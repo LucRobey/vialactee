@@ -49,10 +49,13 @@ class Listener:
             self.gm.append(0.0)
             self.asserv_segm_fft.append(0.0)
      
-        self.segm_fft=np.array(self.segm_fft)
-        self.lm=np.array(self.lm)
-        self.gm=np.array(self.gm)
-        self.asserv_segm_fft=np.array(self.asserv_segm_fft)
+        self.segm_fft = np.array(self.segm_fft)
+        self.lm = np.array(self.lm)
+        self.gm = np.array(self.gm)
+        self.asserv_segm_fft = np.array(self.asserv_segm_fft)
+        self.total_power = 0
+        self.total_power_lm = 0
+        self.total_power_gm = 0
         
     def listen(self):
         try:
@@ -103,3 +106,15 @@ class Listener:
         if (success):
             self.apply_fft()
     
+    def asserv_total_power(self):
+        new_total_power = np.sum(self.lm)
+        if( new_total_power >= self.total_power_lm ):
+                self.total_power_lm = 1.1*new_total_power
+                if( self.total_power_lm >= self.total_power_gm ):
+                    self.total_power_gm = 1.2*self.total_power_lm
+            else:
+                self.total_power_lm *= (1-0.001*self.sensi)
+            self.total_power_gm += 0.01*((1.3-0.2*self.sensi)*self.total_power_lm-self.total_power_gm)
+        
+        sensi=1-self.sensi/1.7
+        self.total_power=(sensi*self.total_power+(new_total_power/self.total_power_gm))/(sensi+1)

@@ -17,7 +17,7 @@ def fromHSV_toRGB(h,s,v):
         if i==5: return (v, w, q)
     else: v = int(255*v); return (v, v, v)
        
-def rgb_to_hsv(r, g, b):
+def fromRGB_toHSV(r, g, b):
     r, g, b = r/255.0, g/255.0, b/255.0
     mx = max(r, g, b)
     mn = min(r, g, b)
