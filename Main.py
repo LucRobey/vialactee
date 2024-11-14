@@ -3,8 +3,8 @@ import neopixel
 pixels1 = neopixel.NeoPixel(board.D18, 40, brightness=1)
 
 import Listener
-import Modes.Mode as Mode
-import Modes.Rainbow_mode as Rainbow_mode
+import modes.Mode as Mode
+import modes.Rainbow_mode as Rainbow_mode
 import Segment
 
 listener = Listener.Listener()

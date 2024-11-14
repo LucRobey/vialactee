@@ -1,5 +1,5 @@
-import Modes.Mode as Mode
-import Modes.Rainbow_mode as Rainbow_mode
+import modes.Mode as Mode
+import modes.Rainbow_mode as Rainbow_mode
 
 import numpy as np
 
