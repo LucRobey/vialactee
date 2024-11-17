@@ -29,8 +29,8 @@ class Shining_stars_mode(Mode.Mode):
         self.colors = []
         for band_index in range(self.nb_of_fft_bands):
             new_colors = RGB_HSV.fromHSV_toRGB(float(band_index)/(self.nb_of_fft_bands-1),1.0,1.0)
-            self.colors.append(new_colors)
-        self.colors=np.array(self.colors)
+            self.wait_times.append(new_colors)
+        self.wait_times=np.array(self.wait_times)
 
     def update(self):
         # first we fade to black
