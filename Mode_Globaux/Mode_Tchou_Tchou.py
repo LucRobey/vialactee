@@ -1,14 +1,15 @@
 import Mode_Global
 import random
-class Mode_Train_Lumineux(Mode_Global.Mode_Global):
+class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
 
-    def __init__(self,matrix):
+    def __init__(self,matrix_class):
         #here matrix modifies the matrix attribute of the parent class Mode_Global which modifies the matrix attribute in Matrix
-        super().__init__(matrix,fusion_type = "Priority")
+        super().__init__(matrix_class,fusion_type = "Priority")
         self.train_head_coordinate = None
         self.train_coordinates= []
         self.train_color = (255,255,255)
         self.train_length = 7
+        self.matrix = matrix_class.matrix
 
     def init_train(self):
 
@@ -75,3 +76,9 @@ class Mode_Train_Lumineux(Mode_Global.Mode_Global):
         for i in self.train_length:
             for coord in self.train_coordinates[i]:
                 self.matrix[coord[0]][coord[1]] = self.train_color
+
+    def update(self):
+        self.update_train()
+        self.update_matrix()
+        super().update()
+        return self.matrix

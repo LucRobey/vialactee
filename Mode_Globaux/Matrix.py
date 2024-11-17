@@ -5,7 +5,7 @@ class Matrix:
         
         self.matrix = Matrix_data().matrix
 
-    def update(self, new_matrix):
-        self.matrix = new_matrix
+    def reset_matrix(self):
+        self.matrix = Matrix_data().matrix
 
     
