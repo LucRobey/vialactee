@@ -1,6 +1,6 @@
 import board
 import neopixel
-pixels1 = neopixel.NeoPixel(board.D18, 40, brightness=1)
+pixels1 = neopixel.NeoPixel(board.D18, 39, brightness=1)
 
 import Listener
 import modes.Mode as Mode
@@ -10,7 +10,7 @@ import Segment
 listener = Listener.Listener()
 segment1 = Segment.Segment(listener , pixels1)
 
-pixels1.fill((100, 0, 0))
+#pixels1.fill((100, 0, 0))
 
 
 
