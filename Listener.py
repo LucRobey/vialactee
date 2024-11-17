@@ -18,41 +18,12 @@ class Listener:
     
     
     def __init__(self):
-        self.samples = []
-        self.power = 1
-        self.sensi = 0.5
+        self.samples = []           #samples we listen os size SAMPLES
+        self.power = 1              #global power  (not used yet)
+        self.sensi = 0.5            #global sensi   (not used yet)
     
-        self.fft_bary=0
-        self.nb_of_segm_fft=10
-        self.segm_fft=[]
-        self.lm=[]
-        self.gm=[]
-        self.asserv_segm_fft=[]
-        self.segm_fft_indexs=[]
-        self.lenFFT = int((self.SAMPLES+1)/2-1)
-        f_0 = 1.0
-        A=self.lenFFT*(1-1/np.power(2,f_0))/(np.power(2,self.nb_of_segm_fft*f_0)-1)
-        print("f_0 = ", f_0)
-        print("A = ", A)
-        H=[]
-        for k in range(self.nb_of_segm_fft):
-            H.append(A*np.power(2,(k+1)*f_0))
-        for k in range(self.nb_of_segm_fft):
-            self.segm_fft_indexs.append(np.max([1,int(H[k])]))
-        self.segm_fft_indexs=np.array(self.segm_fft_indexs)
-        self.segm_fft_indexs[-1]+=self.lenFFT-np.sum(self.segm_fft_indexs)
-        print("indexes = ", self.segm_fft_indexs)
-        print(np.sum(self.segm_fft_indexs))
-        for k in range(self.nb_of_segm_fft):
-            self.segm_fft.append(0.0)
-            self.lm.append(0.0)
-            self.gm.append(0.0)
-            self.asserv_segm_fft.append(0.0)
-     
-        self.segm_fft = np.array(self.segm_fft)
-        self.lm = np.array(self.lm)
-        self.gm = np.array(self.gm)
-        self.asserv_segm_fft = np.array(self.asserv_segm_fft)
+        self.build_asserved_fft_lists()
+        
         self.total_power = 0
         self.total_power_lm = 0
         self.total_power_gm = 0
@@ -112,9 +83,72 @@ class Listener:
                 self.total_power_lm = 1.1*new_total_power
                 if( self.total_power_lm >= self.total_power_gm ):
                     self.total_power_gm = 1.2*self.total_power_lm
-            else:
-                self.total_power_lm *= (1-0.001*self.sensi)
-            self.total_power_gm += 0.01*((1.3-0.2*self.sensi)*self.total_power_lm-self.total_power_gm)
+                else:
+                    self.total_power_lm *= (1-0.001*self.sensi)
+                self.total_power_gm += 0.01*((1.3-0.2*self.sensi)*self.total_power_lm-self.total_power_gm)
         
         sensi=1-self.sensi/1.7
         self.total_power=(sensi*self.total_power+(new_total_power/self.total_power_gm))/(sensi+1)
+
+
+    def build_asserved_fft_lists(self):
+        """
+        This function prepares the asservissement of the fft
+
+        The human ear hears the frequencies in a x^n way, meaning we notice the difference between 2 frequencies as a ratio, not a difference
+
+        Therefore, in order to represent that effect, we have to regroup the fft results in bands wich sizes change according to the frequency
+        the first band will be only 1 value wide, when the last one is actually more than a 1000 wide!
+
+        this is what this function trys to represent
+        """
+
+        self.fft_bary=0             #by_center of the frequencies
+        self.nb_of_segm_fft=10      #nb of bands we divide the frequencies
+        self.segm_fft=[]            
+        self.lm=[]                  #asserved_fft_band_local_max   used for the asservissement of the band values
+        self.gm=[]                  #asserved_fft_band_global_max   used for the asservissement of the band values
+        self.asserv_segm_fft=[]     #result of the asservissement (numbers between 0 and 1)
+        self.segm_fft_indexs=[]     #index that separate each band
+
+        self.lenFFT = int((self.SAMPLES+1)/2-1) #Niquist-Shanon + the first value doesn't matter
+        f_0 = 1.0
+        A=self.lenFFT*(1-1/np.power(2,f_0))/(np.power(2,self.nb_of_segm_fft*f_0)-1)
+        H=[]
+        for k in range(self.nb_of_segm_fft):
+            H.append(A*np.power(2,(k+1)*f_0))
+        for k in range(self.nb_of_segm_fft):
+            self.segm_fft_indexs.append(np.max([1,int(H[k])]))
+        self.segm_fft_indexs=np.array(self.segm_fft_indexs)
+        self.segm_fft_indexs[-1]+=self.lenFFT-np.sum(self.segm_fft_indexs)
+        print("indexes = ", self.segm_fft_indexs)
+        print(np.sum(self.segm_fft_indexs))
+        for k in range(self.nb_of_segm_fft):
+            self.segm_fft.append(0.0)
+            self.lm.append(0.0)
+            self.gm.append(0.0)
+            self.asserv_segm_fft.append(0.0)
+     
+        self.segm_fft = np.array(self.segm_fft)
+        self.lm = np.array(self.lm)
+        self.gm = np.array(self.gm)
+        self.asserv_segm_fft = np.array(self.asserv_segm_fft)
+
+        """
+        we want Nf(k+1)=A*Nf(k), therefore Nf(k)=A^(k-1)*Nf(1)
+        we choose Nf(1)=1
+        we need to hafe Nf(nb_of_bands) = lenFFT, therefore A^(nb_of_bands-1) = lenFFT
+        therefore, A = (lenFFT)^(1/(nb_of_bands-1))
+
+
+
+        A=np.power(1/(self.nb_of_segm_fft-1),self.lenFFT)
+        indexes=[1]
+        for k in range(self.nb_of_segm_fft):
+            indexes.append(indexes[-1]*A)
+        print(indexes)
+        print(self.lenFFT)
+        
+        
+        
+        """
