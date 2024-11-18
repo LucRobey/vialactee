@@ -47,20 +47,11 @@ class Middle_bar_mode(Mode.Mode):
         """
         #we color/decolor the leds starting from the middle(s)
         if(self.hasAMiddle):
-            super().smooth(0.5,self.middle_index[0],self.color)
-            for k in range(1,self.size):
-                super().smooth(0.5,self.middle_index[0]+k,self.color)
-                super().smooth(0.5,self.middle_index[0]-k,self.color)
-            for k in range(self.size,self.max_size):
-                super().smooth(0.5,self.middle_index[0]+k,self.color)
-                super().smooth(0.5,self.middle_index[0]-k,self.color)
+            self.smooth_segment(0.5,self.middle_index[0]-(self.size-1),self.middle_index[0]+(self.size-1),self.color)
+            self.fade_to_black_segment(0.5,0,self.middle_index[0]-(self.self.size-1))
+            self.fade_to_black_segment(0.5,self.middle_index[0]+(self.self.size-1),self.nb_of_leds-1)
         else:
-            super().smooth(0.5,self.middle_index[1],self.color)
-            super().smooth(0.5,self.middle_index[0],self.color)
-            for k in range(1,self.size):
-                super().smooth(0.5,self.middle_index[1]+k,self.color)
-                super().smooth(0.5,self.middle_index[0]-k,self.color)
-            for k in range(self.size,self.max_size):
-                super().smooth(0.5,self.middle_index[1]+k,self.color)
-                super().smooth(0.5,self.middle_index[0]-k,self.color)
+            self.smooth_segment(0.5,self.middle_index[0]-(self.size-1),self.middle_index[1]+(self.size-1),self.color)
+            self.fade_to_black_segment(0.5,0,self.middle_index[0]-(self.self.size-1))
+            self.fade_to_black_segment(0.5,self.middle_index[1]+(self.self.size-1),self.nb_of_leds-1)
             
