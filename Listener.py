@@ -21,12 +21,18 @@ class Listener:
         self.samples = []           #samples we listen os size SAMPLES
         self.power = 1              #global power  (not used yet)
         self.sensi = 0.5            #global sensi   (not used yet)
-    
+
         self.build_asserved_fft_lists()
-        
-        self.total_power = 0
-        self.total_power_lm = 0
-        self.total_power_gm = 0
+        self.build_asserved_total_power()
+        self.build_band_peaks()
+
+    def update(self):
+        success = self.listen()
+        if (success):
+            self.apply_fft()
+            self.asserv_fft_bands()
+            self.update_band_means_and_smoothed_values()
+            self.asserv_total_power()
         
     def listen(self):
         try:
@@ -37,59 +43,93 @@ class Listener:
             print("On arrive pas à écouter")
             return False
 
-    def calculate_asserv_segm_fft(self):
-        for index in range(self.nb_of_segm_fft):
-            if( self.segm_fft[index]>=self.lm[index] ):
-                self.lm[index]=1.1*self.segm_fft[index]
-                if( self.lm[index]>=self.gm[index] ):
-                    self.gm[index]=1.2*self.lm[index]
-            else:
-                self.lm[index]*=(1-0.001*self.sensi)
-            self.gm[index]+=0.01*((1.3-0.2*self.sensi)*self.lm[index]-self.gm[index])
-        
-        sensi=1-self.sensi/1.7
-        for index in range(self.nb_of_segm_fft):
-            self.asserv_segm_fft[index]=(sensi*self.asserv_segm_fft[index]+(self.segm_fft[index]/self.gm[index]))/(sensi+1)
+    def asserv_fft_bands(self):
+        """
+        we use a glomal_max and local_max to asser each band's value
 
+        each time the smoothed_value is not higher than the local_mac, we lower local_max a little
+
+        global max triez to stabilize at 1.2 times the local max but smoothly
+        """
+        for band_index in range(self.nb_of_fft_band):
+            if( self.smoothed_fft_band_values[band_index]>=self.band_lm[band_index] ):
+                self.band_lm[band_index]=self.smoothed_fft_band_values[band_index]
+            else :
+                self.band_lm[band_index]*=0.9995
+
+            if( self.smoothed_fft_band_values[band_index]>=self.band_gm[band_index] ):
+                self.band_gm[band_index]=1.01*self.smoothed_fft_band_values[band_index]
+            else:
+                self.band_gm[band_index] *= 1 + 0.005 * (self.band_lm[band_index]/self.band_lm[band_index] - 0.9)
+
+            self.asserved_fft_band[band_index] += 0.4 *  (self.smoothed_fft_band_values[band_index]/self.band_gm[band_index] - self.asserved_fft_band[band_index])
+
+    def update_band_means_and_smoothed_values(self):
+        for band_index in range(self.nb_of_fft_band):
+            self.smoothed_fft_band_values[band_index] = (1-self.sensi) * self.smoothed_fft_band_values[band_index] + self.sensi*self.fft_band_values[band_index]
+            self.band_means[band_index] += 0.01 * (self.smoothed_fft_band_values[band_index] - self.band_means[band_index])
             
     def apply_fft(self):
         fft_sample = np.abs(np.fft.fft(self.samples))[1:self.lenFFT+1]
-        a=0
-        b=0
-        index=0
-        self.segm_fft[index]=0
+        
+        band_index=0
+        self.fft_band_values[band_index]=0
         for i in range(self.lenFFT):
-            if(index<self.nb_of_segm_fft-1):
-                if(i>=self.segm_fft_indexs[index]):
-                    index+=1
-                    self.segm_fft[index]=0
-            self.segm_fft[index]+=fft_sample[i]
+            if(band_index<self.nb_of_fft_band-1):
+                if(i>=self.segm_fft_indexs[band_index]):
+                    band_index+=1
+                    self.fft_band_values[band_index]=0
+            self.fft_band_values[band_index]+=fft_sample[i]
 
-        for i in range(self.nb_of_segm_fft):
-            a+=i*self.segm_fft[i]
-            b+=self.segm_fft[i]
-        self.fft_bary =  (a/b) /(self.nb_of_segm_fft-1)
+        num=0
+        denom=0
+        for i in range(self.nb_of_fft_band):
+            num+=i*self.fft_band_values[i]
+            b+=self.fft_band_values[i]
+        self.fft_bary =  (num/denom) /(self.nb_of_fft_band-1)
         
-        self.calculate_asserv_segm_fft()
-        
-    def update(self):
-        success = self.listen()
-        if (success):
-            self.apply_fft()
-    
+
     def asserv_total_power(self):
-        new_total_power = np.sum(self.lm)
-        if( new_total_power >= self.total_power_lm ):
-                self.total_power_lm = 1.1*new_total_power
-                if( self.total_power_lm >= self.total_power_gm ):
-                    self.total_power_gm = 1.2*self.total_power_lm
-                else:
-                    self.total_power_lm *= (1-0.001*self.sensi)
-                self.total_power_gm += 0.01*((1.3-0.2*self.sensi)*self.total_power_lm-self.total_power_gm)
-        
-        sensi=1-self.sensi/1.7
-        self.total_power=(sensi*self.total_power+(new_total_power/self.total_power_gm))/(sensi+1)
+        instantPower = 0
+        for band_index in range(self.nb_of_fft_bands):
+            instantPower+= self.fft_band_values[band_index]
 
+        self.smoothed_total_power = 0.5 * (self.smoothed_total_power + instantPower)
+
+        if (self.smoothed_total_power > self.total_power_lm):
+            self.total_power_lm = self.smoothed_total_power
+        else:
+            self.total_power_lm*=0.9998  
+
+        if (self.smoothed_total_power > self.total_power_gm):
+            self.total_power_gm = 1.01 * self.smoothed_total_power
+        else:
+            self.total_power_gm *= 1 + 0.005 * ( (self.total_power_lm/self.total_power_gm) - 0.9)
+
+        self.asserved_total_power += 0.4 *  ( self.smoothed_total_power/self.total_power_gm - self.asserved_total_power)
+
+    def detect_band_peaks(self):
+        """
+        if the band values is above the mean of it's band plus the sensitivity, it activates
+        if it activates, it raises the sensibility, otherwise, the sensibility drops little by little
+        """
+        total=0
+        for band_index in range(self.nb_of_fft_band):
+            if (self.fft_band_values[band_index] > self.band_means[band_index] + self.peak_sensitivity  and 
+                time.time() > self.peak_times[band_index] + self.delta_time_peak):
+                self.band_peak[band_index] = 1
+                total += 1
+                self.peak_times[band_index] = time.time()
+            else :
+                self.band_peak[band_index] = 0
+
+        self.peak_sensitivity *= 1+(total-1)*0.0001
+
+    def build_asserved_total_power(self):
+        self.smoothed_total_power = 0
+        self.asserved_total_power = 0
+        self.total_power_gm = 0
+        self.total_power_lm = 0
 
     def build_asserved_fft_lists(self):
         """
@@ -101,54 +141,52 @@ class Listener:
         the first band will be only 1 value wide, when the last one is actually more than a 1000 wide!
 
         this is what this function trys to represent
-        """
 
-        self.fft_bary=0             #by_center of the frequencies
-        self.nb_of_segm_fft=10      #nb of bands we divide the frequencies
-        self.segm_fft=[]            
-        self.lm=[]                  #asserved_fft_band_local_max   used for the asservissement of the band values
-        self.gm=[]                  #asserved_fft_band_global_max   used for the asservissement of the band values
-        self.asserv_segm_fft=[]     #result of the asservissement (numbers between 0 and 1)
-        self.segm_fft_indexs=[]     #index that separate each band
+        Nf(k) represents the index of the k'th note 
 
-        self.lenFFT = int((self.SAMPLES+1)/2-1) #Niquist-Shanon + the first value doesn't matter
-        f_0 = 1.0
-        A=self.lenFFT*(1-1/np.power(2,f_0))/(np.power(2,self.nb_of_segm_fft*f_0)-1)
-        H=[]
-        for k in range(self.nb_of_segm_fft):
-            H.append(A*np.power(2,(k+1)*f_0))
-        for k in range(self.nb_of_segm_fft):
-            self.segm_fft_indexs.append(np.max([1,int(H[k])]))
-        self.segm_fft_indexs=np.array(self.segm_fft_indexs)
-        self.segm_fft_indexs[-1]+=self.lenFFT-np.sum(self.segm_fft_indexs)
-        print("indexes = ", self.segm_fft_indexs)
-        print(np.sum(self.segm_fft_indexs))
-        for k in range(self.nb_of_segm_fft):
-            self.segm_fft.append(0.0)
-            self.lm.append(0.0)
-            self.gm.append(0.0)
-            self.asserv_segm_fft.append(0.0)
-     
-        self.segm_fft = np.array(self.segm_fft)
-        self.lm = np.array(self.lm)
-        self.gm = np.array(self.gm)
-        self.asserv_segm_fft = np.array(self.asserv_segm_fft)
-
-        """
         we want Nf(k+1)=A*Nf(k), therefore Nf(k)=A^(k-1)*Nf(1)
         we choose Nf(1)=1
         we need to hafe Nf(nb_of_bands) = lenFFT, therefore A^(nb_of_bands-1) = lenFFT
         therefore, A = (lenFFT)^(1/(nb_of_bands-1))
-
-
-
-        A=np.power(1/(self.nb_of_segm_fft-1),self.lenFFT)
-        indexes=[1]
-        for k in range(self.nb_of_segm_fft):
-            indexes.append(indexes[-1]*A)
-        print(indexes)
-        print(self.lenFFT)
-        
-        
-        
         """
+
+        self.fft_bary = 0             #by_center of the frequencies
+        self.nb_of_fft_band = 10      #nb of bands we divide the frequencies
+        self.fft_band_values = []   
+        self.smoothed_fft_band_values = []
+        self.band_means = []         
+        self.band_lm = []                  #asserved_fft_band_local_max   used for the asservissement of the band values
+        self.band_gm = []                  #asserved_fft_band_global_max   used for the asservissement of the band values
+        self.asserved_fft_band = []     #result of the asservissement (numbers between 0 and 1)
+        self.segm_fft_indexs = [1]    #index that separate each band
+
+        self.lenFFT = int((self.SAMPLES+1)/2-1) #Niquist-Shanon + the first value doesn't matter
+
+        A=np.power(self.lenFFT,1/(self.nb_of_fft_band-1))
+        for _ in range(1,self.nb_of_fft_band):
+            self.segm_fft_indexs.append(self.segm_fft_indexs[-1]*A)
+        for band_index in range(1,self.nb_of_fft_band):
+            self.segm_fft_indexs[band_index]=int(self.segm_fft_indexs[band_index])
+        print("indexes = ", self.segm_fft_indexs)
+
+        for _ in range(self.nb_of_fft_band):
+            self.fft_band_values.append(0.0)
+            self.band_lm.append(0.0)
+            self.band_gm.append(0.0)
+            self.asserved_fft_band.append(0.0)
+            self.smoothed_fft_band_values.append(0.0)
+            self.band_means.append(0.0)
+     
+        self.fft_band_values = np.array(self.fft_band_values)
+        self.band_lm = np.array(self.band_lm)
+        self.band_gm = np.array(self.band_gm)
+        self.asserved_fft_band = np.array(self.asserved_fft_band)
+        self.smoothed_fft_band_values=np.array(self.smoothed_fft_band_values)
+        self.band_means=np.means(self.band_means)
+
+
+    def build_band_peaks(self):
+        self.peak_sensitivity = 800
+        self.delta_time_peak = 0.15        #seconde
+        self.peak_times = []
+        self.band_peak = []
