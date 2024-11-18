@@ -2,6 +2,8 @@ import pyaudio
 import time
 import numpy as np
 
+#yo les potos c poulette
+
 class Listener:
     
     SAMPLES = 4048#4*44100 #
