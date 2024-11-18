@@ -24,7 +24,7 @@ class Power_bar_mode(Mode.Mode):
         """
         calculate
         """
-        new_power = self.listener.total_power
+        new_power = self.listener.asserved_total_power
         new_height = new_power*self.nb_of_leds
         #could put some sensi here
         self.power_height = (self.power_height+new_height)/2

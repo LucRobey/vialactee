@@ -22,8 +22,8 @@ class Middle_bar_mode(Mode.Mode):
         self.size = 0
 
         #we randomly choose a asserved_band to listen to and we choose the color accordingly
-        self.band_to_listen = random.randint(self.listener.asserv_segm_fft)
-        hue = float(self.band_to_listen) / (self.listener.asserv_segm_fft - 1)
+        self.band_to_listen = random.randint(self.listener.asserved_fft_band)
+        hue = float(self.band_to_listen) / (self.listener.asserved_fft_band - 1)
         self.color = RGB_HSV.fromHSV_toRGB(hue,1.0,1.0)
 
 
@@ -33,7 +33,7 @@ class Middle_bar_mode(Mode.Mode):
         calculate
         """
         #We listen to the chosen band
-        new_size = self.listener.asserv_segm_fft[self.band_to_listen] * self.max_size
+        new_size = self.listener.asserved_fft_band[self.band_to_listen] * self.max_size
 
         #could put some sensi here
         self.size = (self.size + new_size)/2

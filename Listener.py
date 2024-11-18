@@ -152,6 +152,7 @@ class Listener:
 
         self.fft_bary = 0             #by_center of the frequencies
         self.nb_of_fft_band = 10      #nb of bands we divide the frequencies
+        
         self.fft_band_values = []   
         self.smoothed_fft_band_values = []
         self.band_means = []         

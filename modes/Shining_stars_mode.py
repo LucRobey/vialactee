@@ -17,7 +17,7 @@ class Shining_stars_mode(Mode.Mode):
     def __init__(self , listener , leds , rgb_list):
         super().__init__(listener , leds , rgb_list)
 
-        self.nb_of_fft_band = self.listener.nb_of_fft_band
+        self.nb_of_fft_band = listener.nb_of_fft_band
 
         # colors representing each band (red = basses ; blue = aigus)
         self.colors = []
