@@ -21,7 +21,7 @@ class Rainbow_mode(Mode.Mode):
             high_margin= low_margin+1
 
             position_coef = 1 -(led_index / self.delta_margin - low_margin)
-            intensity = position_coef * self.listener.asserved_fft_band[low_margin] + (1-position_coef) * self.listener.asserved_fft_band[high_margin]
+            intensity = 0.1 + 0.9 *(position_coef * self.listener.asserved_fft_band[low_margin] + (1-position_coef) * self.listener.asserved_fft_band[high_margin])
         
             rgb_color = RGB_HSV.fromHSV_toRGB(hue,1.0,intensity)
 

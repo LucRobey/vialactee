@@ -23,12 +23,12 @@ class Shining_stars_mode(Mode.Mode):
         self.colors = []
         for band_index in range(self.nb_of_fft_band):
             new_colors = RGB_HSV.fromHSV_toRGB(float(band_index)/(self.nb_of_fft_band-1),1.0,1.0)
-            self.new_colors.append(new_colors)
-        self.new_colors=np.array(self.new_colors)
+            self.colors.append(new_colors)
+        self.colors=np.array(self.colors)
 
     def update(self):
         # first we fade to black
-        self.fade_to_black(0.2)
+        self.fade_to_black(0.1)
 
         total = 0
         for band_index in range(self.nb_of_fft_band):
@@ -37,6 +37,7 @@ class Shining_stars_mode(Mode.Mode):
         for band_index in range(self.nb_of_fft_band):
             if self.listener.band_peak[band_index] > 0:
                 self.lightUp(band_index)
+                print(band_index)
 
 
     

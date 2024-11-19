@@ -35,6 +35,7 @@ class Listener:
             self.asserv_fft_bands()
             self.update_band_means_and_smoothed_values()
             self.asserv_total_power()
+            self.detect_band_peaks()
         
     def listen(self):
         try:
@@ -75,6 +76,13 @@ class Listener:
             if(self.band_means[band_index]<0):
                 self.band_means[band_index]=0
             
+            total=0
+            for band_index in range(self.nb_of_fft_band):
+                total += self.smoothed_fft_band_values[band_index]
+            for band_index in range(self.nb_of_fft_band):    
+                self.band_proportion[band_index] = float(self.smoothed_fft_band_values[band_index])/total
+                
+                    
     def apply_fft(self):
         fft_sample = np.abs(np.fft.fft(self.samples))[1:self.lenFFT+1]
         
@@ -87,7 +95,6 @@ class Listener:
                     self.fft_band_values[band_index]=0
             self.fft_band_values[band_index]+=fft_sample[i]
 
-        #print(self.fft_band_values)
         for band_index in range(self.nb_of_fft_band):
             self.fft_band_values[band_index] /= self.rearrange_list[band_index]
             self.fft_band_values[band_index] -=self.manual_calibration[band_index]
@@ -99,6 +106,8 @@ class Listener:
             num+=i*self.fft_band_values[i]
             denom+=self.fft_band_values[i]
         self.fft_bary =  (num/denom) /(self.nb_of_fft_band-1)
+        
+        
         
 
     def asserv_total_power(self):
@@ -134,8 +143,10 @@ class Listener:
                 self.peak_times[band_index] = time.time()
             else :
                 self.band_peak[band_index] = 0
-
+        print(self.band_peak)
         self.peak_sensitivity *= 1+(total-1)*0.0001
+            
+        print(self.peak_sensitivity)
 
     def build_asserved_total_power(self):
         self.smoothed_total_power = 0
@@ -171,6 +182,7 @@ class Listener:
         self.band_lm = []                  #asserved_fft_band_local_max   used for the asservissement of the band values
         self.band_gm = []                  #asserved_fft_band_global_max   used for the asservissement of the band values
         self.asserved_fft_band = []     #result of the asservissement (numbers between 0 and 1)
+        self.band_proportion = []
         self.segm_fft_indexs = [1]    #index that separate each band
 
         self.lenFFT = int((self.SAMPLES)/2-2) #Niquist-Shanon + the first value doesn't matter
@@ -189,6 +201,7 @@ class Listener:
             self.asserved_fft_band.append(0.0)
             self.smoothed_fft_band_values.append(0.0)
             self.band_means.append(0.0)
+            self.band_proportion.append(0.0)
      
         self.fft_band_values = np.array(self.fft_band_values)
         self.band_lm = np.array(self.band_lm)
@@ -200,11 +213,21 @@ class Listener:
         self.smooth_sensi = [0.9,0.6,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5]
         self.rearrange_list=[]
         for band_index in range(self.nb_of_fft_band):
-            self.rearrange_list.append(np.power((band_index+1),1.8))                          #np.power((self.segm_fft_indexs[band_index]-self.segm_fft_indexs[band_index-1]),0.4))
+            self.rearrange_list.append(np.power((band_index+1),1.8))
 
         self.manual_calibration = [1500,300,120,140,220,350,300,270,250,310,318,380,467,630,850,1266]
+        
+        
     def build_band_peaks(self):
-        self.peak_sensitivity = 800
-        self.delta_time_peak = 0.15        #seconde
+        self.peak_sensitivity = 500
+        self.delta_time_peak = 0.15#seconde
         self.peak_times = []
         self.band_peak = []
+        for band_index in range(self.nb_of_fft_band):
+            self.peak_times.append(0.0)
+            self.band_peak.append(0)
+
+        self.peak_times = np.array(self.peak_times)
+        self.band_peak = np.array(self.band_peak)
+        
+    
