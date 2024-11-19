@@ -1,11 +1,11 @@
-import Segments_Locations
+from Mode_Globaux import Segments_Locations as Segments_Locations
 class Matrix_General : 
     def __init__(self, mode_Global):
         self.mode = mode_Global
         self.matrix_class = mode_Global.matrix_class
         self.fusion_type = mode_Global.fusion_type
         self.matrix = self.matrix_class.matrix
-        self.segments_location = Segments_Locations()
+        self.segments_location = Segments_Locations.Segments_Locations()
         self.segment_values = None
 
     def change_mode(self, new_mode):

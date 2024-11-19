@@ -24,8 +24,20 @@ class Segment:
                       Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.rgb_list)]
         self.activ_mode = 0
 
-    def update(self):
-        self.modes[3].update()
-        
-        for k in range(len(self.rgb_list)):
-            self.leds[k]=self.rgb_list[k]
+
+    def update_leds(self, list):
+        for k in range(len(list)):
+            self.leds[k]=list[k]
+
+    def update(self,global_mode_rgb_list):
+        print(self.rgb_list)
+        print(global_mode_rgb_list)
+        self.modes[2].update()
+        self.fuse_rgb_list(global_mode_rgb_list, "Priority")
+        self.update_leds(self.rgb_list)
+
+
+    def fuse_rgb_list(self,list, fusion_type):
+        if fusion_type == "Priority":
+            for k in range(len(list)):
+                self.rgb_list[k] = list[k]

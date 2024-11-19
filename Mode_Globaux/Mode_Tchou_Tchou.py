@@ -1,4 +1,4 @@
-import Mode_Global
+from Mode_Globaux import Mode_Global as Mode_Global
 import random
 class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
 
@@ -10,6 +10,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         self.train_color = (255,255,255)
         self.train_length = 7
         self.matrix = matrix_class.matrix
+        self.init_train()
 
     def init_train(self):
 
@@ -17,23 +18,26 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         self.train_head_coordinate = self.get_random_coordinate_touching_border()
         while self.matrix[self.train_head_coordinate[0]][self.train_head_coordinate[1]] != 1:
             self.train_head_coordinate = self.get_random_coordinate()
-        
+        self.train_coordinates.append(self.train_head_coordinate)
         #get the train coordinates from the head coordinate
-        for i in range(self.train_length-1):
-            possible_directions = self.get_list_possible_direction(self.train_coordinates[i],self.matrix, self.train_coordinates)
-            self.train_coordinates[i+1]= possible_directions[random.randint(0,len(possible_directions)-1)]
+        for i in range(len(self.train_coordinates)):
             
-    def get_list_possible_direction(coord, matrix,train_coordinates):
+            possible_directions = self.get_list_possible_direction(self.train_coordinates[i],self.matrix, self.train_coordinates)
+            if len(possible_directions)>0:
+                self.train_coordinates.append((possible_directions[random.randint(0,len(possible_directions)-1)]))
+            
+    def get_list_possible_direction(self,coord, matrix,train_coordinates):
+        print(coord)
         #return a list of possible direction for the train
         possible_direction = []
         if coord[0] > 0 and matrix[coord[0]-1][coord[1]] == 1:
-            possible_direction.append(coord[0]-1,coord[1])
+            possible_direction.append([coord[0]-1,coord[1]])
         if coord[0] < len(matrix)-1 and matrix[coord[0]+1][coord[1]] == 1:
-            possible_direction.append(coord[0]+1,coord[1])
+            possible_direction.append([coord[0]+1,coord[1]])
         if coord[1] > 0 and matrix[coord[0]][coord[1]-1] == 1:
-            possible_direction.append(coord[0],coord[1]-1)
+            possible_direction.append([coord[0],coord[1]-1])
         if coord[1] < len(matrix[0])-1 and matrix[coord[0]][coord[1]+1] == 1:
-            possible_direction.append(coord[0],coord[1]+1)
+            possible_direction.append([coord[0],coord[1]+1])
         
         for directions in possible_direction:
             if directions in train_coordinates:
@@ -44,6 +48,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
 
 
     def update_train(self):
+        print(self.train_head_coordinate)
         #update the head of the train
         possible_directions = self.get_list_possible_direction(self.train_head_coordinate,self.matrix,self.train_coordinates)
         if possible_directions != []:
@@ -68,14 +73,13 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
                 coord = (random.randint(0,len(self.matrix)-1),0)
             else:
                 coord = (random.randint(0,len(self.matrix)-1),len(self.matrix[0])-1)
-
         return coord
         
     def update_matrix(self):
         #update the matrix with the train
-        for i in self.train_length:
-            for coord in self.train_coordinates[i]:
-                self.matrix[coord[0]][coord[1]] = self.train_color
+        
+        for coord in self.train_coordinates:
+            self.matrix[coord[0]][coord[1]] = self.train_color
 
     def update(self):
         self.update_train()
