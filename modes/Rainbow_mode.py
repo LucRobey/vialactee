@@ -5,10 +5,10 @@ class Rainbow_mode(Mode.Mode):
     
     def __init__(self , listener , leds , rgb_list):
         super().__init__(listener , leds , rgb_list)
-        
+
         #Used to calculate the hue and the intensity of each pixel
-        self.delta_margin=float(self.nb_of_leds)/(self.listener.nb_of_segm_fft-1)
-        self.nb_of_fft_segment = len(self.listener.asserv_segm_fft)
+        self.delta_margin=float(self.nb_of_leds)/(self.listener.nb_of_fft_band-1)
+        self.nb_of_fft_band = self.listener.nb_of_fft_band
 
     
     def update(self):
@@ -21,7 +21,7 @@ class Rainbow_mode(Mode.Mode):
             high_margin= low_margin+1
 
             position_coef = 1 -(led_index / self.delta_margin - low_margin)
-            intensity = position_coef * self.listener.asserv_segm_fft[low_margin] + (1-position_coef) * self.listener.asserv_segm_fft[high_margin]
+            intensity = position_coef * self.listener.asserved_fft_band[low_margin] + (1-position_coef) * self.listener.asserved_fft_band[high_margin]
         
             rgb_color = RGB_HSV.fromHSV_toRGB(hue,1.0,intensity)
 

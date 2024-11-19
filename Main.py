@@ -1,6 +1,6 @@
 import board
 import neopixel
-pixels1 = neopixel.NeoPixel(board.D18, 40, brightness=1)
+pixels1 = neopixel.NeoPixel(board.D18, 39, brightness=1)
 
 import Listener
 import modes.Mode as Mode
