@@ -17,12 +17,15 @@ class Matrix_General :
         self.mode.update()
         self.matrix = self.mode.matrix
         self.fusion_type = self.mode.fusion_type
-        
+        self.set_segments()
 
     
-def get_segments_value(self):
-    self.segment_values = [
-        [self.matrix[x][y] for x, y in segment]
-        for segment in self.segments_location.segment_coords
-    ]
-    return self.segment_values
+    def set_segments(self):
+        #return the coordinates and the values of the segments
+        self.segment_values = [
+            [self.matrix[x][y] for x, y in segment]
+            for segment in self.segments_location.segment_coords
+        ]
+
+    def get_segments(self):
+        return self.segments_location.segment_coords  , self.segment_values
