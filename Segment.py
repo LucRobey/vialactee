@@ -14,7 +14,7 @@ class Segment:
         self.leds = leds
         if(self.listener==None):
             self.listener = listener
-            
+        self.fused_list = []
         self.rgb_list=[]
         for k in range((len(leds))):
             self.rgb_list.append((0,0,0))
@@ -30,14 +30,14 @@ class Segment:
             self.leds[k]=list[k]
 
     def update(self,global_mode_rgb_list):
-        print(self.rgb_list)
-        print(global_mode_rgb_list)
+
         self.modes[2].update()
+        self.fused_list = self.rgb_list.copy()
         self.fuse_rgb_list(global_mode_rgb_list, "Priority")
-        self.update_leds(self.rgb_list)
+        self.update_leds(self.fused_list)
 
 
     def fuse_rgb_list(self,list, fusion_type):
         if fusion_type == "Priority":
             for k in range(len(list)):
-                self.rgb_list[k] = list[k]
+                self.fused_list[k] = list[k]
