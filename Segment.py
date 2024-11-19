@@ -22,8 +22,18 @@ class Segment:
                       Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.rgb_list)]
         self.activ_mode = 0
 
-    def update(self):
+    def update_leds(self, list):
+        for k in range(len(list)):
+            self.leds[k]=list[k]
+
+    def update(self,global_mode_rgb_list):
         self.modes[2].update()
-        
-        for k in range(len(self.rgb_list)):
-            self.leds[k]=self.rgb_list[k]
+        self.fuse_rgb_list(global_mode_rgb_list, "Priority")
+        self.update_leds(self.rgb_list)
+
+
+    def fuse_rgb_list(self,list, fusion_type):
+        if fusion_type == "Priority":
+            for k in range(len(self.rgb_list)):
+                if self.rgb_list[k] == (0,0,0):
+                    self.rgb_list[k] = list[k]
