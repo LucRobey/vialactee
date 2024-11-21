@@ -10,18 +10,25 @@ class Segment:
     
     listener = None
 
-    def __init__(self , listener , leds ):
+    def __init__(self , name ,listener , leds ):
+        self.name = name
         self.leds = leds
         if(self.listener==None):
             self.listener = listener
         self.fused_list = []
         self.rgb_list=[]
-        for k in range((len(leds))):
+        for _ in range((len(leds))):
             self.rgb_list.append((0,0,0))
+
         self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.rgb_list),
                       Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.rgb_list),
                       Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.rgb_list),
                       Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.rgb_list)]
+        
+        self.modes_names = ["Rainbow_mode",
+                            "Bary_rainbow_mode",
+                            "Middle_bar_mode",
+                            "Shining_stars_mode"]
         self.activ_mode = 0
 
 
@@ -41,3 +48,10 @@ class Segment:
         if fusion_type == "Priority":
             for k in range(len(list)):
                 self.fused_list[k] = list[k]
+
+
+    def change_mode(self , mode_name):
+        for mode_index in range(len(self.modes)):
+            if (self.modes_names[mode_index]==mode_name):
+                self.activ_mode=mode_index
+                print("le segment ",self.name, " change de mode pour ", mode_name)
