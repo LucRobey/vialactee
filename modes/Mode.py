@@ -1,3 +1,5 @@
+import calculations.rgb_hsv as RGB_HSV
+
 class Mode:
 
     listener = None
@@ -11,6 +13,7 @@ class Mode:
         self.leds     = leds
         
         self.nb_of_leds = len(rgb_list)
+        self.white = RGB_HSV.fromHSV_toRGB(0,0,1.0)
 
     def smooth(self , ratio_new , led_index , new_color):
         old_col=self.leds[led_index]

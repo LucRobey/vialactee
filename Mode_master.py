@@ -28,23 +28,24 @@ class Mode_master:
 
         self.load_configurations()
 
-        self.leds = neopixel.NeoPixel(board.D18, 39, brightness=1)
+        self.leds = neopixel.NeoPixel(board.D18, 51, brightness=1)
 
         self.listener = Listener.Listener()
 
         self.matrix = Matrix.Matrix()
         self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
-        self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)   
+        self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
+        
+        print(self.matrix_general.segment_values)
 
-        self.segments_list.append(Segment.Segment("segment1",self.listener, self.leds))
+        self.segments_list.append(Segment.Segment("segment1",self.listener, self.leds , self.matrix_general.segment_values))
 
         self.initiate_configuration()
         
     
     def update(self):
-        self.matrix_general.update()
-        list_rgbd = self.matrix_general.get_segments()[1]
-        self.segments_list[0].update(list_rgbd)
+        #self.matrix_general.update()
+        self.segments_list[0].update()
 
 
         self.current_time = time.time()
@@ -60,7 +61,8 @@ class Mode_master:
             segment.change_mode(self.configurations[self.activ_configuration])
 
     def initiate_configuration(self):
-        self.activ_configuration = random.randint(0,len(self.configurations))
+        self.activ_configuration = random.randint(0,len(self.configurations)-1)
+        print("configuration numéro :" , self.activ_configuration)
         self.update_segments_modes()
         self.next_change_of_configuration_time = time.time() + self.configuration_duration
 
