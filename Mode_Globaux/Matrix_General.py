@@ -5,6 +5,7 @@ class Matrix_General :
         self.matrix_class = mode_Global.matrix_class
         self.fusion_type = mode_Global.fusion_type
         self.matrix = self.matrix_class.matrix
+        self.matrix_light = self.matrix_class.matrix_light
         self.segments_location = Segments_Locations.Segments_Locations()
         self.segment_values = None
 
@@ -16,6 +17,7 @@ class Matrix_General :
     def update(self):
         self.mode.update()
         self.matrix = self.mode.matrix
+        self.matrix_light = self.mode.matrix_light
         self.fusion_type = self.mode.fusion_type
         self.set_segments()
 
@@ -23,7 +25,7 @@ class Matrix_General :
     def set_segments(self):
         #return the coordinates and the values of the segments
         self.segment_values = [
-            [self.matrix[x][y] for x, y in segment]
+            [self.matrix_light[x][y] for x, y in segment]
             for segment in self.segments_location.segment_coords
         ]
 
