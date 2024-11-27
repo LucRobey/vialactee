@@ -48,7 +48,7 @@ class Power_bar_mode(Mode.Mode):
                 super().smooth(0.5,led_index,self.color)
 
         #we color the white dot
-        super().smooth(0.5,self.white_dot_height,(1,1,1))
+        super().smooth(0.5,self.white_dot_height,self.white)
 
         #we smoothly brings the rest to zero
         for led_index in range(self.white_dot_height+1,self.nb_of_leds):

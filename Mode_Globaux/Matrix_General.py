@@ -8,6 +8,7 @@ class Matrix_General :
         self.matrix_light = self.matrix_class.matrix_light
         self.segments_location = Segments_Locations.Segments_Locations()
         self.segment_values = None
+        self.set_segments()
 
     def change_mode(self, new_mode):
         self.matrix_class.reset_matrix()
