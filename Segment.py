@@ -63,7 +63,10 @@ class Segment:
         if fusion_type == "Priority":
             print(len(self.global_rgb_list),len(self.fused_list) )
             for led_index in range(len(self.global_rgb_list)):
-                self.fused_list[led_index] = self.global_rgb_list[led_index]
+                if (self.global_rgb_list[led_index] != (0,0,0)):
+                    self.fused_list[led_index] = self.global_rgb_list[led_index]
+                else:
+                    self.fused_list[led_index] = self.rgb_list[led_index]
 
 
     def change_mode(self , mode_name):
