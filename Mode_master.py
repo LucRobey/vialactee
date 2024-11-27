@@ -19,6 +19,7 @@ import neopixel
 class Mode_master:
 
     segments_list = []
+    segments_names_to_index = {}
     activ_configuration = 0
     configurations = []
     configuration_duration = 60
@@ -41,15 +42,16 @@ class Mode_master:
         
         print(self.matrix_general.get_segments())
 
-        self.segments_list.append(Segment.Segment("segment1",self.listener, self.leds , self.matrix_general.segment_values[0]))
+        self.initiate_segments()
 
         self.initiate_configuration()
         
     
     def update(self):
-        message_received = self.connector.listen()
-        if(message_received):
-            self.process_and_obey_msg(message_received)
+        orders = self.connector.update()
+        if(orders!=[] and orders!=None):
+            for order in orders:
+                self.obey_order(order)
         
         self.matrix_general.update()
         
@@ -87,6 +89,11 @@ class Mode_master:
         for _ in range(len(self.segments_list)):
             self.waitEndOfBlockage.append(False)
 
+    def initiate_segments(self):
+        segment_h00 = Segment.Segment("segment_h00",self.listener, self.leds , self.matrix_general.segment_values[0])
+        self.segments_list.append(segment_h00)
+        self.segments_names_to_index["segment_h00"]=0
+
     def change_configuration(self):
         last_configuration = self.activ_configuration
         while (last_configuration==self.activ_configuration):
@@ -99,9 +106,23 @@ class Mode_master:
         self.segments_list[0].block()
         self.waitEndOfBlockage[0] = True
         
-    def process_and_obey_msg(self,message):
-        if (message == "Activité aclool"):
-            self.force_alcool_randomer()
-        if(message=="SHOOOOOOOOOOT"):
-            self.segments_list[0].modes[self.segments_list[0].activ_mode].activate()
+    def obey_order(self,order):
+        splited_order = order.plit(":")
+        category = splited_order[0]
+        
+        if (category == "block"):
+            segment_name = splited_order[1]
+            self.segments_list[self.segments_names_to_index[segment_name]].block()
+            print("On bloque le segment "+segment_name)
+
+        if (category == "unblock"):
+            segment_name = splited_order[1]
+            self.segments_list[self.segments_names_to_index[segment_name]].unBlock()
+            print("On débloque le segment "+segment_name)
+
+        if (category == "change"):
+            segment_name = splited_order[1]
+            new_mode = splited_order[2]
+            self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode)
+            print("On change le segment "+segment_name+" pour le mode "+new_mode)
             

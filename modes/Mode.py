@@ -3,6 +3,7 @@ import calculations.rgb_hsv as RGB_HSV
 class Mode:
 
     listener = None
+    white = RGB_HSV.fromHSV_toRGB(0,0,1.0)
 
     def __init__(self , listener , leds , rgb_list):
         if(self.listener==None):
@@ -13,7 +14,9 @@ class Mode:
         self.leds     = leds
         
         self.nb_of_leds = len(rgb_list)
-        self.white = RGB_HSV.fromHSV_toRGB(0,0,1.0)
+
+        self.isActiv = False
+
 
     def smooth(self , ratio_new , led_index , new_color):
         old_col=self.leds[led_index]
@@ -37,3 +40,9 @@ class Mode:
 
     def update(self):
         pass
+
+    def terminate(self):
+        self.isActiv = False
+
+    def start(self):
+        self.isActiv = False

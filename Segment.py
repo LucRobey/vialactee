@@ -32,11 +32,11 @@ class Segment:
                       Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.rgb_list),
                       Alcool_randomer.Alcool_randomer(self.listener , self.leds , self.rgb_list)]
         
-        self.modes_names = ["Rainbow_mode",
-                            "Bary_rainbow_mode",
-                            "Middle_bar_mode",
-                            "Shining_stars_mode",
-                            "Alcool_randomer"]
+        self.modes_names = ["Rainbow",
+                            "Bary_rainbow",
+                            "Middle_bar",
+                            "Shining_stars",
+                            "Shot"]
         self.activ_mode = 0
 
 
@@ -46,19 +46,16 @@ class Segment:
 
     def update(self):
         
-        self.modes[self.activ_mode].update()
+        #sécurité, enlevable
+        if(self.modes[self.activ_mode].isActiv):
+            self.modes[self.activ_mode].update()
+        else:
+            print("erreur, on update un mode qui n'a pas été start")
         
         self.fuse_rgb_list("Priority")
-        print("fused" , self.fused_list)
-        
         self.update_leds()
         
         
-        if(self.isBlocked):
-            if(self.modes[self.activ_mode].hasEnded):
-                self.isBlocked = False
-
-
     def fuse_rgb_list(self, fusion_type):
         if fusion_type == "Priority":
             print(len(self.global_rgb_list),len(self.fused_list) )
@@ -70,18 +67,20 @@ class Segment:
 
 
     def change_mode(self , mode_name):
-        #mode_name="Alcool_randomer"
+        #On terminate l'ancien mode
+        self.modes[self.activ_mode].terminate()
         for mode_index in range(len(self.modes)):
             if (self.modes_names[mode_index]==mode_name):
+                # On change l'index et on start
                 self.activ_mode=mode_index
+                self.modes[self.activ_mode].start()
                 print("le segment ",self.name, " change de mode pour ", mode_name)
                 
     def get_current_mode(self):
         return self.modes_names[self.activ_mode]
-    
-    def prepare_for_alcool_randomer(self):
-        self.change_mode("Alcool_randomer")
-
-        
+         
     def block(self):
         self.isBlocked = True
+
+    def unBlock(self):
+        self.isBlocked = False
