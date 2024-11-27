@@ -12,9 +12,9 @@ class Listener:
     SAMPLING_FREQUENCY = 44100
     sampling_period_us = 1000000 / SAMPLING_FREQUENCY
     
-    p = pyaudio.PyAudio()
-    input_device_index = 2  # Update this to the correct device index
-    stream = p.open(format=FORMAT, channels=CHANNELS, rate=SAMPLING_FREQUENCY, input=True, input_device_index=input_device_index, frames_per_buffer=SAMPLES)
+    # p = pyaudio.PyAudio()
+    # input_device_index = 2  # Update this to the correct device index
+    # stream = p.open(format=FORMAT, channels=CHANNELS, rate=SAMPLING_FREQUENCY, input=True, input_device_index=input_device_index, frames_per_buffer=SAMPLES)
 
     
     
@@ -29,6 +29,7 @@ class Listener:
         self.build_band_peaks()
 
     def update(self):
+        return
         success = self.listen()
         if (success):
             self.apply_fft()
