@@ -45,10 +45,12 @@ class Segment:
             self.leds[led_index]=self.fused_list[led_index]
 
     def update(self):
-
+        
         self.modes[self.activ_mode].update()
-        print("rgb " ,self.global_rgb_list)
+        
         self.fuse_rgb_list("Priority")
+        print("fused" , self.fused_list)
+        
         self.update_leds()
         
         
@@ -59,8 +61,9 @@ class Segment:
 
     def fuse_rgb_list(self, fusion_type):
         if fusion_type == "Priority":
-            for led_index in range(len(self.fused_list)):
-                self.fused_list[led_index] = self.rgb_list[led_index]
+            print(len(self.global_rgb_list),len(self.fused_list) )
+            for led_index in range(len(self.global_rgb_list)):
+                self.fused_list[led_index] = self.global_rgb_list[led_index]
 
 
     def change_mode(self , mode_name):

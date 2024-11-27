@@ -52,9 +52,10 @@ class Mode_master:
             self.process_and_obey_msg(message_received)
         
         self.matrix_general.update()
-        print(self.matrix_general.segment_values[0])
+        
         for seg_index in range(len(self.segments_list)):
-            
+            print("matrix" , self.matrix_general.segment_values[0])
+            self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
             self.segments_list[seg_index].update()
             if ( self.waitEndOfBlockage[seg_index] ):
                 if ( not self.segments_list[seg_index].isBlocked ):
