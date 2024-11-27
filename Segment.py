@@ -23,6 +23,8 @@ class Segment:
             self.rgb_list.append((0,0,0))
             self.fused_list.append((0,0,0))
         self.global_rgb_list = global_rgb
+        
+        self.isBlocked = False
 
         self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.rgb_list),
                       Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.rgb_list),
@@ -47,19 +49,32 @@ class Segment:
         self.modes[self.activ_mode].update()
         self.fuse_rgb_list("Priority")
         self.update_leds()
+        
+        
+        if(self.isBlocked):
+            if(self.modes[self.activ_mode].hasEnded):
+                self.isBlocked = False
 
 
     def fuse_rgb_list(self, fusion_type):
         if fusion_type == "Priority":
             for led_index in range(len(self.fused_list)):
-            #    self.fused_list[led_index] = self.global_rgb_list[led_index]
-            #else :
                 self.fused_list[led_index] = self.rgb_list[led_index]
 
 
     def change_mode(self , mode_name):
-        mode_name="Alcool_randomer"
+        #mode_name="Alcool_randomer"
         for mode_index in range(len(self.modes)):
             if (self.modes_names[mode_index]==mode_name):
                 self.activ_mode=mode_index
                 print("le segment ",self.name, " change de mode pour ", mode_name)
+                
+    def get_current_mode(self):
+        return self.modes_names[self.activ_mode]
+    
+    def prepare_for_alcool_randomer(self):
+        self.change_mode("Alcool_randomer")
+
+        
+    def block(self):
+        self.isBlocked = True

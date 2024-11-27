@@ -8,15 +8,16 @@ class Alcool_randomer(Mode.Mode):
     def __init__(self , listener , leds , rgb_list):
         super().__init__(listener , leds , rgb_list)
 
-        self.begining_speed = self.nb_of_leds/80
+        self.begining_speed = self.nb_of_leds/40
         self.end_of_phase_one_speed = 4 * self.begining_speed
 
         self.activated = False
+        self.hasEnded = False
         self.pos_int = int(self.nb_of_leds/2)
         self.pos_float = float(int(self.nb_of_leds/2))
         self.speed = 0
         self.direction = 1
-        self.activate()
+        
 
 
     def update(self):
@@ -32,26 +33,33 @@ class Alcool_randomer(Mode.Mode):
                 self.speed=0
             elif(self.phase==5):
                 self.speed=0
+            elif(self.phase==6):
+                self.speed=0
                 self.activated = False
+                self.hasEnded = True
             self.moove_ball()
 
         self.fade_to_black(0.4)
-        
         self.color_head()
         
         
     def activate(self):
 
         self.activated = True
-        self.time_to_spin = random.randint(15,30)
+        self.hasEnded = False
+        self.time_to_spin = random.randint(15,20)
         self.direction =  -1 if random.randint(0,1)==0 else 1
-        self.speed = 1
+        self.speed = self.begining_speed
         self.last_moove = 0
+        
+        self.pos_int = int(self.nb_of_leds/2)
+        self.pos_float = float(int(self.nb_of_leds/2))
         
         self.first_phase_duration = random.randint(2,int(0.4*self.time_to_spin))
         self.second_phase_duration = random.randint(2,int(0.33*self.time_to_spin))
         self.third_phase_duration = self.time_to_spin - self.first_phase_duration - self.second_phase_duration
         self.fourth_phase_duration = 1
+        self.fifth_phase_duration = 5
 
         self.phase = 1
         self.starting_time = time.time()
@@ -61,6 +69,7 @@ class Alcool_randomer(Mode.Mode):
         self.second_phase_end_time =  self.first_phase_duration + self.second_phase_duration
         self.third_phase_end_time  =  self.first_phase_duration + self.second_phase_duration + self.third_phase_duration
         self.fourth_phase_end_time = self.third_phase_end_time + self.fourth_phase_duration
+        self.fifth_phase_end_time = self.fourth_phase_end_time + self.fifth_phase_duration
 
     def check_phase(self):
         new_time = time.time()
@@ -69,7 +78,10 @@ class Alcool_randomer(Mode.Mode):
             if (self.current_time > self.second_phase_end_time ):
                 if (self.current_time > self.third_phase_end_time ): 
                     if(self.current_time > self.fourth_phase_end_time):
-                        self.phase = 5
+                        if(self.current_time > self.fifth_phase_end_time):
+                            self.phase = 6
+                        else:
+                            self.phase = 5
                     else:
                         self.phase = 4
                         if(self.last_moove==0):
@@ -90,8 +102,14 @@ class Alcool_randomer(Mode.Mode):
         self.pos_int = int(self.pos_float)
 
         if(self.phase==5):
-            self.pos_float+=self.last_moove
-            self.pos_int=int(self.pos_float)
+            self.pos_float += self.last_moove
+            self.pos_int = int(self.pos_float)
+            
+            if( self.pos_int > self.nb_of_leds-1):
+                self.pos_int = self.nb_of_leds-1
+            if( self.pos_int < 0):
+                self.pos_int = 0
+ 
             
     def color_head(self):
         self.rgb_list[self.pos_int]=self.white
