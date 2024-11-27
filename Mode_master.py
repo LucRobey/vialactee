@@ -39,9 +39,9 @@ class Mode_master:
         self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
         self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
         
-        print(self.matrix_general.segment_values)
+        print(self.matrix_general.get_segments())
 
-        self.segments_list.append(Segment.Segment("segment1",self.listener, self.leds , self.matrix_general.segment_values))
+        self.segments_list.append(Segment.Segment("segment1",self.listener, self.leds , self.matrix_general.segment_values[0]))
 
         self.initiate_configuration()
         
@@ -51,14 +51,13 @@ class Mode_master:
         if(message_received):
             self.process_and_obey_msg(message_received)
         
-        #self.matrix_general.update()
+        self.matrix_general.update()
+        print(self.matrix_general.segment_values[0])
         for seg_index in range(len(self.segments_list)):
             
             self.segments_list[seg_index].update()
             if ( self.waitEndOfBlockage[seg_index] ):
-                print("on attend plus")
                 if ( not self.segments_list[seg_index].isBlocked ):
-                    print("on devrait changer de mode")
                     self.waitEndOfBlockage[seg_index] = False
                     self.segments_list[seg_index].change_mode("Rainbow_mode")
 

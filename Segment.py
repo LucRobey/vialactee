@@ -47,6 +47,7 @@ class Segment:
     def update(self):
 
         self.modes[self.activ_mode].update()
+        print("rgb " ,self.global_rgb_list)
         self.fuse_rgb_list("Priority")
         self.update_leds()
         

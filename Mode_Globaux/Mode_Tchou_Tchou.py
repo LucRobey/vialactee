@@ -57,7 +57,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         possible_directions = self.get_list_possible_direction(
             self.train_head_coordinate, self.matrix
         )
-        print(possible_directions)
+        
   
         if possible_directions:
             next_head = random.choice(possible_directions)
@@ -110,8 +110,11 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         """
         Updates the matrix to reflect the train's current position.
         """
+        self.matrix_light = [[[0, 0, 0] for _ in range(len(row))] for row in self.matrix]
         for coord in self.train_coordinates:
             self.matrix_light[coord[0]][coord[1]] = self.train_color
+            
+        
 
     def update(self):
         """

@@ -29,6 +29,7 @@ class Matrix_General :
             [self.matrix_light[x][y] for x, y in segment]
             for segment in self.segments_location.segment_coords
         ]
+        
 
     def get_segments(self):
         return self.segments_location.segment_coords  , self.segment_values
