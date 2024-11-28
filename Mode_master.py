@@ -81,7 +81,7 @@ class Mode_master:
 
     def initiate_configuration(self):
         self.activ_configuration = random.randint(0,len(self.configurations)-1)
-        print("configuration numéro :" , self.activ_configuration)
+        print("(MM) initialisation : configuration numéro :" , self.activ_configuration)
         self.update_segments_modes()
         self.next_change_of_configuration_time = time.time() + self.configuration_duration
         
@@ -113,16 +113,23 @@ class Mode_master:
         if (category == "block"):
             segment_name = splited_order[1]
             self.segments_list[self.segments_names_to_index[segment_name]].block()
-            print("On bloque le segment "+segment_name)
+            print("(MM) On bloque le segment "+segment_name)
 
         if (category == "unblock"):
             segment_name = splited_order[1]
             self.segments_list[self.segments_names_to_index[segment_name]].unBlock()
-            print("On débloque le segment "+segment_name)
+            print("(MM) On débloque le segment "+segment_name)
 
         if (category == "change"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
             self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode)
-            print("On change le segment "+segment_name+" pour le mode "+new_mode)
+            print("(MM) On change le segment "+segment_name+" pour le mode "+new_mode)
+
+        if (category == "force"):
+            segment_name = splited_order[1]
+            new_mode = splited_order[2]
+            self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode)
+            print("(MM) On FORCE le segment "+segment_name+" pour le mode "+new_mode)
+
             
