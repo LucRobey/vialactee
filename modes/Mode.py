@@ -45,4 +45,4 @@ class Mode:
         self.isActiv = False
 
     def start(self):
-        self.isActiv = False
+        self.isActiv = True

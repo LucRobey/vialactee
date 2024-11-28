@@ -13,7 +13,7 @@ class Connector:
         self.current_page = "Main"
         self.list_of_pages = ["Main","Playlists","Configuration","Shot"]
 
-        self.list_of_segments = ["segment_h00"]
+        self.list_of_segments = ["segment h00"]
 
     def update(self):
         message = self.listen()
@@ -22,20 +22,27 @@ class Connector:
             print("(C) message reçu : ",message)
             splited_message = message.split(":")
             category = splited_message[0]
+            res_of_the_message = message[len(splited_message[0])+1:]
 
             if (category == "chgpage"):
-                order = self.change_page(splited_message[1])
+                order = self.change_page(res_of_the_message)
 
             elif (category == "chgmode"):
-                order = self.change_mode(message[len(splited_message)+1:])
+                order = self.change_mode(res_of_the_message)
 
             elif (category == "chgconf"):
-                order = self.change_conf(message[len(splited_message)+1:])
+                order = self.change_conf(res_of_the_message)
 
             elif (category == "lockseg"):
                 segment = splited_message[1]
                 lock_unlock = splited_message[2]
                 order = self.block_seg(segment,lock_unlock)
+                
+            elif (category == "special"):
+                order self.handle_special()
+                
+            else:
+                print("(C) mauvaise premiere catégorie")
 
             print("(C)          state : " , self.current_page)
             print("(C)          order : " , order)
@@ -69,13 +76,13 @@ class Connector:
             self.current_page = page
             self.check_current_page
             if (self.current_page == "Shot"):
-                order.append("force:segment_h00:Shot")
-                order.append("block:segment_h00")
+                order.append("force:Segment h00:Shot")
+                order.append("block:Segment h00")
         elif (category == "leave"):
             self.current_page = "Main"
             if(page == "Shot"):
-                order.append("unblock:segment_h00")
-                order.append("force:segment_h00:Rainbow")
+                order.append("unblock:Segment h00")
+                order.append("force:Segment h00:Rainbow")
         else :
             print("(C) ON ENTRE DANS AUCUNE CATEGORIE!")
 
@@ -108,3 +115,7 @@ class Connector:
             order.append("unblock:"+segment)
         else:
             print("(C) ON N EST NI LOCK NI UNLOCK")
+        return order
+    
+    def handle_special(self , message):
+        return []

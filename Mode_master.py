@@ -53,11 +53,11 @@ class Mode_master:
             for order in orders:
                 self.obey_order(order)
         
-        self.matrix_general.update()
+        #self.matrix_general.update()
         
         for seg_index in range(len(self.segments_list)):
-            print("matrix" , self.matrix_general.segment_values[0])
-            self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
+            #print("matrix" , self.matrix_general.segment_values[0])
+            #self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
             self.segments_list[seg_index].update()
             if ( self.waitEndOfBlockage[seg_index] ):
                 if ( not self.segments_list[seg_index].isBlocked ):
@@ -76,7 +76,9 @@ class Mode_master:
         for segment in self.segments_list:
             if (not segment.isBlocked):
                 if(self.configurations[self.activ_configuration]!=segment.get_current_mode()):
-                    segment.change_mode(self.configurations[self.activ_configuration])
+                    print("self.configurations = ",self.configurations)
+                    print("self.configurations[self.activ_configuration] = ",self.configurations[self.activ_configuration])
+                    segment.change_mode(self.configurations[self.activ_configuration]["config"])
                     
 
     def initiate_configuration(self):
@@ -90,9 +92,9 @@ class Mode_master:
             self.waitEndOfBlockage.append(False)
 
     def initiate_segments(self):
-        segment_h00 = Segment.Segment("segment_h00",self.listener, self.leds , self.matrix_general.segment_values[0])
+        segment_h00 = Segment.Segment("Segment h00",self.listener, self.leds , self.matrix_general.segment_values[0],"horizontal",True)
         self.segments_list.append(segment_h00)
-        self.segments_names_to_index["segment_h00"]=0
+        self.segments_names_to_index["Segment h00"]=0
 
     def change_configuration(self):
         last_configuration = self.activ_configuration
@@ -107,29 +109,33 @@ class Mode_master:
         self.waitEndOfBlockage[0] = True
         
     def obey_order(self,order):
-        splited_order = order.plit(":")
+        splited_order = order.split(":")
         category = splited_order[0]
         
         if (category == "block"):
             segment_name = splited_order[1]
-            self.segments_list[self.segments_names_to_index[segment_name]].block()
             print("(MM) On bloque le segment "+segment_name)
+            self.segments_list[self.segments_names_to_index[segment_name]].block()
+            
 
         if (category == "unblock"):
             segment_name = splited_order[1]
+            print("(MM) On  débloque le segment "+segment_name)
             self.segments_list[self.segments_names_to_index[segment_name]].unBlock()
-            print("(MM) On débloque le segment "+segment_name)
+            
 
         if (category == "change"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
+            print("(MM) On essaie de changer le segment "+segment_name+" pour le mode "+new_mode)
             self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode)
-            print("(MM) On change le segment "+segment_name+" pour le mode "+new_mode)
+            
 
         if (category == "force"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
-            self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode)
             print("(MM) On FORCE le segment "+segment_name+" pour le mode "+new_mode)
+            self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode)
+            
 
             
