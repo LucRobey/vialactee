@@ -21,7 +21,9 @@ class Mode_master:
     segments_list = []
     segments_names_to_index = {}
     activ_configuration = 0
-    configurations = []
+    configurations = {}
+    playlists = []
+    blocked_playlists = []
     configuration_duration = 600000
     next_change_of_configuration_time = 0 
     current_time = time.time()
@@ -70,36 +72,36 @@ class Mode_master:
 
     def load_configurations(self):
         self.data_reader = Data_reader.Data_reader()
-        self.configurations = self.data_reader.configurations
+        self.configurations , self.playlists = self.data_reader.configurations
+        for _ in self.playlists:
+            self.blocked_playlists = False
 
-    def update_segments_modes(self):
+    def update_segments_modes(self , info_margin , showInfos):
         for segment in self.segments_list:
             if (not segment.isBlocked):
-                #if(self.configurations[self.activ_configuration]!=segment.get_current_mode()):
-                print("self.configurations = ",self.configurations)
-                print("self.configurations[self.activ_configuration] = ",self.configurations[self.activ_configuration])
-                segment.change_mode("Power bar")
+                if(showInfos):
+                    print(info_margin,"(MM) update_segments_modes : ",segment.name," non bloqué donc on le change")
+                segment.change_mode(self.activ_configuration["modes"][segment.name], info_margin+"   " , showInfos)
                     
 
-    def initiate_configuration(self):
-        self.activ_configuration = random.randint(0,len(self.configurations)-1)
-        print("(MM) initialisation : configuration numéro :" , self.activ_configuration)
-        self.update_segments_modes()
+    def initiate_configuration(self , info_margin , showInfos):
+        self.activ_configuration = self.activ_configuration = self.pick_a_random_conf(info_margin+"   " , showInfos)
+        self.update_segments_modes(info_margin , showInfos)
         self.next_change_of_configuration_time = time.time() + self.configuration_duration
+        if(showInfos):
+            print(info_margin + "(MM)   initiate_configuration()  :     next_change_of_conf_time = " + self.next_change_of_configuration_time)
+
         
-        self.waitEndOfBlockage = []
-        for _ in range(len(self.segments_list)):
-            self.waitEndOfBlockage.append(False)
 
     def initiate_segments(self):
         indexes = [i for i in range(173)]
         segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes, self.matrix_general.segment_values[0],"vertical",False)
         indexes = [i for i in range(173,173+48)]
-        segment_h32 = Segment.Segment("Segment h33",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        segment_h32 = Segment.Segment("Segment h32",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
         indexes = [i for i in range(173+48,173+48+48)]
-        segment_h31 = Segment.Segment("Segment h32",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        segment_h31 = Segment.Segment("Segment h31",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
         indexes = [i for i in range(173+48+48,173+48+48+47)]
-        segment_h30 = Segment.Segment("Segment h31",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        segment_h30 = Segment.Segment("Segment h30",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
         indexes = [i for i in range(173+48+48+47,173+48+48+47+173)]
         segment_v3 = Segment.Segment("Segment v3",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"vertical",False)
         indexes = [i for i in range(173+48+48+47+173,173+48+48+47+173+91)]
@@ -126,9 +128,9 @@ class Mode_master:
         self.segments_list.append(segment_h10)
         self.segments_list.append(segment_v1)
         self.segments_names_to_index["Segment v4"]=0
-        self.segments_names_to_index["Segment h33"]=1
-        self.segments_names_to_index["Segment h32"]=2
-        self.segments_names_to_index["Segment h31"]=3
+        self.segments_names_to_index["Segment h32"]=1
+        self.segments_names_to_index["Segment h31"]=2
+        self.segments_names_to_index["Segment h30"]=3
         self.segments_names_to_index["Segment v3"]=4
         self.segments_names_to_index["Segment h20"]=5
         self.segments_names_to_index["Segment h00"]=6
@@ -138,12 +140,37 @@ class Mode_master:
         self.segments_names_to_index["Segment v1"]=10
 
 
-    def change_configuration(self):
+    def change_configuration(self , info_margin , showInfos):
         last_configuration = self.activ_configuration
         while (last_configuration==self.activ_configuration):
-            self.activ_configuration = random.randint(0,len(self.configurations))
-        self.update_segments_modes()
+            self.activ_configuration = self.pick_a_random_conf( info_margin+"   " , showInfos)
+        self.update_segments_modes( info_margin , showInfos )
         self.next_change_of_configuration_time = self.current_time + self.configuration_duration
+        if(showInfos):
+            print(info_margin + "(MM)   change_configuration()  :     next_change_of_conf_time = " + self.next_change_of_configuration_time)
+
+    def pick_a_random_conf(self , info_margin , showInfos):
+        reachable_playlists = []
+        new_conf={}
+        for playlist_index in range(len(self.playlists)):
+            if (not self.blocked_playlists[playlist_index]) :
+                reachable_playlists.append(self.playlists[playlist_index])
+
+        random_playlist_index = random.randint(0,len(reachable_playlists)-1)
+        playlist_name = reachable_playlists[random_playlist_index]
+
+        new_conf["playlist"] = playlist_name
+        random_conf_index = random.randint(0,len(self.configurations[playlist_name])-1)
+        new_conf["index"] = random_conf_index
+
+        new_conf["name"] = self.configurations[playlist_name][random_conf_index]["name"]
+
+        new_conf["modes"] = self.configurations[playlist_name][random_conf_index]["modes"]
+
+        if(showInfos):
+            print(info_margin + "(MM)   pick_a_random_conf() :     conf = " + new_conf)
+        return new_conf
+
         
     def force_alcool_randomer(self):
         self.segments_list[0].prepare_for_alcool_randomer()

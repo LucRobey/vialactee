@@ -42,8 +42,12 @@ class Mode:
     def update(self):
         pass
 
-    def terminate(self):
+    def terminate(self , info_margin , showInfos):
         self.isActiv = False
+        if(showInfos):
+            print(info_margin + "(Mode)  on désactive le mode ")
 
-    def start(self):
+    def start(self , info_margin , showInfos):
         self.isActiv = True
+        if(showInfos):
+            print(info_margin + "(Mode)  on active le mode ")

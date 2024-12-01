@@ -103,19 +103,23 @@ class Segment:
         
 
 
-    def change_mode(self , mode_name):
+    def change_mode(self , mode_name , info_margin , showInfos):
         if(not self.isBlocked):
             #On terminate l'ancien mode
-            self.modes[self.activ_mode].terminate()
+            self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)
             for mode_index in range(len(self.modes)):
-                print(self.modes_names[mode_index],"  ",mode_name)
+                found_a_mode = False
                 if (self.modes_names[mode_index]==mode_name):
                     
                     # On change l'index et on start
                     self.activ_mode=mode_index
-                    self.modes[self.activ_mode].start()
-                    print("(S) le segment ",self.name, " change de mode pour ", mode_name)
+                    self.modes[self.activ_mode].start(info_margin+"   " , showInfos)
+                    if(showInfos):
+                        print(info_margin,"(S) ",self.name, " a changé de mode pour ", mode_name)
+                    found_a_mode = True
                     break
+            if (not found_a_mode):
+                print("ALERTE CE MODE :" , mode_name " n'existe pas pour " , self.name)
         else:
             print("(S) le "+self.name +" est bloqué et ne peut pas passer au "+mode_name)
 
