@@ -5,21 +5,22 @@ class Mode:
     listener = None
     white = RGB_HSV.fromHSV_toRGB(0,0,1.0)
 
-    def __init__(self , listener , leds , rgb_list):
+    def __init__(self , listener , leds , indexes , rgb_list):
         if(self.listener==None):
             self.listener = listener
             
         #rgb_list est la liste donnée au mode
         self.rgb_list = rgb_list
         self.leds     = leds
+        self.indexes = indexes
         
-        self.nb_of_leds = len(rgb_list)
+        self.nb_of_leds = len(indexes)
 
         self.isActiv = False
 
 
     def smooth(self , ratio_new , led_index , new_color):
-        old_col=self.leds[led_index]
+        old_col=self.leds[self.indexes[led_index]]
         mixed_color=((1-ratio_new)*old_col[0]+ratio_new*new_color[0] , (1-ratio_new)*old_col[1]+ratio_new*new_color[1] , (1-ratio_new)*old_col[2]+ratio_new*new_color[2])
         self.rgb_list[led_index]=mixed_color
 

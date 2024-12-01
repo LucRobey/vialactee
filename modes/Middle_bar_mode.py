@@ -4,12 +4,12 @@ import calculations.rgb_hsv as RGB_HSV
 
 class Middle_bar_mode(Mode.Mode):
 
-    def __init__(self , listener , leds , rgb_list):
-        super().__init__(listener , leds , rgb_list)
+    def __init__(self , listener , leds , indexes , rgb_list):
+        super().__init__(listener , leds , indexes , rgb_list)
 
         #we need to know if we have a middle or two
         if (self.nb_of_leds%2 == 0):
-            self.middle_index = [self.nb_of_leds/2 , self.nb_of_leds/2 +1]
+            self.middle_index = [int(self.nb_of_leds/2) , int(self.nb_of_leds/2) +1]
         else:
              self.middle_index = [int((self.nb_of_leds+1)/2),int((self.nb_of_leds+1)/2)]
         
@@ -20,7 +20,7 @@ class Middle_bar_mode(Mode.Mode):
         self.size = 0
 
         #we randomly choose a asserved_band to listen to and we choose the color accordingly
-        self.band_to_listen = random.randint(0,self.listener.nb_of_fft_band)
+        self.band_to_listen = random.randint(0,self.listener.nb_of_fft_band-1)
         hue = float(self.band_to_listen) / (self.listener.nb_of_fft_band - 1)
         self.color = RGB_HSV.fromHSV_toRGB(hue,1.0,1.0)
 
@@ -44,7 +44,7 @@ class Middle_bar_mode(Mode.Mode):
         show
         """
         #we color/decolor the leds starting from the middle(s)
-        self.smooth_segment(0.5 , self.middle_index[0]-(self.size-1) , self.middle_index[1]+(self.size-1) , self.color)
-        self.fade_to_black_segment(0.5 ,                      0             , self.middle_index[0]-(self.size-1))
-        self.fade_to_black_segment(0.5 , self.middle_index[1]+(self.size-1) ,        self.nb_of_leds-1          )
+        self.smooth_segment(0.5 , int(self.middle_index[0]-(self.size-1)) , int(self.middle_index[1]+(self.size-1)) , self.color)
+        self.fade_to_black_segment(0.5 ,                      0             , int(self.middle_index[0]-(self.size-1)))
+        self.fade_to_black_segment(0.5 , int(self.middle_index[1]+(self.size-1)) ,        self.nb_of_leds-1          )
             

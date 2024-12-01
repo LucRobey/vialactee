@@ -22,7 +22,7 @@ class Mode_master:
     segments_names_to_index = {}
     activ_configuration = 0
     configurations = []
-    configuration_duration = 60
+    configuration_duration = 600000
     next_change_of_configuration_time = 0 
     current_time = time.time()
 
@@ -32,7 +32,8 @@ class Mode_master:
 
         self.load_configurations()
 
-        self.leds = neopixel.NeoPixel(board.D18, 51, brightness=1)
+        self.leds = neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False)
+        self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)
 
         self.listener = Listener.Listener()
 
@@ -40,7 +41,7 @@ class Mode_master:
         self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
         self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
         
-        print(self.matrix_general.get_segments())
+        #print(self.matrix_general.get_segments())
 
         self.initiate_segments()
 
@@ -53,16 +54,15 @@ class Mode_master:
             for order in orders:
                 self.obey_order(order)
         
+        self.listener.update()
         #self.matrix_general.update()
         
         for seg_index in range(len(self.segments_list)):
             #print("matrix" , self.matrix_general.segment_values[0])
             #self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
             self.segments_list[seg_index].update()
-            if ( self.waitEndOfBlockage[seg_index] ):
-                if ( not self.segments_list[seg_index].isBlocked ):
-                    self.waitEndOfBlockage[seg_index] = False
-                    self.segments_list[seg_index].change_mode("Rainbow_mode")
+        self.leds.show()
+        self.leds2.show()
 
         self.current_time = time.time()
         if(self.current_time > self.next_change_of_configuration_time):
@@ -75,10 +75,10 @@ class Mode_master:
     def update_segments_modes(self):
         for segment in self.segments_list:
             if (not segment.isBlocked):
-                if(self.configurations[self.activ_configuration]!=segment.get_current_mode()):
-                    print("self.configurations = ",self.configurations)
-                    print("self.configurations[self.activ_configuration] = ",self.configurations[self.activ_configuration])
-                    segment.change_mode(self.configurations[self.activ_configuration]["config"])
+                #if(self.configurations[self.activ_configuration]!=segment.get_current_mode()):
+                print("self.configurations = ",self.configurations)
+                print("self.configurations[self.activ_configuration] = ",self.configurations[self.activ_configuration])
+                segment.change_mode("Power bar")
                     
 
     def initiate_configuration(self):
@@ -92,9 +92,51 @@ class Mode_master:
             self.waitEndOfBlockage.append(False)
 
     def initiate_segments(self):
-        segment_h00 = Segment.Segment("Segment h00",self.listener, self.leds , self.matrix_general.segment_values[0],"horizontal",True)
+        indexes = [i for i in range(173)]
+        segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes, self.matrix_general.segment_values[0],"vertical",False)
+        indexes = [i for i in range(173,173+48)]
+        segment_h32 = Segment.Segment("Segment h33",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        indexes = [i for i in range(173+48,173+48+48)]
+        segment_h31 = Segment.Segment("Segment h32",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        indexes = [i for i in range(173+48+48,173+48+48+47)]
+        segment_h30 = Segment.Segment("Segment h31",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        indexes = [i for i in range(173+48+48+47,173+48+48+47+173)]
+        segment_v3 = Segment.Segment("Segment v3",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"vertical",False)
+        indexes = [i for i in range(173+48+48+47+173,173+48+48+47+173+91)]
+        segment_h20 = Segment.Segment("Segment h20",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",True)
+        indexes = [i for i in range(173+48+48+47+173+91,173+48+48+47+173+91+205)]
+        segment_h00 = Segment.Segment("Segment h00",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",True)
+        indexes = [i for i in range(0,173)]
+        segment_v2 = Segment.Segment("Segment v2",self.listener, self.leds2 , indexes,self.matrix_general.segment_values[0],"vertical",False)
+        indexes = [i for i in range(173,173+87)]
+        segment_h11 = Segment.Segment("Segment h11",self.listener, self.leds2 , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        indexes = [i for i in range(173+87,173+87+86)]
+        segment_h10 = Segment.Segment("Segment h10",self.listener, self.leds2 , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        indexes = [i for i in range(173+87+86,173+87+86+173)]
+        segment_v1 = Segment.Segment("Segment v1",self.listener, self.leds2 , indexes,self.matrix_general.segment_values[0],"vertical",False)
+        self.segments_list.append(segment_v4)
+        self.segments_list.append(segment_h32)
+        self.segments_list.append(segment_h31)
+        self.segments_list.append(segment_h30)
+        self.segments_list.append(segment_v3)
+        self.segments_list.append(segment_h20)
         self.segments_list.append(segment_h00)
-        self.segments_names_to_index["Segment h00"]=0
+        self.segments_list.append(segment_v2)
+        self.segments_list.append(segment_h11)
+        self.segments_list.append(segment_h10)
+        self.segments_list.append(segment_v1)
+        self.segments_names_to_index["Segment v4"]=0
+        self.segments_names_to_index["Segment h33"]=1
+        self.segments_names_to_index["Segment h32"]=2
+        self.segments_names_to_index["Segment h31"]=3
+        self.segments_names_to_index["Segment v3"]=4
+        self.segments_names_to_index["Segment h20"]=5
+        self.segments_names_to_index["Segment h00"]=6
+        self.segments_names_to_index["Segment v2"]=7
+        self.segments_names_to_index["Segment h11"]=8
+        self.segments_names_to_index["Segment h10"]=9
+        self.segments_names_to_index["Segment v1"]=10
+
 
     def change_configuration(self):
         last_configuration = self.activ_configuration
@@ -118,24 +160,31 @@ class Mode_master:
             self.segments_list[self.segments_names_to_index[segment_name]].block()
             
 
-        if (category == "unblock"):
+        elif (category == "unblock"):
             segment_name = splited_order[1]
             print("(MM) On  débloque le segment "+segment_name)
             self.segments_list[self.segments_names_to_index[segment_name]].unBlock()
             
 
-        if (category == "change"):
+        elif (category == "change"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
             print("(MM) On essaie de changer le segment "+segment_name+" pour le mode "+new_mode)
             self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode)
             
 
-        if (category == "force"):
+        elif (category == "force"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
             print("(MM) On FORCE le segment "+segment_name+" pour le mode "+new_mode)
             self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode)
+            
+        elif (category == "special"):
+            print("(MM) On lance le shot ")
+            self.segments_list[self.segments_names_to_index["Segment h20"]].modes[4].activate()
+            self.segments_list[self.segments_names_to_index["Segment h00"]].modes[4].activate()
+ 
+            
             
 
             

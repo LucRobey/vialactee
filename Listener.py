@@ -12,9 +12,9 @@ class Listener:
     SAMPLING_FREQUENCY = 44100
     sampling_period_us = 1000000 / SAMPLING_FREQUENCY
     
-    # p = pyaudio.PyAudio()
-    # input_device_index = 2  # Update this to the correct device index
-    # stream = p.open(format=FORMAT, channels=CHANNELS, rate=SAMPLING_FREQUENCY, input=True, input_device_index=input_device_index, frames_per_buffer=SAMPLES)
+    p = pyaudio.PyAudio()
+    input_device_index = 2  # Update this to the correct device index
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=SAMPLING_FREQUENCY, input=True, input_device_index=input_device_index, frames_per_buffer=SAMPLES)
 
     
     
@@ -23,13 +23,13 @@ class Listener:
         self.samples = []           #samples we listen os size SAMPLES
         self.power = 1              #global power  (not used yet)
         self.sensi = 0.5            #global sensi   (not used yet)
+        
 
         self.build_asserved_fft_lists()
         self.build_asserved_total_power()
         self.build_band_peaks()
 
     def update(self):
-        return
         success = self.listen()
         if (success):
             self.apply_fft()
@@ -37,6 +37,9 @@ class Listener:
             self.update_band_means_and_smoothed_values()
             self.asserv_total_power()
             self.detect_band_peaks()
+            
+        else:
+            print("on ecoute rien")
         
     def listen(self):
         try:
@@ -144,10 +147,8 @@ class Listener:
                 self.peak_times[band_index] = time.time()
             else :
                 self.band_peak[band_index] = 0
-        print(self.band_peak)
         self.peak_sensitivity *= 1+(total-1)*0.0001
             
-        print(self.peak_sensitivity)
 
     def build_asserved_total_power(self):
         self.smoothed_total_power = 0
@@ -193,7 +194,6 @@ class Listener:
             self.segm_fft_indexs.append(self.segm_fft_indexs[-1]*A)
         for band_index in range(1,self.nb_of_fft_band):
             self.segm_fft_indexs[band_index]=int(self.segm_fft_indexs[band_index])
-        print("indexes = ", self.segm_fft_indexs)
 
         for _ in range(self.nb_of_fft_band):
             self.fft_band_values.append(0.0)

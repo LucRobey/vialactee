@@ -5,8 +5,8 @@ import numpy as np
 
 class Bary_rainbow_mode(Mode.Mode):
 
-    def __init__(self , listener , leds , rgb_list):
-        super().__init__(listener , leds , rgb_list)
+    def __init__(self , listener , leds , indexes , rgb_list):
+        super().__init__(listener , leds , indexes , rgb_list)
         
         if (self.nb_of_leds%2 == 0):
             self.hasAMiddle = False
@@ -27,14 +27,13 @@ class Bary_rainbow_mode(Mode.Mode):
         fft_band_values = self.listener.smoothed_fft_band_values
         
         a = 0
-        b = 0
+        b = 0.0001
         
         for band_index in range(self.listener.nb_of_fft_band):
             a += fft_band_values[band_index] * band_index
             b += fft_band_values[band_index]
             
         middle_hue = np.min([(float(a)/b) / (self.listener.nb_of_fft_band-1),0.84])
-
         """
         show
         """

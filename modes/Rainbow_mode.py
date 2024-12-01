@@ -3,8 +3,8 @@ import calculations.rgb_hsv as RGB_HSV
 
 class Rainbow_mode(Mode.Mode):
     
-    def __init__(self , listener , leds , rgb_list):
-        super().__init__(listener , leds , rgb_list)
+    def __init__(self , listener , leds , indexes , rgb_list):
+        super().__init__(listener , leds , indexes , rgb_list)
 
         #Used to calculate the hue and the intensity of each pixel
         self.delta_margin=float(self.nb_of_leds)/(self.listener.nb_of_fft_band-1)
@@ -24,7 +24,6 @@ class Rainbow_mode(Mode.Mode):
             intensity = 0.1 + 0.9 *(position_coef * self.listener.asserved_fft_band[low_margin] + (1-position_coef) * self.listener.asserved_fft_band[high_margin])
         
             rgb_color = RGB_HSV.fromHSV_toRGB(hue,1.0,intensity)
-
             super().smooth(0.5,led_index,rgb_color)
 
 

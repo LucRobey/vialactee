@@ -14,8 +14,8 @@ class Shining_stars_mode(Mode.Mode):
     # threshold to activate each band (with listener.asserv_segm_fft)
     threshold = 0.6
 
-    def __init__(self , listener , leds , rgb_list):
-        super().__init__(listener , leds , rgb_list)
+    def __init__(self , listener , leds , indexes , rgb_list):
+        super().__init__(listener , leds , indexes , rgb_list)
 
         self.nb_of_fft_band = listener.nb_of_fft_band
 
@@ -37,7 +37,6 @@ class Shining_stars_mode(Mode.Mode):
         for band_index in range(self.nb_of_fft_band):
             if self.listener.band_peak[band_index] > 0:
                 self.lightUp(band_index)
-                print(band_index)
 
 
     

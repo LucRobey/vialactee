@@ -5,8 +5,8 @@ import random
 
 class Alcool_randomer(Mode.Mode):
 
-    def __init__(self , listener , leds , rgb_list):
-        super().__init__(listener , leds , rgb_list)
+    def __init__(self , listener , leds , indexes , rgb_list):
+        super().__init__(listener , leds , indexes , rgb_list)
 
         self.begining_speed = self.nb_of_leds/40
         self.end_of_phase_one_speed = 4 * self.begining_speed
@@ -28,7 +28,7 @@ class Alcool_randomer(Mode.Mode):
             elif(self.phase==2):
                 pass
             elif(self.phase==3):
-                self.speed = self.end_of_phase_one_speed - (float(self.current_time-self.second_phase_end_time)/(self.third_phase_end_time-self.second_phase_end_time)) * self.end_of_phase_one_speed
+                self.speed = self.end_of_phase_one_speed * (1 - (float(self.current_time-self.second_phase_end_time)/(self.third_phase_end_time-self.second_phase_end_time)))
             elif(self.phase==4):
                 self.speed=0
             elif(self.phase==5):
@@ -38,12 +38,12 @@ class Alcool_randomer(Mode.Mode):
                 self.activated = False
                 self.hasEnded = True
             self.moove_ball()
-
         self.fade_to_black(0.4)
         self.color_head()
         
         
     def activate(self):
+        print("On est activé")
 
         self.activated = True
         self.hasEnded = False

@@ -1,6 +1,7 @@
 import modes.Mode as Mode
 import modes.Rainbow_mode as Rainbow_mode
 import modes.Middle_bar_mode as Middle_bar_mode
+import modes.Power_bar_mode as Power_bar_mode
 import modes.Bary_rainbow_mode as Bary_rainbow_mode
 import modes.Shining_stars_mode as Shining_stars_mode
 import modes.Alcool_randomer as Alcool_randomer
@@ -11,15 +12,16 @@ class Segment:
     
     listener = None
 
-    def __init__(self , name ,listener , leds , global_rgb , orientation , alcool):
+    def __init__(self , name ,listener , leds , indexes , global_rgb , orientation , alcool):
         self.name = name
         self.leds = leds
-        self.nb_of_leds=len(self.leds)
+        self.indexes = indexes
+        self.nb_of_leds=len(self.indexes)
         if(self.listener==None):
             self.listener = listener
         self.fused_list = []
         self.rgb_list = []
-        for _ in range((len(leds))):
+        for _ in range((len(indexes))):
             self.rgb_list.append((0,0,0))
             self.fused_list.append((0,0,0))
         self.global_rgb_list = global_rgb
@@ -36,45 +38,52 @@ class Segment:
 
 
 
+
     def update_leds(self):
         for led_index in range(self.nb_of_leds):
-            self.leds[led_index]=self.fused_list[led_index]
+            self.leds[self.indexes[led_index]]=self.fused_list[led_index]
+        
 
     def update(self):
         
         #sécurité, enlevable
-        if(self.modes[self.activ_mode].isActiv):
-            self.modes[self.activ_mode].update()
-        else:
-            print("(S) erreur, on update un mode qui n'a pas été start")
+        #if(self.modes[self.activ_mode].isActiv):
+        self.modes[self.activ_mode].update()
+        #else:
+        #    print("(S) erreur, on update un mode qui n'a pas été start")
         
         self.fuse_rgb_list("Priority")
-        self.update_leds()
+        #self.update_leds()
+        
 
     def initiate_modes(self , orientation , alcool):
         if(orientation == "horizontal"):
-            self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.rgb_list),
-                        Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.rgb_list),
-                        Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.rgb_list),
-                        Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.rgb_list),]
+            self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        ]
         
             self.modes_names = ["Rainbow",
-                                "Bary_rainbow",
+                                "Bary rainbow",
                                 "Middle bar",
-                                "Shining stars",]
+                                "Shining stars",
+                                ]
         else:
-            self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.rgb_list),
-                        Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.rgb_list),
-                        Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.rgb_list),
-                        Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.rgb_list),]
+            self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Power_bar_mode.Power_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list)]
         
             self.modes_names = ["Rainbow",
-                                "Bary_rainbow",
+                                "Bary rainbow",
                                 "Middle bar",
-                                "Shining stars",]
+                                "Shining stars",
+                                "Power bar"]
         
         if (alcool):
-            self.modes.append(Alcool_randomer.Alcool_randomer(self.listener , self.leds , self.rgb_list))
+            self.modes.append(Alcool_randomer.Alcool_randomer(self.listener , self.leds , self.indexes , self.rgb_list))
             self.modes_names.append("Shot")
         
     def fuse_rgb_list(self, fusion_type):
@@ -87,8 +96,11 @@ class Segment:
                 else:
                     self.fused_list[led_index] = self.rgb_list[led_index]
         """
-        for led_index in range(len(self.global_rgb_list)):
-            self.fused_list[led_index] = self.rgb_list[led_index]
+        for led_index in range(self.nb_of_leds):
+            self.leds[self.indexes[led_index]] = self.rgb_list[led_index]
+
+        #self.leds[self.indexes] = self.rgb_list
+        
 
 
     def change_mode(self , mode_name):

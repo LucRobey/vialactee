@@ -5,8 +5,8 @@ import numpy as np
 
 class Power_bar_mode(Mode.Mode):
 
-    def __init__(self , listener , leds , rgb_list):
-        super().__init__(listener , leds , rgb_list)
+    def __init__(self , listener , leds , indexes , rgb_list):
+        super().__init__(listener , leds , indexes , rgb_list)
 
         #height of the color bar
         self.power_height = 0
@@ -39,19 +39,21 @@ class Power_bar_mode(Mode.Mode):
         else:
             #we bring the white dot down
             self.white_dot_height -= self.white_speed
+            if(self.white_dot_height<0):
+                self.white_dot_height=0
 
         """
         show
         """
         #we color the bar
-        for led_index in range(self.power_height+1):
+        for led_index in range(int(self.power_height+1)):
                 super().smooth(0.5,led_index,self.color)
 
         #we color the white dot
-        super().smooth(0.5,self.white_dot_height,self.white)
+        super().smooth(0.5,int(self.white_dot_height),self.white)
 
         #we smoothly brings the rest to zero
-        for led_index in range(self.white_dot_height+1,self.nb_of_leds):
+        for led_index in range(int(self.white_dot_height+1),self.nb_of_leds):
                 super().smooth(0.5,led_index,(0,0,0))
         
 

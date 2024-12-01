@@ -13,7 +13,9 @@ class Connector:
         self.current_page = "Main"
         self.list_of_pages = ["Main","Playlists","Configuration","Shot"]
 
-        self.list_of_segments = ["segment h00"]
+        self.list_of_segments = ["Segment h00","Segment v1","Segment h10","Segment h11","Segment v2",
+                                 "Segment h20","Segment v3","Segment h30","Segment h31","Segment h32",
+                                 "Segment v4"]
 
     def update(self):
         message = self.listen()
@@ -39,7 +41,7 @@ class Connector:
                 order = self.block_seg(segment,lock_unlock)
                 
             elif (category == "special"):
-                order self.handle_special()
+                order = self.handle_special(res_of_the_message)
                 
             else:
                 print("(C) mauvaise premiere catégorie")
@@ -78,11 +80,15 @@ class Connector:
             if (self.current_page == "Shot"):
                 order.append("force:Segment h00:Shot")
                 order.append("block:Segment h00")
+                order.append("force:Segment h20:Shot")
+                order.append("block:Segment h20")
         elif (category == "leave"):
             self.current_page = "Main"
             if(page == "Shot"):
                 order.append("unblock:Segment h00")
                 order.append("force:Segment h00:Rainbow")
+                order.append("unblock:Segment h20")
+                order.append("force:Segment h20:Rainbow")
         else :
             print("(C) ON ENTRE DANS AUCUNE CATEGORIE!")
 
@@ -95,7 +101,10 @@ class Connector:
 
     def change_mode(self , message):
         order = []
-        order.append("change:"+message[:11]+":"+message[12:])
+        splited_message = message.split(":")
+        segment = splited_message[0]
+        mode = splited_message[1]
+        order.append("change:"+segment+":"+mode)
         return order
     
     def change_conf(self , message):
@@ -118,4 +127,4 @@ class Connector:
         return order
     
     def handle_special(self , message):
-        return []
+        return ["special:Shot"]
