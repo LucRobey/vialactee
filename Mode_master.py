@@ -30,13 +30,14 @@ class Mode_master:
 
     def __init__(self):
             
-        self.connector = Connector.Connector()
+        self.appli_connector = Connector.Connector()
 
         self.load_configurations()
 
         self.leds = neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False)
         self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)
 
+        
         self.listener = Listener.Listener()
 
         self.matrix = Matrix.Matrix()
@@ -51,7 +52,7 @@ class Mode_master:
         
     
     def update(self):
-        orders = self.connector.update()
+        orders = self.appli_connector.update()
         if(orders!=[] and orders!=None):
             for order in orders:
                 self.obey_order(order)

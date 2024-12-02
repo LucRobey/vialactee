@@ -15,6 +15,7 @@ class Alcool_randomer(Mode.Mode):
         self.hasEnded = False
         self.pos_int = int(self.nb_of_leds/2)
         self.pos_float = float(int(self.nb_of_leds/2))
+        self.last_pos_int = self.pos_int
         self.speed = 0
         self.direction = 1
         
@@ -43,8 +44,6 @@ class Alcool_randomer(Mode.Mode):
         
         
     def activate(self):
-        print("On est activé")
-
         self.activated = True
         self.hasEnded = False
         self.time_to_spin = random.randint(15,20)
@@ -54,8 +53,9 @@ class Alcool_randomer(Mode.Mode):
         
         self.pos_int = int(self.nb_of_leds/2)
         self.pos_float = float(int(self.nb_of_leds/2))
+        self.last_pos_int = self.pos_int
         
-        self.first_phase_duration = random.randint(2,int(0.4*self.time_to_spin))
+        self.first_phase_duration = random.randint(2,int(0.33*self.time_to_spin))
         self.second_phase_duration = random.randint(2,int(0.33*self.time_to_spin))
         self.third_phase_duration = self.time_to_spin - self.first_phase_duration - self.second_phase_duration
         self.fourth_phase_duration = 1
@@ -65,11 +65,28 @@ class Alcool_randomer(Mode.Mode):
         self.starting_time = time.time()
         self.current_time = 0
 
-        self.first_phase_end_time  =  self.first_phase_duration
-        self.second_phase_end_time =  self.first_phase_duration + self.second_phase_duration
-        self.third_phase_end_time  =  self.first_phase_duration + self.second_phase_duration + self.third_phase_duration
-        self.fourth_phase_end_time = self.third_phase_end_time + self.fourth_phase_duration
-        self.fifth_phase_end_time = self.fourth_phase_end_time + self.fifth_phase_duration
+        self.first_phase_end_time  =  self.starting_time         + self.first_phase_duration
+        self.second_phase_end_time =  self.first_phase_end_time  + self.second_phase_duration
+        self.third_phase_end_time  =  self.second_phase_end_time + self.third_phase_duration
+        self.fourth_phase_end_time = self.third_phase_end_time   + self.fourth_phase_duration
+        self.fifth_phase_end_time  = self.fourth_phase_end_time  + self.fifth_phase_duration
+
+        print("On a activé le mode shot:")
+        print("first_duration = ", self.first_phase_duration)
+        print("second_phase_duration = ", self.second_phase_duration)
+        print("third_phase_duration = ", self.third_phase_duration)
+        print("fourth_phase_duration = ", self.fourth_phase_duration)
+        print("fifth_phase_duration = ", self.fifth_phase_duration)
+        print("==")
+        print("time_ends :")
+        print("starting_time = ", self.starting_time)
+        print("first_phase_end_time = ",self.first_phase_end_time)
+        print("second_phase_end_time = ",self.second_phase_end_time)
+        print("third_phase_end_time = ",self.third_phase_end_time)
+        print("fourth_phase_end_time = ",self.fourth_phase_end_time)
+        print("fifth_phase_end_time = ",self.fifth_phase_end_time)
+
+
 
     def check_phase(self):
         new_time = time.time()
@@ -92,6 +109,7 @@ class Alcool_randomer(Mode.Mode):
                 self.phase = 2
 
     def moove_ball(self):
+        self.last_pos_int = self.pos_int
         self.pos_float += self.speed * self.direction
         if( self.pos_float >= self.nb_of_leds):
             self.pos_float = self.nb_of_leds-1
@@ -112,10 +130,10 @@ class Alcool_randomer(Mode.Mode):
  
             
     def color_head(self):
-        self.rgb_list[self.pos_int]=self.white
-        if(self.pos_int+1 < self.nb_of_leds):
-            self.rgb_list[self.pos_int+1]=self.white
-        if(self.pos_int-1 >= 0):
-            self.rgb_list[self.pos_int-1]=self.white
-    
-        
+        #On colorie tout entre last_pos et new_pos
+        if(self.pos_int > self.last_pos_int):
+            for led_index in range(self.last_pos_int , self.pos_int+1):
+                self.rgb_list[led_index]=self.white
+        else:
+            for led_index in range(self.pos_int , self.last_pos_int+1):
+                self.rgb_list[led_index]=self.white
