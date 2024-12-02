@@ -119,7 +119,7 @@ class Segment:
                     found_a_mode = True
                     break
             if (not found_a_mode):
-                print("ALERTE CE MODE :" , mode_name " n'existe pas pour " , self.name)
+                print("ALERTE CE MODE :" , mode_name ," n'existe pas pour " , self.name)
         else:
             print("(S) le "+self.name +" est bloqué et ne peut pas passer au "+mode_name)
 
