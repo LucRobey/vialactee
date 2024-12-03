@@ -57,28 +57,46 @@ class Mode_master:
         
     
     def update(self):
+
+        time1 = time.time()
         orders = self.appli_connector.update()
         if(orders!=[] and orders!=None):
             for order in orders:
                 self.obey_order(order)
         
+        duration1 = time.time() - time1
+
+        time2 = time.time()
         self.listener.update()
+        duration2 = time.time() - time2
+
         
         
         #self.matrix_general.update()
         
+        time3 = time.time()
         for seg_index in range(len(self.segments_list)):
             #print("matrix" , self.matrix_general.segment_values[0])
             #self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
             self.segments_list[seg_index].update()
+        duration3 = time.time() - time3
+        
+
         #self.leds.show()
         #self.leds2.show()
         
+        time4 = time.time()
         self.ESP_connector.send_to_ESP1()
+        duration4 = time.time() - time4
 
         self.current_time = time.time()
         if(self.current_time > self.next_change_of_configuration_time):
             self.change_configuration()
+
+        total = duration1 + duration2 + duration3 + duration4
+
+        print("total = ", total)
+        print("app :", 100*(duration1/total)," , listen() :", 100*(duration2/total), " update() :", 100*(duration3/total) , " espConn : ", 100*(duration4/total) )
 
     def load_configurations(self):
         self.data_reader = Data_reader.Data_reader()
