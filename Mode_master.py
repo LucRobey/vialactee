@@ -8,7 +8,8 @@ from Mode_Globaux import Matrix_data as Matrix_data
 from Mode_Globaux import Segments_Locations as Segments_Locations
 from Mode_Globaux import Mode_Tchou_Tchou as Mode_Tchou_Tchou
 
-import Connector
+import connectors.ESP32_Connector as ESP32_Connector
+import connectors.Connector as  Connector
 import Segment as Segment
 import Listener as Listener
 import data.Data_reader as Data_reader
@@ -34,8 +35,12 @@ class Mode_master:
 
         self.load_configurations()
 
-        self.leds = neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False)
-        self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)
+        self.leds = [[0 , 255 , 128] for _ in range(900)]#neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False)
+        self.leds2 = [[0 , 255, 128] for _ in range(800)]#neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)
+        
+        print(self.leds)
+        
+        self.ESP_connector = ESP32_Connector.ESP32_Connector(self.leds,self.leds2)
 
         
         self.listener = Listener.Listener()
@@ -48,7 +53,7 @@ class Mode_master:
 
         self.initiate_segments()
 
-        self.initiate_configuration()
+        self.initiate_configuration("",True)
         
     
     def update(self):
@@ -58,14 +63,18 @@ class Mode_master:
                 self.obey_order(order)
         
         self.listener.update()
+        
+        
         #self.matrix_general.update()
         
         for seg_index in range(len(self.segments_list)):
             #print("matrix" , self.matrix_general.segment_values[0])
             #self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
             self.segments_list[seg_index].update()
-        self.leds.show()
-        self.leds2.show()
+        #self.leds.show()
+        #self.leds2.show()
+        
+        self.ESP_connector.send_to_ESP1()
 
         self.current_time = time.time()
         if(self.current_time > self.next_change_of_configuration_time):
@@ -73,9 +82,9 @@ class Mode_master:
 
     def load_configurations(self):
         self.data_reader = Data_reader.Data_reader()
-        self.configurations , self.playlists = self.data_reader.configurations
+        self.configurations , self.playlists = self.data_reader.configurations , self.data_reader.playlists
         for _ in self.playlists:
-            self.blocked_playlists = False
+            self.blocked_playlists.append(False)
 
     def update_segments_modes(self , info_margin , showInfos):
         for segment in self.segments_list:
@@ -90,7 +99,7 @@ class Mode_master:
         self.update_segments_modes(info_margin , showInfos)
         self.next_change_of_configuration_time = time.time() + self.configuration_duration
         if(showInfos):
-            print(info_margin + "(MM)   initiate_configuration()  :     next_change_of_conf_time = " + self.next_change_of_configuration_time)
+            print(info_margin + "(MM)   initiate_configuration()  :     next_change_of_conf_time = " , self.next_change_of_configuration_time)
 
         
 
@@ -156,11 +165,14 @@ class Mode_master:
         for playlist_index in range(len(self.playlists)):
             if (not self.blocked_playlists[playlist_index]) :
                 reachable_playlists.append(self.playlists[playlist_index])
+        print(reachable_playlists)
 
         random_playlist_index = random.randint(0,len(reachable_playlists)-1)
         playlist_name = reachable_playlists[random_playlist_index]
 
         new_conf["playlist"] = playlist_name
+        print(playlist_name)
+        print(self.configurations[playlist_name])
         random_conf_index = random.randint(0,len(self.configurations[playlist_name])-1)
         new_conf["index"] = random_conf_index
 
@@ -169,7 +181,7 @@ class Mode_master:
         new_conf["modes"] = self.configurations[playlist_name][random_conf_index]["modes"]
 
         if(showInfos):
-            print(info_margin + "(MM)   pick_a_random_conf() :     conf = " + new_conf)
+            print(info_margin + "(MM)   pick_a_random_conf() :     conf = " + str(new_conf))
         return new_conf
 
         
