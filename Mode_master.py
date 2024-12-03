@@ -45,9 +45,9 @@ class Mode_master:
         
         self.listener = Listener.Listener()
 
-        #self.matrix = Matrix.Matrix()
-        #self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
-        #self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
+        self.matrix = Matrix.Matrix()
+        self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
+        self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
         
         #print(self.matrix_general.get_segments())
 
@@ -72,12 +72,13 @@ class Mode_master:
 
         
         
-        #self.matrix_general.update()
+        self.matrix_general.update()
         
         time3 = time.time()
         for seg_index in range(len(self.segments_list)):
             #print("matrix" , self.matrix_general.segment_values[0])
-            #self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
+            global_segments = self.matrix_general.get_segments()
+            self.segments_list[seg_index].global_rgb_list = global_segments[self.segments_list[seg_index].name]
             self.segments_list[seg_index].update()
         duration3 = time.time() - time3
         
