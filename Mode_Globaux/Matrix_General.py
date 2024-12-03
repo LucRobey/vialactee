@@ -32,4 +32,7 @@ class Matrix_General :
         
 
     def get_segments(self):
-        return self.segments_location.segment_coords  , self.segment_values
+        dictionary = {} 
+        for i in range(len(self.segments_location.segment_names)):
+            dictionary[self.segments_location.segment_names[i]] = self.segment_values[i]
+        return dict(dictionary)

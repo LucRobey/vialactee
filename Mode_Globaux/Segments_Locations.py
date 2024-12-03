@@ -32,5 +32,5 @@ class Segments_Locations:
         self.segment_v4 = [[self.len_h00 + self.len_h10 + self.len_h20 + self.len_h31, coord_y + self.offset_h30_v4*2] for coord_y in range(self.len_v4)]
 
         self.segment_coords = [self.segment_h00, self.segment_h10, self.segment_h11, self.segment_h20, self.segment_h30, self.segment_h31, self.segment_h32, self.segment_v1, self.segment_v2, self.segment_v3, self.segment_v4]
-
+        self.segment_names = ["h00", "h10", "h11", "h20", "h30", "h31", "h32", "v1", "v2", "v3", "v4"]
     
