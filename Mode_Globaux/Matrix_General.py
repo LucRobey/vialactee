@@ -7,7 +7,8 @@ class Matrix_General :
         self.matrix = self.matrix_class.matrix
         self.matrix_light = self.matrix_class.matrix_light
         self.segments_location = Segments_Locations.Segments_Locations()
-        self.segment_values = None
+        self.segment_values = []
+        self.init_segments()
         self.set_segments()
 
     def change_mode(self, new_mode):
@@ -25,10 +26,20 @@ class Matrix_General :
     
     def set_segments(self):
         #return the coordinates and the values of the segments
-        self.segment_values = [
-            [self.matrix_light[x][y] for x, y in segment]
-            for segment in self.segments_location.segment_coords
-        ]
+
+
+        for segment in self.segments_location.segment_coords:
+            for index in range(len(segment)):
+            
+                self.segment_values[index] = self.matrix_light[segment[index][1]][segment[index][0]]
+    def init_segments(self):
+       
+        for segment in self.segments_location.segment_coords:
+            for index in range(len(segment)):
+       
+                self.segment_values.append(self.matrix_light[segment[index][1]][segment[index][0]])
+        
+            
         
 
     def get_segments(self):

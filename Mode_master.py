@@ -35,12 +35,12 @@ class Mode_master:
 
         self.load_configurations()
 
-        self.leds = [[0 , 255 , 128] for _ in range(900)]#neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False)
-        self.leds2 = [[0 , 255, 128] for _ in range(800)]#neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)
+        self.leds = neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False) #self.leds = [[0 , 255 , 128] for _ in range(900)]
+        self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)#self.leds2 = [[0 , 255, 128] for _ in range(800)]
         
-        print(self.leds)
+        #print(self.leds)
         
-        self.ESP_connector = ESP32_Connector.ESP32_Connector(self.leds,self.leds2)
+        #self.ESP_connector = ESP32_Connector.ESP32_Connector(self.leds,self.leds2)
 
         
         self.listener = Listener.Listener()
@@ -83,11 +83,11 @@ class Mode_master:
         duration3 = time.time() - time3
         
 
-        #self.leds.show()
-        #self.leds2.show()
+        self.leds.show()
+        self.leds2.show()
         
         time4 = time.time()
-        self.ESP_connector.send_to_ESP1()
+        #self.ESP_connector.send_to_ESP1()
         duration4 = time.time() - time4
 
         self.current_time = time.time()
