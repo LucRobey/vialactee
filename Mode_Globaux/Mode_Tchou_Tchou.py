@@ -14,7 +14,24 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         self.train_length = 7
         self.matrix = matrix_class.matrix
         self.matrix_light = matrix_class.matrix_light
+        self.valid_borders = self._get_valid_borders()  # Precompute valid borders
         self.init_train()
+
+    def _get_valid_borders(self):
+        """
+        Precomputes the list of valid border coordinates.
+        """
+        rows, cols = len(self.matrix), len(self.matrix[0])
+        return [
+            (x, y)
+            for x, y in [
+                *[(0, y) for y in range(cols)],                   # Top border
+                *[(rows - 1, y) for y in range(cols)],            # Bottom border
+                *[(x, 0) for x in range(rows)],                   # Left border
+                *[(x, cols - 1) for x in range(rows)]             # Right border
+            ]
+            if self.matrix[x][y] == 1
+        ]
 
     def init_train(self):
         """
@@ -26,95 +43,68 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
 
         # Build the train's initial coordinates
         for _ in range(self.train_length - 1):
-            possible_directions = self.get_list_possible_direction(
-                self.train_coordinates[-1], self.matrix
-            )
+            possible_directions = self.get_list_possible_directions(self.train_coordinates[-1])
             if possible_directions:
                 next_coord = random.choice(possible_directions)
                 self.train_coordinates.append(next_coord)
             else:
                 raise ValueError("Not enough space to initialize the train!")
 
-    def get_list_possible_direction(self, coord, matrix):
-        directions = [
-            (coord[0] - 1, coord[1]),  # Up
-            (coord[0] + 1, coord[1]),  # Down
-            (coord[0], coord[1] - 1),  # Left
-            (coord[0], coord[1] + 1)   # Right
-        ]
+    def get_list_possible_directions(self, coord):
+        """
+        Returns a list of valid adjacent cells to the given coordinate.
+        """
+        x, y = coord
+        directions = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
         return [
-            (x, y) for x, y in directions
-            if 0 <= x < len(matrix) and 0 <= y < len(matrix[0])
-            and matrix[x][y] == 1 and (x, y) not in self.train_coordinates
+            (nx, ny)
+            for nx, ny in directions
+            if 0 <= nx < len(self.matrix) and 0 <= ny < len(self.matrix[0])
+            and self.matrix[nx][ny] == 1
+            and (nx, ny) not in self.train_coordinates
         ]
-
 
     def update_train(self):
         """
         Updates the train's position by moving the head to a new valid coordinate
         or resetting to a new border position if no valid moves are available.
         """
-        possible_directions = self.get_list_possible_direction(
-            self.train_head_coordinate, self.matrix
-        )
-        
-  
+        possible_directions = self.get_list_possible_directions(self.train_head_coordinate)
         if possible_directions:
             next_head = random.choice(possible_directions)
             self.train_coordinates.insert(0, next_head)
             self.train_head_coordinate = next_head
             self.train_coordinates.pop()
         else:
-            # Reset train head if stuck
-            self.train_head_coordinate = self.get_random_coordinate_touching_border()
-            self.train_coordinates.insert(0, self.train_head_coordinate)
-            self.train_coordinates.pop()
+            self.reset_train()
+
+    def reset_train(self):
+        """
+        Resets the train to a new border position if no valid moves are available.
+        """
+        self.train_head_coordinate = self.get_random_coordinate_touching_border()
+        self.train_coordinates = [self.train_head_coordinate]
 
     def get_random_coordinate_touching_border(self):
         """
-        Returns a random valid coordinate touching the border of the matrix
-        that has only one possible direction (a dead end).
+        Returns a random valid coordinate touching the border of the matrix.
         """
-        valid_borders = [
-            (0, y) for y in range(len(self.matrix[0])) if self.matrix[0][y] == 1
-        ] + [
-            (len(self.matrix) - 1, y) for y in range(len(self.matrix[0])) if self.matrix[-1][y] == 1
-        ] + [
-            (x, 0) for x in range(len(self.matrix)) if self.matrix[x][0] == 1
-        ] + [
-            (x, len(self.matrix[0]) - 1) for x in range(len(self.matrix)) if self.matrix[x][-1] == 1
-        ]
-       
-        if not valid_borders:
+        if not self.valid_borders:
             raise ValueError("Matrix contains no valid border coordinates.")
-        
-        dead_end_borders = [
-            coord for coord in valid_borders
-            if len(self.get_list_possible_direction(coord, self.matrix, )) == 1
-        ]
-        
-        if not dead_end_borders:
-            print("No dead-end border found, defaulting to a random border.")
-            return random.choice(valid_borders)
-
-        # Avoid choosing a coordinate already in the train
         visited = set(self.train_coordinates)
-        for _ in range(100):  # Retry limit to prevent infinite loops
-            coordinate = random.choice(dead_end_borders)
-            if coordinate not in visited:
-                return coordinate
-        
-        raise ValueError("Failed to find a unique dead-end border coordinate.")
+        for _ in range(100):  # Retry limit
+            coord = random.choice(self.valid_borders)
+            if coord not in visited:
+                return coord
+        raise ValueError("Failed to find a unique border coordinate.")
 
     def update_matrix(self):
         """
         Updates the matrix to reflect the train's current position.
+        Only modifies affected cells instead of rebuilding the entire matrix.
         """
-        self.matrix_light = [[[0, 0, 0] for _ in range(len(row))] for row in self.matrix]
         for coord in self.train_coordinates:
             self.matrix_light[coord[0]][coord[1]] = self.train_color
-            
-        
 
     def update(self):
         """
