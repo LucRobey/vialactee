@@ -12,7 +12,7 @@ class Segment:
     
     listener = None
 
-    def __init__(self , name ,listener , leds , indexes , global_rgb , orientation , alcool):
+    def __init__(self , name ,listener , leds , indexes  , orientation , alcool):
         self.name = name
         self.leds = leds
         self.indexes = indexes
@@ -24,7 +24,7 @@ class Segment:
         for _ in range((len(indexes))):
             self.rgb_list.append((0,0,0))
             self.fused_list.append((0,0,0))
-        self.global_rgb_list = global_rgb
+        #self.global_rgb_list = global_rgb
         
         self.isBlocked = False
 

@@ -8,7 +8,7 @@ class Connector:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.HOST, self.PORT))
         self.server_socket.listen(1)
-        self.server_socket.settimeout(0.0001)  # Set timeout to 0.0001 seconds for waiting on connections
+        self.server_socket.settimeout(0.00001)  # Set timeout to 0.0001 seconds for waiting on connections
 
         self.current_page = "Main"
         self.list_of_pages = ["Main","Playlists","Configuration","Shot"]

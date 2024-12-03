@@ -45,15 +45,15 @@ class Mode_master:
         
         self.listener = Listener.Listener()
 
-        self.matrix = Matrix.Matrix()
-        self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
-        self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
+        #self.matrix = Matrix.Matrix()
+        #self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
+        #self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
         
         #print(self.matrix_general.get_segments())
 
         self.initiate_segments()
 
-        self.initiate_configuration("",True)
+        self.initiate_configuration("",False)
         
     
     def update(self):
@@ -95,8 +95,8 @@ class Mode_master:
 
         total = duration1 + duration2 + duration3 + duration4
 
-        print("total = ", total)
-        print("app :", 100*(duration1/total)," , listen() :", 100*(duration2/total), " update() :", 100*(duration3/total) , " espConn : ", 100*(duration4/total) )
+        #print("total = ", total)
+        #print("app :", 100*(duration1/total)," , listen() :", 100*(duration2/total), " update() :", 100*(duration3/total) , " espConn : ", 100*(duration4/total) )
 
     def load_configurations(self):
         self.data_reader = Data_reader.Data_reader()
@@ -123,27 +123,27 @@ class Mode_master:
 
     def initiate_segments(self):
         indexes = [i for i in range(173)]
-        segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes, self.matrix_general.segment_values[0],"vertical",False)
+        segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes,"vertical",False)
         indexes = [i for i in range(173,173+48)]
-        segment_h32 = Segment.Segment("Segment h32",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        segment_h32 = Segment.Segment("Segment h32",self.listener, self.leds , indexes,"horizontal",False)
         indexes = [i for i in range(173+48,173+48+48)]
-        segment_h31 = Segment.Segment("Segment h31",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        segment_h31 = Segment.Segment("Segment h31",self.listener, self.leds , indexes,"horizontal",False)
         indexes = [i for i in range(173+48+48,173+48+48+47)]
-        segment_h30 = Segment.Segment("Segment h30",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        segment_h30 = Segment.Segment("Segment h30",self.listener, self.leds , indexes,"horizontal",False)
         indexes = [i for i in range(173+48+48+47,173+48+48+47+173)]
-        segment_v3 = Segment.Segment("Segment v3",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"vertical",False)
+        segment_v3 = Segment.Segment("Segment v3",self.listener, self.leds , indexes,"vertical",False)
         indexes = [i for i in range(173+48+48+47+173,173+48+48+47+173+91)]
-        segment_h20 = Segment.Segment("Segment h20",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",True)
+        segment_h20 = Segment.Segment("Segment h20",self.listener, self.leds , indexes,"horizontal",True)
         indexes = [i for i in range(173+48+48+47+173+91,173+48+48+47+173+91+205)]
-        segment_h00 = Segment.Segment("Segment h00",self.listener, self.leds , indexes,self.matrix_general.segment_values[0],"horizontal",True)
+        segment_h00 = Segment.Segment("Segment h00",self.listener, self.leds , indexes,"horizontal",True)
         indexes = [i for i in range(0,173)]
-        segment_v2 = Segment.Segment("Segment v2",self.listener, self.leds2 , indexes,self.matrix_general.segment_values[0],"vertical",False)
+        segment_v2 = Segment.Segment("Segment v2",self.listener, self.leds2 , indexes,"vertical",False)
         indexes = [i for i in range(173,173+87)]
-        segment_h11 = Segment.Segment("Segment h11",self.listener, self.leds2 , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        segment_h11 = Segment.Segment("Segment h11",self.listener, self.leds2 , indexes,"horizontal",False)
         indexes = [i for i in range(173+87,173+87+86)]
-        segment_h10 = Segment.Segment("Segment h10",self.listener, self.leds2 , indexes,self.matrix_general.segment_values[0],"horizontal",False)
+        segment_h10 = Segment.Segment("Segment h10",self.listener, self.leds2 , indexes,"horizontal",False)
         indexes = [i for i in range(173+87+86,173+87+86+173)]
-        segment_v1 = Segment.Segment("Segment v1",self.listener, self.leds2 , indexes,self.matrix_general.segment_values[0],"vertical",False)
+        segment_v1 = Segment.Segment("Segment v1",self.listener, self.leds2 , indexes,"vertical",False)
         self.segments_list.append(segment_v4)
         self.segments_list.append(segment_h32)
         self.segments_list.append(segment_h31)
