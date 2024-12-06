@@ -22,23 +22,29 @@ class Matrix_General :
         self.matrix_light = self.mode.matrix_light
         self.fusion_type = self.mode.fusion_type
         self.set_segments()
+        
 
     
     def set_segments(self):
         #return the coordinates and the values of the segments
-
-
-        for segment in self.segments_location.segment_coords:
-            for index in range(len(segment)):
-            
-                self.segment_values[index] = self.matrix_light[segment[index][1]][segment[index][0]]
-    def init_segments(self):
-       
-        for segment in self.segments_location.segment_coords:
-            for index in range(len(segment)):
-       
-                self.segment_values.append(self.matrix_light[segment[index][1]][segment[index][0]])
         
+
+        for index_segment in range(len(self.segments_location.segment_coords)):
+            new_segment = []
+            for index in range(len(self.segments_location.segment_coords[index_segment])):
+                segment = self.segments_location.segment_coords[index_segment]
+                new_segment.append(self.matrix_light[segment[index][1]][segment[index][0]])
+            self.segment_values[index_segment] = new_segment
+            
+    def init_segments(self):
+    
+
+        for index_segment in range(len(self.segments_location.segment_coords)):
+            new_segment = []
+            for index in range(len(self.segments_location.segment_coords[index_segment])):
+                segment = self.segments_location.segment_coords[index_segment]
+                new_segment.append(self.matrix_light[segment[index][1]][segment[index][0]])
+            self.segment_values.append(new_segment)
             
         
 

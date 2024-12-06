@@ -69,6 +69,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
             self.train_head_coordinate = self.get_random_coordinate_touching_border()
             self.train_coordinates.insert(0, self.train_head_coordinate)
             self.train_coordinates.pop()
+        print(self.train_coordinates)
 
     def get_random_coordinate_touching_border(self):
         """
