@@ -12,10 +12,12 @@ class Segment:
     
     listener = None
 
-    def __init__(self , name ,listener , leds , indexes  , orientation , alcool):
+    def __init__(self , name ,listener , leds , indexes , global_rgb , orientation , alcool , show_modes_details, useGlobalMatrix):
         self.name = name
         self.leds = leds
         self.indexes = indexes
+        self.show_modes_details = show_modes_details
+        self.useGlobalMatrix = useGlobalMatrix
         self.nb_of_leds=len(self.indexes)
         if(self.listener==None):
             self.listener = listener
@@ -23,8 +25,7 @@ class Segment:
         self.rgb_list = []
         for _ in range((len(indexes))):
             self.rgb_list.append((0,0,0))
-            self.fused_list.append((0,0,0))
-        #self.global_rgb_list = global_rgb
+        self.global_rgb_list = global_rgb
         
         self.isBlocked = False
 
@@ -38,22 +39,15 @@ class Segment:
 
 
 
-
-    def update_leds(self):
-        for led_index in range(self.nb_of_leds):
-            self.leds[self.indexes[led_index]]=self.fused_list[led_index]
-        
-
     def update(self):
         
         #sécurité, enlevable
-        #if(self.modes[self.activ_mode].isActiv):
-        self.modes[self.activ_mode].update()
-        #else:
-        #    print("(S) erreur, on update un mode qui n'a pas été start")
+        if(self.modes[self.activ_mode].isActiv):
+            self.modes[self.activ_mode].update()
+        else:
+            print("(S) erreur, on update un mode qui n'a pas été start")
         
-        self.fuse_rgb_list("Priority")
-        #self.update_leds()
+        self.update_leds("Priority")
         
 
     def initiate_modes(self , orientation , alcool):
@@ -86,24 +80,19 @@ class Segment:
             self.modes.append(Alcool_randomer.Alcool_randomer(self.listener , self.leds , self.indexes , self.rgb_list))
             self.modes_names.append("Shot")
         
-    def fuse_rgb_list(self, fusion_type):
-        """
-        if fusion_type == "Priority":
-            #print(self.global_rgb_list,self.fused_list)
-            for led_index in range(len(self.global_rgb_list)):
-                print(self.global_rgb_list[led_index])
-                if (self.global_rgb_list[led_index] != [0,0,0]):
-                    print
-                    self.fused_list[led_index] = self.global_rgb_list[led_index]
-                else:
-                    self.fused_list[led_index] = self.rgb_list[led_index]
-                """
-        
-        for led_index in range(self.nb_of_leds):
-            self.leds[self.indexes[led_index]] = self.rgb_list[led_index]
-
-        #self.leds[self.indexes] = self.rgb_list
-        
+    def update_leds(self, fusion_type):
+        luminosite = self.listener.luminosite
+        if (self.useGlobalMatrix):
+            if fusion_type == "Priority":
+                print(len(self.global_rgb_list),len(self.fused_list) )
+                for led_index in range(len(self.global_rgb_list)):
+                    if (self.global_rgb_list[led_index] != (0,0,0)):
+                        self.leds[self.indexes[led_index]] = luminosite * self.global_rgb_list[led_index]
+                    else:
+                        self.leds[self.indexes[led_index]] = luminosite * self.rgb_list[led_index]
+        else:
+            for led_index in range(self.nb_of_leds):
+                self.leds[self.indexes[led_index]] = luminosite * self.rgb_list[led_index]
 
 
     def change_mode(self , mode_name , info_margin , showInfos):
@@ -124,7 +113,8 @@ class Segment:
             if (not found_a_mode):
                 print("ALERTE CE MODE :" , mode_name ," n'existe pas pour " , self.name)
         else:
-            print("(S) le "+self.name +" est bloqué et ne peut pas passer au "+mode_name)
+            if (self.show_modes_details):
+                print("(S) le "+self.name +" est bloqué et ne peut pas passer au "+mode_name)
 
     def force_mode(self , mode_name):
         #On terminate l'ancien mode
@@ -134,7 +124,8 @@ class Segment:
                 # On change l'index et on start
                 self.activ_mode=mode_index
                 self.modes[self.activ_mode].start()
-                print("(S) le segment ",self.name, " change de mode pour ", mode_name)
+                if (self.show_modes_details):
+                    print("(S) le segment ",self.name, " change de mode pour ", mode_name)
                 
                 
     def get_current_mode(self):

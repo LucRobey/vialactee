@@ -23,6 +23,7 @@ class Listener:
         self.samples = []           #samples we listen os size SAMPLES
         self.power = 1              #global power  (not used yet)
         self.sensi = 0.5            #global sensi   (not used yet)
+        self.luminosite = 1.0
         
 
         self.build_asserved_fft_lists()
@@ -49,6 +50,18 @@ class Listener:
         except:
             print("On arrive pas à écouter")
             return False
+        
+    def asserv_fft_bands_2(self):
+        for band_index in range(self.nb_of_fft_band):
+            min_bar = np.max([self.band_means[band_index] - 2*self.band_mean_distances[band_index] , 0])
+            #sensi : remplacer le 2 par (3 - sensi)?
+            max_bar = self.band_means[band_index] + 2*self.band_mean_distances[band_index]
+            self.asserved_fft_band_2[band_index] = (self.smoothed_fft_band_values[band_index] - min_bar)/(max_bar - min_bar)
+
+            if(self.asserved_fft_band_2[band_index] > 1):
+                self.asserved_fft_band_2[band_index] = 1
+            elif (self.asserved_fft_band_2[band_index] > 0):
+                self.asserved_fft_band_2[band_index] = 0
 
     def asserv_fft_bands(self):
         """
@@ -74,7 +87,8 @@ class Listener:
     def update_band_means_and_smoothed_values(self):
         for band_index in range(self.nb_of_fft_band):
             self.smoothed_fft_band_values[band_index] = self.smooth_sensi[band_index] * self.smoothed_fft_band_values[band_index] + (1-self.smooth_sensi[band_index])*self.fft_band_values[band_index]
-            self.band_means[band_index] += 0.01 * (self.smoothed_fft_band_values[band_index] - self.band_means[band_index])
+            self.band_means[band_index] = 0.999 * self.band_means[band_index] + 0.001 * self.smoothed_fft_band_values[band_index]
+            self.band_mean_distances[band_index] = 0.999 * self.band_mean_distances[band_index] + 0.001 * np.abs(self.smoothed_fft_band_values[band_index] - self.band_means[band_index])
             if(self.smoothed_fft_band_values[band_index]<0):
                 self.smoothed_fft_band_values[band_index]=0
             if(self.band_means[band_index]<0):
@@ -180,7 +194,9 @@ class Listener:
         
         self.fft_band_values = []   
         self.smoothed_fft_band_values = []
-        self.band_means = []         
+        self.band_means = [] 
+        self.band_mean_distances = []   
+        self.asserved_fft_band_2 = []     
         self.band_lm = []                  #asserved_fft_band_local_max   used for the asservissement of the band values
         self.band_gm = []                  #asserved_fft_band_global_max   used for the asservissement of the band values
         self.asserved_fft_band = []     #result of the asservissement (numbers between 0 and 1)
@@ -202,6 +218,8 @@ class Listener:
             self.asserved_fft_band.append(0.0)
             self.smoothed_fft_band_values.append(0.0)
             self.band_means.append(0.0)
+            self.band_mean_distances.append(0.0)
+            self.asserved_fft_band_2.append(0.0)
             self.band_proportion.append(0.0)
      
         self.fft_band_values = np.array(self.fft_band_values)
@@ -210,6 +228,7 @@ class Listener:
         self.asserved_fft_band = np.array(self.asserved_fft_band)
         self.smoothed_fft_band_values=np.array(self.smoothed_fft_band_values)
         self.band_means=np.array(self.band_means)
+        self.band_mean_distances=np.array(self.band_mean_distances)
         
         self.smooth_sensi = [0.9,0.6,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5]
         self.rearrange_list=[]
