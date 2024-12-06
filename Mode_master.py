@@ -37,12 +37,12 @@ class Mode_master:
 
         self.load_configurations()
 
-        self.leds = [[0 , 255 , 128] for _ in range(900)]#neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False)
-        self.leds2 = [[0 , 255, 128] for _ in range(800)]#neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)
+        self.leds = neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False) #self.leds = [[0 , 255 , 128] for _ in range(900)]
+        self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)#self.leds2 = [[0 , 255, 128] for _ in range(800)]
         
-        print(self.leds)
+        #print(self.leds)
         
-        self.ESP_connector = ESP32_Connector.ESP32_Connector(self.leds,self.leds2)
+        #self.ESP_connector = ESP32_Connector.ESP32_Connector(self.leds,self.leds2)
 
         
         self.listener = Listener.Listener()
@@ -55,7 +55,6 @@ class Mode_master:
 
         self.initiate_segments()
 
-        
         self.initiate_configuration("",self.show_modes_details)
    
     
@@ -159,6 +158,8 @@ class Mode_master:
         
 
     def initiate_segments(self):
+        if(not self.useGlobalMatrix):
+            self.useGlobalMatrix=[0]
         indexes = [i for i in range(173)]
         segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes, self.matrix_general.segment_values[0],"vertical",False,self.show_modes_details , self.useGlobalMatrix)
         indexes = [i for i in range(173,173+48)]
