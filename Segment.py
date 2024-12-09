@@ -4,6 +4,8 @@ import modes.Middle_bar_mode as Middle_bar_mode
 import modes.Power_bar_mode as Power_bar_mode
 import modes.Bary_rainbow_mode as Bary_rainbow_mode
 import modes.Shining_stars_mode as Shining_stars_mode
+
+import modes.christmas_modes.Christmas_mode_1 as Christmas_mode_1
 import modes.Alcool_randomer as Alcool_randomer
 
 import numpy as np
@@ -56,25 +58,29 @@ class Segment:
                         Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
                         Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list),
                         Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Christmas_mode_1.Christmas_mode_1(self.listener , self.leds , self.indexes , self.rgb_list)
                         ]
         
             self.modes_names = ["Rainbow",
                                 "Bary Rainbow",
                                 "Middle Bar",
                                 "Shining Stars",
+                                "Christmas_mode_1"
                                 ]
         else:
             self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
                         Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
                         Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list),
                         Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Power_bar_mode.Power_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list)]
+                        Power_bar_mode.Power_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list),
+                        Christmas_mode_1.Christmas_mode_1(self.listener , self.leds , self.indexes , self.rgb_list)]
         
             self.modes_names = ["Rainbow",
                                 "Bary Rainbow",
                                 "Middle Bar",
                                 "Shining Stars",
-                                "Power Bar"]
+                                "Power Bar",
+                                "Christmas_mode_1"]
         
         if (alcool):
             self.modes.append(Alcool_randomer.Alcool_randomer(self.listener , self.leds , self.indexes , self.rgb_list))
@@ -100,6 +106,7 @@ class Segment:
 
 
     def change_mode(self , mode_name , info_margin , showInfos):
+        mode_name = "Christmas_mode_1"
         if(not self.isBlocked):
             #On terminate l'ancien mode
             self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)

@@ -29,13 +29,8 @@ class Mode_master:
     next_change_of_configuration_time = 0
     current_time = time.time()
 
-    def __init__(self, listener):
-        self.useGlobalMatrix = False
-        self.printTimeOfCalculation = False
-        self.show_modes_details = False
-        self.microphone = True
-        self.showMicrophoneDetails = False
-        self.showAppDetails = True
+    def __init__(self, listener , useGlobalMatrix , printTimeOfCalculation)):
+    
 
         self.listener = listener
         self.listener.use_microphone(self.microphone)

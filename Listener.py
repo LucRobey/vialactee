@@ -15,23 +15,12 @@ class Listener:
         self.luminosite = 1.0
 
         self.nb_of_fft_band = 8     # number of bands we divide the frequencies
-        self.microphone = False
-        self.showMicrophoneDetails = False
 
         self.build_asserved_fft_lists()
         self.build_asserved_total_power()
         self.build_band_peaks()
 
-        self.connector = ESP32_Microphone.ESP32_Microphone(self.fft_band_values, self.showMicrophoneDetails)
-
         self.prepare_for_calibration()
-
-    def use_microphone(self, activate):
-        self.microphone = activate
-
-    def set_prints(self, activate):
-        self.showMicrophoneDetails = activate
-
         
     async def update_forever(self):
         while True:
@@ -58,15 +47,11 @@ class Listener:
 
         
     def asserv_fft_bands_2(self):
-        for band_index in range(self.nb_of_fft_band):
-            #print("index : ",band_index)
-            
+        for band_index in range(self.nb_of_fft_band):          
             min_bar = np.max([self.band_means[band_index] - 2*self.band_mean_distances[band_index] , 0])
             #sensi : remplacer le 2 par (3 - sensi)?
             max_bar = self.band_means[band_index] + 2*self.band_mean_distances[band_index]
-            #print(min_bar , max_bar)
-            #print("mean = " , self.band_means[band_index])
-            #print("ecart = " , self.band_mean_distances[band_index])
+    
             if(max_bar == min_bar):
                 self.asserved_fft_band[band_index] = 0.5
             else:

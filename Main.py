@@ -13,9 +13,20 @@ import Mode_master as Mode_master
 
 
 async def main():
+    
+    useGlobalMatrix = False
+    useMicrophone = True
+    
+    printTimeOfCalculation = False
+    show_modes_details = False
+    showMicrophoneDetails = False
+    showAppDetails = True
+    
     # Create instances of necessary classes
-    listener = Listener.Listener()  # Assuming Listener class is set up correctly
-    mode_master = Mode_master.Mode_master(listener)  # Assuming None for now, replace as needed
+    listener = Listener.Listener()
+    mode_master = Mode_master.Mode_master(listener,
+                                          useGlobalMatrix,
+                                          printTimeOfCalculation) 
    
     esp32_microphone = ESP32_Microphone.ESP32_Microphone(listener.fft_band_values , False)
 

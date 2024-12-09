@@ -1,5 +1,4 @@
 import modes.Mode as Mode
-import calculations.rgb_hsv as RGB_HSV
 import numpy as np
 #import matplotlib.pyplot as plt
 
