@@ -1,69 +1,104 @@
 import socket
+import asyncio
+import Mode_master
 
 class Connector:
-    HOST = ''  # Listen on all available network interfaces
+    HOST = '0.0.0.0'  # Listen on all available network interfaces
     PORT = 12345
 
-    def __init__(self):
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.bind((self.HOST, self.PORT))
-        self.server_socket.listen(1)
-        self.server_socket.settimeout(0.001)  # Set timeout to 0.001 seconds for waiting on connections
-
+    def __init__(self , mode_master):
         self.current_page = "Main"
         self.list_of_pages = ["Main","Playlists","Configuration","Shot","Parametres","Calibration"]
 
         self.list_of_segments = ["Segment h00","Segment v1","Segment h10","Segment h11","Segment v2",
                                  "Segment h20","Segment v3","Segment h30","Segment h31","Segment h32",
                                  "Segment v4"]
+        
+        self.mode_master = mode_master
+        
+    async def start_server(self):
+        """Start the asynchronous TCP server."""
+        server = await asyncio.start_server(self.handle_client, self.HOST, self.PORT)
+        print(f"Server started on {self.HOST}:{self.PORT}")
+        
+        async with server:
+            await server.serve_forever()
+            
+    async def handle_client(self, reader, writer):
+        """Handle incoming client connections."""
+        client_address = writer.get_extra_info('peername')
+        print(f"Connection from {client_address}")
+        
+        try:
+            # Read the message sent by the client
+            data = await reader.read(1024)
+            message = data.decode().strip()
+            if not message:
+                print(f"No data received from {client_address}")
+                return
 
-    def update(self):
-        message = self.listen()
+            print(f"(C) Message received: {message}")
+            response = self.process_message(message)
 
-        if(message):
-            print("(C) message reçu : ",message)
-            splited_message = message.split(":")
-            category = splited_message[0]
-            rest_of_the_message = message[len(splited_message[0])+1:]
+            writer.write(b"ack\n")  # Acknowledge receipt
+            await writer.drain()
 
-            if (category == "chgpage"):
-                category = splited_message[1]
-                page = splited_message[2]
-                order = self.change_page(category,page)
+            print(f"(C) State: {self.current_page}")
+            print(f"(C) Order: {response}")
+        except Exception as e:
+            print(f"Error handling client {client_address}: {e}")
+        finally:
+            # Close the connection
+            writer.close()
+            await writer.wait_closed()
+            print(f"Connection with {client_address} closed.")
 
-            elif (category == "chgmode"):
-                segment = splited_message[1]
-                new_mode = splited_message[2]
-                order = self.change_mode(segment , new_mode)
+    def process_message(self, message):
+        """Process the incoming message and execute the appropriate command."""
+        print("(C) message reçu : ",message)
+        splited_message = message.split(":")
+        category = splited_message[0]
+        rest_of_the_message = message[len(splited_message[0])+1:]
 
-            elif (category == "chgconf"):
-                order = self.change_conf(rest_of_the_message)
+        if (category == "chgpage"):
+            category = splited_message[1]
+            page = splited_message[2]
+            order = self.change_page(category,page)
 
-            elif (category == "lockseg"):
-                segment = splited_message[1]
-                lock_unlock = splited_message[2]
-                order = self.block_seg(segment,lock_unlock)
+        elif (category == "chgmode"):
+            segment = splited_message[1]
+            new_mode = splited_message[2]
+            order = self.change_mode(segment , new_mode)
 
-            elif (category == "chgparam"):
-                parametre = splited_message[1]
-                nouvelle_valeur = splited_message[2]
-                order = self.change_param(parametre,nouvelle_valeur)
+        elif (category == "chgconf"):
+            order = self.change_conf(rest_of_the_message)
 
-            elif (category == "calibration"):
-                calibration_type = splited_message[1]
-                phase = splited_message[2]
-                order = self.calibrate_fft(calibration_type,phase)
-                
-            elif (category == "special"):
-                order = self.handle_special(rest_of_the_message)
-                
-            else:
-                print("(C) mauvaise premiere catégorie")
+        elif (category == "lockseg"):
+            segment = splited_message[1]
+            lock_unlock = splited_message[2]
+            order = self.block_seg(segment,lock_unlock)
 
-            print("(C)          state : " , self.current_page)
-            print("(C)          order : " , order)
-            return order
-        return []
+        elif (category == "chgparam"):
+            parametre = splited_message[1]
+            nouvelle_valeur = splited_message[2]
+            order = self.change_param(parametre,nouvelle_valeur)
+
+        elif (category == "calibration"):
+            calibration_type = splited_message[1]
+            phase = splited_message[2]
+            order = self.calibrate_fft(calibration_type , phase)
+            
+        elif (category == "special"):
+            order = self.handle_special(rest_of_the_message)
+            
+        else:
+            print("(C) invalid category")
+            return []
+
+        print("(C)          state : " , self.current_page)
+        print("(C)          order : " , order)
+        self.mode_master.obey_orders(order)
+        
 
     def listen(self):
         try:

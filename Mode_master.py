@@ -15,10 +15,9 @@ import data.Data_reader as Data_reader
 
 import neopixel
 import board
+import asyncio
 
 class Mode_master:
-
-    
 
     segments_list = []
     segments_names_to_index = {}
@@ -27,125 +26,107 @@ class Mode_master:
     playlists = []
     blocked_playlists = []
     configuration_duration = 600000
-    next_change_of_configuration_time = 0 
+    next_change_of_configuration_time = 0
     current_time = time.time()
 
-    def __init__(self):
+    def __init__(self, listener):
         self.useGlobalMatrix = False
         self.printTimeOfCalculation = False
-        self.show_modes_details = True
+        self.show_modes_details = False
         self.microphone = True
         self.showMicrophoneDetails = False
         self.showAppDetails = True
-            
-        self.appli_connector = Connector.Connector()
 
+        self.listener = listener
+        self.listener.use_microphone(self.microphone)
+        self.listener.set_prints(self.showMicrophoneDetails)
         self.load_configurations()
 
+        self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
+        self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
         
-        self.leds = neopixel.NeoPixel(board.D21, 173+47+48+47+173+89+207+1, brightness=1,auto_write=False)
-        self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1,auto_write=False)#
-        #self.leds = [[0 , 255 , 128] for _ in range(900)]
-        #self.leds2 = [[0 , 255, 128] for _ in range(800)]
-
-        
-        self.listener = Listener.Listener(self.microphone , self.showMicrophoneDetails)
-
         if (self.useGlobalMatrix):
             self.matrix = Matrix.Matrix()
             self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
             self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
-        
 
         self.initiate_segments()
+        self.initiate_configuration("", self.show_modes_details)
 
-        self.initiate_configuration("",self.show_modes_details)
-   
-    
-    def update(self):
+    def set_connector(self, connector):
+        self.appli_connector = connector
 
-        #==============================================
-        if (self.printTimeOfCalculation):
-            time1 = time.time()
+    async def update_forever(self):
+        while True:
+            await self.update()
+            await asyncio.sleep(0.0001)
 
-        orders = self.appli_connector.update()
-        if(orders!=[] and orders!=None):
-            for order in orders:
-                self.obey_order(order)
-
-        if (self.printTimeOfCalculation):
-            duration1 = time.time() - time1
-        #==============================================
-
-        #==============================================
-        if (self.printTimeOfCalculation):
-            time2 = time.time()
-
+    async def update(self):
+        
         self.listener.update()
-
-        if (self.printTimeOfCalculation):    
-            duration2 = time.time() - time2
         #==============================================
-
-        #==============================================
-        if (self.printTimeOfCalculation):
+        if self.printTimeOfCalculation:
             time3 = time.time()
 
-        if (self.useGlobalMatrix):
+        if self.useGlobalMatrix:
             self.matrix_general.update()
 
-        if (self.printTimeOfCalculation):    
+        if self.printTimeOfCalculation:
             duration3 = time.time() - time3
         #==============================================
-            
+
         self.leds.show()
         self.leds2.show()
-        
+
         #==============================================
-        if (self.printTimeOfCalculation):
+        if self.printTimeOfCalculation:
             time4 = time.time()
 
         for seg_index in range(len(self.segments_list)):
-            if (self.useGlobalMatrix):
+            if self.useGlobalMatrix:
                 self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
             self.segments_list[seg_index].update()
-            
-        if (self.printTimeOfCalculation):
+
+        if self.printTimeOfCalculation:
             duration4 = time.time() - time4
         #==============================================
-        
 
         #==============================================
         self.current_time = time.time()
-        if(self.current_time > self.next_change_of_configuration_time):
-            self.change_configuration()
+        if self.current_time > self.next_change_of_configuration_time:
+            await self.change_configuration()
         #==============================================
 
-        if (self.printTimeOfCalculation):
-            total = duration1 + duration2 + duration3 + duration4 
+        if self.printTimeOfCalculation:
+            total = duration1 + duration2 + duration3 + duration4
             print("total = ", total)
-            nb_of_it_per_sec = 1/total
-            print("soit ",nb_of_it_per_sec," itérations par seconde")
-            print("app :", 100*(duration1/total),
-                    " , listen() :" , 100*(duration2/total),
-                    " , general_matrix :"   , 100*(duration3/total) ,
-                    " , update_modes : "    , 100*(duration4/total),)
+            nb_of_it_per_sec = 1 / total
+            print("soit ", nb_of_it_per_sec, " itérations par seconde")
+            print("app :", 100 * (duration1 / total),
+                  " , listen() :", 100 * (duration2 / total),
+                  " , general_matrix :", 100 * (duration3 / total),
+                  " , update_modes : ", 100 * (duration4 / total),)
 
     def load_configurations(self):
-        #Le Data_reader load depuis google excel et construit notre dictionnaire
+        # Le Data_reader load depuis google excel et construit notre dictionnaire
         self.data_reader = Data_reader.Data_reader(self.show_modes_details)
-        self.configurations , self.playlists = self.data_reader.configurations , self.data_reader.playlists
-        #On initialise le bloquage des playlists (Par default, on les prend toutes)
+        self.configurations, self.playlists = self.data_reader.configurations, self.data_reader.playlists
+        # On initialise le bloquage des playlists (Par défaut, on les prend toutes)
         for _ in self.playlists:
             self.blocked_playlists.append(False)
 
-    def update_segments_modes(self , info_margin , showInfos):
+    async def change_configuration(self):
+        """Add your configuration change logic here."""
+        # Implement configuration change here, as this seems to involve asynchronous activity
+        pass
+
+    def update_segments_modes(self, info_margin, showInfos):
         for segment in self.segments_list:
-            if (not segment.isBlocked):
-                if(showInfos):
-                    print(info_margin,"(MM) update_segments_modes : ",segment.name," non bloqué donc on ordonne de le changer")
-                segment.change_mode(self.activ_configuration["modes"][segment.name], info_margin+"   " , showInfos)
-                    
+            if not segment.isBlocked:
+                if showInfos:
+                    print(info_margin, "(MM) update_segments_modes : ", segment.name, "non bloqué donc on ordonne de le changer")
+                segment.change_mode(self.activ_configuration["modes"][segment.name], info_margin + "   ", showInfos)
+ 
 
     def initiate_configuration(self , info_margin , showInfos):
         #On initialise en prenant une conf au pif dans une playlist au pif
@@ -241,12 +222,15 @@ class Mode_master:
             print(info_margin + "(MM)   pick_a_random_conf() :     conf = " + str(new_conf))
         return new_conf
 
-        
+    def obey_orders(self,orders):
+        for order in orders:
+            self.obey_order(order)
         
     def obey_order(self,order):
         splited_order = order.split(":")
         category = splited_order[0]                     #str category c ["block","unblock","change","force","update","special"]
         
+        print("category = ",category)
         if (category == "block"):
             segment_name = splited_order[1]
             if (self.showAppDetails):
@@ -284,7 +268,23 @@ class Mode_master:
             if (parametre == "sensibilite"):
                 self.listener.sensi = float(new_value)/100          #On ramene la sensi entre 0 et 1 
             if (parametre == "luminosite"):
-                self.listener.luminosite = float(new_value)/100     #On ramene la luminosite entre 0 et 1 
+                self.listener.luminosite = float(new_value)/100     #On ramene la luminosite entre 0 et 1
+                
+        elif (category == "calibration"):
+            type_cal = splited_order[1]
+            phase = splited_order[2]     #str type_cal c ["silence , "bb"]
+            if (self.showAppDetails):
+                    print("(MM) On "+phase+" une calibration "+type_cal)
+            if (type_cal == "silence"):
+                if (phase == "start"):
+                    self.listener.start_silence_calibration()
+                elif(phase == "end"):
+                    self.listener.stop_silence_calibration()
+            elif (type_cal == "bb"):
+                if (phase == "start"):
+                    self.listener.start_bb_calibration()
+                elif(phase == "end"):
+                    self.listener.stop_bb_calibration()
             
         elif (category == "special"):
             if (self.showAppDetails):
@@ -292,9 +292,17 @@ class Mode_master:
             self.segments_list[self.segments_names_to_index["Segment h20"]].modes[4].activate()
             self.segments_list[self.segments_names_to_index["Segment h00"]].modes[4].activate()
 
-        
- 
+"""     
+async def main():
+    listener = Listener.Listener()
+    mm = Mode_master(listener)  # or Mode_master(), depending on where you want to start
+    # Start the async update_forever method
+    await mm.update_forever()
+
+if __name__ == '__main__':
+    # Start the asyncio event loop
+    asyncio.run(main())
             
-            
+"""      
 
             
