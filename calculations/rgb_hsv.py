@@ -9,13 +9,13 @@ def fromHSV_toRGB(h,s,v):
         t = int(255*( v * (1.0 - s * (1.0 - f)) ))
         v = int(255*v)
         
-        if i==0: return (v, t, w)
-        if i==1: return (q, v, w)
-        if i==2: return (w, v, t)
-        if i==3: return (w, q, v)
-        if i==4: return (t, w, v)
-        if i==5: return (v, w, q)
-    else: v = int(255*v); return (v, v, v)
+        if i==0: return [v, t, w]
+        if i==1: return [q, v, w]
+        if i==2: return [w, v, t]
+        if i==3: return [w, q, v]
+        if i==4: return [t, w, v]
+        if i==5: return [v, w, q]
+    else: v = int(255*v); return [v, v, v]
        
 def fromRGB_toHSV(r, g, b):
     r, g, b = r/255.0, g/255.0, b/255.0

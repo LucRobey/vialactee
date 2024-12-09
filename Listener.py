@@ -1,55 +1,68 @@
 import pyaudio
 import time
 import numpy as np
+import random
+
+import connectors.ESP32_Microphone as ESP32_Microphone
 
 #yo les potos c poulette
 
 class Listener:
     
-    SAMPLES = 4048#4*44100 #
-    FORMAT = pyaudio.paInt16
-    CHANNELS = 1
+    SAMPLES = 1024#4048#4*44100 #
+    #FORMAT = pyaudio.paInt16
+    #CHANNELS = 1
     SAMPLING_FREQUENCY = 44100
     sampling_period_us = 1000000 / SAMPLING_FREQUENCY
     
-    p = pyaudio.PyAudio()
-    input_device_index = 2  # Update this to the correct device index
-    stream = p.open(format=FORMAT, channels=CHANNELS, rate=SAMPLING_FREQUENCY, input=True, input_device_index=input_device_index, frames_per_buffer=SAMPLES)
+    #p = pyaudio.PyAudio()
+    #input_device_index = 2  # Update this to the correct device index
+    #stream = p.open(format=FORMAT, channels=CHANNELS, rate=SAMPLING_FREQUENCY, input=True, input_device_index=input_device_index, frames_per_buffer=SAMPLES)
 
     
     
     
-    def __init__(self):
+    def __init__(self , microphone , showMicrophoneDetails):
         self.samples = []           #samples we listen os size SAMPLES
         self.power = 1              #global power  (not used yet)
         self.sensi = 0.5            #global sensi   (not used yet)
         self.luminosite = 1.0
         
+        self.microphone = microphone
+        self.showMicrophoneDetails = showMicrophoneDetails
+        
+        self.nb_of_fft_band = 8      #nb of bands we divide the frequencies
+        self.connector = ESP32_Microphone.ESP32_Microphone(self.nb_of_fft_band , self.showMicrophoneDetails)
 
         self.build_asserved_fft_lists()
         self.build_asserved_total_power()
         self.build_band_peaks()
+        
+        
 
     def update(self):
-        success = self.listen()
-        if (success):
-            self.apply_fft()
+        if (self.microphone):
+            success = self.listen()
+            if (success):
+                #self.apply_fft()
+                self.asserv_fft_bands()
+                self.update_band_means_and_smoothed_values()
+                self.asserv_total_power()
+                self.detect_band_peaks()
+                
+            else:
+                if (self.showMicrophoneDetails):
+                    print("(L) on ecoute rien")
+        else:
+            self.apply_fake_fft()
             self.asserv_fft_bands()
             self.update_band_means_and_smoothed_values()
             self.asserv_total_power()
             self.detect_band_peaks()
-            
-        else:
-            print("on ecoute rien")
         
     def listen(self):
-        try:
-            data = self.stream.read(self.SAMPLES, exception_on_overflow=False)
-            self.samples = np.frombuffer(data, dtype=np.int16)
-            return True
-        except:
-            print("On arrive pas à écouter")
-            return False
+        success , self.fft_band_values = self.connector.listen()
+        return success
         
     def asserv_fft_bands_2(self):
         for band_index in range(self.nb_of_fft_band):
@@ -126,6 +139,18 @@ class Listener:
         self.fft_bary =  (num/denom) /(self.nb_of_fft_band-1)
         
         
+    def apply_fake_fft(self):
+        for band_index in range(self.nb_of_fft_band):
+            self.fft_band_values[band_index] += random.randint(-10,10)
+            if ( self.fft_band_values[band_index] <= 0):
+                self.fft_band_values[band_index] = 20
+                
+        num=0
+        denom=0
+        for i in range(self.nb_of_fft_band):
+            num+=i*self.fft_band_values[i]
+            denom+=self.fft_band_values[i]
+        self.fft_bary =  (num/denom) /(self.nb_of_fft_band-1)
         
 
     def asserv_total_power(self):
@@ -190,7 +215,7 @@ class Listener:
         """
 
         self.fft_bary = 0             #by_center of the frequencies
-        self.nb_of_fft_band = 16      #nb of bands we divide the frequencies
+        
         
         self.fft_band_values = []   
         self.smoothed_fft_band_values = []
@@ -210,7 +235,7 @@ class Listener:
             self.segm_fft_indexs.append(self.segm_fft_indexs[-1]*A)
         for band_index in range(1,self.nb_of_fft_band):
             self.segm_fft_indexs[band_index]=int(self.segm_fft_indexs[band_index])
-
+        print(self.segm_fft_indexs)
         for _ in range(self.nb_of_fft_band):
             self.fft_band_values.append(0.0)
             self.band_lm.append(100.0)

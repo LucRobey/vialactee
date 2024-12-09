@@ -30,10 +30,10 @@ class Mode:
 
     def fade_to_black(self , ratio_black):
         for led_index in range(self.nb_of_leds):
-            self.smooth( ratio_black , led_index , (0,0,0))
+            self.smooth( ratio_black , led_index , [0,0,0])
 
     def fade_to_black_led(self , ratio_black , led_index):
-        self.smooth( ratio_black , led_index , (0,0,0))
+        self.smooth( ratio_black , led_index , [0,0,0])
 
     def fade_to_black_segment(self , ratio_black , start_index , stop_index ):
         for led_index in range(start_index , stop_index+1):

@@ -12,7 +12,7 @@ class Segment:
     
     listener = None
 
-    def __init__(self , name ,listener , leds , indexes , global_rgb , orientation , alcool , show_modes_details, useGlobalMatrix):
+    def __init__(self , name ,listener , leds , indexes , orientation , alcool , show_modes_details, useGlobalMatrix):
         self.name = name
         self.leds = leds
         self.indexes = indexes
@@ -24,8 +24,8 @@ class Segment:
         self.fused_list = []
         self.rgb_list = []
         for _ in range((len(indexes))):
-            self.rgb_list.append((0,0,0))
-        self.global_rgb_list = global_rgb
+            self.rgb_list.append([0,0,0])
+        self.global_rgb_list = []
         
         self.isBlocked = False
 
@@ -59,8 +59,8 @@ class Segment:
                         ]
         
             self.modes_names = ["Rainbow",
-                                "Bary rainbow",
-                                "Middle bar",
+                                "Bary Rainbow",
+                                "Middle Bar",
                                 "Shining Stars",
                                 ]
         else:
@@ -71,10 +71,10 @@ class Segment:
                         Power_bar_mode.Power_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list)]
         
             self.modes_names = ["Rainbow",
-                                "Bary rainbow",
-                                "Middle bar",
+                                "Bary Rainbow",
+                                "Middle Bar",
                                 "Shining Stars",
-                                "Power bar"]
+                                "Power Bar"]
         
         if (alcool):
             self.modes.append(Alcool_randomer.Alcool_randomer(self.listener , self.leds , self.indexes , self.rgb_list))
@@ -91,16 +91,26 @@ class Segment:
                     else:
                         self.leds[self.indexes[led_index]] = luminosite * self.rgb_list[led_index]
         else:
+            
             for led_index in range(self.nb_of_leds):
-                self.leds[self.indexes[led_index]] = luminosite * self.rgb_list[led_index]
+                new_color = []
+                for rgb_index in range(3):
+                    new_color.append(int(luminosite * self.rgb_list[led_index][rgb_index]))
+                self.leds[self.indexes[led_index]] = new_color
 
 
     def change_mode(self , mode_name , info_margin , showInfos):
         if(not self.isBlocked):
             #On terminate l'ancien mode
             self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)
+            if (not mode_name in self.modes_names):
+                mode_name = mode_name[1:]
             for mode_index in range(len(self.modes)):
                 found_a_mode = False
+                #print("|",self.modes_names[mode_index],"|",mode_name,"|")
+                #print(len(self.modes_names[mode_index]),len(mode_name))
+                #print("|",self.modes_names[mode_index],"|",mode_name[1:],"|")
+                #print(self.modes_names[mode_index]==mode_name[1:])
                 if (self.modes_names[mode_index]==mode_name):
                     
                     # On change l'index et on start
@@ -116,14 +126,14 @@ class Segment:
             if (self.show_modes_details):
                 print("(S) le "+self.name +" est bloqué et ne peut pas passer au "+mode_name)
 
-    def force_mode(self , mode_name):
+    def force_mode(self , mode_name , info_margin , showInfos):
         #On terminate l'ancien mode
-        self.modes[self.activ_mode].terminate()
+        self.modes[self.activ_mode].terminate(info_margin +"   ", showInfos)
         for mode_index in range(len(self.modes)):
             if (self.modes_names[mode_index]==mode_name):
                 # On change l'index et on start
                 self.activ_mode=mode_index
-                self.modes[self.activ_mode].start()
+                self.modes[self.activ_mode].start(info_margin +"   ", showInfos)
                 if (self.show_modes_details):
                     print("(S) le segment ",self.name, " change de mode pour ", mode_name)
                 
