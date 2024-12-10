@@ -8,7 +8,7 @@ class Proportion_rainbow_mode(Mode.Mode):
     def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
         super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
         
-        self.minimum_hue = 0.8
+        self.minimum_hue = 0.0
         self.maximum_hue = 0.8
 
         self.N = (self.nb_of_leds-1)/(self.listener.nb_of_fft_band-1)
@@ -28,7 +28,6 @@ class Proportion_rainbow_mode(Mode.Mode):
             mem_dhue = []
             mem_hue = [self.minimum_hue]
             print("(PRM)     sum_dhue = ",sum_dhue)
-
 
         for led_index in range(self.nb_of_leds-1):
             

@@ -49,7 +49,7 @@ class Segment:
         if(self.modes[self.activ_mode].isActiv):
             self.modes[self.activ_mode].update()
         else:
-            print("(S) erreur, on update un mode qui n'a pas été start")
+            print("(S) erreur, on update un mode qui n'a pas été start ")
         
         self.update_leds("Priority")
         
@@ -78,6 +78,7 @@ class Segment:
                         Shining_stars_mode.Shining_stars_mode("Shining Stars"   , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         Power_bar_mode.Power_bar_mode        ("Power_bar"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Christmas_mode_2.Christmas_mode_2    ("Christmas_mode_2", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
                         
                         ]
         
@@ -90,7 +91,7 @@ class Segment:
                                 "Christmas_mode_2"
                                 ]
         
-        self.modes.append(Proportion_rainbow_mode.Proportion_rainbow_mode(("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)))
+        self.modes.append(Proportion_rainbow_mode.Proportion_rainbow_mode("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
         self.modes_names.append("Proportion Rainbow")
         if (alcool):
             self.modes.append(Alcool_randomer.Alcool_randomer("Shot" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
