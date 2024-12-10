@@ -171,6 +171,16 @@ class Mode_master:
         
 
     def initiate_segments(self):
+        def add_segments(info_list , leds):
+            offset = 0
+            for segment_index in range(len(info_list)):
+                seg_infos = info_list[segment_index]
+                indexes = [i for i in range(offset,offset+seg_infos["size"])]
+                new_segment = Segment.Segment(seg_infos["name"],self.listener, leds ,indexes,seg_infos["orientation"],seg_infos["alcool"],self.infos)
+                offset += seg_infos["size"]
+                self.segments_list.append(new_segment)
+                self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
+                
         v4 =  {"name":"Segment v4"  , "size" : 173 , "order" : 0 , "orientation" : "vertical"   , "alcool" : False}
         h32 = {"name":"Segment h32" , "size" : 48  , "order" : 1 , "orientation" : "horizontal" , "alcool" : False}
         h31 = {"name":"Segment h31" , "size" : 48  , "order" : 2 , "orientation" : "horizontal" , "alcool" : False}
@@ -192,15 +202,7 @@ class Mode_master:
 
 
 
-        def add_segments(info_list , leds):
-            offset = 0
-            for segment_index in range(len(info_list)):
-                seg_infos = info_list[segment_index]
-                indexes = [i for i in range(offset,offset+seg_infos["size"])]
-                new_segment = Segment.Segment(seg_infos["name"],self.listener, leds ,indexes,seg_infos["orientation"],seg_infos["alcool"],self.infos)
-                offset += seg_infos["size"]
-                self.segments_list.append(new_segment)
-                self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
+        
 
         
 
