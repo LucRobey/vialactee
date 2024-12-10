@@ -171,6 +171,41 @@ class Mode_master:
         
 
     def initiate_segments(self):
+        v4 =  {"name":"Segment v4"  , "size" : 173 , "order" : 0 , "orientation" : "vertical"   , "alcool" : False}
+        h32 = {"name":"Segment h32" , "size" : 48  , "order" : 1 , "orientation" : "horizontal" , "alcool" : False}
+        h31 = {"name":"Segment h31" , "size" : 48  , "order" : 2 , "orientation" : "horizontal" , "alcool" : False}
+        h30 = {"name":"Segment h30" , "size" : 47  , "order" : 3 , "orientation" : "horizontal" , "alcool" : False}
+        v3 =  {"name":"Segment v3"  , "size" : 173 , "order" : 4 , "orientation" : "horizontal" , "alcool" : False}
+        h20 = {"name":"Segment h20" , "size" : 91  , "order" : 5 , "orientation" : "horizontal" , "alcool" : True }
+        h00 = {"name":"Segment h00" , "size" : 205 , "order" : 6 , "orientation" : "horizontal" , "alcool" : True }
+
+        v2 =  {"name":"Segment v2"  , "size" : 173 , "order" : 7 , "orientation" : "vertical"   , "alcool" : False}
+        h11 = {"name":"Segment h11" , "size" : 87  , "order" : 8 , "orientation" : "horizontal" , "alcool" : False}
+        h10 = {"name":"Segment h10" , "size" : 86  , "order" : 9 , "orientation" : "horizontal" , "alcool" : False}
+        v1 =  {"name":"Segment v1"  , "size" : 173 , "order" : 10 ,"orientation" : "horizontal" , "alcool" : False}
+
+        segs_1 = [v4 , h32 , h31 , h30 , v3 , h20 , h00]
+        segs_2 = [v2 , h11 , h10 , v1]
+
+        add_segments(segs_1,self.leds)
+        add_segments(segs_2,self.leds2)
+
+
+
+        def add_segments(info_list , leds):
+            offset = 0
+            for segment_index in range(len(info_list)):
+                seg_infos = info_list[segment_index]
+                indexes = [i for i in range(offset,offset+seg_infos["size"])]
+                new_segment = Segment.Segment(seg_infos["name"],self.listener, leds ,indexes,seg_infos["orientation"],seg_infos["alcool"],self.infos)
+                offset += seg_infos["size"]
+                self.segments_list.append(new_segment)
+                self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
+
+        
+
+        """
+        
         indexes = [i for i in range(173)]
         segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes,"vertical",False,self.infos)
         indexes = [i for i in range(173,173+48)]
@@ -215,7 +250,7 @@ class Mode_master:
         self.segments_names_to_index["Segment h11"]=8
         self.segments_names_to_index["Segment h10"]=9
         self.segments_names_to_index["Segment v1"]=10
-
+"""
 
     def change_configuration(self , info_margin , showInfos):
         #on pick une conf nouvelle au pif
