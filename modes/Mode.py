@@ -50,6 +50,10 @@ class Mode:
         for led_index in range(start_index , stop_index+1):
             self.fade_to_black_led(ratio_black , led_index)
 
+    def fill(self, color):
+        for led_index in range(self.nb_of_leds):
+            self.rgb_list[led_index] = color
+
 
     def terminate(self , info_margin , showInfos):
         self.isActiv = False

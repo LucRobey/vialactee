@@ -9,8 +9,6 @@ class Listener:
         self.printAsservmentDetails = infos["printAsservmentDetails"]
         self.useMicrophone          = infos["useMicrophone"]
         
-        self.samples = []           # samples we listen to, size SAMPLES
-        self.power = 1              # global power (not used yet)
         self.sensi = 0.5            # global sensi (not used yet)
         self.luminosite = 1.0
 
@@ -201,7 +199,6 @@ class Listener:
         self.band_proportion = []
         self.segm_fft_indexs = [1]    #index that separate each band
 
-        #self.lenFFT = int((self.SAMPLES)/2-2) #Niquist-Shanon + the first value doesn't matter
         """
         A=np.power(self.lenFFT,1/(self.nb_of_fft_band-1))
         for _ in range(1,self.nb_of_fft_band):
