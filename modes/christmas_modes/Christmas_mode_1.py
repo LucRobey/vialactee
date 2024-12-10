@@ -8,7 +8,7 @@ class Christmas_mode_1(Mode.Mode):
         super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
         
         self.invasion_time = 5
-        self.size_of_conquest = 5       #impair
+        self.size_of_conquest = 9       #impair
         self.invader = chtm_colors.red
         self.victim = chtm_colors.green
         self.new_invasion = True
@@ -30,12 +30,16 @@ class Christmas_mode_1(Mode.Mode):
 
         if( time_coef>=1 ):
             self.new_invasion = True
+            self.start_invasion_time = time.time()
             if(self.invader == chtm_colors.red):
                 self.invader = chtm_colors.green
                 self.victim = chtm_colors.red
             else:
                 self.invader = chtm_colors.red
                 self.victim = chtm_colors.green
+            if(self.printThisModeDetail):
+                print("(CM_1)       Nouvelle invasion!")
+                
         else:
             nb_of_invader = int(self.size_of_conquest*time_coef)
             if(self.printThisModeDetail):
@@ -47,6 +51,7 @@ class Christmas_mode_1(Mode.Mode):
                     self.rgb_list[country_index*self.size_of_conquest-invader_index] = self.invader
                     if (country_index*self.size_of_conquest+invader_index<self.nb_of_leds):
                         self.rgb_list[country_index*self.size_of_conquest+invader_index] = self.invader
+                country_index += 1
 
         #====================================================================================
         if(self.printTimeOfCalculation and self.printThisModeDetail):

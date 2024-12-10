@@ -16,8 +16,8 @@ import Listener as Listener
 import data.Data_reader as Data_reader
 
 import numpy as np
-#import neopixel
-#import board
+import neopixel
+import board
 import asyncio
 
 class Mode_master:
@@ -45,8 +45,8 @@ class Mode_master:
         self.load_configurations()
 
         if(self.onRaspberry):
-            #self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
-            #self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
+            self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
+            self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
             pass
         else:
             self.leds = Fake_leds.Fake_leds(173 + 47 + 48 + 47 + 173 + 89 + 207 + 1)
