@@ -6,6 +6,8 @@ import modes.Bary_rainbow_mode as Bary_rainbow_mode
 import modes.Shining_stars_mode as Shining_stars_mode
 
 import modes.christmas_modes.Christmas_mode_1 as Christmas_mode_1
+import modes.christmas_modes.Christmas_mode_2 as Christmas_mode_2
+import modes.Proportion_rainbow_mode as Proportion_rainbow_mode
 import modes.Alcool_randomer as Alcool_randomer
 
 import numpy as np
@@ -73,7 +75,7 @@ class Segment:
                         Middle_bar_mode.Middle_bar_mode      ("Middle Bar"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         Shining_stars_mode.Shining_stars_mode("Shining Stars"   , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         Power_bar_mode.Power_bar_mode        ("Power_bar"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
+                        Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         
                         ]
         
@@ -84,6 +86,8 @@ class Segment:
                                 "Power Bar",
                                 "Christmas_mode_1"]
         
+        self.modes.append(Proportion_rainbow_mode.Proportion_rainbow_mode(("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)))
+        self.modes_names.append("Proportion Rainbow")
         if (alcool):
             self.modes.append(Alcool_randomer.Alcool_randomer("Shot" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
             self.modes_names.append("Shot")
@@ -108,7 +112,7 @@ class Segment:
 
 
     def change_mode(self , mode_name , info_margin , showInfos):
-        mode_name = "Christmas_mode_1"
+        mode_name = "Proportion Rainbow"
         if(not self.isBlocked):
             #On terminate l'ancien mode
             self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)

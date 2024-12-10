@@ -14,14 +14,14 @@ async def main():
         "onRaspberry"     : False ,    #si tu veux compiler sur ton ordi, met en commentaire plus haut import neopixel et import board, et met aussi en commentaire import Serial dans ESP32_microphone, et l'initialisation des leds dans mode_master
 
         "printTimeOfCalculation" : False ,
-        "printModesDetails"      : False ,
+        "printModesDetails"      : True  ,
         "printMicrophoneDetails" : False ,
         "printAppDetails"        : False ,
         "printAsservmentDetails" : False ,
         "printConfigurationLoads": False ,
         "printConfigChanges"     : False ,
 
-        "modesToPrintDetails"    : ["Christmas_mode_1"]
+        "modesToPrintDetails"    : ["Proportion Rainbow"]
     }
     
     listener = Listener.Listener(infos)
