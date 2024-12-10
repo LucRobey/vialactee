@@ -60,14 +60,16 @@ class Segment:
                         Bary_rainbow_mode.Bary_rainbow_mode  ("Bary Rainbow"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         Middle_bar_mode.Middle_bar_mode      ("Middle Bar"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         Shining_stars_mode.Shining_stars_mode("Shining Stars"   , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
+                        Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Christmas_mode_2.Christmas_mode_2    ("Christmas_mode_2", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
                         ]
         
             self.modes_names = ["Rainbow",
                                 "Bary Rainbow",
                                 "Middle Bar",
                                 "Shining Stars",
-                                "Christmas_mode_1"
+                                "Christmas_mode_1",
+                                "Christmas_mode_2"
                                 ]
         else:
             self.modes = [Rainbow_mode.Rainbow_mode          ("Rainbow"         , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
@@ -84,7 +86,9 @@ class Segment:
                                 "Middle Bar",
                                 "Shining Stars",
                                 "Power Bar",
-                                "Christmas_mode_1"]
+                                "Christmas_mode_1",
+                                "Christmas_mode_2"
+                                ]
         
         self.modes.append(Proportion_rainbow_mode.Proportion_rainbow_mode(("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)))
         self.modes_names.append("Proportion Rainbow")

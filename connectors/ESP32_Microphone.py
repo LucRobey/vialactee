@@ -8,12 +8,13 @@ class ESP32_Microphone:
         self.showMicrophoneDetails  = infos["printMicrophoneDetails"]
         self.onRaspberry            = infos["onRaspberry"]
         self.printTimeOfCalculation = infos["printTimeOfCalculation"]
+        self.useMicrophone          = infos["useMicrophone"]
 
         self.bandValues = bandValues
         self.nb_of_fft_band = len(self.bandValues)
 
         self.ser = None
-        if(self.onRaspberry):
+        if(self.onRaspberry and self.useMicrophone):
             self.ser = serial.Serial('/dev/ttyUSB0', 1000000, timeout=0.1)
         
                 
@@ -28,7 +29,7 @@ class ESP32_Microphone:
             await asyncio.sleep(0.0001)
             
     async def listen(self):
-        if(self.onRaspberry):
+        if(self.onRaspberry and self.useMicrophone):
             #s'il y a au moins un message en attente
             if self.ser.in_waiting > 0:
                 # Read the response in a separate thread to avoid blocking the event loop
