@@ -1,10 +1,11 @@
 import modes.Mode as Mode
 import calculations.rgb_hsv as RGB_HSV
+import time
 
 class Rainbow_mode(Mode.Mode):
     
-    def __init__(self , listener , leds , indexes , rgb_list):
-        super().__init__(listener , leds , indexes , rgb_list)
+    def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
+        super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
 
         #Used to calculate the hue and the intensity of each pixel
         self.delta_margin=float(self.nb_of_leds)/(self.listener.nb_of_fft_band-1)
@@ -12,6 +13,10 @@ class Rainbow_mode(Mode.Mode):
 
     
     def update(self):
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            time_me = time.time()
+        #====================================================================================
+        #   
         for led_index in range(self.nb_of_leds):
             #hue de 0 à 1 pour aller du rouge au bleu
             hue = led_index/self.nb_of_leds
@@ -25,6 +30,11 @@ class Rainbow_mode(Mode.Mode):
         
             rgb_color = RGB_HSV.fromHSV_toRGB(hue,1.0,intensity)
             super().smooth(0.5,led_index,rgb_color)
+
+        #====================================================================================
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            duration = time.time() - time_me
+            print("      (CM) temps pour ",self.name," : ",duration)
 
 
                     

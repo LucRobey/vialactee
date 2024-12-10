@@ -2,6 +2,7 @@ import modes.Mode as Mode
 import calculations.rgb_hsv as RGB_HSV
 import numpy as np
 import random
+import time
 
 class Shining_stars_mode(Mode.Mode):
 
@@ -14,8 +15,8 @@ class Shining_stars_mode(Mode.Mode):
     # threshold to activate each band (with listener.asserv_segm_fft)
     threshold = 0.6
 
-    def __init__(self , listener , leds , indexes , rgb_list):
-        super().__init__(listener , leds , indexes , rgb_list)
+    def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
+        super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
 
         self.nb_of_fft_band = listener.nb_of_fft_band
 
@@ -27,6 +28,10 @@ class Shining_stars_mode(Mode.Mode):
         self.colors=np.array(self.colors)
 
     def update(self):
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            time_me = time.time()  
+        #====================================================================================
+        
         # first we fade to black
         self.fade_to_black(0.1)
 
@@ -37,6 +42,11 @@ class Shining_stars_mode(Mode.Mode):
         for band_index in range(self.nb_of_fft_band):
             if self.listener.band_peak[band_index] > 0:
                 self.lightUp(band_index)
+
+        #====================================================================================
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            duration = time.time() - time_me
+            print("      (CM) temps pour ",self.name," : ",duration)
 
 
     

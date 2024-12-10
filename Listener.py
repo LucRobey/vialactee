@@ -1,14 +1,14 @@
-import pyaudio
 import time
 import numpy as np
 import random
-
 import asyncio
 
-import connectors.ESP32_Microphone as ESP32_Microphone
 
 class Listener:
-    def __init__(self):
+    def __init__(self , infos):
+        self.printAsservmentDetails = infos["printAsservmentDetails"]
+        self.useMicrophone          = infos["useMicrophone"]
+        
         self.samples = []           # samples we listen to, size SAMPLES
         self.power = 1              # global power (not used yet)
         self.sensi = 0.5            # global sensi (not used yet)
@@ -28,11 +28,11 @@ class Listener:
             await asyncio.sleep(0.0001)
 
     def update(self):
-        if self.microphone:
+        if self.useMicrophone:
             if self.isSilenceCalibrating:
                 self.calibrate_silence()
             elif self.isBBCalibrating:
-                self.calibrate_()
+                self.calibrate_bb()
             else:
                 self.update_band_means_and_smoothed_values()
                 self.asserv_fft_bands_2()

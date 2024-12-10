@@ -8,13 +8,16 @@ from Mode_Globaux import Matrix_data as Matrix_data
 from Mode_Globaux import Segments_Locations as Segments_Locations
 from Mode_Globaux import Mode_Tchou_Tchou as Mode_Tchou_Tchou
 
+import Fake_leds
+
 import connectors.Connector as  Connector
 import Segment as Segment
 import Listener as Listener
 import data.Data_reader as Data_reader
 
-import neopixel
-import board
+import numpy as np
+#import neopixel
+#import board
 import asyncio
 
 class Mode_master:
@@ -29,24 +32,33 @@ class Mode_master:
     next_change_of_configuration_time = 0
     current_time = time.time()
 
-    def __init__(self, listener , useGlobalMatrix , printTimeOfCalculation)):
-    
-
+    def __init__(self, listener , infos):
+        self.infos = infos
         self.listener = listener
-        self.listener.use_microphone(self.microphone)
-        self.listener.set_prints(self.showMicrophoneDetails)
+        self.useGlobalMatrix        = infos["useGlobalMatrix"]
+        self.onRaspberry            = infos["onRaspberry"]
+        self.printTimeOfCalculation = infos["printTimeOfCalculation"]
+        self.printModesDetails      = infos["printModesDetails"]
+        self.printAppDetails        = infos["printAppDetails"]
+        self.printConfigChanges     = infos["printConfigChanges"]
+
         self.load_configurations()
 
-        self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
-        self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
-        
+        if(self.onRaspberry):
+            #self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
+            #self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
+            pass
+        else:
+            self.leds = Fake_leds.Fake_leds(173 + 47 + 48 + 47 + 173 + 89 + 207 + 1)
+            self.leds2 = Fake_leds.Fake_leds(800)
+
         if (self.useGlobalMatrix):
             self.matrix = Matrix.Matrix()
             self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
             self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
 
         self.initiate_segments()
-        self.initiate_configuration("", self.show_modes_details)
+        self.initiate_configuration()
 
     def set_connector(self, connector):
         self.appli_connector = connector
@@ -57,25 +69,48 @@ class Mode_master:
             await asyncio.sleep(0.0001)
 
     async def update(self):
-        
-        self.listener.update()
+        if self.printTimeOfCalculation:
+            duration = []
+            names_of_durations = []
+
         #==============================================
         if self.printTimeOfCalculation:
-            time3 = time.time()
+            time_listener_update = time.time()
+
+        self.listener.update()
+
+        if self.printTimeOfCalculation:
+            duration.append(time.time() - time_listener_update)
+            names_of_durations.append("listener.update()")
+        #==============================================
+
+        #==============================================
+        if self.printTimeOfCalculation:
+            time_matrix_general_update = time.time()
 
         if self.useGlobalMatrix:
             self.matrix_general.update()
 
         if self.printTimeOfCalculation:
-            duration3 = time.time() - time3
+            duration.append(time.time() - time_matrix_general_update)
+            names_of_durations.append("matrix_general.update()")
         #==============================================
+
+        #==============================================
+        if self.printTimeOfCalculation:
+            time_led_show = time.time()
 
         self.leds.show()
         self.leds2.show()
 
+        if self.printTimeOfCalculation:
+            duration.append(time.time() - time_led_show)
+            names_of_durations.append("leds.show()")
+        #==============================================
+
         #==============================================
         if self.printTimeOfCalculation:
-            time4 = time.time()
+            time_segments_update= time.time()
 
         for seg_index in range(len(self.segments_list)):
             if self.useGlobalMatrix:
@@ -83,7 +118,8 @@ class Mode_master:
             self.segments_list[seg_index].update()
 
         if self.printTimeOfCalculation:
-            duration4 = time.time() - time4
+            duration.append(time.time() - time_segments_update)
+            names_of_durations.append("segments.update()")
         #==============================================
 
         #==============================================
@@ -93,18 +129,18 @@ class Mode_master:
         #==============================================
 
         if self.printTimeOfCalculation:
-            total = duration1 + duration2 + duration3 + duration4
-            print("total = ", total)
+            print("=======================================================================")
+            total = np.sum(duration)
+            print("   |(MM) total = ", total , " secondes")
             nb_of_it_per_sec = 1 / total
-            print("soit ", nb_of_it_per_sec, " itérations par seconde")
-            print("app :", 100 * (duration1 / total),
-                  " , listen() :", 100 * (duration2 / total),
-                  " , general_matrix :", 100 * (duration3 / total),
-                  " , update_modes : ", 100 * (duration4 / total),)
+            print("   |(MM) soit ", nb_of_it_per_sec, " itérations par seconde")
+            for k in range(len(duration)):
+                print("   |(MM) " ,names_of_durations[k], "  :  " , 100*float(duration[k])/total , "%")
+
 
     def load_configurations(self):
         # Le Data_reader load depuis google excel et construit notre dictionnaire
-        self.data_reader = Data_reader.Data_reader(self.show_modes_details)
+        self.data_reader = Data_reader.Data_reader(self.infos)
         self.configurations, self.playlists = self.data_reader.configurations, self.data_reader.playlists
         # On initialise le bloquage des playlists (Par défaut, on les prend toutes)
         for _ in self.playlists:
@@ -123,40 +159,40 @@ class Mode_master:
                 segment.change_mode(self.activ_configuration["modes"][segment.name], info_margin + "   ", showInfos)
  
 
-    def initiate_configuration(self , info_margin , showInfos):
+    def initiate_configuration(self):
         #On initialise en prenant une conf au pif dans une playlist au pif
-        self.activ_configuration = self.activ_configuration = self.pick_a_random_conf(info_margin+"   " , showInfos)
-        self.update_segments_modes(info_margin , showInfos)
+        self.activ_configuration = self.activ_configuration = self.pick_a_random_conf("   " , self.printConfigChanges)
+        self.update_segments_modes("   " , self.printConfigChanges)
         #On set un temps pour le futur changement de conf
         self.next_change_of_configuration_time = time.time() + self.configuration_duration
-        if(showInfos):
-            print(info_margin + "(MM)   initiate_configuration()  :     next_change_of_conf_time = " , self.next_change_of_configuration_time)
+        if(self.printConfigChanges):
+            print("(MM)   initiate_configuration()  :     next_change_of_conf_time = " , self.next_change_of_configuration_time)
 
         
 
     def initiate_segments(self):
         indexes = [i for i in range(173)]
-        segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes,"vertical",False,self.show_modes_details , self.useGlobalMatrix)
+        segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes,"vertical",False,self.infos)
         indexes = [i for i in range(173,173+48)]
-        segment_h32 = Segment.Segment("Segment h32",self.listener, self.leds , indexes,"horizontal",False,self.show_modes_details,self.useGlobalMatrix)
+        segment_h32 = Segment.Segment("Segment h32",self.listener, self.leds , indexes,"horizontal",False,self.infos)
         indexes = [i for i in range(173+48,173+48+48)]
-        segment_h31 = Segment.Segment("Segment h31",self.listener, self.leds , indexes,"horizontal",False,self.show_modes_details,self.useGlobalMatrix)
+        segment_h31 = Segment.Segment("Segment h31",self.listener, self.leds , indexes,"horizontal",False,self.infos)
         indexes = [i for i in range(173+48+48,173+48+48+47)]
-        segment_h30 = Segment.Segment("Segment h30",self.listener, self.leds , indexes,"horizontal",False,self.show_modes_details,self.useGlobalMatrix)
+        segment_h30 = Segment.Segment("Segment h30",self.listener, self.leds , indexes,"horizontal",False,self.infos)
         indexes = [i for i in range(173+48+48+47,173+48+48+47+173)]
-        segment_v3 = Segment.Segment("Segment v3",self.listener, self.leds , indexes,"vertical",False,self.show_modes_details,self.useGlobalMatrix)
+        segment_v3 = Segment.Segment("Segment v3",self.listener, self.leds , indexes,"vertical",False,self.infos)
         indexes = [i for i in range(173+48+48+47+173,173+48+48+47+173+91)]
-        segment_h20 = Segment.Segment("Segment h20",self.listener, self.leds , indexes,"horizontal",True,self.show_modes_details,self.useGlobalMatrix)
+        segment_h20 = Segment.Segment("Segment h20",self.listener, self.leds , indexes,"horizontal",True,self.infos)
         indexes = [i for i in range(173+48+48+47+173+91,173+48+48+47+173+91+205)]
-        segment_h00 = Segment.Segment("Segment h00",self.listener, self.leds , indexes,"horizontal",True,self.show_modes_details,self.useGlobalMatrix)
+        segment_h00 = Segment.Segment("Segment h00",self.listener, self.leds , indexes,"horizontal",True,self.infos)
         indexes = [i for i in range(0,173)]
-        segment_v2 = Segment.Segment("Segment v2",self.listener, self.leds2 , indexes,"vertical",False,self.show_modes_details,self.useGlobalMatrix)
+        segment_v2 = Segment.Segment("Segment v2",self.listener, self.leds2 , indexes,"vertical",False,self.infos)
         indexes = [i for i in range(173,173+87)]
-        segment_h11 = Segment.Segment("Segment h11",self.listener, self.leds2 , indexes,"horizontal",False,self.show_modes_details,self.useGlobalMatrix)
+        segment_h11 = Segment.Segment("Segment h11",self.listener, self.leds2 , indexes,"horizontal",False,self.infos)
         indexes = [i for i in range(173+87,173+87+86)]
-        segment_h10 = Segment.Segment("Segment h10",self.listener, self.leds2 , indexes,"horizontal",False,self.show_modes_details,self.useGlobalMatrix)
+        segment_h10 = Segment.Segment("Segment h10",self.listener, self.leds2 , indexes,"horizontal",False,self.infos)
         indexes = [i for i in range(173+87+86,173+87+86+173)]
-        segment_v1 = Segment.Segment("Segment v1",self.listener, self.leds2 , indexes,"vertical",False,self.show_modes_details,self.useGlobalMatrix)
+        segment_v1 = Segment.Segment("Segment v1",self.listener, self.leds2 , indexes,"vertical",False,self.infos)
         self.segments_list.append(segment_v4)
         self.segments_list.append(segment_h32)
         self.segments_list.append(segment_h31)
@@ -228,38 +264,38 @@ class Mode_master:
         print("category = ",category)
         if (category == "block"):
             segment_name = splited_order[1]
-            if (self.showAppDetails):
-                print("(MM) On bloque le segment "+segment_name)
+            if (self.printAppDetails):
+                print("(MM) On veut bloquer le segment "+segment_name)
             self.segments_list[self.segments_names_to_index[segment_name]].block()
             
 
         elif (category == "unblock"):
             segment_name = splited_order[1]
-            if (self.showAppDetails):
-                print("(MM) On  débloque le segment "+segment_name)
+            if (self.printAppDetails):
+                print("(MM) On veut débloquer le segment "+segment_name)
             self.segments_list[self.segments_names_to_index[segment_name]].unBlock()
             
 
         elif (category == "change"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
-            if (self.showAppDetails):
-                print("(MM) On essaie de changer le segment "+segment_name+" pour le mode "+new_mode)
+            if (self.printAppDetails):
+                print("(MM) On veut changer le segment "+segment_name+" pour le mode "+new_mode)
             self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode , "" , self.show_modes_details)
             
 
         elif (category == "force"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
-            if (self.showAppDetails):
-                print("(MM) On FORCE le segment "+segment_name+" pour le mode "+new_mode)
+            if (self.printAppDetails):
+                print("(MM) On veut FORCER le segment "+segment_name+" pour le mode "+new_mode)
             self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode , "" , self.show_modes_details)
 
         elif (category == "update"):
             parametre = splited_order[1]                            #str parametre c ["sensibilite","luminosite"]
             new_value = int(splited_order[2])
-            if (self.showAppDetails):#int sensi,lum c [0:100]
-                print("(MM) New "+parametre+" = "+str(new_value))
+            if (self.printAppDetails):#int sensi,lum c [0:100]
+                print("(MM) On veut changer "+parametre+" = "+str(new_value))
             if (parametre == "sensibilite"):
                 self.listener.sensi = float(new_value)/100          #On ramene la sensi entre 0 et 1 
             if (parametre == "luminosite"):
@@ -268,8 +304,8 @@ class Mode_master:
         elif (category == "calibration"):
             type_cal = splited_order[1]
             phase = splited_order[2]     #str type_cal c ["silence , "bb"]
-            if (self.showAppDetails):
-                    print("(MM) On "+phase+" une calibration "+type_cal)
+            if (self.printAppDetails):
+                    print("(MM) On veut "+ phase+" une calibration "+type_cal)
             if (type_cal == "silence"):
                 if (phase == "start"):
                     self.listener.start_silence_calibration()
@@ -282,22 +318,10 @@ class Mode_master:
                     self.listener.stop_bb_calibration()
             
         elif (category == "special"):
-            if (self.showAppDetails):
-                print("(MM) On lance le shot ")
+            if (self.printAppDetails):
+                print("(MM) On veut lancer le shot ")
             self.segments_list[self.segments_names_to_index["Segment h20"]].modes[4].activate()
             self.segments_list[self.segments_names_to_index["Segment h00"]].modes[4].activate()
 
-"""     
-async def main():
-    listener = Listener.Listener()
-    mm = Mode_master(listener)  # or Mode_master(), depending on where you want to start
-    # Start the async update_forever method
-    await mm.update_forever()
-
-if __name__ == '__main__':
-    # Start the asyncio event loop
-    asyncio.run(main())
-            
-"""      
 
             

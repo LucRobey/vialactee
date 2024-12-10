@@ -7,8 +7,8 @@ class Data_reader:
     playlists = []
     file_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSQMOg2yZp2tJaOK20D9RetwFd92GDbuIKQNrnZfl8KgQmrbA9TAa1Npr3rPI8tYIbqw_E9NC6RE7uR/pub?gid=452631794&single=true&output=csv"
 
-    def __init__(self , show_modes_details):
-        self.show_modes_details = show_modes_details
+    def __init__(self , infos):
+        self.printConfigurationLoads = infos["printConfigurationLoads"]
 
         self.configurations , self.playlists = self.read_csv_from_google_drive()
 
@@ -27,8 +27,8 @@ class Data_reader:
             
             # Check content type to verify it's a CSV file
             content_type = response.headers.get('Content-Type', '')
-            if ( self.show_modes_details):
-                print(f"Content Type: {content_type}")
+            if ( self.printConfigurationLoads):
+                print(f"(DR) Content Type: {content_type}")
             if 'text/csv' not in content_type:
                 print("The file does not appear to be a CSV file.")
                 return
@@ -43,9 +43,9 @@ class Data_reader:
             # Process and print each row
             for row_index, row in enumerate(csv_reader):
               
-              if ( self.show_modes_details):
+              if ( self.printConfigurationLoads):
                   row_data = " | ".join(cell.strip() for cell in row)
-                  print(f"Row {row_index}: {row_data}")
+                  print(f"(DR)  Row {row_index}: {row_data}")
               if(row_index>0):
                   playlist = row[0]
                   name = row[1]

@@ -1,48 +1,46 @@
-import board
-import neopixel
 import asyncio
-#pixels1 = neopixel.NeoPixel(board.D18, 39, brightness=1)
 
 import Listener
-import modes.Mode as Mode
 import connectors.Connector as  Connector
 import connectors.ESP32_Microphone as ESP32_Microphone
-import modes.Rainbow_mode as Rainbow_mode
-import Segment
 import Mode_master as Mode_master
 
 
 async def main():
     
-    useGlobalMatrix = False
-    useMicrophone = True
+    infos = {
+        "useGlobalMatrix" : False ,
+        "useMicrophone"   : True  ,
+        "onRaspberry"     : False ,    #si tu veux compiler sur ton ordi, met en commentaire plus haut import neopixel et import board, et met aussi en commentaire import Serial dans ESP32_microphone, et l'initialisation des leds dans mode_master
+
+        "printTimeOfCalculation" : False ,
+        "printModesDetails"      : False ,
+        "printMicrophoneDetails" : False ,
+        "printAppDetails"        : False ,
+        "printAsservmentDetails" : False ,
+        "printConfigurationLoads": False ,
+        "printConfigChanges"     : False ,
+
+        "modesToPrintDetails"    : ["Christmas_mode_1"]
+    }
     
-    printTimeOfCalculation = False
-    show_modes_details = False
-    showMicrophoneDetails = False
-    showAppDetails = True
-    
-    # Create instances of necessary classes
-    listener = Listener.Listener()
-    mode_master = Mode_master.Mode_master(listener,
-                                          useGlobalMatrix,
-                                          printTimeOfCalculation) 
+    listener = Listener.Listener(infos)
+    mode_master = Mode_master.Mode_master(listener, infos)                                 
    
-    esp32_microphone = ESP32_Microphone.ESP32_Microphone(listener.fft_band_values , False)
+    esp32_microphone = ESP32_Microphone.ESP32_Microphone(listener.fft_band_values , infos)
 
     # Initialize the Connector with the mode_master
-    connector = Connector.Connector(mode_master)
+    connector = Connector.Connector(mode_master , infos)
 
-    # Set connector for Mode_master if needed (depending on your design)
+    # Set connector
     mode_master.set_connector(connector)
 
     # Start the server and update loops concurrently
     server_task = asyncio.create_task(connector.start_server())  # Start the server
-    #listener_task = asyncio.create_task(listener.update_forever())  # Listener's forever update loop
     mode_master_task = asyncio.create_task(mode_master.update_forever())
     microphone_task = asyncio.create_task(esp32_microphone.listen_forever())  # Microphone listening loop
     
-    # Wait for all tasks to complete (in an actual application, you might use other means)
+    # Wait for all tasks to complete
     await asyncio.gather(server_task, mode_master_task, microphone_task)
 
 # Run the event loop

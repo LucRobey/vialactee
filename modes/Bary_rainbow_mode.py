@@ -1,11 +1,12 @@
 import modes.Mode as Mode
+import calculations.rgb_hsv as RGB_HSV
 import numpy as np
-#import matplotlib.pyplot as plt
+import time
 
 class Bary_rainbow_mode(Mode.Mode):
 
-    def __init__(self , listener , leds , indexes , rgb_list):
-        super().__init__(listener , leds , indexes , rgb_list)
+    def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
+        super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
         
         if (self.nb_of_leds%2 == 0):
             self.hasAMiddle = False
@@ -19,6 +20,10 @@ class Bary_rainbow_mode(Mode.Mode):
         
         
     def update(self):
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            time_me = time.time() 
+        #====================================================================================
+         
         """
         calculate
         """
@@ -45,3 +50,7 @@ class Bary_rainbow_mode(Mode.Mode):
             led_hue = middle_hue + (0.85-middle_hue) * ( (float(led_index)-self.middle_index[1]) / (self.nb_of_leds - self.middle_index[1]))
             self.rgb_list[led_index] = RGB_HSV.fromHSV_toRGB(led_hue,1.0,1.0)
  
+        #====================================================================================
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            duration = time.time() - time_me
+            print("      (CM) temps pour ",self.name," : ",duration)

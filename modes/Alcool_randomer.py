@@ -1,12 +1,11 @@
 import modes.Mode as Mode
-import calculations.rgb_hsv as RGB_HSV
 import time
 import random
 
 class Alcool_randomer(Mode.Mode):
 
-    def __init__(self , listener , leds , indexes , rgb_list):
-        super().__init__(listener , leds , indexes , rgb_list)
+    def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
+        super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
 
         self.begining_speed = self.nb_of_leds/40
         self.end_of_phase_one_speed = 4 * self.begining_speed
@@ -22,6 +21,10 @@ class Alcool_randomer(Mode.Mode):
 
 
     def update(self):
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            time_me = time.time()  
+        #====================================================================================
+         
         self.fade_to_black(0.4)
         if(self.activated):
             self.check_phase()
@@ -42,6 +45,10 @@ class Alcool_randomer(Mode.Mode):
             self.moove_ball()
             
         self.color_head()
+        #====================================================================================
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            duration = time.time() - time_me
+            print("      (CM) temps pour ",self.name," : ",duration)
         
         
     def activate(self):

@@ -6,7 +6,9 @@ class Connector:
     HOST = '0.0.0.0'  # Listen on all available network interfaces
     PORT = 12345
 
-    def __init__(self , mode_master):
+    def __init__(self , mode_master , infos):
+
+        self.printAppDetails = infos["printAppDetails"]
         self.current_page = "Main"
         self.list_of_pages = ["Main","Playlists","Configuration","Shot","Parametres","Calibration"]
 
@@ -34,28 +36,28 @@ class Connector:
             data = await reader.read(1024)
             message = data.decode().strip()
             if not message:
-                print(f"No data received from {client_address}")
+                if (self.printAppDetails):
+                    print(f"(C) No data received from {client_address}")
                 return
-
-            print(f"(C) Message received: {message}")
+            if (self.printAppDetails):
+                print(f"(C) Message received: {message}")
             response = self.process_message(message)
 
             writer.write(b"ack\n")  # Acknowledge receipt
             await writer.drain()
 
-            print(f"(C) State: {self.current_page}")
-            print(f"(C) Order: {response}")
         except Exception as e:
             print(f"Error handling client {client_address}: {e}")
         finally:
             # Close the connection
             writer.close()
             await writer.wait_closed()
-            print(f"Connection with {client_address} closed.")
+            print(f"(C) Connection with {client_address} closed.")
 
     def process_message(self, message):
         """Process the incoming message and execute the appropriate command."""
-        print("(C) message reçu : ",message)
+        if(self.printAppDetails):
+            print("(C) message reçu : ",message)
         splited_message = message.split(":")
         category = splited_message[0]
         rest_of_the_message = message[len(splited_message[0])+1:]
@@ -95,28 +97,11 @@ class Connector:
             print("(C) invalid category")
             return []
 
-        print("(C)          state : " , self.current_page)
-        print("(C)          order : " , order)
+        if(self.printAppDetails):
+            print("(C)          state : " , self.current_page)
+            print("(C)          order : " , order)
         self.mode_master.obey_orders(order)
         
-
-    def listen(self):
-        try:
-            conn, addr = self.server_socket.accept()
-            #print(f"Connected by {addr}")
-            data = conn.recv(1024).decode()
-            if data:
-                print(f"Received: {data}")
-                conn.close()
-                return data
-            else:
-                #print("No data received from the client.")
-                conn.close()
-                return None
-        except socket.timeout:
-            # Handle the case where no connection was received within the timeout
-            #print("No connection received. Doing something else...")
-            return None
         
     def change_page(self , category , page):
         order = []

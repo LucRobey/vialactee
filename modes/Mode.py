@@ -1,11 +1,22 @@
 import calculations.rgb_hsv as RGB_HSV
+import time
 
 class Mode:
 
     listener = None
     white = RGB_HSV.fromHSV_toRGB(0,0,1.0)
 
-    def __init__(self , listener , leds , indexes , rgb_list):
+    def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
+        self.name = name
+        self.segment_name = segment_name
+
+        self.printTimeOfCalculation = infos["printTimeOfCalculation"]
+
+        self.printThisModeDetail = False
+        if(infos["printModesDetails"]):
+            if (self.name in infos["modesToPrintDetails"]):
+                self.printThisModeDetail = True
+
         if(self.listener==None):
             self.listener = listener
             
@@ -39,15 +50,13 @@ class Mode:
         for led_index in range(start_index , stop_index+1):
             self.fade_to_black_led(ratio_black , led_index)
 
-    def update(self):
-        pass
 
     def terminate(self , info_margin , showInfos):
         self.isActiv = False
         if(showInfos):
-            print(info_margin + "(Mode)  on désactive le mode ")
+            print(info_margin + "(Mode)  on désactive le "+self.name+" du "+self.segment_name)
 
     def start(self , info_margin , showInfos):
         self.isActiv = True
         if(showInfos):
-            print(info_margin + "(Mode)  on active le mode ")
+            print(info_margin + "(Mode)  on active le "+self.name+" du "+self.segment_name)

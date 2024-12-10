@@ -14,12 +14,12 @@ class Segment:
     
     listener = None
 
-    def __init__(self , name ,listener , leds , indexes , orientation , alcool , show_modes_details, useGlobalMatrix):
+    def __init__(self , name ,listener , leds , indexes , orientation , alcool , infos):
         self.name = name
         self.leds = leds
         self.indexes = indexes
-        self.show_modes_details = show_modes_details
-        self.useGlobalMatrix = useGlobalMatrix
+        self.infos = infos
+        self.useGlobalMatrix = infos["useGlobalMatrix"]
         self.nb_of_leds=len(self.indexes)
         if(self.listener==None):
             self.listener = listener
@@ -54,11 +54,11 @@ class Segment:
 
     def initiate_modes(self , orientation , alcool):
         if(orientation == "horizontal"):
-            self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Christmas_mode_1.Christmas_mode_1(self.listener , self.leds , self.indexes , self.rgb_list)
+            self.modes = [Rainbow_mode.Rainbow_mode          ("Rainbow"         , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Bary_rainbow_mode.Bary_rainbow_mode  ("Bary Rainbow"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Middle_bar_mode.Middle_bar_mode      ("Middle Bar"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Shining_stars_mode.Shining_stars_mode("Shining Stars"   , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
                         ]
         
             self.modes_names = ["Rainbow",
@@ -68,12 +68,14 @@ class Segment:
                                 "Christmas_mode_1"
                                 ]
         else:
-            self.modes = [Rainbow_mode.Rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Bary_rainbow_mode.Bary_rainbow_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Middle_bar_mode.Middle_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Shining_stars_mode.Shining_stars_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Power_bar_mode.Power_bar_mode(self.listener , self.leds , self.indexes , self.rgb_list),
-                        Christmas_mode_1.Christmas_mode_1(self.listener , self.leds , self.indexes , self.rgb_list)]
+            self.modes = [Rainbow_mode.Rainbow_mode          ("Rainbow"         , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Bary_rainbow_mode.Bary_rainbow_mode  ("Bary Rainbow"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Middle_bar_mode.Middle_bar_mode      ("Middle Bar"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Shining_stars_mode.Shining_stars_mode("Shining Stars"   , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Power_bar_mode.Power_bar_mode        ("Power_bar"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
+                        
+                        ]
         
             self.modes_names = ["Rainbow",
                                 "Bary Rainbow",
@@ -83,7 +85,7 @@ class Segment:
                                 "Christmas_mode_1"]
         
         if (alcool):
-            self.modes.append(Alcool_randomer.Alcool_randomer(self.listener , self.leds , self.indexes , self.rgb_list))
+            self.modes.append(Alcool_randomer.Alcool_randomer("Shot" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
             self.modes_names.append("Shot")
         
     def update_leds(self, fusion_type):

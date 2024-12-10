@@ -2,11 +2,12 @@ import modes.Mode as Mode
 import calculations.rgb_hsv as RGB_HSV
 import random
 import numpy as np
+import time
 
 class Power_bar_mode(Mode.Mode):
 
-    def __init__(self , listener , leds , indexes , rgb_list):
-        super().__init__(listener , leds , indexes , rgb_list)
+    def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
+        super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
 
         #height of the color bar
         self.power_height = 0
@@ -21,6 +22,10 @@ class Power_bar_mode(Mode.Mode):
 
     
     def update(self):
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            time_me = time.time()  
+        #====================================================================================
+        
         """
         calculate
         """
@@ -55,5 +60,10 @@ class Power_bar_mode(Mode.Mode):
         #we smoothly brings the rest to zero
         for led_index in range(int(self.white_dot_height+1),self.nb_of_leds):
                 super().smooth(0.5,led_index,(0,0,0))
+
+        #====================================================================================
+        if(self.printTimeOfCalculation and self.printThisModeDetail):
+            duration = time.time() - time_me
+            print("      (CM) temps pour ",self.name," : ",duration)
         
 
