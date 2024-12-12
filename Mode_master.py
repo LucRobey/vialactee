@@ -327,8 +327,14 @@ class Mode_master:
             segment_name = splited_order[1]
             new_way = splited_order[2]
             if (self.printAppDetails):
-                print("(MM) On veut changer le segment "+segment_name+" pour le mode "+new_mode)
+                print("(MM) On veut changer le "+segment_name+" pour le sens "+new_way)
             self.segments_list[self.segments_names_to_index[segment_name]].change_way(new_way , "" , self.show_modes_details)
+            
+        elif (category == "switch_way"):
+            segment_name = splited_order[1]
+            if (self.printAppDetails):
+                print("(MM) On veut switch le "+segment_name)
+            self.segments_list[self.segments_names_to_index[segment_name]].switch_way("" , self.show_modes_details)
             
 
         elif (category == "force"):

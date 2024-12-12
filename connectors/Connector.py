@@ -77,8 +77,14 @@ class Connector:
             new_way = splited_message[2]
             order = self.change_way(segment , new_way)
 
+        elif (category == "switchway"):
+            segment = splited_message[1]
+            order = self.switch_way(segment)
+
         elif (category == "chgconf"):
-            order = self.change_conf(rest_of_the_message)
+            mode_orders = splited_message[1]
+            ways_orders = splited_message[2]
+            order = self.change_conf(mode_orders,ways_orders)
 
         elif (category == "lockseg"):
             segment = splited_message[1]
@@ -145,11 +151,18 @@ class Connector:
         order.append("change_way:"+segment+":"+new_way)
         return order
     
-    def change_conf(self , message):
+    def switch_way(self , segment):
         order = []
-        modes = message[1:-2].split(',')
+        order.append("switch_way:"+segment)
+        return order
+    
+    def change_conf(self , mode_orders , ways_orders):
+        order = []
+        modes = mode_orders[1:-2].split(',')  #on enleve les "{" et  "}" au debut et a la fin
+        ways = ways_orders[1:-2].split(',')
         for segment_index in range(len(self.list_of_segments)):
-            order.append("change:"+self.list_of_segments[segment_index]+":"+modes[segment_index])
+            order.append("change_mode:"+self.list_of_segments[segment_index]+":"+modes[segment_index])
+            order.append("change_way:"+self.list_of_segments[segment_index]+":"+ways[segment_index])
         return order
     
     def block_seg(self , segment , lock_unlock):

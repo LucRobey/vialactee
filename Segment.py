@@ -72,8 +72,8 @@ class Segment:
                                 "Bary Rainbow",
                                 "Middle Bar",
                                 "Shining Stars",
-                                "Christmas_mode_1",
-                                "Christmas_mode_2"
+                                "Christmas 1",
+                                "Christmas 2"
                                 ]
         else:
             self.modes = [Rainbow_mode.Rainbow_mode          ("Rainbow"         , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
@@ -91,8 +91,8 @@ class Segment:
                                 "Middle Bar",
                                 "Shining Stars",
                                 "Power Bar",
-                                "Christmas_mode_1",
-                                "Christmas_mode_2"
+                                "Christmas 1",
+                                "Christmas 2"
                                 ]
         
         self.modes.append(Proportion_rainbow_mode.Proportion_rainbow_mode("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
@@ -135,8 +135,16 @@ class Segment:
         if(showInfos):
             print (info_margin + "(S) le " + self.name +"change de sens "+ self.way +" pour " + new_way)
         self.way = new_way
-        
 
+    def switch_way(self , info_margin , showInfos):
+        if(self.way == "UP"):
+            new_way = "DOWN"
+        else:
+            new_way = "UP"
+        if(showInfos):
+            print (info_margin + "(S) switch ")
+        self.change_way(new_way ,  info_margin , showInfos)
+        
 
     def change_mode(self , mode_name , info_margin , showInfos):
         mode_name = "Opposite Sides"
