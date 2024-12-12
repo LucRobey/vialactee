@@ -10,18 +10,18 @@ async def main():
     
     infos = {
         "useGlobalMatrix" : False ,
-        "useMicrophone"   : True ,
-        "onRaspberry"     : True  ,    #si tu veux compiler sur ton ordi, met en commentaire plus haut import neopixel et import board dans Mode_master, et met aussi en commentaire import Serial dans ESP32_microphone, et l'initialisation des leds dans mode_master
+        "useMicrophone"   : False ,
+        "onRaspberry"     : False ,    #si tu veux compiler sur ton ordi, met en commentaire plus haut import neopixel et import board dans Mode_master, et met aussi en commentaire import Serial dans ESP32_microphone, et l'initialisation des leds dans mode_master
 
         "printTimeOfCalculation" : False ,
         "printModesDetails"      : False ,
-        "printMicrophoneDetails" : True  ,
+        "printMicrophoneDetails" : False ,
         "printAppDetails"        : False ,
-        "printAsservmentDetails" : True  ,
+        "printAsservmentDetails" : False ,
         "printConfigurationLoads": False ,
-        "printConfigChanges"     : True  ,
+        "printConfigChanges"     : False ,
 
-        "modesToPrintDetails"    : ["Proportion Rainbow"]
+        "modesToPrintDetails"    : ["Opposite Sides"]
     }
     
     listener = Listener.Listener(infos)
@@ -35,7 +35,6 @@ async def main():
     # Set connector
     mode_master.set_connector(connector)
 
-    # Start the server and update loops concurrently
     server_task = asyncio.create_task(connector.start_server())  # Start the server
     mode_master_task = asyncio.create_task(mode_master.update_forever())
     microphone_task = asyncio.create_task(esp32_microphone.listen_forever())  # Microphone listening loop

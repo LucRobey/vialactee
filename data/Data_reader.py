@@ -50,22 +50,34 @@ class Data_reader:
                   playlist = row[0]
                   name = row[1]
                   modes={}
+                  way={}
                   modes["Segment h00"] = row[2]
-                  modes["Segment v1"] = row[3]
-                  modes["Segment h10"] = row[4]
-                  modes["Segment h11"] = row[5]
-                  modes["Segment v2"] = row[6]
-                  modes["Segment h20"] = row[7]
-                  modes["Segment v3"] = row[8]
-                  modes["Segment h30"] = row[9]
-                  modes["Segment h31"] = row[10]
-                  modes["Segment h32"] = row[11]
-                  modes["Segment v4"] = row[12]
+                  way["Segment h00"] = row[3]
+                  modes["Segment v1"] = row[4]
+                  way["Segment v1"] = row[5]
+                  modes["Segment h10"] = row[6]
+                  way["Segment h10"] = row[7]
+                  modes["Segment h11"] = row[8]
+                  way["Segment h11"] = row[9]
+                  modes["Segment v2"] = row[10]
+                  way["Segment v2"] = row[11]
+                  modes["Segment h20"] = row[12]
+                  way["Segment h20"] = row[13]
+                  modes["Segment v3"] = row[14]
+                  way["Segment v3"] = row[15]
+                  modes["Segment h30"] = row[16]
+                  way["Segment h30"] = row[17]
+                  modes["Segment h31"] = row[18]
+                  way["Segment h31"] = row[19]
+                  modes["Segment h32"] = row[20]
+                  way["Segment h32"] = row[21]
+                  modes["Segment v4"] = row[22]
+                  way["Segment v4"] = row[23]
                   if(playlist in configurations):
-                      configurations[playlist].append({"name":name, "modes":modes})
+                      configurations[playlist].append({"name":name , "modes":modes , "way":way})
                   else:
                       playlists.append(playlist)
-                      configurations[playlist]=[{"name":name, "modes":modes}]
+                      configurations[playlist]=[{"name":name , "modes":modes , "way":way}]
                   
             return configurations , playlists
         

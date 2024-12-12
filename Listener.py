@@ -199,14 +199,16 @@ class Listener:
         self.band_proportion = []
         self.segm_fft_indexs = [1]    #index that separate each band
 
-        """
+        """self.lenFFT = int(512/2)
+        
         A=np.power(self.lenFFT,1/(self.nb_of_fft_band-1))
         for _ in range(1,self.nb_of_fft_band):
             self.segm_fft_indexs.append(self.segm_fft_indexs[-1]*A)
         for band_index in range(1,self.nb_of_fft_band):
             self.segm_fft_indexs[band_index]=int(self.segm_fft_indexs[band_index])
-        """
-        #print(self.segm_fft_indexs)
+            print(self.segm_fft_indexs)"""
+        
+        
         for _ in range(self.nb_of_fft_band):
             self.fft_band_values.append(0.0)
             self.band_lm.append(100.0)

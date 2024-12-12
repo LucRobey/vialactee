@@ -16,8 +16,8 @@ import Listener as Listener
 import data.Data_reader as Data_reader
 
 import numpy as np
-import neopixel
-import board
+#import neopixel
+#import board
 import asyncio
 
 class Mode_master:
@@ -45,8 +45,8 @@ class Mode_master:
         self.load_configurations()
 
         if(self.onRaspberry):
-            self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
-            self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
+            #self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
+            #self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
             pass
         else:
             self.leds = Fake_leds.Fake_leds(173 + 47 + 48 + 47 + 173 + 89 + 207 + 1)
@@ -156,7 +156,9 @@ class Mode_master:
             if not segment.isBlocked:
                 if showInfos:
                     print(info_margin, "(MM) update_segments_modes : ", segment.name, "non bloqué donc on ordonne de le changer")
-                segment.change_mode(self.activ_configuration["modes"][segment.name], info_margin + "   ", showInfos)
+                segment.change_mode(self.activ_configuration["modes"][segment.name] , info_margin + "   ", showInfos)
+                segment.change_way(self.activ_configuration["way"][segment.name] , info_margin + "   ", showInfos)
+
  
 
     def initiate_configuration(self):
@@ -285,6 +287,7 @@ class Mode_master:
         new_conf["index"] = random_conf_index
         new_conf["name"] = self.configurations[playlist_name][random_conf_index]["name"]
         new_conf["modes"] = self.configurations[playlist_name][random_conf_index]["modes"]
+        new_conf["way"] = self.configurations[playlist_name][random_conf_index]["way"]
 
         if(showInfos):
             print(info_margin + "(MM)   pick_a_random_conf() :     conf = " + str(new_conf))
@@ -313,12 +316,19 @@ class Mode_master:
             self.segments_list[self.segments_names_to_index[segment_name]].unBlock()
             
 
-        elif (category == "change"):
+        elif (category == "change_mode"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
             if (self.printAppDetails):
                 print("(MM) On veut changer le segment "+segment_name+" pour le mode "+new_mode)
             self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode , "" , self.show_modes_details)
+            
+        elif (category == "change_way"):
+            segment_name = splited_order[1]
+            new_way = splited_order[2]
+            if (self.printAppDetails):
+                print("(MM) On veut changer le segment "+segment_name+" pour le mode "+new_mode)
+            self.segments_list[self.segments_names_to_index[segment_name]].change_way(new_way , "" , self.show_modes_details)
             
 
         elif (category == "force"):

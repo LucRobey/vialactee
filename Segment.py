@@ -4,10 +4,13 @@ import modes.Middle_bar_mode as Middle_bar_mode
 import modes.Power_bar_mode as Power_bar_mode
 import modes.Bary_rainbow_mode as Bary_rainbow_mode
 import modes.Shining_stars_mode as Shining_stars_mode
+import modes.Proportion_rainbow_mode as Proportion_rainbow_mode
+import modes.PSG_mode as PSG_mode
+import modes.Opposite_sides_mode as Opposite_sides_mode
 
 import modes.christmas_modes.Christmas_mode_1 as Christmas_mode_1
 import modes.christmas_modes.Christmas_mode_2 as Christmas_mode_2
-import modes.Proportion_rainbow_mode as Proportion_rainbow_mode
+
 import modes.Alcool_randomer as Alcool_randomer
 
 import numpy as np
@@ -38,6 +41,7 @@ class Segment:
         self.initiate_modes(orientation , alcool)
 
         
+        self.way="UP"
 
         self.activ_mode = 3
 
@@ -93,6 +97,12 @@ class Segment:
         
         self.modes.append(Proportion_rainbow_mode.Proportion_rainbow_mode("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
         self.modes_names.append("Proportion Rainbow")
+        self.modes.append(PSG_mode.PSG_mode("PSG", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
+        self.modes_names.append("PSG")
+        self.modes.append(Opposite_sides_mode.Opposite_sides_mode("Opposite Sides", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
+        self.modes_names.append("Opposite Sides")
+
+        
         if (alcool):
             self.modes.append(Alcool_randomer.Alcool_randomer("Shot" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
             self.modes_names.append("Shot")
@@ -106,18 +116,30 @@ class Segment:
                     if (self.global_rgb_list[led_index] != (0,0,0)):
                         self.leds[self.indexes[led_index]] = luminosite * self.global_rgb_list[led_index]
                     else:
-                        self.leds[self.indexes[led_index]] = luminosite * self.rgb_list[led_index]
+                        if(self.way=="UP"):
+                            self.leds[self.indexes[led_index]] = luminosite * self.rgb_list[led_index]
+                        else:
+                            self.leds[self.indexes[self.nb_of_leds-1-led_index]] = luminosite * self.rgb_list[led_index]
         else:
             
             for led_index in range(self.nb_of_leds):
                 new_color = []
                 for rgb_index in range(3):
                     new_color.append(int(luminosite * self.rgb_list[led_index][rgb_index]))
-                self.leds[self.indexes[led_index]] = new_color
+                if(self.way=="UP"):
+                    self.leds[self.indexes[led_index]] = new_color
+                else:
+                    self.leds[self.indexes[self.nb_of_leds-1-led_index]] = new_color
+
+    def change_way(self , new_way , info_margin , showInfos):
+        if(showInfos):
+            print (info_margin + "(S) le " + self.name +"change de sens "+ self.way +" pour " + new_way)
+        self.way = new_way
+        
 
 
     def change_mode(self , mode_name , info_margin , showInfos):
-        mode_name = "Proportion Rainbow"
+        mode_name = "Opposite Sides"
         if(not self.isBlocked):
             #On terminate l'ancien mode
             self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)
@@ -125,14 +147,9 @@ class Segment:
                 mode_name = mode_name[1:]
             for mode_index in range(len(self.modes)):
                 found_a_mode = False
-                #print("|",self.modes_names[mode_index],"|",mode_name,"|")
-                #print(len(self.modes_names[mode_index]),len(mode_name))
-                #print("|",self.modes_names[mode_index],"|",mode_name[1:],"|")
-                #print(self.modes_names[mode_index]==mode_name[1:])
                 if (self.modes_names[mode_index]==mode_name):
-                    
                     # On change l'index et on start
-                    self.activ_mode=mode_index
+                    self.activ_mode = mode_index
                     self.modes[self.activ_mode].start(info_margin+"   " , showInfos)
                     if(showInfos):
                         print(info_margin,"(S) ",self.name, " a changé de mode pour ", mode_name)
@@ -150,7 +167,7 @@ class Segment:
         for mode_index in range(len(self.modes)):
             if (self.modes_names[mode_index]==mode_name):
                 # On change l'index et on start
-                self.activ_mode=mode_index
+                self.activ_mode = mode_index
                 self.modes[self.activ_mode].start(info_margin +"   ", showInfos)
                 if (self.show_modes_details):
                     print("(S) le segment ",self.name, " change de mode pour ", mode_name)

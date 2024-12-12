@@ -71,6 +71,11 @@ class Connector:
             segment = splited_message[1]
             new_mode = splited_message[2]
             order = self.change_mode(segment , new_mode)
+        
+        elif (category == "chgway"):
+            segment = splited_message[1]
+            new_way = splited_message[2]
+            order = self.change_way(segment , new_way)
 
         elif (category == "chgconf"):
             order = self.change_conf(rest_of_the_message)
@@ -132,7 +137,12 @@ class Connector:
 
     def change_mode(self , segment , new_mode):
         order = []
-        order.append("change:"+segment+":"+new_mode)
+        order.append("change_mode:"+segment+":"+new_mode)
+        return order
+    
+    def change_way(self , segment , new_way):
+        order = []
+        order.append("change_way:"+segment+":"+new_way)
         return order
     
     def change_conf(self , message):
