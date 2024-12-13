@@ -45,6 +45,9 @@ class Connector:
 
             writer.write(b"ack\n")  # Acknowledge receipt
             await writer.drain()
+            if(response):
+                writer.write(response+"\n")
+                await writer.drain()
 
         except Exception as e:
             print(f"Error handling client {client_address}: {e}")
@@ -65,60 +68,70 @@ class Connector:
         if (category == "chgpage"):
             category = splited_message[1]
             page = splited_message[2]
-            order = self.change_page(category,page)
+            order , response = self.change_page(category,page)
 
         elif (category == "chgmode"):
             segment = splited_message[1]
             new_mode = splited_message[2]
-            order = self.change_mode(segment , new_mode)
+            order , response = self.change_mode(segment , new_mode)
         
         elif (category == "chgway"):
             segment = splited_message[1]
             new_way = splited_message[2]
-            order = self.change_way(segment , new_way)
+            order , response = self.change_way(segment , new_way)
 
         elif (category == "switchway"):
             segment = splited_message[1]
-            order = self.switch_way(segment)
+            order , response = self.switch_way(segment)
 
         elif (category == "chgconf"):
             mode_orders = splited_message[1]
             ways_orders = splited_message[2]
-            order = self.change_conf(mode_orders,ways_orders)
+            order , response = self.change_conf(mode_orders,ways_orders)
 
         elif (category == "lockseg"):
             segment = splited_message[1]
             lock_unlock = splited_message[2]
-            order = self.block_seg(segment,lock_unlock)
+            order , response = self.block_seg(segment,lock_unlock)
 
         elif (category == "chgparam"):
             parametre = splited_message[1]
             nouvelle_valeur = splited_message[2]
-            order = self.change_param(parametre,nouvelle_valeur)
+            order , response = self.change_param(parametre,nouvelle_valeur)
 
         elif (category == "calibration"):
             calibration_type = splited_message[1]
             phase = splited_message[2]
-            order = self.calibrate_fft(calibration_type , phase)
+            order , response = self.calibrate_fft(calibration_type , phase)
             
         elif (category == "special"):
-            order = self.handle_special(rest_of_the_message)
+            order , response = self.handle_special(rest_of_the_message)
             
         else:
             print("(C) invalid category")
-            return []
+            return None
 
         if(self.printAppDetails):
             print("(C)          state : " , self.current_page)
             print("(C)          order : " , order)
         self.mode_master.obey_orders(order)
+        return response
+
+    def get_current_modes(self):
+        current_modes = []
+        for segment in self.mode_master.segments_list:
+            current_modes.append(segment.modes_names[segment.activ_mode])
+        return current_modes
         
         
     def change_page(self , category , page):
         order = []
+        response = None
         if (category == "enter"):
             self.current_page = page
-            self.check_current_page
+            self.check_current_page()
+            if(self.current_page == "Configuration"):
+                response = self.get_current_modes()
             if (self.current_page == "Shot"):
                 order.append("force:Segment h00:Shot")
                 order.append("block:Segment h00")
@@ -134,7 +147,7 @@ class Connector:
         else :
             print("(C) ON ENTRE DANS AUCUNE CATEGORIE!")
 
-        return order
+        return order , response
 
 
     def check_current_page(self):
@@ -143,44 +156,51 @@ class Connector:
 
     def change_mode(self , segment , new_mode):
         order = []
+        response = None
         order.append("change_mode:"+segment+":"+new_mode)
-        return order
+        return order , response
     
     def change_way(self , segment , new_way):
         order = []
+        response = None
         order.append("change_way:"+segment+":"+new_way)
-        return order
+        return order , response
     
     def switch_way(self , segment):
         order = []
+        response = None
         order.append("switch_way:"+segment)
-        return order
+        return order , response
     
     def change_conf(self , mode_orders , ways_orders):
         order = []
+        response = None
         modes = mode_orders[1:-2].split(',')  #on enleve les "{" et  "}" au debut et a la fin
         ways = ways_orders[1:-2].split(',')
         for segment_index in range(len(self.list_of_segments)):
             order.append("change_mode:"+self.list_of_segments[segment_index]+":"+modes[segment_index])
             order.append("change_way:"+self.list_of_segments[segment_index]+":"+ways[segment_index])
-        return order
+        return order , response
     
     def block_seg(self , segment , lock_unlock):
         order = []
+        response = None
         if(lock_unlock == "true"):
             order.append("block:"+segment)
         elif(lock_unlock == "false"):
             order.append("unblock:"+segment)
         else:
             print("(C) ON N EST NI LOCK NI UNLOCK")
-        return order
+        return order , response
     
     def change_param(self , parametre , nouvelle_valeur):
         order = ["update:"+parametre+":"+str(nouvelle_valeur)]
-        return order
+        response = None
+        return order , response
     
     def calibrate_fft(self , calibration_type , phase):
         order = []
+        response = None
         if (phase == "start"):
             for segment_name in self.list_of_segments:              # On bloque les segments pdt la calibration
                 order.append("block:"+segment_name)
@@ -193,8 +213,8 @@ class Connector:
 
         else:
             print("(C) ON NE START NI END LA CALIBRATION!")
-        return order
+        return order , response
 
     
     def handle_special(self , message):
-        return ["special:Shot"]
+        return ["special:Shot"] , None

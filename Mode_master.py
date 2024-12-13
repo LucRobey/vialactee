@@ -1,24 +1,23 @@
+import numpy as np
+import asyncio
 import random
 import time
 
-from Mode_Globaux.Mode_Global import Mode_Global
 from Mode_Globaux import Matrix_General as Matrix_General
 from Mode_Globaux import Matrix as Matrix
 from Mode_Globaux import Matrix_data as Matrix_data
 from Mode_Globaux import Segments_Locations as Segments_Locations
 from Mode_Globaux import Mode_Tchou_Tchou as Mode_Tchou_Tchou
 
-import Fake_leds
-
-import connectors.Connector as  Connector
 import Segment as Segment
 import Listener as Listener
 import data.Data_reader as Data_reader
 
-import numpy as np
+
+import Fake_leds
 #import neopixel
 #import board
-import asyncio
+
 
 class Mode_master:
 
