@@ -48,8 +48,8 @@ class Mode_master:
             #self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
             pass
         else:
-            self.leds = Fake_leds.Fake_leds(173 + 47 + 48 + 47 + 173 + 89 + 207 + 1)
-            self.leds2 = Fake_leds.Fake_leds(800)
+            self.leds = Fake_leds.Fake_leds(785)
+            self.leds2 = Fake_leds.Fake_leds(519)
 
         if (self.useGlobalMatrix):
             self.matrix = Matrix.Matrix()

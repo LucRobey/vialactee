@@ -59,50 +59,34 @@ class Segment:
         
 
     def initiate_modes(self , orientation , alcool):
-        if(orientation == "horizontal"):
-            self.modes = [Rainbow_mode.Rainbow_mode          ("Rainbow"         , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Bary_rainbow_mode.Bary_rainbow_mode  ("Bary Rainbow"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Middle_bar_mode.Middle_bar_mode      ("Middle Bar"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Shining_stars_mode.Shining_stars_mode("Shining Stars"   , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Christmas_mode_2.Christmas_mode_2    ("Christmas_mode_2", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
+        self.modes = [Rainbow_mode.Rainbow_mode                        ("Rainbow"           , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Bary_rainbow_mode.Bary_rainbow_mode            ("Bary Rainbow"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Middle_bar_mode.Middle_bar_mode                ("Middle Bar"        , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Shining_stars_mode.Shining_stars_mode          ("Shining Stars"     , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Proportion_rainbow_mode.Proportion_rainbow_mode("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        PSG_mode.PSG_mode                              ("PSG"               , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Opposite_sides_mode.Opposite_sides_mode        ("Opposite Sides"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Christmas_mode_1.Christmas_mode_1              ("Christmas_mode_1"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Christmas_mode_2.Christmas_mode_2              ("Christmas_mode_2"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
                         ]
-        
-            self.modes_names = ["Rainbow",
+        self.modes_names = ["Rainbow",
                                 "Bary Rainbow",
                                 "Middle Bar",
                                 "Shining Stars",
+                                "Proportion Rainbow",
+                                "PSG",
+                                "Opposite Sides",
                                 "Christmas 1",
                                 "Christmas 2"
                                 ]
-        else:
-            self.modes = [Rainbow_mode.Rainbow_mode          ("Rainbow"         , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Bary_rainbow_mode.Bary_rainbow_mode  ("Bary Rainbow"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Middle_bar_mode.Middle_bar_mode      ("Middle Bar"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Shining_stars_mode.Shining_stars_mode("Shining Stars"   , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Power_bar_mode.Power_bar_mode        ("Power_bar"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Christmas_mode_1.Christmas_mode_1    ("Christmas_mode_1", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Christmas_mode_2.Christmas_mode_2    ("Christmas_mode_2", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
-                        
-                        ]
-        
-            self.modes_names = ["Rainbow",
-                                "Bary Rainbow",
-                                "Middle Bar",
-                                "Shining Stars",
-                                "Power Bar",
-                                "Christmas 1",
-                                "Christmas 2"
-                                ]
-        
-        self.modes.append(Proportion_rainbow_mode.Proportion_rainbow_mode("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
-        self.modes_names.append("Proportion Rainbow")
-        self.modes.append(PSG_mode.PSG_mode("PSG", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
-        self.modes_names.append("PSG")
-        self.modes.append(Opposite_sides_mode.Opposite_sides_mode("Opposite Sides", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
-        self.modes_names.append("Opposite Sides")
 
-        
+        if(orientation == "horizontal"):
+            pass
+                      
+        if(orientation == "vertical"):
+            self.modes.append(Power_bar_mode.Power_bar_mode("Power_bar" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
+            self.modes_names.append("Power Bar")
+
         if (alcool):
             self.modes.append(Alcool_randomer.Alcool_randomer("Shot" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
             self.modes_names.append("Shot")
