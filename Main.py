@@ -21,7 +21,7 @@ async def main():
         "printConfigurationLoads": False ,
         "printConfigChanges"     : False ,
 
-        "modesToPrintDetails"    : ["Opposite Sides"]
+        "modesToPrintDetails"    : ["PSG"]
     }
     
     listener = Listener.Listener(infos)

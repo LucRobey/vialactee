@@ -109,13 +109,10 @@ class Segment:
         else:
             
             for led_index in range(self.nb_of_leds):
-                new_color = []
-                for rgb_index in range(3):
-                    new_color.append(int(luminosite * self.rgb_list[led_index][rgb_index]))
                 if(self.way=="UP"):
-                    self.leds[self.indexes[led_index]] = new_color
+                    self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
                 else:
-                    self.leds[self.indexes[self.nb_of_leds-1-led_index]] = new_color
+                    self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
 
     def change_way(self , new_way , info_margin , showInfos):
         if(showInfos):
@@ -133,11 +130,12 @@ class Segment:
         
 
     def change_mode(self , mode_name , info_margin , showInfos):
-        #mode_name = "Proportion Rainbow"
+        mode_name = "Rainbow"
         if(not self.isBlocked):
             #On terminate l'ancien mode
             self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)
             if (not mode_name in self.modes_names):
+                print("bug chelou, on transforme ",mode_name, " en ", mode_name[1:])
                 mode_name = mode_name[1:]
             for mode_index in range(len(self.modes)):
                 found_a_mode = False

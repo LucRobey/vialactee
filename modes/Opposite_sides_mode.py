@@ -9,7 +9,7 @@ class Opposite_sides_mode(Mode.Mode):
         super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
 
         self.bass_hue = 0.0
-        self.high_hue = 0.8
+        self.high_hue = 0.7
 
         self.bass_color = RGB_HSV.fromHSV_toRGB(self.bass_hue,1.0,1.0)
         self.high_color = RGB_HSV.fromHSV_toRGB(self.high_hue,1.0,1.0)
@@ -41,6 +41,8 @@ class Opposite_sides_mode(Mode.Mode):
                 self.rgb_list[led_index] = color
             self.firstUpdate = False
 
+        
+                
         self.lower_height  = int(self.maxSize * (self.listener.asserved_fft_band[0]  + self.listener.asserved_fft_band[1] )/2)
         self.higher_height = int(self.maxSize * (self.listener.asserved_fft_band[-1] + self.listener.asserved_fft_band[-2])/2)
 
@@ -49,9 +51,11 @@ class Opposite_sides_mode(Mode.Mode):
         self.smooth_segment(0.5,self.middle_end_index+1,self.middle_end_index+1+self.higher_height,self.high_color)
         self.fade_to_black_segment(0.5,self.middle_end_index+1+self.higher_height+1,self.nb_of_leds-1)
 
-        self.fade_to_black_segment(0.5,self.lower_height+1,self.nb_of_leds-1-self.higher_height-1)
-        self.smooth_segment(0.5,self.nb_of_leds-1-self.higher_height,self.nb_of_leds-1,colors.blue)
+        #self.fade_to_black_segment(0.5,self.lower_height+1,self.nb_of_leds-1-self.higher_height-1)
+        #self.smooth_segment(0.5,self.nb_of_leds-1-self.higher_height,self.nb_of_leds-1,colors.blue)
 
+        
+            
         if(self.printThisModeDetail):
             print("(PSG)     lower_height = ",self.lower_height)
             print("(PSG)     higher_height = ",self.higher_height)

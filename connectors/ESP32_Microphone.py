@@ -26,7 +26,7 @@ class ESP32_Microphone:
             if(self.printTimeOfCalculation):
                 duration = time.time() - time_mem
                 print("(ESPmicro) temps de calcul = ",duration)
-            await asyncio.sleep(0.0001)
+            await asyncio.sleep(0.00001)
             
     async def listen(self):
         if(self.onRaspberry and self.useMicrophone):
@@ -34,24 +34,24 @@ class ESP32_Microphone:
             if self.ser.in_waiting > 0:
                 # Read the response in a separate thread to avoid blocking the event loop
                 # on lit tous les messages et on garde le dernier
+                response = None
+                #print(self.ser.in_waiting)
                 while self.ser.in_waiting > 0:
                     response = await asyncio.to_thread(self.ser.readline)
                 
-                if self.showMicrophoneDetails:
-                    print("(ESP_mic)   message reçu ", response)
+                if(response):
+                    if self.showMicrophoneDetails:
+                        print("(ESP_mic)   message reçu ", response)
                 
-                cleaned_data = response.decode().strip()
-                split_data = cleaned_data.split(',')
-                
-                # Update the band values
-                for band_index in range(self.nb_of_fft_band):
-                    self.bandValues[band_index] = int(split_data[band_index])
-                
-                return True
-            else:
-                if self.showMicrophoneDetails:
-                    print("(ESP_mic)   pas de message reçu ")
-                return False
+                    cleaned_data = response.decode().strip()
+                    split_data = cleaned_data.split(',')
+                    
+                    # Update the band values
+                    for band_index in range(self.nb_of_fft_band):
+                        self.bandValues[band_index] = int(split_data[band_index])
+                else:
+                    if self.showMicrophoneDetails:
+                        print("(ESP_mic)   pas de message reçu ")
         else:
             pass
 

@@ -44,8 +44,8 @@ class Mode_master:
         self.load_configurations()
 
         if(self.onRaspberry):
-            self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
-            self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
+            self.leds = neopixel.NeoPixel(board.D21, 785, brightness=1, auto_write=False)
+            self.leds2 = neopixel.NeoPixel(board.D18, 519, brightness=1, auto_write=False)
             pass
         else:
             self.leds = Fake_leds.Fake_leds(785)
@@ -65,7 +65,7 @@ class Mode_master:
     async def update_forever(self):
         while True:
             await self.update()
-            await asyncio.sleep(0.0001)
+            await asyncio.sleep(0.00001)
 
     async def update(self):
         if self.printTimeOfCalculation:
@@ -119,8 +119,8 @@ class Mode_master:
                 # print(seg.name)
                 # print(len(getsegments[seg.name]))
                 seg.global_rgb_list = getsegments[seg.name]
-            for seg_index in range(len(self.segments_list)):
-                self.segments_list[seg_index].update()
+        for seg_index in range(len(self.segments_list)):
+            self.segments_list[seg_index].update()
 
         if self.printTimeOfCalculation:
             duration.append(time.time() - time_segments_update)

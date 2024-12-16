@@ -46,7 +46,7 @@ class Connector:
             writer.write(b"ack\n")  # Acknowledge receipt
             await writer.drain()
             if(response):
-                writer.write(response+"\n")
+                writer.write((str(response) + "\n").encode('utf-8'))
                 await writer.drain()
 
         except Exception as e:
@@ -175,8 +175,8 @@ class Connector:
     def change_conf(self , mode_orders , ways_orders):
         order = []
         response = None
-        modes = mode_orders[1:-2].split(',')  #on enleve les "{" et  "}" au debut et a la fin
-        ways = ways_orders[1:-2].split(',')
+        modes = mode_orders[1:-1].split(',')  #on enleve les "{" et  "}" au debut et a la fin
+        ways = ways_orders[1:-1].split(',')
         for segment_index in range(len(self.list_of_segments)):
             order.append("change_mode:"+self.list_of_segments[segment_index]+":"+modes[segment_index])
             order.append("change_way:"+self.list_of_segments[segment_index]+":"+ways[segment_index])

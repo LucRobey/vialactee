@@ -35,12 +35,18 @@ class PSG_mode(Mode.Mode):
             coef = float(self.higher_height - self.lower_height)/(self.higher_height + self.lower_height)
 
         self.white_dot_pos = int((self.nb_of_leds/2) *(1 + coef))
-        self.rgb_list[self.white_dot_pos] = colors.white
-
+        if(self.white_dot_pos > self.nb_of_leds-1):
+            self.white_dot_pos = self.nb_of_leds-1
+        if(self.white_dot_pos < 0):
+            self.white_dot_pos = 0
+        
         if(self.printThisModeDetail):
             print("(PSG)     lower_height = ",self.lower_height)
             print("(PSG)     higher_height = ",self.higher_height)
             print("(PSG)     coef = ",coef)
+        self.rgb_list[self.white_dot_pos] = colors.white
+
+        
 
         #====================================================================================
         if(self.printTimeOfCalculation and self.printThisModeDetail):
