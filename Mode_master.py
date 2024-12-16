@@ -90,6 +90,7 @@ class Mode_master:
         if self.useGlobalMatrix:
             self.matrix_general.update()
 
+
         if self.printTimeOfCalculation:
             duration.append(time.time() - time_matrix_general_update)
             names_of_durations.append("matrix_general.update()")
@@ -111,10 +112,15 @@ class Mode_master:
         if self.printTimeOfCalculation:
             time_segments_update= time.time()
 
-        for seg_index in range(len(self.segments_list)):
-            if self.useGlobalMatrix:
-                self.segments_list[seg_index].global_rgb_list = self.matrix_general.segment_values[0]
-            self.segments_list[seg_index].update()
+        if self.useGlobalMatrix:
+            #get each segment its global value
+            getsegments = self.matrix_general.get_segments()
+            for seg in self.segments_list:
+                # print(seg.name)
+                # print(len(getsegments[seg.name]))
+                seg.global_rgb_list = getsegments[seg.name]
+            for seg_index in range(len(self.segments_list)):
+                self.segments_list[seg_index].update()
 
         if self.printTimeOfCalculation:
             duration.append(time.time() - time_segments_update)
