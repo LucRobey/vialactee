@@ -15,9 +15,13 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         self.matrix_light = matrix_class.matrix_light
 
         # Predefined list of starting coordinates
-        self.predefined_coordinates = [(15, 0), (0, 245), (3, 429), (431, 31)]
+        self.predefined_coordinates = [(16, 0), (245, 292), (1, 429), (32, 431)]  
+
+
+
         self.init_train()
 
+      
     def init_train(self):
         """
         Initializes the train by selecting a random starting position
@@ -29,6 +33,9 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         # Build the train's initial coordinates
         for _ in range(self.train_length - 1):
             possible_directions = self.get_list_possible_directions(self.train_coordinates[-1])
+            # print(f"Current train coordinates: {self.train_coordinates}")
+            # print(f"Possible directions from {self.train_coordinates[-1]}: {possible_directions}")
+            
             if possible_directions:
                 next_coord = random.choice(possible_directions)
                 self.train_coordinates.append(next_coord)
@@ -89,6 +96,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         Only modifies affected cells instead of rebuilding the entire matrix.
         """
         for coord in self.train_coordinates:
+            print(f"Updating train color at {coord}")
             self.matrix_light[coord[0]][coord[1]] = self.train_color
 
     def update(self):

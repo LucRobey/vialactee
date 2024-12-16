@@ -32,7 +32,7 @@ class Segment:
         self.rgb_list = []
         for _ in range((len(indexes))):
             self.rgb_list.append([0,0,0])
-        self.global_rgb_list = []
+        self.global_rgb_list = None
         
         self.isBlocked = False
 
@@ -95,15 +95,17 @@ class Segment:
         luminosite = self.listener.luminosite
         if (self.useGlobalMatrix):
             if fusion_type == "Priority":
-                print(len(self.global_rgb_list),len(self.fused_list) )
+                print("len of global rgb list " ,len(self.global_rgb_list), "for segment ", {self.name}, " |len of fused list" ,len(self.fused_list) )
                 for led_index in range(len(self.global_rgb_list)):
                     if (self.global_rgb_list[led_index] != (0,0,0)):
-                        self.leds[self.indexes[led_index]] = luminosite * self.global_rgb_list[led_index]
+                        # print(f'led_index: {led_index}, length of leds: {len(self.global_rgb_list)}, segment name: {self.name}')
+                        self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.global_rgb_list[led_index]]
                     else:
                         if(self.way=="UP"):
-                            self.leds[self.indexes[led_index]] = luminosite * self.rgb_list[led_index]
+                            
+                            self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
                         else:
-                            self.leds[self.indexes[self.nb_of_leds-1-led_index]] = luminosite * self.rgb_list[led_index]
+                            self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
         else:
             
             for led_index in range(self.nb_of_leds):
