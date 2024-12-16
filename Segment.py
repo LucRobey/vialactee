@@ -131,7 +131,7 @@ class Segment:
         
 
     def change_mode(self , mode_name , info_margin , showInfos):
-        mode_name = "Opposite Sides"
+        #mode_name = "Proportion Rainbow"
         if(not self.isBlocked):
             #On terminate l'ancien mode
             self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)

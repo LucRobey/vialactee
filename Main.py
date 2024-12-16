@@ -10,8 +10,8 @@ async def main():
     
     infos = {
         "useGlobalMatrix" : False ,
-        "useMicrophone"   : False ,
-        "onRaspberry"     : False ,    #si tu veux compiler sur ton ordi, met en commentaire plus haut import neopixel et import board dans Mode_master, et met aussi en commentaire import Serial dans ESP32_microphone, et l'initialisation des leds dans mode_master
+        "useMicrophone"   : True  ,
+        "onRaspberry"     : True  ,    #si tu veux compiler sur ton ordi, met en commentaire plus haut import neopixel et import board dans Mode_master, et met aussi en commentaire import Serial dans ESP32_microphone, et l'initialisation des leds dans mode_master
 
         "printTimeOfCalculation" : False ,
         "printModesDetails"      : False ,

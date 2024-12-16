@@ -6,7 +6,7 @@ red_hue = 0.0
 green = [0 , 255 , 0]
 
 blue = RGB_HSV.fromHSV_toRGB(240.0/360 , 1.0 , 1.0)
-blue_hue = 0.7
+blue_hue = 0.85
 
 gold = RGB_HSV.fromHSV_toRGB(52.0/360 , 1.0 , 1.0)
 

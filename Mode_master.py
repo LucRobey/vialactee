@@ -15,8 +15,8 @@ import data.Data_reader as Data_reader
 
 
 import Fake_leds
-#import neopixel
-#import board
+import neopixel
+import board
 
 
 class Mode_master:
@@ -44,8 +44,8 @@ class Mode_master:
         self.load_configurations()
 
         if(self.onRaspberry):
-            #self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
-            #self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
+            self.leds = neopixel.NeoPixel(board.D21, 173 + 47 + 48 + 47 + 173 + 89 + 207 + 1, brightness=1, auto_write=False)
+            self.leds2 = neopixel.NeoPixel(board.D18, 800, brightness=1, auto_write=False)
             pass
         else:
             self.leds = Fake_leds.Fake_leds(785)
@@ -320,20 +320,20 @@ class Mode_master:
             new_mode = splited_order[2]
             if (self.printAppDetails):
                 print("(MM) On veut changer le segment "+segment_name+" pour le mode "+new_mode)
-            self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode , "" , self.show_modes_details)
+            self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode , "" , self.printModesDetails)
             
         elif (category == "change_way"):
             segment_name = splited_order[1]
             new_way = splited_order[2]
             if (self.printAppDetails):
                 print("(MM) On veut changer le "+segment_name+" pour le sens "+new_way)
-            self.segments_list[self.segments_names_to_index[segment_name]].change_way(new_way , "" , self.show_modes_details)
+            self.segments_list[self.segments_names_to_index[segment_name]].change_way(new_way , "" , self.printModesDetails)
             
         elif (category == "switch_way"):
             segment_name = splited_order[1]
             if (self.printAppDetails):
                 print("(MM) On veut switch le "+segment_name)
-            self.segments_list[self.segments_names_to_index[segment_name]].switch_way("" , self.show_modes_details)
+            self.segments_list[self.segments_names_to_index[segment_name]].switch_way("" , self.printModesDetails)
             
 
         elif (category == "force"):
@@ -341,7 +341,7 @@ class Mode_master:
             new_mode = splited_order[2]
             if (self.printAppDetails):
                 print("(MM) On veut FORCER le segment "+segment_name+" pour le mode "+new_mode)
-            self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode , "" , self.show_modes_details)
+            self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode , "" , self.printModesDetails)
 
         elif (category == "update"):
             parametre = splited_order[1]                            #str parametre c ["sensibilite","luminosite"]
