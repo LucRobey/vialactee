@@ -96,7 +96,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         Only modifies affected cells instead of rebuilding the entire matrix.
         """
         for coord in self.train_coordinates:
-            print(f"Updating train color at {coord}")
+            # print(f"Updating train color at {coord}")
             self.matrix_light[coord[0]][coord[1]] = self.train_color
 
     def update(self):

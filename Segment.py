@@ -95,7 +95,7 @@ class Segment:
         luminosite = self.listener.luminosite
         if (self.useGlobalMatrix):
             if fusion_type == "Priority":
-                print("len of global rgb list " ,len(self.global_rgb_list), "for segment ", {self.name}, " |len of fused list" ,len(self.fused_list) )
+                # print("len of global rgb list " ,len(self.global_rgb_list), "for segment ", {self.name}, " |len of fused list" ,len(self.fused_list) )
                 for led_index in range(len(self.global_rgb_list)):
                     if (self.global_rgb_list[led_index] != (0,0,0)):
                         # print(f'led_index: {led_index}, length of leds: {len(self.global_rgb_list)}, segment name: {self.name}')

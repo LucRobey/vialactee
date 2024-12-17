@@ -51,6 +51,6 @@ class Matrix_General:
         """
         Returns a dictionary mapping segment names to their corresponding values.
         """
-        for i, segment in enumerate(self.segments_location.segment_coords):
-            print(f'Length of segment {self.segments_location.segment_names[i]}: {len(segment)}')
+        # for i, segment in enumerate(self.segments_location.segment_coords):
+        #     print(f'Length of segment {self.segments_location.segment_names[i]}: {len(segment)}')
         return dict(zip(self.segments_location.segment_names, self.segment_values))
