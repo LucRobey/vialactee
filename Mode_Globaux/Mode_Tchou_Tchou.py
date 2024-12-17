@@ -85,7 +85,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         else:
             self.reset_train()
         
-        print(f"Train head: {self.train_head_coordinate}, Train coordinates: {self.train_coordinates}")
+        # print(f"Train head: {self.train_head_coordinate}, Train coordinates: {self.train_coordinates}")
 
     def reset_train(self):
         """
