@@ -15,7 +15,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         self.matrix_light = matrix_class.matrix_light
 
         # Predefined list of starting coordinates
-        self.predefined_coordinates = [(16, 0), (245, 292), (1, 429), (32, 431)]  
+        self.predefined_coordinates = [(16, 0), (245, 292), (1, 429), (32, 431),(188,192),(204,430)]  
 
 
 
@@ -110,4 +110,4 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         self.update_train()
         self.update_matrix()
         super().update()
-        return self.matrix
+
