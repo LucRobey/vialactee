@@ -15,7 +15,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         self.matrix_light = matrix_class.matrix_light
 
         # Predefined list of starting coordinates
-        self.predefined_coordinates = [(16, 0), (245, 292), (1, 429), (32, 431)]  
+        self.predefined_coordinates = [(16, 0), (245, 292), (1, 429), (32, 431),(188,192),(204,430)]  
 
 
 
@@ -37,10 +37,12 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
             # print(f"Possible directions from {self.train_coordinates[-1]}: {possible_directions}")
             
             if possible_directions:
+                # print(f"Possible directions: {possible_directions}")
                 next_coord = random.choice(possible_directions)
                 self.train_coordinates.append(next_coord)
             else:
                 raise ValueError("Not enough space to initialize the train!")
+        print(f"Train head: {self.train_head_coordinate}, Train coordinates: {self.train_coordinates}")
 
     def get_random_coordinate_touching_border(self):
         """
@@ -49,7 +51,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         if not self.predefined_coordinates:
             raise ValueError("No predefined starting coordinates available.")
         visited = set(self.train_coordinates)
-        for _ in range(100):  # Retry limit
+        for _ in range(10):  # Retry limit
             coord = random.choice(self.predefined_coordinates)
             if coord not in visited:
                 return coord
@@ -82,13 +84,15 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
             self.train_coordinates.pop()
         else:
             self.reset_train()
+        
+        # print(f"Train head: {self.train_head_coordinate}, Train coordinates: {self.train_coordinates}")
 
     def reset_train(self):
         """
         Resets the train to a new predefined position if no valid moves are available.
         """
         self.train_head_coordinate = self.get_random_coordinate_touching_border()
-        self.train_coordinates = [self.train_head_coordinate]
+        self.train_coordinates[0] = self.train_head_coordinate
 
     def update_matrix(self):
         """
@@ -96,7 +100,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         Only modifies affected cells instead of rebuilding the entire matrix.
         """
         for coord in self.train_coordinates:
-            print(f"Updating train color at {coord}")
+            # print(f"Updating train color at {coord}")
             self.matrix_light[coord[0]][coord[1]] = self.train_color
 
     def update(self):
@@ -106,4 +110,4 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
         self.update_train()
         self.update_matrix()
         super().update()
-        return self.matrix
+
