@@ -8,6 +8,13 @@ import modes.Proportion_rainbow_mode as Proportion_rainbow_mode
 import modes.PSG_mode as PSG_mode
 import modes.Opposite_sides_mode as Opposite_sides_mode
 
+import modes.Matrix_rain_mode as Matrix_rain_mode
+import modes.Plasma_fire_mode as Plasma_fire_mode
+import modes.Hyper_strobe_mode as Hyper_strobe_mode
+import modes.Chromatic_chaser_mode as Chromatic_chaser_mode
+import modes.Synesthesia_mode as Synesthesia_mode
+import modes.Metronome_mode as Metronome_mode
+
 import modes.christmas_modes.Christmas_mode_1 as Christmas_mode_1
 import modes.christmas_modes.Christmas_mode_2 as Christmas_mode_2
 
@@ -29,9 +36,7 @@ class Segment:
         if(self.listener==None):
             self.listener = listener
         self.fused_list = []
-        self.rgb_list = []
-        for _ in range((len(indexes))):
-            self.rgb_list.append([0,0,0])
+        self.rgb_list = np.zeros((len(indexes), 3), dtype=np.int32)
         self.global_rgb_list = None
         
         self.isBlocked = False
@@ -66,8 +71,14 @@ class Segment:
                         Proportion_rainbow_mode.Proportion_rainbow_mode("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         PSG_mode.PSG_mode                              ("PSG"               , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         Opposite_sides_mode.Opposite_sides_mode        ("Opposite Sides"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Christmas_mode_1.Christmas_mode_1              ("Christmas_mode_1"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Christmas_mode_2.Christmas_mode_2              ("Christmas_mode_2"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
+                        Matrix_rain_mode.Matrix_rain_mode              ("Matrix_rain_mode"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Plasma_fire_mode.Plasma_fire_mode              ("Plasma_fire_mode"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Hyper_strobe_mode.Hyper_strobe_mode            ("Hyper_strobe_mode" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Chromatic_chaser_mode.Chromatic_chaser_mode    ("Chromatic_chaser_mode", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Synesthesia_mode.Synesthesia_mode              ("Synesthesia_mode"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Metronome_mode.Metronome_mode                  ("Metronome_mode"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        #Christmas_mode_1.Christmas_mode_1              ("Christmas_mode_1"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        #Christmas_mode_2.Christmas_mode_2              ("Christmas_mode_2"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
                         ]
         self.modes_names = ["Rainbow",
                                 "Bary Rainbow",
@@ -76,8 +87,14 @@ class Segment:
                                 "Proportion Rainbow",
                                 "PSG",
                                 "Opposite Sides",
-                                "Christmas 1",
-                                "Christmas 2"
+                                "Matrix_rain_mode",
+                                "Plasma_fire_mode",
+                                "Hyper_strobe_mode",
+                                "Chromatic_chaser_mode",
+                                "Synesthesia_mode",
+                                "Metronome_mode",
+                                #"Christmas 1",
+                                #"Christmas 2"
                                 ]
 
         if(orientation == "horizontal"):
@@ -130,7 +147,6 @@ class Segment:
         
 
     def change_mode(self , mode_name , info_margin , showInfos):
-        mode_name = "Rainbow"
         if(not self.isBlocked):
             #On terminate l'ancien mode
             self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)

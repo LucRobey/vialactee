@@ -39,18 +39,22 @@ class Data_reader:
             
             configurations = {}
             playlists = []
+            active_configurations = []
 
             # Process and print each row
             for row_index, row in enumerate(csv_reader):
+
               
               if ( self.printConfigurationLoads):
                   row_data = " | ".join(cell.strip() for cell in row)
                   print(f"(DR)  Row {row_index}: {row_data}")
               if(row_index>0):
+                if(row[0]!=""):
                   playlist = row[0]
                   name = row[1]
                   modes={}
                   way={}
+                  
                   modes["Segment h00"] = row[2]
                   way["Segment h00"] = row[3]
                   modes["Segment v1"] = row[4]
@@ -73,11 +77,16 @@ class Data_reader:
                   way["Segment h32"] = row[21]
                   modes["Segment v4"] = row[22]
                   way["Segment v4"] = row[23]
-                  if(playlist in configurations):
-                      configurations[playlist].append({"name":name , "modes":modes , "way":way})
+                  if row[24] == "TRUE":
+                      active_configurations.append(True)
                   else:
-                      playlists.append(playlist)
-                      configurations[playlist]=[{"name":name , "modes":modes , "way":way}]
+                      active_configurations.append(False)
+                  if(active_configurations[-1]):
+                    if(playlist in configurations):
+                        configurations[playlist].append({"name":name , "modes":modes , "way":way})
+                    else:
+                        playlists.append(playlist)
+                        configurations[playlist]=[{"name":name , "modes":modes , "way":way}]
                   
             return configurations , playlists
         

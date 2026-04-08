@@ -9,14 +9,10 @@ from Mode_Globaux import Matrix_data as Matrix_data
 from Mode_Globaux import Segments_Locations as Segments_Locations
 from Mode_Globaux import Mode_Tchou_Tchou as Mode_Tchou_Tchou
 
-import Segment as Segment
-import Listener as Listener
+import core.Segment as Segment
+import core.Listener as Listener
 import data.Data_reader as Data_reader
 
-
-import Fake_leds
-import neopixel
-import board
 
 
 class Mode_master:
@@ -31,25 +27,20 @@ class Mode_master:
     next_change_of_configuration_time = 0
     current_time = time.time()
 
-    def __init__(self, listener , infos):
+    def __init__(self, listener, infos, leds1, leds2):
         self.infos = infos
         self.listener = listener
-        self.useGlobalMatrix        = infos["useGlobalMatrix"]
-        self.onRaspberry            = infos["onRaspberry"]
-        self.printTimeOfCalculation = infos["printTimeOfCalculation"]
-        self.printModesDetails      = infos["printModesDetails"]
-        self.printAppDetails        = infos["printAppDetails"]
-        self.printConfigChanges     = infos["printConfigChanges"]
+        self.useGlobalMatrix        = infos.get("useGlobalMatrix", False)
+        self.onRaspberry            = infos.get("onRaspberry", False)
+        self.printTimeOfCalculation = infos.get("printTimeOfCalculation", False)
+        self.printModesDetails      = infos.get("printModesDetails", False)
+        self.printAppDetails        = infos.get("printAppDetails", False)
+        self.printConfigChanges     = infos.get("printConfigChanges", False)
+
+        self.leds = leds1
+        self.leds2 = leds2
 
         self.load_configurations()
-
-        if(self.onRaspberry):
-            self.leds = neopixel.NeoPixel(board.D21, 785, brightness=1, auto_write=False)
-            self.leds2 = neopixel.NeoPixel(board.D18, 519, brightness=1, auto_write=False)
-            pass
-        else:
-            self.leds = Fake_leds.Fake_leds(785)
-            self.leds2 = Fake_leds.Fake_leds(519)
 
         if (self.useGlobalMatrix):
             self.matrix = Matrix.Matrix()
@@ -65,7 +56,7 @@ class Mode_master:
     async def update_forever(self):
         while True:
             await self.update()
-            await asyncio.sleep(0.00001)
+            await asyncio.sleep(1/30)
 
     async def update(self):
         if self.printTimeOfCalculation:
@@ -100,8 +91,13 @@ class Mode_master:
         if self.printTimeOfCalculation:
             time_led_show = time.time()
 
-        self.leds.show()
-        self.leds2.show()
+        if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi":
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self.leds.show)
+            await loop.run_in_executor(None, self.leds2.show)
+        else:
+            self.leds.show()
+            self.leds2.show()
 
         if self.printTimeOfCalculation:
             duration.append(time.time() - time_led_show)
@@ -188,24 +184,12 @@ class Mode_master:
                 self.segments_list.append(new_segment)
                 self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
                 
-        v4 =  {"name":"Segment v4"  , "size" : 173 , "order" : 0 , "orientation" : "vertical"   , "alcool" : False}
-        h32 = {"name":"Segment h32" , "size" : 48  , "order" : 1 , "orientation" : "horizontal" , "alcool" : False}
-        h31 = {"name":"Segment h31" , "size" : 48  , "order" : 2 , "orientation" : "horizontal" , "alcool" : False}
-        h30 = {"name":"Segment h30" , "size" : 47  , "order" : 3 , "orientation" : "horizontal" , "alcool" : False}
-        v3 =  {"name":"Segment v3"  , "size" : 173 , "order" : 4 , "orientation" : "horizontal" , "alcool" : False}
-        h20 = {"name":"Segment h20" , "size" : 91  , "order" : 5 , "orientation" : "horizontal" , "alcool" : True }
-        h00 = {"name":"Segment h00" , "size" : 205 , "order" : 6 , "orientation" : "horizontal" , "alcool" : True }
-
-        v2 =  {"name":"Segment v2"  , "size" : 173 , "order" : 7 , "orientation" : "vertical"   , "alcool" : False}
-        h11 = {"name":"Segment h11" , "size" : 87  , "order" : 8 , "orientation" : "horizontal" , "alcool" : False}
-        h10 = {"name":"Segment h10" , "size" : 86  , "order" : 9 , "orientation" : "horizontal" , "alcool" : False}
-        v1 =  {"name":"Segment v1"  , "size" : 173 , "order" : 10 ,"orientation" : "horizontal" , "alcool" : False}
-
-        segs_1 = [v4 , h32 , h31 , h30 , v3 , h20 , h00]
-        segs_2 = [v2 , h11 , h10 , v1]
-
-        add_segments(segs_1,self.leds)
-        add_segments(segs_2,self.leds2)
+        import json
+        with open("config/segments.json", "r") as f:
+            data = json.load(f)
+            
+        add_segments(data["segs_1"],self.leds)
+        add_segments(data["segs_2"],self.leds2)
 
 
 

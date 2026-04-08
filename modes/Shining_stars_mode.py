@@ -7,10 +7,8 @@ import time
 class Shining_stars_mode(Mode.Mode):
 
     # size of the sub_segment that we will replicate in order to save some calculus
-    sub_segment_size = 40
-
-    # nb of iterations to wait before showing again the color representing each band
-    iteration_wait = 30
+    # these are used as fallbacks if not found in self.infos
+    sub_segment_size_default = 40
 
     # threshold to activate each band (with listener.asserv_segm_fft)
     threshold = 0.6
@@ -19,6 +17,8 @@ class Shining_stars_mode(Mode.Mode):
         super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
 
         self.nb_of_fft_band = listener.nb_of_fft_band
+        self.sub_segment_size = infos.get("stars_sub_segment_size", self.sub_segment_size_default)
+        self.iteration_wait = infos.get("stars_iteration_wait", 30)
 
         # colors representing each band (red = basses ; blue = aigus)
         self.colors = []
@@ -27,13 +27,9 @@ class Shining_stars_mode(Mode.Mode):
             self.colors.append(new_colors)
         self.colors=np.array(self.colors)
 
-    def update(self):
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            time_me = time.time()  
-        #====================================================================================
-        
+    def run(self):
         # first we fade to black
-        self.fade_to_black(0.1)
+        self.fade_to_black_segment_vectorized(0.1, 0, self.nb_of_leds - 1)
 
         total = 0
         for band_index in range(self.nb_of_fft_band):
@@ -42,11 +38,6 @@ class Shining_stars_mode(Mode.Mode):
         for band_index in range(self.nb_of_fft_band):
             if self.listener.band_peak[band_index] > 0:
                 self.lightUp(band_index)
-
-        #====================================================================================
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            duration = time.time() - time_me
-            print("      (CM) temps pour ",self.name," : ",duration)
 
 
     

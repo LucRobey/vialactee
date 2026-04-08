@@ -21,14 +21,7 @@ class Power_bar_mode(Mode.Mode):
         self.white_speed = float((self.nb_of_leds)/20)
 
     
-    def update(self):
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            time_me = time.time()  
-        #====================================================================================
-        
-        """
-        calculate
-        """
+    def run(self):
         new_power = self.listener.asserved_total_power
         new_height = new_power*self.nb_of_leds
         #could put some sensi here
@@ -47,23 +40,13 @@ class Power_bar_mode(Mode.Mode):
             if(self.white_dot_height<0):
                 self.white_dot_height=0
 
-        """
-        show
-        """
         #we color the bar
-        for led_index in range(int(self.power_height+1)):
-                super().smooth(0.5,led_index,self.color)
+        self.smooth_segment_vectorized(0.5, 0, int(self.power_height), self.color)
 
         #we color the white dot
-        super().smooth(0.5,int(self.white_dot_height),self.white)
+        self.smooth(0.5,int(self.white_dot_height),self.white)
 
         #we smoothly brings the rest to zero
-        for led_index in range(int(self.white_dot_height+1),self.nb_of_leds):
-                super().smooth(0.5,led_index,(0,0,0))
-
-        #====================================================================================
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            duration = time.time() - time_me
-            print("      (CM) temps pour ",self.name," : ",duration)
+        self.smooth_segment_vectorized(0.5, int(self.white_dot_height+1), self.nb_of_leds - 1, (0,0,0))
         
 

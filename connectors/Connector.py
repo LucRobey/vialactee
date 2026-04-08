@@ -1,6 +1,6 @@
 import socket
 import asyncio
-import Mode_master
+import core.Mode_master as Mode_master
 
 class Connector:
     HOST = '0.0.0.0'  # Listen on all available network interfaces

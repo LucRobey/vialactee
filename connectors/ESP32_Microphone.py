@@ -1,4 +1,7 @@
-import serial
+try:
+    import serial
+except ImportError:
+    serial = None
 import asyncio
 import time
 

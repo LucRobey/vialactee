@@ -18,16 +18,15 @@ class Bary_rainbow_mode(Mode.Mode):
         #the maximum size of a side bar
         self.max_size = int((self.nb_of_leds+1)/2)
         
-        
-    def update(self):
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            time_me = time.time() 
-        #====================================================================================
-         
-        """
-        calculate
-        """
-
+        self.left_hues_base = np.arange(self.middle_index[0]) / self.middle_index[0]
+        if self.nb_of_leds > self.middle_index[1] + 1:
+            self.right_led_indices_ratio = (np.arange(self.middle_index[1]+1, self.nb_of_leds) - self.middle_index[1]) / (self.nb_of_leds - self.middle_index[1])
+            self.target_right = np.zeros((self.nb_of_leds - self.middle_index[1] - 1, 3), dtype=np.int32)
+        else:
+            self.right_led_indices_ratio = None
+            
+        self.target_left = np.zeros((self.middle_index[0], 3), dtype=np.int32)
+    def run(self):
         fft_band_values = self.listener.smoothed_fft_band_values
         
         a = 0
@@ -38,19 +37,19 @@ class Bary_rainbow_mode(Mode.Mode):
             b += fft_band_values[band_index]
             
         middle_hue = np.min([(float(a)/b) / (self.listener.nb_of_fft_band-1),0.84])
-        """
-        show
-        """
-        for led_index in range(self.middle_index[0]):
-            led_hue = (float(led_index)/self.middle_index[0]) * middle_hue
-            self.rgb_list[led_index] = RGB_HSV.fromHSV_toRGB(led_hue,1.0,1.0)
+        
+        # Vectorize left side
+        left_hues = self.left_hues_base * middle_hue
+        RGB_HSV.fromHSV_toRGB_vectorized(left_hues, 1.0, 1.0, out=self.target_left)
+        self.rgb_list[:self.middle_index[0]] = self.target_left
+        
+        # Center
         self.rgb_list[self.middle_index[0]] = RGB_HSV.fromHSV_toRGB(middle_hue,1.0,1.0)
-        self.rgb_list[self.middle_index[1]] = RGB_HSV.fromHSV_toRGB(middle_hue,1.0,1.0)
-        for led_index in range(self.middle_index[1]+1,self.nb_of_leds):
-            led_hue = middle_hue + (0.85-middle_hue) * ( (float(led_index)-self.middle_index[1]) / (self.nb_of_leds - self.middle_index[1]))
-            self.rgb_list[led_index] = RGB_HSV.fromHSV_toRGB(led_hue,1.0,1.0)
- 
-        #====================================================================================
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            duration = time.time() - time_me
-            print("      (CM) temps pour ",self.name," : ",duration)
+        if self.middle_index[1] < self.nb_of_leds:
+            self.rgb_list[self.middle_index[1]] = RGB_HSV.fromHSV_toRGB(middle_hue,1.0,1.0)
+        
+        # Vectorize right side
+        if self.right_led_indices_ratio is not None:
+            right_hues = middle_hue + (0.85 - middle_hue) * self.right_led_indices_ratio
+            RGB_HSV.fromHSV_toRGB_vectorized(right_hues, 1.0, 1.0, out=self.target_right)
+            self.rgb_list[self.middle_index[1]+1:self.nb_of_leds] = self.target_right

@@ -27,13 +27,7 @@ class Middle_bar_mode(Mode.Mode):
 
 
 
-    def update(self):
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            time_me = time.time() 
-        #==================================================================================== 
-        """
-        calculate
-        """
+    def run(self):
         #We listen to the chosen band
         new_size = self.listener.asserved_fft_band[self.band_to_listen] * self.max_size
 
@@ -44,15 +38,7 @@ class Middle_bar_mode(Mode.Mode):
         if (self.size > self.max_size):
             self.size = self.max_size
 
-        """
-        show
-        """
         #we color/decolor the leds starting from the middle(s)
-        self.smooth_segment(0.5 , int(self.middle_index[0]-(self.size-1)) , int(self.middle_index[1]+(self.size-1)) , self.color)
-        self.fade_to_black_segment(0.5 ,                      0             , int(self.middle_index[0]-(self.size-1)))
-        self.fade_to_black_segment(0.5 , int(self.middle_index[1]+(self.size-1)) ,        self.nb_of_leds-1          )
-            
-        #====================================================================================
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            duration = time.time() - time_me
-            print("      (CM) temps pour ",self.name," : ",duration)
+        self.smooth_segment_vectorized(0.5 , int(self.middle_index[0]-(self.size-1)) , int(self.middle_index[1]+(self.size-1)) , self.color)
+        self.fade_to_black_segment_vectorized(0.5 ,                      0             , int(self.middle_index[0]-(self.size-1)))
+        self.fade_to_black_segment_vectorized(0.5 , int(self.middle_index[1]+(self.size-1)) ,        self.nb_of_leds-1          )

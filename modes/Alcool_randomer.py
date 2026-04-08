@@ -7,8 +7,9 @@ class Alcool_randomer(Mode.Mode):
     def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
         super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
 
-        self.begining_speed = self.nb_of_leds/40
-        self.end_of_phase_one_speed = 4 * self.begining_speed
+        self.begining_speed = float(infos.get("shot_base_speed", self.nb_of_leds / 40.0))
+        self.end_of_phase_one_speed = float(infos.get("shot_max_speed", 4 * self.begining_speed))
+        self.fade_to_black_ratio = float(infos.get("shot_fade_ratio", 0.4))
 
         self.activated = False
         self.hasEnded = False
@@ -20,12 +21,8 @@ class Alcool_randomer(Mode.Mode):
         
 
 
-    def update(self):
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            time_me = time.time()  
-        #====================================================================================
-         
-        self.fade_to_black(0.4)
+    def run(self):
+        self.fade_to_black(self.fade_to_black_ratio)
         if(self.activated):
             self.check_phase()
             if(self.phase==1):
@@ -45,16 +42,12 @@ class Alcool_randomer(Mode.Mode):
             self.moove_ball()
             
         self.color_head()
-        #====================================================================================
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            duration = time.time() - time_me
-            print("      (CM) temps pour ",self.name," : ",duration)
         
         
     def activate(self):
         self.activated = True
         self.hasEnded = False
-        self.time_to_spin = random.randint(15,20)
+        self.time_to_spin = random.randint(self.infos.get("shot_min_spin", 15), self.infos.get("shot_max_spin", 20))
         self.direction =  -1 if random.randint(0,1)==0 else 1
         self.speed = self.begining_speed
         self.last_moove = 0

@@ -29,11 +29,7 @@ class Opposite_sides_mode(Mode.Mode):
         super().start(info_margin,showInfos)
         self.firstUpdate = True
 
-    def update(self):
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            time_me = time.time() 
-        #====================================================================================
-        
+    def run(self):
         if (self.firstUpdate):
             for led_index in range(self.middle_start_index,self.middle_end_index+1):
                 hue = self.bass_hue + (self.high_hue - self.bass_hue) * (float(led_index - self.middle_start_index)/(self.middle_end_index - self.middle_start_index))
@@ -41,26 +37,14 @@ class Opposite_sides_mode(Mode.Mode):
                 self.rgb_list[led_index] = color
             self.firstUpdate = False
 
-        
-                
         self.lower_height  = int(self.maxSize * (self.listener.asserved_fft_band[0]  + self.listener.asserved_fft_band[1] )/2)
         self.higher_height = int(self.maxSize * (self.listener.asserved_fft_band[-1] + self.listener.asserved_fft_band[-2])/2)
 
-        self.fade_to_black_segment(0.5,0,self.middle_start_index-1-self.lower_height-1)
-        self.smooth_segment(0.5,self.middle_start_index-1-self.lower_height,self.middle_start_index-1,self.bass_color)
-        self.smooth_segment(0.5,self.middle_end_index+1,self.middle_end_index+1+self.higher_height,self.high_color)
-        self.fade_to_black_segment(0.5,self.middle_end_index+1+self.higher_height+1,self.nb_of_leds-1)
+        self.fade_to_black_segment_vectorized(0.5,0,self.middle_start_index-1-self.lower_height-1)
+        self.smooth_segment_vectorized(0.5,self.middle_start_index-1-self.lower_height,self.middle_start_index-1,self.bass_color)
+        self.smooth_segment_vectorized(0.5,self.middle_end_index+1,self.middle_end_index+1+self.higher_height,self.high_color)
+        self.fade_to_black_segment_vectorized(0.5,self.middle_end_index+1+self.higher_height+1,self.nb_of_leds-1)
 
-        #self.fade_to_black_segment(0.5,self.lower_height+1,self.nb_of_leds-1-self.higher_height-1)
-        #self.smooth_segment(0.5,self.nb_of_leds-1-self.higher_height,self.nb_of_leds-1,colors.blue)
-
-        
-            
         if(self.printThisModeDetail):
             print("(PSG)     lower_height = ",self.lower_height)
             print("(PSG)     higher_height = ",self.higher_height)
-
-        #====================================================================================
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            duration = time.time() - time_me
-            print("      (CM) temps pour ",self.name," : ",duration)
