@@ -4,6 +4,9 @@ except ImportError:
     serial = None
 import asyncio
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ESP32_Microphone:
 
@@ -28,7 +31,7 @@ class ESP32_Microphone:
             await self.listen()
             if(self.printTimeOfCalculation):
                 duration = time.time() - time_mem
-                print("(ESPmicro) temps de calcul = ",duration)
+                logger.debug(f"(ESPmicro) temps de calcul = {duration}")
             await asyncio.sleep(0.00001)
             
     async def listen(self):
@@ -44,7 +47,7 @@ class ESP32_Microphone:
                 
                 if(response):
                     if self.showMicrophoneDetails:
-                        print("(ESP_mic)   message reçu ", response)
+                        logger.debug(f"(ESP_mic)   message reçu {response}")
                 
                     cleaned_data = response.decode().strip()
                     split_data = cleaned_data.split(',')
@@ -54,7 +57,7 @@ class ESP32_Microphone:
                         self.bandValues[band_index] = int(split_data[band_index])
                 else:
                     if self.showMicrophoneDetails:
-                        print("(ESP_mic)   pas de message reçu ")
+                        logger.debug("(ESP_mic)   pas de message reçu ")
         else:
             pass
 

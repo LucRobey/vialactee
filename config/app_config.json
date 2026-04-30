@@ -1,0 +1,16 @@
+{
+    "startServer": true,
+    "useGlobalMatrix": false,
+    "useMicrophone": true,
+    "HARDWARE_MODE": "auto",
+    "printTimeOfCalculation": false,
+    "printModesDetails": true,
+    "printMicrophoneDetails": false,
+    "printAppDetails": false,
+    "printAsservmentDetails": false,
+    "printConfigurationLoads": false,
+    "printConfigChanges": false,
+    "modesToPrintDetails": [
+        "PSG"
+    ]
+}

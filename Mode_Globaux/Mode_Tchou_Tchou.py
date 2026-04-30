@@ -1,5 +1,9 @@
 from Mode_Globaux import Mode_Global as Mode_Global
 import random
+import logging
+
+logger = logging.getLogger(__name__)
+
 class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
     def __init__(self, matrix_class):
         """
@@ -42,7 +46,7 @@ class Mode_Tchou_Tchou(Mode_Global.Mode_Global):
                 self.train_coordinates.append(next_coord)
             else:
                 raise ValueError("Not enough space to initialize the train!")
-        print(f"Train head: {self.train_head_coordinate}, Train coordinates: {self.train_coordinates}")
+        logger.debug(f"Train head: {self.train_head_coordinate}, Train coordinates: {self.train_coordinates}")
 
     def get_random_coordinate_touching_border(self):
         """

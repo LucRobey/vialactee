@@ -1,5 +1,8 @@
 import csv
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Data_reader:
 
@@ -22,15 +25,15 @@ class Data_reader:
             
             # Check if the request was successful
             if response.status_code != 200:
-                print(f"Failed to download file. HTTP Response Code: {response.status_code}")
+                logger.error(f"Failed to download file. HTTP Response Code: {response.status_code}")
                 return
             
             # Check content type to verify it's a CSV file
             content_type = response.headers.get('Content-Type', '')
             if ( self.printConfigurationLoads):
-                print(f"(DR) Content Type: {content_type}")
+                logger.debug(f"(DR) Content Type: {content_type}")
             if 'text/csv' not in content_type:
-                print("The file does not appear to be a CSV file.")
+                logger.warning("The file does not appear to be a CSV file.")
                 return
 
             # Read the CSV content line by line
@@ -47,7 +50,7 @@ class Data_reader:
               
               if ( self.printConfigurationLoads):
                   row_data = " | ".join(cell.strip() for cell in row)
-                  print(f"(DR)  Row {row_index}: {row_data}")
+                  logger.debug(f"(DR)  Row {row_index}: {row_data}")
               if(row_index>0):
                 if(row[0]!=""):
                   playlist = row[0]
@@ -91,4 +94,4 @@ class Data_reader:
             return configurations , playlists
         
         except Exception as e:
-            print(f"Error reading CSV file from Google Drive: {e}")
+            logger.error(f"Error reading CSV file from Google Drive: {e}")

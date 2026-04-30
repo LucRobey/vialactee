@@ -29,12 +29,12 @@ class Christmas_mode_2(Mode.Mode):
             self.lightUp(color)
             self.next_apparition = time.time() + self.delta_time
             if(self.printThisModeDetail):
-                print("(CM_2)       On fait apparaitre une couleur")
+                self.logger.debug("(CM_2)       On fait apparaitre une couleur")
         
         #====================================================================================
         if(self.printTimeOfCalculation and self.printThisModeDetail):
             duration = time.time() - time_me
-            print("      (CM_2) temps pour ",self.name," : ",duration)
+            self.logger.debug(f"      (CM_2) temps pour {self.name} : {duration}")
 
 
     def lightUp(self , color):

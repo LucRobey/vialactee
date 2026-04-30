@@ -12,33 +12,20 @@ class Metronome_mode(Mode.Mode):
         phase = self.listener.beat_phase # 0.0 -> 1.0 continuously
         count = self.listener.beat_count
         
-        # Ping-pong scanning behavior based on the exact beat
+        # Alternate between White (beats) and Blue (sub-beats)
         if count % 2 == 0:
-            pos = phase # Draw Left to Right on even beats
+            base_color = np.array([255.0, 255.0, 255.0]) * self.brightness_multiplier
         else:
-            pos = 1.0 - phase # Draw Right to Left on odd beats
-            
-        # Identify the exact physical LED index of the sweeping head
-        head_index = int(pos * (self.nb_of_leds - 1))
+            base_color = np.array([0.0, 0.0, 255.0]) * self.brightness_multiplier
         
-        # Every subsequent beat shifts the hue automatically
-        hue = (count * 0.15) % 1.0
-        head_color = RGB_HSV.fromHSV_toRGB_vectorized(hue, 1.0, self.brightness_multiplier)[0]
+        # Flashing ADSR envelope: 
+        # Peaks instantly at phase=0, then fades to black (0) by halfway through the phase
+        flash_envelope = max(0.0, 1.0 - (phase * 2.0))
         
-        # The background acts as a physical grid downbeat accent
-        # It flares up slightly on the exact beat (phase=0), then fades
-        bg_flash = max(0.0, 1.0 - (phase * 4)) # Visible only for the first 25% of the beat interval
-        bg_brightness = (bg_flash ** 2) * 0.3 * self.brightness_multiplier
-        bg_color = RGB_HSV.fromHSV_toRGB_vectorized(hue, 1.0, bg_brightness)[0]
+        # Power curve to make the strobe punchier
+        brightness = (flash_envelope ** 1.5)
         
-        # 1. Paint the background grid pulse smoothly
-        self.smooth_segment_vectorized(0.3, 0, self.nb_of_leds - 1, bg_color)
+        active_color = base_color * brightness
         
-        # 2. Hard draw the anticipating laser head 
-        self.smooth(1.0, head_index, head_color) 
-        
-        # Add a subtle anti-aliased glow around the head to make it thicker and punchier
-        if head_index > 0:
-            self.smooth(0.8, head_index - 1, head_color)
-        if head_index < self.nb_of_leds - 1:
-            self.smooth(0.8, head_index + 1, head_color)
+        # Paint the entire bar instantaneously with the calculated color
+        self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, active_color)

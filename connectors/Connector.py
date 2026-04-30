@@ -1,10 +1,13 @@
-import socket
 import asyncio
-import core.Mode_master as Mode_master
+import logging
+from aiohttp import web
+import os
+
+logger = logging.getLogger(__name__)
 
 class Connector:
-    HOST = '0.0.0.0'  # Listen on all available network interfaces
-    PORT = 12345
+    HOST = '0.0.0.0'
+    PORT = 8080
 
     def __init__(self , mode_master , infos):
 
@@ -17,50 +20,73 @@ class Connector:
                                  "Segment v4"]
         
         self.mode_master = mode_master
+        self.active_websockets = set()
         
     async def start_server(self):
-        """Start the asynchronous TCP server."""
-        server = await asyncio.start_server(self.handle_client, self.HOST, self.PORT)
-        print(f"Server started on {self.HOST}:{self.PORT}")
+        """Start the aiohttp web server with websockets."""
+        app = web.Application()
         
-        async with server:
-            await server.serve_forever()
-            
-    async def handle_client(self, reader, writer):
-        """Handle incoming client connections."""
-        client_address = writer.get_extra_info('peername')
-        print(f"Connection from {client_address}")
+        # Setup routes
+        app.router.add_get('/', self.handle_index)
+        app.router.add_get('/ws', self.websocket_handler)
+        
+        web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web')
+        if os.path.exists(web_dir):
+            app.router.add_static('/static/', path=web_dir, name='static')
+
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, self.HOST, self.PORT)
+        await site.start()
+        logger.info(f"Web Server started on http://{self.HOST}:{self.PORT}")
         
         try:
-            # Read the message sent by the client
-            data = await reader.read(1024)
-            message = data.decode().strip()
-            if not message:
-                if (self.printAppDetails):
-                    print(f"(C) No data received from {client_address}")
-                return
-            if (self.printAppDetails):
-                print(f"(C) Message received: {message}")
-            response = self.process_message(message)
-
-            writer.write(b"ack\n")  # Acknowledge receipt
-            await writer.drain()
-            if(response):
-                writer.write((str(response) + "\n").encode('utf-8'))
-                await writer.drain()
-
-        except Exception as e:
-            print(f"Error handling client {client_address}: {e}")
+            await asyncio.Event().wait()
         finally:
-            # Close the connection
-            writer.close()
-            await writer.wait_closed()
-            print(f"(C) Connection with {client_address} closed.")
+            await runner.cleanup()
+
+    async def handle_index(self, request):
+        web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web')
+        index_path = os.path.join(web_dir, 'index.html')
+        if os.path.exists(index_path):
+            return web.FileResponse(index_path)
+        return web.Response(text="Web interface not found. Please create web/index.html", status=404)
+
+    async def websocket_handler(self, request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        
+        self.active_websockets.add(ws)
+        if self.printAppDetails:
+            logger.debug(f"(C) New WebSocket connection")
+
+        try:
+            async for msg in ws:
+                if msg.type == web.WSMsgType.TEXT:
+                    message = msg.data.strip()
+                    if not message:
+                        continue
+                        
+                    if self.printAppDetails:
+                        logger.debug(f"(C) WS Message received: {message}")
+                    
+                    response = self.process_message(message)
+                    
+                    if response is not None:
+                        await ws.send_str(str(response))
+                elif msg.type == web.WSMsgType.ERROR:
+                    logger.error(f"ws connection closed with exception {ws.exception()}")
+        finally:
+            self.active_websockets.remove(ws)
+            if self.printAppDetails:
+                logger.debug(f"(C) WebSocket disconnected")
+
+        return ws
 
     def process_message(self, message):
         """Process the incoming message and execute the appropriate command."""
         if(self.printAppDetails):
-            print("(C) message reçu : ",message)
+            logger.debug(f"(C) message reçu : {message}")
         splited_message = message.split(":")
         category = splited_message[0]
         rest_of_the_message = message[len(splited_message[0])+1:]
@@ -104,16 +130,20 @@ class Connector:
             phase = splited_message[2]
             order , response = self.calibrate_fft(calibration_type , phase)
             
+        elif (category == "ping"):
+            order = []
+            response = "pong"
+            
         elif (category == "special"):
             order , response = self.handle_special(rest_of_the_message)
             
         else:
-            print("(C) invalid category")
+            logger.warning("(C) invalid category")
             return None
 
         if(self.printAppDetails):
-            print("(C)          state : " , self.current_page)
-            print("(C)          order : " , order)
+            logger.debug(f"(C)          state : {self.current_page}")
+            logger.debug(f"(C)          order : {order}")
         self.mode_master.obey_orders(order)
         return response
 
@@ -145,14 +175,14 @@ class Connector:
                 order.append("unblock:Segment h20")
                 order.append("force:Segment h20:Rainbow")
         else :
-            print("(C) ON ENTRE DANS AUCUNE CATEGORIE!")
+            logger.warning("(C) ON ENTRE DANS AUCUNE CATEGORIE!")
 
         return order , response
 
 
     def check_current_page(self):
         if (not self.current_page in self.list_of_pages):
-            print("(C) CURRENT PAGE PAS DANS LA LISTE")
+            logger.warning("(C) CURRENT PAGE PAS DANS LA LISTE")
 
     def change_mode(self , segment , new_mode):
         order = []
@@ -190,7 +220,7 @@ class Connector:
         elif(lock_unlock == "false"):
             order.append("unblock:"+segment)
         else:
-            print("(C) ON N EST NI LOCK NI UNLOCK")
+            logger.warning("(C) ON N EST NI LOCK NI UNLOCK")
         return order , response
     
     def change_param(self , parametre , nouvelle_valeur):
@@ -212,7 +242,7 @@ class Connector:
             order.append("calibration:"+calibration_type+":"+phase)
 
         else:
-            print("(C) ON NE START NI END LA CALIBRATION!")
+            logger.warning("(C) ON NE START NI END LA CALIBRATION!")
         return order , response
 
     

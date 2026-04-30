@@ -43,13 +43,10 @@ class Shining_stars_mode(Mode.Mode):
     
     def lightUp(self , band_index):
         
-        # we get a random pos under the size of the sub_segment than we show the led at this position modulo the sub_segment size
+        # we get a random pos under the size of the sub_segment
         random_pos = random.randint(0,self.sub_segment_size)
 
-        segment_number = 0
-        while ( segment_number * self.sub_segment_size + random_pos ) < self.nb_of_leds:
-            self.rgb_list[segment_number * self.sub_segment_size + random_pos] = self.colors[band_index]
-            segment_number+=1
-
+        # We broadcast the color across all subsegments instantly using step slicing
+        self.rgb_list[random_pos::self.sub_segment_size] = self.colors[band_index]
 
 

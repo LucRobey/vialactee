@@ -6,7 +6,15 @@ def create_hardware(infos):
     Returns:
         leds1, leds2 (HardwareInterface instances)
     """
-    mode = infos.get("HARDWARE_MODE", "simulation")
+    mode = infos.get("HARDWARE_MODE", "auto")
+
+    if mode == "auto":
+        try:
+            import board
+            import neopixel
+            mode = "rpi"
+        except ImportError:
+            mode = "simulation"
 
     if mode == "simulation":
         import hardware.Fake_leds as Fake_leds

@@ -127,10 +127,7 @@ class Alcool_randomer(Mode.Mode):
  
             
     def color_head(self):
-        #On colorie tout entre last_pos et new_pos
-        if(self.pos_int > self.last_pos_int):
-            for led_index in range(self.last_pos_int , self.pos_int+1):
-                self.rgb_list[led_index]=self.white
-        else:
-            for led_index in range(self.pos_int , self.last_pos_int+1):
-                self.rgb_list[led_index]=self.white
+        # On colorie tout entre last_pos et new_pos
+        start = min(self.pos_int, self.last_pos_int)
+        end = max(self.pos_int, self.last_pos_int)
+        self.rgb_list[start : end + 1] = self.white

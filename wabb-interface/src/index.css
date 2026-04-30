@@ -1,0 +1,1531 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=VT323&display=swap');
+
+:root {
+  /* ============================================================================ */
+  /* 🧱 LEGO MATH ENGINE: Central Logic Panel for Grid & Physical Placement       */
+  /* ============================================================================ */
+  --stud: 30px;
+  --tolerance: 4px;
+  
+  /* Layout Dimensions (in studs) */
+  --col-left-studs: 3;
+  --col-center-studs: 25;
+  --col-right-studs: 8;
+  --gap-studs: 1;
+  --padding-studs: 1;
+
+  --tab-height-studs: 2;
+  --telemetry-height-studs: 3;
+  --preset-brick-height-studs: 2;
+  --slider-height-studs: 10;
+  --lego-label-height-studs: 1;
+  /* ============================================================================ */
+
+  --bg-dark: #12151c;
+  /* Very dark blueish grey baseplate */
+  --stud-color: #1a1e26;
+
+  --lego-red: #da291c;
+  --lego-blue: #0055bf;
+  --lego-orange: #ff8200;
+  --lego-green: #00843D;
+  --lego-purple: #6b3fa0;
+  --lego-yellow: #ffcd00;
+  --lego-cyan: #00b5e2;
+  --lego-magenta: #c10076;
+  --lego-dark-blue: #00205b;
+  --lego-dark-grey: #2b2b2b;
+  --lego-light-grey: #6b6b6b;
+
+  --text-main: #f0f0f0;
+  --text-dim: #a0a0a0;
+
+  /* Glossy plastic effects */
+  --plastic-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 10px 15px rgba(0, 0, 0, 0.8),
+    0 4px 6px rgba(0, 0, 0, 0.5);
+  --plastic-pressed:
+    inset 0 2px 8px rgba(0, 0, 0, 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+
+  --neon-orange: #ff5500;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #1a1e24;
+  /* deep grey baseplate */
+  color: var(--text-main);
+
+  /* High-Fidelity Infinite Lego Baseplate */
+  background-image:
+    /* Top-left light highlight on the stud */
+    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.12) 0%, transparent 6px),
+    /* The stud itself: flat top, rolling off into a dark edge bevel */
+    radial-gradient(circle at 15px 15px, #22272e 0%, #22272e 7px, rgba(0, 0, 0, 0.7) 9.5px, transparent 10px),
+    /* The drop shadow cast by the stud onto the baseplate below */
+    radial-gradient(circle at 16.5px 16.5px, rgba(0, 0, 0, 0.6) 0%, transparent 13px);
+
+  background-size: var(--stud) var(--stud);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 0;
+}
+
+/* Large Orange Mount Plate */
+.large-orange-baseplate {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: #e67300; /* Classic Lego Orange */
+  border-radius: 4px;
+  border: 1px solid #b35900;
+  box-shadow: 
+    0 10px 20px rgba(0,0,0,0.8), /* Deep shadow on main board */
+    inset 2px 2px 4px rgba(255,255,255,0.3),
+    inset -2px -2px 4px rgba(0,0,0,0.4);
+  z-index: 0;
+}
+.large-orange-baseplate::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  background-size: var(--stud) var(--stud);
+  transition: all 0.3s;
+}
+
+.large-orange-baseplate.glow-green::before {
+  background-image:
+    /* Glow highlight */
+    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.4) 0%, transparent 4px),
+    /* Green stud body */
+    radial-gradient(circle at 15px 15px, #48bb78 0%, #38a169 7px, #1a641a 8px, transparent 9px),
+    /* Drop shadow with slight green glow bleed */
+    radial-gradient(circle at 16px 18px, rgba(0, 50, 0, 0.6) 0%, transparent 11px);
+}
+
+.large-orange-baseplate.glow-red::before {
+  background-image:
+    /* Glow highlight */
+    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.5) 0%, transparent 4px),
+    /* Red stud body */
+    radial-gradient(circle at 15px 15px, #f56565 0%, #e53e3e 7px, #742a2a 8px, transparent 9px),
+    /* Drop shadow with slight red glow bleed */
+    radial-gradient(circle at 16px 18px, rgba(50, 0, 0, 0.6) 0%, transparent 11px);
+}
+
+/* Inner region covering the glowing studs with normal orange studs */
+.large-orange-baseplate::after {
+  content: "";
+  position: absolute;
+  top: var(--stud); bottom: var(--stud); 
+  left: var(--stud); right: var(--stud);
+  background-color: #e67300;
+  background-image:
+    /* Stud top highlight */
+    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.2) 0%, transparent 4px),
+    /* Stud main body */
+    radial-gradient(circle at 15px 15px, #e67300 0%, #e67300 7px, #b35900 8px, transparent 9px),
+    /* Stud drop shadow */
+    radial-gradient(circle at 16px 18px, rgba(0, 0, 0, 0.4) 0%, transparent 11px);
+  background-size: var(--stud) var(--stud);
+}
+
+/* ========================================= */
+/* ROGUE PIECE MODULAR SYSTEM                */
+/* ========================================= */
+
+.baseplate-rogue-pieces {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.rogue-piece {
+  position: absolute;
+  box-sizing: border-box;
+  background-size: 30px 30px;
+  background-position: -2px -2px;
+  /* Shifts internal studs to perfectly match the global grid! */
+  border-radius: 2px;
+  /* Auto-draws a 4px physical gap around the piece that weaves around studs */
+  box-shadow:
+    0 0 0 2px #050608,
+    -2px -2px 0 2px rgba(0, 0, 0, 0.8),
+    2px 2px 0 2px rgba(255, 255, 255, 0.1);
+
+  /* Base stud geometries to combine with colors */
+  --highlight: radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.12) 0%, transparent 6px);
+  --shadow: radial-gradient(circle at 16.5px 16.5px, rgba(0, 0, 0, 0.6) 0%, transparent 13px);
+}
+
+.rogue-piece.dark-blue {
+  background-color: #0d1b2e;
+  background-image:
+    var(--highlight),
+    radial-gradient(circle at 15px 15px, #12233b 0%, #12233b 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
+    var(--shadow);
+}
+
+.rogue-piece.dark-red {
+  background-color: #2e0d0d;
+  background-image:
+    var(--highlight),
+    radial-gradient(circle at 15px 15px, #3b1212 0%, #3b1212 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
+    var(--shadow);
+}
+
+.rogue-piece.green {
+  background-color: #0b2e13;
+  background-image:
+    var(--highlight),
+    radial-gradient(circle at 15px 15px, #103b1a 0%, #103b1a 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
+    var(--shadow);
+}
+
+.rogue-piece.yellow {
+  background-color: #382d09;
+  background-image:
+    var(--highlight),
+    radial-gradient(circle at 15px 15px, #4d3e0b 0%, #4d3e0b 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
+    var(--shadow);
+}
+
+.rogue-piece.grey {
+  background-color: #2a2a2a;
+  background-image:
+    var(--highlight),
+    radial-gradient(circle at 15px 15px, #333 0%, #333 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
+    var(--shadow);
+}
+
+/* Tabs */
+.tab-bar {
+  display: flex;
+  background: rgba(10, 10, 10, 0.9);
+  height: calc(var(--tab-height-studs) * var(--stud));
+  align-items: center;
+  padding: 0 calc(var(--padding-studs) * var(--stud));
+  gap: calc(var(--stud) / 2);
+  border-bottom: 2px solid #000;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.tab {
+  padding: 0 calc(var(--stud) / 2);
+  height: var(--stud);
+  display: flex;
+  align-items: center;
+  background-color: #222;
+  color: var(--text-dim);
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  border-radius: 3px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.tab::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 8px;
+  right: 8px;
+  background-image:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.1) 0%, transparent 2px),
+    radial-gradient(circle at 50% 50%, transparent 4px, rgba(0, 0, 0, 0.3) 6px, transparent 7px);
+  background-size: 16px 16px;
+  background-repeat: space;
+  background-position: center;
+  pointer-events: none;
+}
+
+.tab:hover {
+  background-color: #333;
+  color: var(--text-main);
+}
+
+.tab.active {
+  background-color: var(--lego-blue);
+  color: white;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.4),
+    0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+.tab.active::before {
+  background-image:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.3) 0%, transparent 2px),
+    radial-gradient(circle at 50% 50%, transparent 4px, rgba(0, 0, 0, 0.4) 6px, transparent 7px);
+}
+
+.page-container {
+  padding: calc(var(--padding-studs) * var(--stud));
+  box-sizing: border-box;
+  flex: 1;
+  display: flex;
+}
+
+/* LIVE DECK ABSOLUTE GRID */
+.live-deck-grid {
+  position: relative;
+  width: 100%;
+  height: calc(30 * var(--stud)); /* Ensure there is enough vertical space for absolute items */
+}
+
+/* SLIDERS COLUMN */
+.sliders-column {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap-studs) * var(--stud));
+}
+
+.lego-label {
+  height: calc((var(--lego-label-height-studs) * var(--stud)) - var(--tolerance));
+  width: calc((var(--col-left-studs) * var(--stud)) - var(--tolerance)); /* Matches slider width */
+  background-color: #a0a5a9; /* Light Bluish Gray */
+  border: 1px solid #333;
+  border-radius: 3px;
+  box-shadow: 
+    inset 0 2px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.3),
+    0 4px 6px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111; /* Dark text on light gray */
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.lego-slider {
+  background-color: #1e2634;
+  border: 2px solid #0f131a;
+  border-radius: 4px;
+  box-shadow: var(--plastic-shadow);
+  padding: 0;
+  position: relative;
+  width: calc((var(--col-left-studs) * var(--stud)) - var(--tolerance));
+  height: calc((var(--slider-height-studs) * var(--stud)) - var(--tolerance));
+  overflow: hidden;
+}
+
+/* Real slider container */
+.slider-track-wrap {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  /* Symmetrical left and right scales, exact 30px groove in center */
+  grid-template-columns: 1fr var(--stud) 1fr;
+  position: relative;
+  z-index: 2;
+}
+
+.slider-scale {
+  display: flex;
+  flex-direction: column-reverse;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.slider-scale span {
+  width: 100%;
+  flex-grow: 1; /* Divides the 296px container evenly, preventing the bottom '1' from being cut off */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-weight: 800;
+  font-size: 0.95rem;
+  background-color: #2b374a;
+  border-top: 1px solid #41526b;
+  border-bottom: 1px solid #1a2230;
+  box-shadow:
+    inset 1px 0 2px rgba(255, 255, 255, 0.05),
+    inset -1px 0 2px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  /* Make them behave like individual 1x1 tiles */
+  border-radius: 1px;
+}
+
+/* Simulate the slight imperfections of 1x1 Lego tiles snapping onto a single stud (they can twist slightly) */
+.slider-scale span:nth-child(even) {
+  transform: rotate(0.8deg) translateX(0.5px);
+}
+.slider-scale span:nth-child(3n) {
+  transform: rotate(-0.5deg) translateX(-0.5px);
+}
+.slider-scale span:nth-child(5n) {
+  transform: rotate(1.2deg) translateY(-0.5px);
+}
+.slider-scale span:nth-child(7n) {
+  transform: rotate(-1deg) translateY(0.5px);
+}
+
+/* Randomly swap out exactly 3 pieces for a lighter grey plastic to look like mixed/scavenged parts */
+.slider-scale:first-child span:nth-child(2),
+.slider-scale:last-child span:nth-child(6),
+.slider-scale:first-child span:nth-child(9) {
+  background-color: #42516b; /* Lighter, slightly washed-out grey */
+  color: #c4cadd; /* Slightly fresher print color */
+  border-top: 1px solid #5a6e8f; /* Lighter highlight on top edge */
+}
+
+/* Careless builder: 4 pieces are snapped on completely sideways or upside down! */
+.slider-scale:first-child span:nth-child(4) {
+  transform: rotate(90deg);
+}
+.slider-scale:last-child span:nth-child(3) {
+  transform: rotate(180deg);
+}
+.slider-scale:first-child span:nth-child(7) {
+  transform: rotate(270deg);
+}
+.slider-scale:last-child span:nth-child(8) {
+  transform: rotate(90deg);
+}
+
+.slider-scale:first-child span {
+  border-right: 1px solid #141b26;
+  border-left: 1px solid #141b26;
+}
+
+.slider-scale:last-child span {
+  border-left: 1px solid #141b26;
+  border-right: 1px solid #141b26;
+}
+
+.slider-track-groove {
+  width: var(--stud);
+  height: 100%;
+  background-color: #0b0f14;
+  box-shadow:
+    inset 4px 0 8px rgba(0, 0, 0, 0.9),
+    inset -4px 0 8px rgba(0, 0, 0, 0.9);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Metallic Rail */
+.slider-track-groove::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 4px;
+  transform: translateX(-50%);
+  background: linear-gradient(to right, #333, #888 50%, #333);
+  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+}
+
+/* ========================================= */
+/* ABSURD SLIDER MECHANISM (Over-engineered) */
+/* ========================================= */
+
+.absurd-slider-mechanism {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20; /* Renders ON TOP of the slider container */
+  pointer-events: none; /* Passes clicks through to the slider */
+}
+
+.absurd-gear {
+  position: absolute;
+  background-color: #a0a5a9; /* Light Bluish Gray Lego */
+  border-radius: 50%;
+  /* Make teeth with conic gradient and a solid inner mask */
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    #718096 0deg 10deg,
+    #a0a5a9 10deg 20deg
+  );
+  box-shadow: 
+    0 5px 10px rgba(0,0,0,0.7), 
+    inset 0 0 0 4px #a0a5a9, /* solid ring inside the teeth */
+    inset 2px 2px 4px rgba(255,255,255,0.4);
+  transition: transform 0.05s linear;
+}
+
+/* Gear Axle Hole (Now a solid Red Technic Axle pinning it down!) */
+.absurd-gear::after {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 12px; height: 12px;
+  transform: translate(-50%, -50%);
+  background-color: #c91a09; /* Red Lego Axle */
+  /* Cross shape */
+  clip-path: polygon(30% 0%, 70% 0%, 70% 30%, 100% 30%, 100% 70%, 70% 70%, 70% 100%, 30% 100%, 30% 70%, 0% 70%, 0% 30%, 30% 30%);
+  box-shadow: inset 0 0 2px rgba(0,0,0,0.8);
+}
+
+.absurd-bar {
+  position: absolute;
+  width: 8px;
+  background: repeating-linear-gradient(
+    90deg,
+    #a0a5a9,
+    #a0a5a9 2px,
+    #718096 2px,
+    #718096 4px
+  );
+  border: 1px solid #2d3748;
+  border-radius: 4px;
+  box-shadow: 0 5px 8px rgba(0,0,0,0.6);
+  transition: transform 0.05s linear;
+}
+
+.absurd-weight {
+  position: absolute;
+  width: 24px;
+  height: 60px; /* Exact 2-stud height */
+  border-radius: 2px;
+  box-shadow: 
+    0 8px 12px rgba(0,0,0,0.8), /* Deep drop shadow */
+    inset 2px 2px 2px rgba(255,255,255,0.3),
+    inset -2px -2px 2px rgba(0,0,0,0.2);
+  transition: transform 0.05s linear;
+}
+.weight-drop-1 { background-color: #f2cd37; /* Bright Yellow Lego */ border: 1px solid #e1b400; }
+.weight-drop-2 { background-color: #c91a09; /* Red Lego */ border: 1px solid #a31205; }
+.weight-drop-3 { background-color: #0055bf; /* Blue Lego */ border: 1px solid #004299; }
+.weight-drop-green { background-color: #238823; /* Green Lego */ border: 1px solid #1a641a; }
+
+.absurd-weight::before, .absurd-weight::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #111;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.4);
+}
+.absurd-weight::before { top: 10px; }
+.absurd-weight::after { bottom: 10px; }
+
+/* Guide Rails for weights (Now thick light-grey Technic Axles) */
+.guide-rail {
+  position: absolute;
+  width: 8px; /* Thicker, realistic axle width */
+  background: linear-gradient(to right, #718096, #cbd5e0 40%, #a0a5a9 60%, #4a5568);
+  border-radius: 4px;
+  z-index: -1;
+  box-shadow: 0 10px 15px rgba(0,0,0,0.9); /* Heavy shadow dropping into the trench */
+}
+.rail-3 { left: -15px; top: 5px; height: 250px; } /* For weight 1 */
+.rail-4 { left: -25px; top: -15px; height: 280px; } /* For weight 2 */
+.rail-5 { left: -52px; top: 25px; height: 220px; } /* For weight 3 */
+
+/* Structural Mounts for Rails and Beams */
+.rail-mount {
+  position: absolute;
+  background-color: #3f4756; /* Dark Grey Lego */
+  border-radius: 2px;
+  border: 1px solid #1a202c;
+  box-shadow: 
+    0 8px 12px rgba(0,0,0,0.8), 
+    inset 2px 2px 2px rgba(255,255,255,0.3),
+    inset -2px -2px 2px rgba(0,0,0,0.2);
+  z-index: 10;
+  background-image: radial-gradient(circle at center, #111 0%, #111 3px, rgba(0,0,0,0.9) 4px, transparent 5px);
+  background-size: 20px 100%;
+  background-position: center;
+}
+.mount-1 { left: -34px; top: -5px; width: 32px; height: 16px; } /* Top of beam 1 / rail 3 */
+.mount-2 { left: -44px; top: 235px; width: 32px; height: 16px; } /* Bottom of beam 2 */
+.mount-3 { left: -23px; top: 255px; width: 24px; height: 16px; } /* Bottom of rail 3 */
+
+.mount-4 { left: -54px; top: -5px; width: 32px; height: 16px; } /* Top of beam 3 */
+.mount-5 { left: -29px; top: -25px; width: 16px; height: 16px; } /* Top of rail 4 */
+.mount-6 { left: -60px; top: 265px; width: 50px; height: 16px; } /* Bottom wide mount for rails 4 & 5 */
+
+/* Structural Housing (Now a deep sunken trench cut into the baseplate) */
+.absurd-chassis {
+  position: absolute;
+  top: 0;
+  left: -90px; /* extends left further to fit everything */
+  width: 90px;
+  height: 100%;
+  background-color: #0d1015; /* Extremely dark pit */
+  border-right: 2px solid #000;
+  border-radius: 8px 0 0 8px;
+  /* Massive inset shadow makes it look like a physical hole */
+  box-shadow: 
+    inset 10px 10px 20px rgba(0,0,0,0.9),
+    inset 0 -10px 20px rgba(0,0,0,0.9);
+  z-index: -2;
+}
+
+/* Lego Technic Beams */
+.technic-beam {
+  position: absolute;
+  background-color: #a0a5a9; /* Light Bluish Gray */
+  border-radius: 12px;
+  box-shadow: 
+    0 10px 15px rgba(0,0,0,0.8), /* Strong shadow into the trench */
+    inset 2px 2px 3px rgba(255,255,255,0.4),
+    inset -2px -2px 3px rgba(0,0,0,0.3);
+  z-index: -1;
+}
+
+/* Technic Holes */
+.technic-beam::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  background-image: 
+    radial-gradient(circle at 12px 15px, transparent 0%, transparent 4px, rgba(0,0,0,0.5) 5px, rgba(0,0,0,0) 6px),
+    radial-gradient(circle at 12px 15px, #111 0%, #111 4px, transparent 5px);
+  background-size: 24px 30px; /* 30px matches exactly 1 stud height! */
+  background-position: top center;
+}
+
+/* Technic Black Pins anchoring the top and bottom of the beam */
+.technic-beam::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  background-image: 
+    radial-gradient(circle at 12px 15px, #2a2a2a 0%, #000 4px, transparent 5px),
+    radial-gradient(circle at 12px calc(100% - 15px), #2a2a2a 0%, #000 4px, transparent 5px);
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+}
+
+.beam-1 { width: 24px; height: 150px; left: -30px; top: 15px; } /* 5 holes */
+.beam-2 { width: 24px; height: 120px; left: -40px; top: 105px; } /* 4 holes */
+.beam-3 { width: 24px; height: 180px; left: -50px; top: 15px; } /* 6 holes */
+
+/* Physics Mapped to --slider-val (1 to 100) */
+/* Slider going from 1 -> 100 means moving UP visually. */
+
+/* Gears */
+.gear-spin-1 { width: 60px; height: 60px; left: -40px; top: 20px; transform: rotate(calc(var(--slider-val) * 8.5deg)); }
+.gear-spin-2 { width: 40px; height: 40px; left: -25px; top: 75px; transform: rotate(calc(var(--slider-val) * -12.75deg)); }
+.gear-spin-3 { width: 80px; height: 80px; left: -50px; bottom: 40px; transform: rotate(calc(var(--slider-val) * 6deg)); }
+
+/* Counter-weights (Slide precisely OPPOSITE to the slider. As slider goes UP, weight goes DOWN / +Y) */
+.weight-drop-1 { left: -23px; top: 10px; transform: translateY(calc(var(--slider-val) * 1.85px)); }
+.weight-drop-2 { left: -33px; top: -10px; transform: translateY(calc(var(--slider-val) * 2.6px)); }
+.weight-drop-3 { left: -60px; top: 30px; transform: translateY(calc(var(--slider-val) * 1.8px)); }
+.weight-drop-green { left: -23px; top: 10px; transform: translateY(calc(var(--slider-val) * 1.85px)); }
+
+.vertical-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 300px;
+  height: 30px;
+  background: transparent;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  outline: none;
+  z-index: 10;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+}
+
+.vertical-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 28px;
+  width: 60px;
+  border-radius: 2px;
+  cursor: pointer;
+  background-color: #d32020;
+  /* Make it look like 2 stacked red blocks with a gap in the middle */
+  background-image:
+    linear-gradient(90deg, transparent 48%, rgba(0, 0, 0, 0.6) 49%, rgba(0, 0, 0, 0.6) 51%, rgba(255, 255, 255, 0.3) 52%, transparent 53%),
+    radial-gradient(circle at 25% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 15%),
+    radial-gradient(circle at 25% 50%, transparent 20%, rgba(0, 0, 0, 0.4) 25%, transparent 35%),
+    radial-gradient(circle at 75% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 15%),
+    radial-gradient(circle at 75% 50%, transparent 20%, rgba(0, 0, 0, 0.4) 25%, transparent 35%);
+  box-shadow:
+    inset 0 3px 4px rgba(255, 255, 255, 0.4),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.5),
+    inset 3px 0 4px rgba(255, 255, 255, 0.3),
+    inset -3px 0 4px rgba(0, 0, 0, 0.3),
+    -6px 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.vertical-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  cursor: pointer;
+}
+
+
+/* CENTER COLUMN */
+.center-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+
+.section-title {
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 2px;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.stage-map-container {
+  width: 100%;
+}
+
+.stage-map-visual {
+  background: var(--lego-dark-grey);
+  border-radius: 8px;
+  height: 250px;
+  width: 100%;
+  box-shadow: var(--plastic-shadow);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.stage-map-visual::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0%, transparent 40%);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.map-layout {
+  position: relative;
+  width: 80%;
+  height: 80%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.map-block {
+  background: var(--lego-light-grey);
+  color: white;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  box-shadow: var(--plastic-shadow);
+  text-transform: uppercase;
+}
+
+.neon-line {
+  position: absolute;
+  background: var(--neon-orange);
+  box-shadow: 0 0 15px var(--neon-orange), 0 0 30px var(--neon-orange);
+  border-radius: 10px;
+}
+
+/* FLAT LEGO TILE (Light Bluish Gray) */
+.flat-lego-tile {
+  background-color: #a0a5a9;
+  /* Classic light stone grey */
+  border-radius: 4px;
+  /* Lego tiles have a tiny rounded corner */
+  border: 2px solid #6b6f73;
+  /* Darker grey edge */
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.7),
+    /* Strong top edge light */
+    inset 2px 0 3px rgba(255, 255, 255, 0.5),
+    /* Strong left edge light */
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+    /* Bottom edge shadow */
+    inset -2px 0 3px rgba(0, 0, 0, 0.3),
+    /* Right edge shadow */
+    0 10px 20px rgba(0, 0, 0, 0.8);
+  /* Cast shadow onto baseplate */
+  position: relative;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+}
+
+/* Optional tiny groove line inside to sell the physical edge */
+.flat-lego-tile::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  right: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  border-left: 1px solid rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.tile-label {
+  color: #1a1a1a;
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+/* ROUND LEGO BUTTON (2x2) */
+.lego-round-button {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 2px solid #1a1a1a;
+
+  /* Cylindrical 3D Bevel Effect */
+  box-shadow:
+    inset 0 4px 10px rgba(255, 255, 255, 0.4),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.5),
+    0 8px 15px rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  overflow: hidden;
+  color: white;
+  font-family: inherit;
+  font-weight: 900;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  flex-shrink: 0;
+}
+
+.lego-round-button:active {
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  transform: translateY(6px);
+}
+
+.round-stud-grid {
+  position: absolute;
+  top: 14%;
+  bottom: 14%;
+  left: 14%;
+  right: 14%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  place-items: center;
+  pointer-events: none;
+}
+
+.stud-blue {
+  background-color: var(--lego-blue);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+/* DROP BUTTON */
+.drop-button-container {
+  /* Margin removed to let grid gap handle spacing perfectly */
+}
+
+.giant-drop-button {
+  width: 100%;
+  height: calc(5 * var(--stud) - var(--tolerance));
+  background-color: var(--lego-red);
+  border: 2px solid rgba(0, 0, 0, 0.8);
+  border-radius: 6px;
+  position: relative;
+  cursor: pointer;
+  box-shadow:
+    inset 0 6px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -8px 0 rgba(0, 0, 0, 0.4),
+    inset 6px 0 0 rgba(255, 255, 255, 0.2),
+    inset -6px 0 0 rgba(0, 0, 0, 0.2),
+    0 10px 20px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s ease;
+  overflow: hidden;
+}
+
+.drop-stud-grid {
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 34px;
+  right: 34px;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  grid-template-columns: repeat(59, 30px);
+  justify-content: center;
+  place-items: center;
+  pointer-events: none;
+}
+
+.stud {
+  width: 100%;
+  max-width: 23px;
+  max-height: 23px;
+  aspect-ratio: 1/1;
+  border-radius: 50%;
+  background-image:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4) 0%, transparent 30%),
+    radial-gradient(circle at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.5) 70%, transparent 80%);
+  transition: all 0.3s ease;
+}
+
+.stud-piece {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  background-color: #f4f4f4;
+  box-shadow: 
+    inset 1px 1px 1px rgba(255,255,255,0.9),
+    inset -1px -2px 3px rgba(0,0,0,0.2),
+    2px 4px 6px rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.stud-piece.piece-square {
+  border-radius: 3px;
+}
+
+.stud-piece.piece-circle {
+  border-radius: 50%;
+}
+
+.stud-piece::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #f4f4f4;
+  background-image:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.2) 70%, transparent 80%);
+  box-shadow: 1px 2px 3px rgba(0,0,0,0.3);
+}
+
+/* Color overrides for pieces */
+.stud-piece.piece-yellow {
+  background-color: var(--lego-yellow);
+}
+.stud-piece.piece-yellow::after {
+  background-color: var(--lego-yellow);
+}
+
+.stud-piece.piece-grey {
+  background-color: var(--lego-light-grey);
+}
+.stud-piece.piece-grey::after {
+  background-color: var(--lego-light-grey);
+}
+
+/* Clear piece (flat tile, no fixing circle) */
+.stud-piece.piece-clear::after {
+  display: none;
+}
+
+.giant-drop-button:active {
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  transform: translateY(8px);
+}
+
+
+/* CENTER COLUMN LAYOUT */
+.center-column {
+  width: calc(var(--col-center-studs) * var(--stud));
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap-studs) * var(--stud));
+}
+
+.top-center-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap-studs) * var(--stud));
+  width: 100%;
+}
+
+.stage-status-bar {
+  margin-top: 0;
+  padding: 0 calc(var(--padding-studs) * var(--stud));
+  height: calc(var(--telemetry-height-studs) * var(--stud));
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-shadow: inset 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.configuration-blocks {
+  display: flex;
+  gap: calc(var(--gap-studs) * var(--stud));
+}
+
+.configuration-blocks-column {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap-studs) * var(--stud));
+  flex: 1;
+}
+
+.lock-trans-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  width: calc(5 * var(--stud));
+  box-shadow: inset 0 5px 15px rgba(0, 0, 0, 0.5);
+  padding: calc(var(--stud) / 2);
+  box-sizing: border-box;
+}
+
+/* PRESETS COLUMN */
+.presets-column {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap-studs) * var(--stud));
+  width: calc(var(--col-right-studs) * var(--stud));
+}
+
+.preset-brick {
+  width: 100%;
+  height: calc((var(--preset-brick-height-studs) * var(--stud)) - var(--tolerance));
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  border-radius: 3px;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.4),
+    inset 3px 0 0 rgba(255, 255, 255, 0.2),
+    inset -3px 0 0 rgba(0, 0, 0, 0.2),
+    0 4px 6px rgba(0, 0, 0, 0.5);
+  position: relative;
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.preset-brick::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 9px;
+  right: 9px;
+  background-image:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4) 0%, transparent 3px),
+    radial-gradient(circle at 50% 50%, transparent 5px, rgba(0, 0, 0, 0.5) 7px, transparent 8px);
+  background-size: var(--stud) var(--stud);
+  background-repeat: space;
+  background-position: center;
+  pointer-events: none;
+}
+
+.preset-brick:active {
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.6),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  transform: translateY(2px);
+}
+
+.preset-brick .preset-num {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.bg-blue {
+  background-color: var(--lego-blue);
+}
+
+.bg-orange {
+  background-color: var(--lego-orange);
+}
+
+.bg-green {
+  background-color: var(--lego-green);
+}
+
+.bg-purple {
+  background-color: var(--lego-purple);
+}
+
+.bg-yellow {
+  background-color: var(--lego-yellow);
+  color: #222;
+  text-shadow: none;
+}
+
+.bg-red {
+  background-color: var(--lego-red);
+}
+
+.bg-cyan {
+  background-color: var(--lego-cyan);
+  color: #111;
+  text-shadow: none;
+}
+
+.bg-magenta {
+  background-color: var(--lego-magenta);
+}
+
+.bg-dark-blue {
+  background-color: var(--lego-dark-blue);
+}
+
+.bpm-display {
+  margin-top: 1rem;
+  background: #0a0a0a;
+  border: 2px solid #222;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: inset 0 5px 15px rgba(0, 0, 0, 1);
+}
+
+.bpm-value {
+  font-family: 'VT323', monospace;
+  font-size: 3.5rem;
+  color: var(--neon-orange);
+  text-shadow: 0 0 10px var(--neon-orange), 0 0 20px var(--neon-orange);
+  line-height: 1;
+}
+
+.bpm-label {
+  color: var(--text-dim);
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  margin-top: 0.2rem;
+}
+
+/* General Panels */
+.panel {
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+}
+
+/* Stage Status Bar */
+.stage-status-bar {
+  margin-top: 1rem;
+  background-color: #0a0a0a;
+  border: 2px solid #222;
+  border-radius: 6px;
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.8);
+  width: 100%;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-label {
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.status-value {
+  color: white;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Lego Switch */
+.lego-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 1rem;
+}
+
+.lego-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.switch-track {
+  width: 70px;
+  height: 36px;
+  background-color: #111;
+  border-radius: 4px;
+  border: 2px solid #333;
+  box-shadow: inset 0 5px 10px rgba(0, 0, 0, 0.8);
+  position: relative;
+  transition: .2s;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 32px;
+  height: 28px;
+  background-color: var(--lego-red);
+  border-radius: 2px;
+  box-shadow: var(--plastic-shadow);
+  transition: .2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.switch-thumb::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+}
+
+.lego-switch input:checked+.switch-track .switch-thumb {
+  transform: translateX(30px);
+  background-color: var(--lego-green);
+}
+
+.switch-label {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: .2s;
+}
+
+.lego-switch input:checked~.switch-label {
+  color: var(--lego-green);
+  text-shadow: 0 0 10px var(--lego-green);
+}
+
+/* HEAVY DUTY LOCK SWITCH (Option 1) */
+.lock-switch-container {
+  width: calc(5 * var(--stud) - var(--tolerance));
+  height: calc(9 * var(--stud) - var(--tolerance));
+  background-color: #1a1e26;
+  border: 2px solid #0f131a;
+  border-radius: 6px;
+  box-shadow: var(--plastic-shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 10px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.heavy-duty-checkbox {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.lock-status-display {
+  height: 30px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  background-color: #111;
+  border-radius: 4px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  border: 1px solid #222;
+  position: relative;
+}
+
+.lock-text {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: 3px;
+  transition: all 0.2s;
+  display: none;
+}
+
+/* Visibility logic */
+.heavy-duty-checkbox:checked ~ .lock-status-display .lock-text-hold {
+  display: block;
+  color: var(--lego-red);
+  text-shadow: 0 0 10px var(--lego-red);
+}
+
+.heavy-duty-checkbox:not(:checked) ~ .lock-status-display .lock-text-live {
+  display: block;
+  color: var(--lego-green);
+  text-shadow: 0 0 10px var(--lego-green);
+}
+
+/* The deep recessed plain grey channel */
+.heavy-duty-track {
+  width: 100%;
+  flex-grow: 1;
+  background-color: #3b4048; /* Solid Dark Bluish Gray */
+  border-radius: 4px;
+  box-shadow: 
+    inset 0 10px 20px rgba(0,0,0,0.9),
+    inset 0 2px 5px rgba(0,0,0,1),
+    0 1px 1px rgba(255,255,255,0.05);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+/* OVER-ENGINEERED TECHNIC BACKGROUND */
+.mech-system {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* COUNTERWEIGHTS */
+.mech-weight {
+  width: 14px;
+  height: 25px;
+  background-color: #2a2a2a; /* Dark metallic */
+  border: 1px solid #111;
+  border-radius: 2px;
+  position: absolute;
+  top: 10px; /* starts at the top when brick is bottom */
+  box-shadow: 2px 5px 8px rgba(0,0,0,0.8), inset 0 2px 2px rgba(255,255,255,0.1);
+  transition: top 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+  z-index: 0;
+}
+/* The physical cable */
+.mech-weight::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  width: 2px;
+  height: 300px; /* super long to go offscreen */
+  background: linear-gradient(to right, #111, #444, #111);
+  transform: translateX(-50%);
+}
+.weight-left { left: 10px; }
+.weight-right { right: 10px; }
+
+/* TECHNIC GEARS */
+.mech-gear {
+  width: 44px; height: 44px;
+  background: 
+    radial-gradient(circle, #111 4px, transparent 5px), /* Axle hole */
+    radial-gradient(circle, #5b5f66 14px, transparent 15px), /* Gear body */
+    repeating-conic-gradient(from 0deg, #444 0deg 10deg, transparent 10deg 20deg); /* Teeth */
+  border-radius: 50%;
+  position: absolute;
+  bottom: 10px;
+  transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+  z-index: 1;
+}
+.gear-left { left: -15px; }
+.gear-right { right: -15px; }
+
+
+/* TECHNIC CROSS AXLE (PISTON) */
+.mech-piston {
+  width: 12px;
+  height: 0px;
+  background: linear-gradient(to right, #222 0%, #666 30%, #333 50%, #666 70%, #222 100%);
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: height 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+  box-shadow: 0 0 10px rgba(0,0,0,0.9);
+  border-radius: 2px;
+}
+
+/* TECHNIC LIFTARM CLAMPS (Now LED Indicators) */
+.mech-bolt {
+  position: absolute;
+  top: 10px;
+  width: 30px;
+  height: 20px;
+  background-color: #a0a5a9; /* Light Bluish Gray */
+  border: 1px solid #333;
+  border-radius: 10px; /* rounded ends like a liftarm */
+  box-shadow: inset 0 2px 3px rgba(255,255,255,0.5), 0 5px 10px rgba(0,0,0,0.6);
+  z-index: 3;
+}
+.mech-bolt::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  /* Default LIVE state: Green */
+  background-color: #48bb78;
+  box-shadow: 0 0 6px 2px #48bb78, inset 0 1px 2px rgba(255,255,255,0.8);
+  border: 1px solid #111;
+  transition: all 0.3s;
+}
+.bolt-left { left: 0; }
+.bolt-left::after { left: 6px; }
+
+.bolt-right { right: 0; }
+.bolt-right::after { right: 6px; }
+
+
+/* The thick 2x2 Cherry Red sliding brick */
+.heavy-duty-brick {
+  width: calc(3 * var(--stud));
+  height: calc(3 * var(--stud));
+  background-color: var(--lego-red);
+  position: absolute;
+  bottom: 5px; /* Starting position (Unlocked / LIVE) */
+  border: 2px solid rgba(0,0,0,0.8);
+  border-radius: 3px;
+  transition: bottom 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+  box-shadow: 
+    inset 0 3px 0 rgba(255,255,255,0.3),
+    inset 0 -4px 0 rgba(0,0,0,0.4),
+    inset 3px 0 0 rgba(255,255,255,0.2),
+    inset -3px 0 0 rgba(0,0,0,0.2),
+    0 8px 15px rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* Stud grid for the 2x2 sliding brick */
+.round-stud-grid-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: calc(2 * var(--stud));
+  height: calc(2 * var(--stud));
+  place-items: center;
+}
+
+/* Give the studs on this specific block realistic lighting */
+.round-stud-grid-2x2 .stud {
+  background-color: var(--lego-red);
+  box-shadow: 
+    inset 2px 2px 4px rgba(255,255,255,0.7), 
+    inset -2px -2px 4px rgba(0,0,0,0.4),
+    2px 2px 4px rgba(0,0,0,0.6);
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+/* Movement & Mechanical Animation Logic */
+.heavy-duty-checkbox:checked ~ .heavy-duty-track .heavy-duty-brick {
+  bottom: calc(100% - 3 * var(--stud) - 5px); /* Slide to the top */
+}
+
+.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-weight {
+  top: calc(100% - 40px); /* Counterweights drop to the bottom */
+}
+
+.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-gear.gear-left {
+  transform: rotate(720deg);
+}
+.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-gear.gear-right {
+  transform: rotate(-720deg);
+}
+.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-piston {
+  height: calc(100% - 3 * var(--stud) - 5px); /* Piston extends all the way up under the brick */
+}
+
+/* Bolts act as LED indicators, turning Red when in HOLD state */
+.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-bolt::after {
+  background-color: #f56565; /* Red LED */
+  box-shadow: 0 0 8px 2px #f56565, inset 0 1px 2px rgba(255,255,255,0.8);
+}

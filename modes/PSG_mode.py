@@ -41,9 +41,9 @@ class PSG_mode(Mode.Mode):
             self.white_dot_pos = 0
         
         if(self.printThisModeDetail):
-            print("(PSG)     lower_height = ",self.lower_height)
-            print("(PSG)     higher_height = ",self.higher_height)
-            print("(PSG)     coef = ",coef)
+            self.logger.debug(f"(PSG)     lower_height = {self.lower_height}")
+            self.logger.debug(f"(PSG)     higher_height = {self.higher_height}")
+            self.logger.debug(f"(PSG)     coef = {coef}")
         self.rgb_list[self.white_dot_pos] = colors.white
 
         
@@ -51,4 +51,4 @@ class PSG_mode(Mode.Mode):
         #====================================================================================
         if(self.printTimeOfCalculation and self.printThisModeDetail):
             duration = time.time() - time_me
-            print("      (CM) temps pour ",self.name," : ",duration)
+            self.logger.debug(f"      (CM) temps pour {self.name} : {duration}")

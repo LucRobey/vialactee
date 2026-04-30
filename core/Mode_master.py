@@ -1,5 +1,6 @@
 import numpy as np
 import asyncio
+import logging
 import random
 import time
 
@@ -11,8 +12,42 @@ from Mode_Globaux import Mode_Tchou_Tchou as Mode_Tchou_Tchou
 
 import core.Segment as Segment
 import core.Listener as Listener
+import core.Transition_Director as Transition_Director
 import data.Data_reader as Data_reader
 
+
+
+from contextlib import contextmanager
+
+class Profiler:
+    def __init__(self, active, logger):
+        self.active = active
+        self.logger = logger
+        self.durations = []
+        self.names = []
+        self.start_times = {}
+
+    @contextmanager
+    def measure(self, name):
+        if self.active:
+            start = time.time()
+            yield
+            self.durations.append(time.time() - start)
+            self.names.append(name)
+        else:
+            yield
+
+    def print_results(self):
+        if self.active and self.durations:
+            self.logger.debug("=======================================================================")
+            total = np.sum(self.durations)
+            self.logger.debug(f"   |(MM) total = {total:.5f} secondes")
+            if total > 0:
+                nb_of_it_per_sec = 1 / total
+                self.logger.debug(f"   |(MM) soit {nb_of_it_per_sec:.2f} itérations par seconde")
+                for k in range(len(self.durations)):
+                    percentage = 100 * float(self.durations[k]) / total
+                    self.logger.debug(f"   |(MM) {self.names[k]}  :  {percentage:.2f}%")
 
 
 class Mode_master:
@@ -23,7 +58,7 @@ class Mode_master:
     configurations = {}
     playlists = []
     blocked_playlists = []
-    configuration_duration = 600000
+    configuration_duration = 6
     next_change_of_configuration_time = 0
     current_time = time.time()
 
@@ -39,6 +74,8 @@ class Mode_master:
 
         self.leds = leds1
         self.leds2 = leds2
+        self.logger = logging.getLogger("Mode_master")
+        self.profiler = Profiler(self.printTimeOfCalculation, self.logger)
 
         self.load_configurations()
 
@@ -49,6 +86,7 @@ class Mode_master:
 
         self.initiate_segments()
         self.initiate_configuration()
+        self.transition_director = Transition_Director.Transition_Director(self.listener, self.infos)
 
     def set_connector(self, connector):
         self.appli_connector = connector
@@ -59,84 +97,51 @@ class Mode_master:
             await asyncio.sleep(1/30)
 
     async def update(self):
-        if self.printTimeOfCalculation:
-            duration = []
-            names_of_durations = []
-
-        #==============================================
-        if self.printTimeOfCalculation:
-            time_listener_update = time.time()
-
-        self.listener.update()
-
-        if self.printTimeOfCalculation:
-            duration.append(time.time() - time_listener_update)
-            names_of_durations.append("listener.update()")
-        #==============================================
-
-        #==============================================
-        if self.printTimeOfCalculation:
-            time_matrix_general_update = time.time()
+        # Profiler cleans up the time_time() boilerplate
+        with self.profiler.measure("listener.update()"):
+            self.listener.update()
 
         if self.useGlobalMatrix:
-            self.matrix_general.update()
+            with self.profiler.measure("matrix_general.update()"):
+                self.matrix_general.update()
 
+        with self.profiler.measure("leds.show()"):
+            is_rpi_hardware = "Rpi_NeoPixels" in str(type(self.leds))
+            if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or is_rpi_hardware:
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, self.leds.show)
+                await loop.run_in_executor(None, self.leds2.show)
+            else:
+                self.leds.show()
+                self.leds2.show()
 
-        if self.printTimeOfCalculation:
-            duration.append(time.time() - time_matrix_general_update)
-            names_of_durations.append("matrix_general.update()")
-        #==============================================
-
-        #==============================================
-        if self.printTimeOfCalculation:
-            time_led_show = time.time()
-
-        if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi":
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, self.leds.show)
-            await loop.run_in_executor(None, self.leds2.show)
-        else:
-            self.leds.show()
-            self.leds2.show()
-
-        if self.printTimeOfCalculation:
-            duration.append(time.time() - time_led_show)
-            names_of_durations.append("leds.show()")
-        #==============================================
-
-        #==============================================
-        if self.printTimeOfCalculation:
-            time_segments_update= time.time()
-
-        if self.useGlobalMatrix:
-            #get each segment its global value
-            getsegments = self.matrix_general.get_segments()
-            for seg in self.segments_list:
-                # print(seg.name)
-                # print(len(getsegments[seg.name]))
-                seg.global_rgb_list = getsegments[seg.name]
-        for seg_index in range(len(self.segments_list)):
-            self.segments_list[seg_index].update()
-
-        if self.printTimeOfCalculation:
-            duration.append(time.time() - time_segments_update)
-            names_of_durations.append("segments.update()")
-        #==============================================
+        with self.profiler.measure("segments.update()"):
+            if self.useGlobalMatrix:
+                #get each segment its global value
+                getsegments = self.matrix_general.get_segments()
+                for seg in self.segments_list:
+                    seg.global_rgb_list = getsegments[seg.name]
+            for seg_index in range(len(self.segments_list)):
+                self.segments_list[seg_index].update()
 
         #==============================================
         self.current_time = time.time()
-        if self.current_time > self.next_change_of_configuration_time:
-            await self.change_configuration()
-        #==============================================
+        
+        action, transition_config = self.transition_director.evaluate_context(self.current_time, self.next_change_of_configuration_time)
+        
+        if action == "force_standby":
+            await self.force_standby_playlist(transition_config)
+            self.transition_director.is_in_standby = True
+        elif action == "allow_change":
+            await self.change_configuration(transition_config)
+        elif action == "delay_change":
+            self.logger.debug("(MM) Delaying configuration change due to audio context.")
+            self.next_change_of_configuration_time += 1.0
 
-        if self.printTimeOfCalculation:
-            print("=======================================================================")
-            total = np.sum(duration)
-            print("   |(MM) total = ", total , " secondes")
-            nb_of_it_per_sec = 1 / total
-            print("   |(MM) soit ", nb_of_it_per_sec, " itérations par seconde")
-            for k in range(len(duration)):
-                print("   |(MM) " ,names_of_durations[k], "  :  " , 100*float(duration[k])/total , "%")
+        self.profiler.print_results()
+        # Clean profiler values for next frame
+        self.profiler.durations.clear()
+        self.profiler.names.clear()
 
 
     def load_configurations(self):
@@ -146,30 +151,31 @@ class Mode_master:
         # On initialise le bloquage des playlists (Par défaut, on les prend toutes)
         for _ in self.playlists:
             self.blocked_playlists.append(False)
+        self.shuffle_bag = []
+    def update_segments_modes(self, transition_config=None):
+        targeted_segments = None
+        if transition_config and "segments" in transition_config:
+            targeted_segments = transition_config["segments"]
 
-    async def change_configuration(self):
-        """Add your configuration change logic here."""
-        # Implement configuration change here, as this seems to involve asynchronous activity
-        pass
-
-    def update_segments_modes(self, info_margin, showInfos):
         for segment in self.segments_list:
             if not segment.isBlocked:
-                if showInfos:
-                    print(info_margin, "(MM) update_segments_modes : ", segment.name, "non bloqué donc on ordonne de le changer")
-                segment.change_mode(self.activ_configuration["modes"][segment.name] , info_margin + "   ", showInfos)
-                segment.change_way(self.activ_configuration["way"][segment.name] , info_margin + "   ", showInfos)
+                # Skip segments entirely if a local change targeted specific ones
+                if targeted_segments is not None and segment.name not in targeted_segments:
+                    continue
+
+                self.logger.debug(f"(MM) update_segments_modes : {segment.name} non bloqué donc on ordonne de le changer")
+                segment.change_mode(self.activ_configuration["modes"][segment.name], transition_config)
+                segment.change_way(self.activ_configuration["way"][segment.name])
 
  
 
     def initiate_configuration(self):
         #On initialise en prenant une conf au pif dans une playlist au pif
-        self.activ_configuration = self.activ_configuration = self.pick_a_random_conf("   " , self.printConfigChanges)
-        self.update_segments_modes("   " , self.printConfigChanges)
+        self.activ_configuration = self.pick_a_random_conf()
+        self.update_segments_modes()
         #On set un temps pour le futur changement de conf
         self.next_change_of_configuration_time = time.time() + self.configuration_duration
-        if(self.printConfigChanges):
-            print("(MM)   initiate_configuration()  :     next_change_of_conf_time = " , self.next_change_of_configuration_time)
+        self.logger.debug(f"(MM)   initiate_configuration()  :     next_change_of_conf_time = {self.next_change_of_configuration_time}")
 
         
 
@@ -192,94 +198,68 @@ class Mode_master:
         add_segments(data["segs_2"],self.leds2)
 
 
-
-        
-
-        
-
-        """
-        
-        indexes = [i for i in range(173)]
-        segment_v4 = Segment.Segment("Segment v4",self.listener, self.leds ,indexes,"vertical",False,self.infos)
-        indexes = [i for i in range(173,173+48)]
-        segment_h32 = Segment.Segment("Segment h32",self.listener, self.leds , indexes,"horizontal",False,self.infos)
-        indexes = [i for i in range(173+48,173+48+48)]
-        segment_h31 = Segment.Segment("Segment h31",self.listener, self.leds , indexes,"horizontal",False,self.infos)
-        indexes = [i for i in range(173+48+48,173+48+48+47)]
-        segment_h30 = Segment.Segment("Segment h30",self.listener, self.leds , indexes,"horizontal",False,self.infos)
-        indexes = [i for i in range(173+48+48+47,173+48+48+47+173)]
-        segment_v3 = Segment.Segment("Segment v3",self.listener, self.leds , indexes,"vertical",False,self.infos)
-        indexes = [i for i in range(173+48+48+47+173,173+48+48+47+173+91)]
-        segment_h20 = Segment.Segment("Segment h20",self.listener, self.leds , indexes,"horizontal",True,self.infos)
-        indexes = [i for i in range(173+48+48+47+173+91,173+48+48+47+173+91+205)]
-        segment_h00 = Segment.Segment("Segment h00",self.listener, self.leds , indexes,"horizontal",True,self.infos)
-        indexes = [i for i in range(0,173)]
-        segment_v2 = Segment.Segment("Segment v2",self.listener, self.leds2 , indexes,"vertical",False,self.infos)
-        indexes = [i for i in range(173,173+87)]
-        segment_h11 = Segment.Segment("Segment h11",self.listener, self.leds2 , indexes,"horizontal",False,self.infos)
-        indexes = [i for i in range(173+87,173+87+86)]
-        segment_h10 = Segment.Segment("Segment h10",self.listener, self.leds2 , indexes,"horizontal",False,self.infos)
-        indexes = [i for i in range(173+87+86,173+87+86+173)]
-        segment_v1 = Segment.Segment("Segment v1",self.listener, self.leds2 , indexes,"vertical",False,self.infos)
-        self.segments_list.append(segment_v4)
-        self.segments_list.append(segment_h32)
-        self.segments_list.append(segment_h31)
-        self.segments_list.append(segment_h30)
-        self.segments_list.append(segment_v3)
-        self.segments_list.append(segment_h20)
-        self.segments_list.append(segment_h00)
-        self.segments_list.append(segment_v2)
-        self.segments_list.append(segment_h11)
-        self.segments_list.append(segment_h10)
-        self.segments_list.append(segment_v1)
-        self.segments_names_to_index["Segment v4"]=0
-        self.segments_names_to_index["Segment h32"]=1
-        self.segments_names_to_index["Segment h31"]=2
-        self.segments_names_to_index["Segment h30"]=3
-        self.segments_names_to_index["Segment v3"]=4
-        self.segments_names_to_index["Segment h20"]=5
-        self.segments_names_to_index["Segment h00"]=6
-        self.segments_names_to_index["Segment v2"]=7
-        self.segments_names_to_index["Segment h11"]=8
-        self.segments_names_to_index["Segment h10"]=9
-        self.segments_names_to_index["Segment v1"]=10
-"""
-
-    def change_configuration(self , info_margin , showInfos):
+    async def change_configuration(self, transition_config=None):
         #on pick une conf nouvelle au pif
         last_configuration = self.activ_configuration
-        while (last_configuration==self.activ_configuration):
-            self.activ_configuration = self.pick_a_random_conf( info_margin+"   " , showInfos)
+        loop_guard = 0
+        while (last_configuration==self.activ_configuration and loop_guard < 10):
+            self.activ_configuration = self.pick_a_random_conf()
+            loop_guard += 1
         #on l'applique à tous les segments
-        self.update_segments_modes( info_margin , showInfos )
+        self.update_segments_modes(transition_config)
         #On set un temps pour le futur changement de conf
         self.next_change_of_configuration_time = self.current_time + self.configuration_duration
-        if(showInfos):
-            print(info_margin + "(MM)   change_configuration()  :     next_change_of_conf_time = " + self.next_change_of_configuration_time)
+        self.logger.debug(f"(MM)   change_configuration()  :     next_change_of_conf_time = {self.next_change_of_configuration_time}")
 
-    def pick_a_random_conf(self , info_margin , showInfos):
-        reachable_playlists = []
-        new_conf={}
-        #On charge les playlists activées
-        for playlist_index in range(len(self.playlists)):
-            if (not self.blocked_playlists[playlist_index]) :
-                reachable_playlists.append(self.playlists[playlist_index])
+    async def force_standby_playlist(self, transition_config=None):
+        target_playlist = None
+        for p in self.playlists:
+            if "chill" in p.lower() or "standby" in p.lower():
+                target_playlist = p
+                break
+                
+        if not target_playlist and len(self.playlists) > 0:
+            target_playlist = self.playlists[0]
+            
+        if target_playlist and len(self.configurations.get(target_playlist, [])) > 0:
+            self.logger.info(f"(MM) Forcing Standby Playlist: {target_playlist}")
+            conf = random.choice(self.configurations[target_playlist])
+            self.activ_configuration = {
+                "playlist": target_playlist,
+                "index": self.configurations[target_playlist].index(conf),
+                "name": conf["name"],
+                "modes": conf["modes"],
+                "way": conf["way"]
+            }
+            self.update_segments_modes(transition_config)
+            self.next_change_of_configuration_time = self.current_time + self.configuration_duration
 
-        #On en choisit une au pif
-        random_playlist_index = random.randint(0,len(reachable_playlists)-1)
-        playlist_name = reachable_playlists[random_playlist_index]
+    def pick_a_random_conf(self):
+        # If our shuffle bag is empty, we must refill it with all available configurations
+        if len(self.shuffle_bag) == 0:
+            for playlist_index in range(len(self.playlists)):
+                if not self.blocked_playlists[playlist_index]:
+                    playlist_name = self.playlists[playlist_index]
+                    # Add every configuration from this playlist into the bag
+                    for conf_index in range(len(self.configurations[playlist_name])):
+                        self.shuffle_bag.append({
+                            "playlist": playlist_name,
+                            "index": conf_index,
+                            "name": self.configurations[playlist_name][conf_index]["name"],
+                            "modes": self.configurations[playlist_name][conf_index]["modes"],
+                            "way": self.configurations[playlist_name][conf_index]["way"]
+                        })
+            # Shuffle the bag like a deck of cards
+            random.shuffle(self.shuffle_bag)
 
-        new_conf["playlist"] = playlist_name
+        # Fallback just in case all playlists are somehow blocked preventing refill
+        if len(self.shuffle_bag) == 0:
+            return self.activ_configuration
 
-        #On pick une conf au pif dans cette playlist
-        random_conf_index = random.randint(0,len(self.configurations[playlist_name])-1)
-        new_conf["index"] = random_conf_index
-        new_conf["name"] = self.configurations[playlist_name][random_conf_index]["name"]
-        new_conf["modes"] = self.configurations[playlist_name][random_conf_index]["modes"]
-        new_conf["way"] = self.configurations[playlist_name][random_conf_index]["way"]
+        # Pop the next configuration from the shuffle bag
+        new_conf = self.shuffle_bag.pop()
 
-        if(showInfos):
-            print(info_margin + "(MM)   pick_a_random_conf() :     conf = " + str(new_conf))
+        self.logger.debug(f"(MM)   pick_a_random_conf() :     conf = {new_conf}")
         return new_conf
 
     def obey_orders(self,orders):
@@ -290,18 +270,18 @@ class Mode_master:
         splited_order = order.split(":")
         category = splited_order[0]                     #str category c ["block","unblock","change","force","update","special"]
         
-        print("category = ",category)
+        self.logger.debug(f"category = {category}")
         if (category == "block"):
             segment_name = splited_order[1]
             if (self.printAppDetails):
-                print("(MM) On veut bloquer le segment "+segment_name)
+                self.logger.debug(f"(MM) On veut bloquer le segment {segment_name}")
             self.segments_list[self.segments_names_to_index[segment_name]].block()
             
 
         elif (category == "unblock"):
             segment_name = splited_order[1]
             if (self.printAppDetails):
-                print("(MM) On veut débloquer le segment "+segment_name)
+                self.logger.debug(f"(MM) On veut débloquer le segment {segment_name}")
             self.segments_list[self.segments_names_to_index[segment_name]].unBlock()
             
 
@@ -309,35 +289,35 @@ class Mode_master:
             segment_name = splited_order[1]
             new_mode = splited_order[2]
             if (self.printAppDetails):
-                print("(MM) On veut changer le segment "+segment_name+" pour le mode "+new_mode)
-            self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode , "" , self.printModesDetails)
+                self.logger.debug(f"(MM) On veut changer le segment {segment_name} pour le mode {new_mode}")
+            self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode)
             
         elif (category == "change_way"):
             segment_name = splited_order[1]
             new_way = splited_order[2]
             if (self.printAppDetails):
-                print("(MM) On veut changer le "+segment_name+" pour le sens "+new_way)
-            self.segments_list[self.segments_names_to_index[segment_name]].change_way(new_way , "" , self.printModesDetails)
+                self.logger.debug(f"(MM) On veut changer le {segment_name} pour le sens {new_way}")
+            self.segments_list[self.segments_names_to_index[segment_name]].change_way(new_way)
             
         elif (category == "switch_way"):
             segment_name = splited_order[1]
             if (self.printAppDetails):
-                print("(MM) On veut switch le "+segment_name)
-            self.segments_list[self.segments_names_to_index[segment_name]].switch_way("" , self.printModesDetails)
+                self.logger.debug(f"(MM) On veut switch le {segment_name}")
+            self.segments_list[self.segments_names_to_index[segment_name]].switch_way()
             
 
         elif (category == "force"):
             segment_name = splited_order[1]
             new_mode = splited_order[2]
             if (self.printAppDetails):
-                print("(MM) On veut FORCER le segment "+segment_name+" pour le mode "+new_mode)
-            self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode , "" , self.printModesDetails)
+                self.logger.debug(f"(MM) On veut FORCER le segment {segment_name} pour le mode {new_mode}")
+            self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode)
 
         elif (category == "update"):
             parametre = splited_order[1]                            #str parametre c ["sensibilite","luminosite"]
             new_value = int(splited_order[2])
             if (self.printAppDetails):#int sensi,lum c [0:100]
-                print("(MM) On veut changer "+parametre+" = "+str(new_value))
+                self.logger.debug(f"(MM) On veut changer {parametre} = {new_value}")
             if (parametre == "sensibilite"):
                 self.listener.sensi = float(new_value)/100          #On ramene la sensi entre 0 et 1 
             if (parametre == "luminosite"):
@@ -347,7 +327,7 @@ class Mode_master:
             type_cal = splited_order[1]
             phase = splited_order[2]     #str type_cal c ["silence , "bb"]
             if (self.printAppDetails):
-                    print("(MM) On veut "+ phase+" une calibration "+type_cal)
+                    self.logger.debug(f"(MM) On veut {phase} une calibration {type_cal}")
             if (type_cal == "silence"):
                 if (phase == "start"):
                     self.listener.start_silence_calibration()
@@ -361,9 +341,13 @@ class Mode_master:
             
         elif (category == "special"):
             if (self.printAppDetails):
-                print("(MM) On veut lancer le shot ")
-            self.segments_list[self.segments_names_to_index["Segment h20"]].modes[4].activate()
-            self.segments_list[self.segments_names_to_index["Segment h00"]].modes[4].activate()
+                self.logger.debug("(MM) On veut lancer le shot ")
+            for target_seg in ["Segment h20", "Segment h00"]:
+                seg = self.segments_list[self.segments_names_to_index[target_seg]]
+                for m_idx, m_name in enumerate(seg.modes_names):
+                    if m_name == "Shot":
+                        seg.modes[m_idx].activate()
+                        break
 
 
             

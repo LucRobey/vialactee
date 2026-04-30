@@ -25,16 +25,18 @@ class Opposite_sides_mode(Mode.Mode):
 
         self.firstUpdate = True
 
-    def start(self , info_margin , showInfos):
-        super().start(info_margin,showInfos)
+    def start(self):
+        super().start()
         self.firstUpdate = True
 
     def run(self):
         if (self.firstUpdate):
-            for led_index in range(self.middle_start_index,self.middle_end_index+1):
-                hue = self.bass_hue + (self.high_hue - self.bass_hue) * (float(led_index - self.middle_start_index)/(self.middle_end_index - self.middle_start_index))
-                color = RGB_HSV.fromHSV_toRGB(hue,1.0,1.0)
-                self.rgb_list[led_index] = color
+            length = self.middle_end_index + 1 - self.middle_start_index
+            if length > 0:
+                import numpy as np
+                hues = np.linspace(self.bass_hue, self.high_hue, length)
+                view = self.rgb_list[self.middle_start_index : self.middle_end_index + 1]
+                RGB_HSV.fromHSV_toRGB_vectorized(hues, 1.0, 1.0, out=view)
             self.firstUpdate = False
 
         self.lower_height  = int(self.maxSize * (self.listener.asserved_fft_band[0]  + self.listener.asserved_fft_band[1] )/2)
@@ -46,5 +48,5 @@ class Opposite_sides_mode(Mode.Mode):
         self.fade_to_black_segment_vectorized(0.5,self.middle_end_index+1+self.higher_height+1,self.nb_of_leds-1)
 
         if(self.printThisModeDetail):
-            print("(PSG)     lower_height = ",self.lower_height)
-            print("(PSG)     higher_height = ",self.higher_height)
+            self.logger.debug(f"(PSG)     lower_height = {self.lower_height}")
+            self.logger.debug(f"(PSG)     higher_height = {self.higher_height}")

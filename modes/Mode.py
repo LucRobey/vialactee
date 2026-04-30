@@ -2,6 +2,7 @@ import calculations.rgb_hsv as RGB_HSV
 import time
 import numpy as np
 from typing import List, Dict, Any
+import logging
 
 class Mode:
 
@@ -18,6 +19,8 @@ class Mode:
         if(infos["printModesDetails"]):
             if (self.name in infos["modesToPrintDetails"]):
                 self.printThisModeDetail = True
+                
+        self.logger = logging.getLogger(f"Mode.{self.name}")
 
         if(self.listener==None):
             self.listener = listener
@@ -30,12 +33,14 @@ class Mode:
         self.nb_of_leds = len(indexes)
 
         self.isActiv = False
+        self.has_custom_transition = False
 
 
-    def smooth(self , ratio_new: float , led_index: int , new_color: List[int]):
-        old_col=self.leds[self.indexes[led_index]]
-        mixed_color=((1-ratio_new)*old_col[0]+ratio_new*new_color[0] , (1-ratio_new)*old_col[1]+ratio_new*new_color[1] , (1-ratio_new)*old_col[2]+ratio_new*new_color[2])
-        self.rgb_list[led_index]=mixed_color
+    def smooth(self, ratio_new: float, led_index: int, new_color: List[int]):
+        target = np.array(new_color)
+        view = self.rgb_list[led_index:led_index+1]
+        np.multiply(view, 1.0 - ratio_new, out=view, casting='unsafe')
+        np.add(view, target * ratio_new, out=view, casting='unsafe')
 
     def smooth_vectorized(self, ratio_new: float, target_rgb_matrix: np.ndarray):
         """
@@ -45,20 +50,18 @@ class Mode:
         np.multiply(self.rgb_list, 1.0 - ratio_new, out=self.rgb_list, casting='unsafe')
         np.add(self.rgb_list, target_rgb_matrix * ratio_new, out=self.rgb_list, casting='unsafe')
 
-    def smooth_segment(self , ratio_new , start_index , stop_index , new_color):
-        for led_index in range(start_index , stop_index+1):
-            self.smooth(ratio_new , led_index , new_color)
+    def smooth_segment(self, ratio_new: float, start_index: int, stop_index: int, new_color):
+        self.smooth_segment_vectorized(ratio_new, start_index, stop_index, new_color)
 
-    def fade_to_black(self , ratio_black):
-        for led_index in range(self.nb_of_leds):
-            self.smooth( ratio_black , led_index , [0,0,0])
+    def fade_to_black(self, ratio_black: float):
+        np.multiply(self.rgb_list, 1.0 - ratio_black, out=self.rgb_list, casting='unsafe')
 
-    def fade_to_black_led(self , ratio_black , led_index):
-        self.smooth( ratio_black , led_index , [0,0,0])
+    def fade_to_black_led(self, ratio_black: float, led_index: int):
+        view = self.rgb_list[led_index:led_index+1]
+        np.multiply(view, 1.0 - ratio_black, out=view, casting='unsafe')
 
-    def fade_to_black_segment(self , ratio_black , start_index , stop_index ):
-        for led_index in range(start_index , stop_index+1):
-            self.fade_to_black_led(ratio_black , led_index)
+    def fade_to_black_segment(self, ratio_black: float, start_index: int, stop_index: int):
+        self.fade_to_black_segment_vectorized(ratio_black, start_index, stop_index)
 
     def smooth_segment_vectorized(self, ratio_new: float, start_index: int, stop_index: int, new_color):
         if start_index <= stop_index and start_index >= 0 and stop_index < self.nb_of_leds:
@@ -76,19 +79,16 @@ class Mode:
             np.multiply(view, 1.0 - ratio_black, out=view, casting='unsafe')
 
     def fill(self, color):
-        for led_index in range(self.nb_of_leds):
-            self.rgb_list[led_index] = color
+        self.rgb_list[:] = color
 
 
-    def terminate(self , info_margin , showInfos):
+    def terminate(self):
         self.isActiv = False
-        if(showInfos):
-            print(info_margin + "(Mode)  on désactive le "+self.name+" du "+self.segment_name)
+        self.logger.info("  on désactive le "+self.name+" du "+self.segment_name)
 
-    def start(self , info_margin , showInfos):
+    def start(self):
         self.isActiv = True
-        if(showInfos):
-            print(info_margin + "(Mode)  on active le "+self.name+" du "+self.segment_name)
+        self.logger.info("  on active le "+self.name+" du "+self.segment_name)
 
     def update(self):
         if(self.printTimeOfCalculation and self.printThisModeDetail):
@@ -98,7 +98,7 @@ class Mode:
 
         if(self.printTimeOfCalculation and self.printThisModeDetail):
             duration = time.time() - time_me
-            print("      (CM) temps pour ",self.name," : ",duration)
+            self.logger.debug(f"      (CM) temps pour {self.name} : {duration}")
 
     def run(self):
         pass

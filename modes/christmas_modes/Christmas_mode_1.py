@@ -26,7 +26,7 @@ class Christmas_mode_1(Mode.Mode):
 
         time_coef = float(time.time() - self.start_invasion_time)/self.invasion_time
         if(self.printThisModeDetail):
-            print("(CM_1)       time_coef = ",time_coef)
+            self.logger.debug(f"(CM_1)       time_coef = {time_coef}")
 
         if( time_coef>=1 ):
             self.new_invasion = True
@@ -38,12 +38,12 @@ class Christmas_mode_1(Mode.Mode):
                 self.invader = chtm_colors.red
                 self.victim = chtm_colors.green
             if(self.printThisModeDetail):
-                print("(CM_1)       Nouvelle invasion!")
+                self.logger.debug("(CM_1)       Nouvelle invasion!")
                 
         else:
             nb_of_invader = int(self.size_of_conquest*time_coef)
             if(self.printThisModeDetail):
-                print("(CM_1)       nb_of_invader = ",nb_of_invader)
+                self.logger.debug(f"(CM_1)       nb_of_invader = {nb_of_invader}")
 
             country_index = 0
             while self.size_of_conquest * country_index < self.nb_of_leds:
@@ -56,4 +56,4 @@ class Christmas_mode_1(Mode.Mode):
         #====================================================================================
         if(self.printTimeOfCalculation and self.printThisModeDetail):
             duration = time.time() - time_me
-            print("      (CM_1) temps pour ",self.name," : ",duration)
+            self.logger.debug(f"      (CM_1) temps pour {self.name} : {duration}")

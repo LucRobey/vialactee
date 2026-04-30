@@ -20,7 +20,11 @@ import modes.christmas_modes.Christmas_mode_2 as Christmas_mode_2
 
 import modes.Alcool_randomer as Alcool_randomer
 
+import Mode_Globaux.Segments_Locations as Segments_Locations
+import core.Transition_Engine as Transition_Engine
+
 import numpy as np
+import logging
 
 class Segment:
     
@@ -28,6 +32,7 @@ class Segment:
 
     def __init__(self , name ,listener , leds , indexes , orientation , alcool , infos):
         self.name = name
+        self.logger = logging.getLogger(f"Segment.{self.name}")
         self.leds = leds
         self.indexes = indexes
         self.infos = infos
@@ -37,7 +42,11 @@ class Segment:
             self.listener = listener
         self.fused_list = []
         self.rgb_list = np.zeros((len(indexes), 3), dtype=np.int32)
+        self.dual_rgb_list = np.zeros((len(indexes), 3), dtype=np.int32)
         self.global_rgb_list = None
+        
+        self.coords_array = None
+        self._load_coordinates()
         
         self.isBlocked = False
 
@@ -45,10 +54,29 @@ class Segment:
         self.modes_names=[]
         self.initiate_modes(orientation , alcool)
 
+    def _load_coordinates(self):
+        locations = Segments_Locations.Segments_Locations()
+        if self.name in locations.segment_names:
+            idx = locations.segment_names.index(self.name)
+            coords_list = locations.segment_coords[idx]
+            if len(coords_list) >= self.nb_of_leds:
+                self.coords_array = np.array(coords_list[:self.nb_of_leds])
+            else:
+                self.logger.warning(f"Coordinate length mismatch for {self.name}. Expected {self.nb_of_leds}, got {len(coords_list)}")
+        else:
+            self.logger.warning(f"Could not find coordinates for {self.name} in Segments_Locations")
+
         
         self.way="UP"
 
         self.activ_mode = 3
+
+        self.state = "NORMAL"
+        self.transition_progress = 0.0
+        self.transition_step = 0.05
+        self.target_mode_name = None
+        self.target_index = None
+        self.transition_type = None
 
 
 
@@ -58,7 +86,44 @@ class Segment:
         if(self.modes[self.activ_mode].isActiv):
             self.modes[self.activ_mode].update()
         else:
-            print("(S) erreur, on update un mode qui n'a pas été start ")
+            self.logger.warning("(S) erreur, on update un mode qui n'a pas été start ")
+            
+        # State machine for transitions
+        if self.state == "TRANSITION_DUAL":
+            if not self.modes[self.activ_mode].has_custom_transition:
+                self.transition_progress += self.transition_step
+                
+                # --- UPDATE NEW MODE INTO SECONDARY BUFFER ---
+                # We point the incoming mode exclusively to our dual_rgb_list buffer
+                self.modes[self.target_index].rgb_list = self.dual_rgb_list
+                if self.modes[self.target_index].isActiv:
+                    self.modes[self.target_index].update()
+                
+                # Immediately restore the pointer for data safety
+                self.modes[self.target_index].rgb_list = self.rgb_list
+
+                # --- SPATIAL MIX BOTH BUFFERS INTO PRIMARY BUFFER ---
+                active_coords = self.coords_array
+                if self.way == "DOWN" and self.coords_array is not None:
+                    active_coords = self.coords_array[::-1]
+
+                if self.transition_type in ["fade_to_black", "local_change"]:
+                    Transition_Engine.apply_dual_fade(self.rgb_list, self.dual_rgb_list, self.transition_progress)
+                elif self.transition_type == "global_change":
+                    Transition_Engine.apply_colorful_glitch(self.rgb_list, self.dual_rgb_list, self.transition_progress)
+                elif self.transition_type == "gravity_drop" and active_coords is not None:
+                    Transition_Engine.apply_gravity_drop(self.rgb_list, self.dual_rgb_list, active_coords, self.transition_progress)
+                elif active_coords is not None:
+                    Transition_Engine.apply_spatial_transition(self.rgb_list, self.dual_rgb_list, active_coords, self.transition_progress, self.transition_type)
+
+                
+            if self.transition_progress >= 1.0 or self.modes[self.activ_mode].has_custom_transition:
+                # Execution complete! Swap the modes and terminate old one.
+                self.modes[self.activ_mode].terminate()
+                self.activ_mode = self.target_index
+                
+                self.state = "NORMAL"
+                self.transition_progress = 0.0
         
         self.update_leds("Priority")
         
@@ -131,54 +196,94 @@ class Segment:
                 else:
                     self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
 
-    def change_way(self , new_way , info_margin , showInfos):
-        if(showInfos):
-            print (info_margin + "(S) le " + self.name +"change de sens "+ self.way +" pour " + new_way)
+    def change_way(self , new_way):
+        self.logger.debug(f"le {self.name} change de sens {self.way} pour {new_way}")
         self.way = new_way
 
-    def switch_way(self , info_margin , showInfos):
+    def switch_way(self):
         if(self.way == "UP"):
             new_way = "DOWN"
         else:
             new_way = "UP"
-        if(showInfos):
-            print (info_margin + "(S) switch ")
-        self.change_way(new_way ,  info_margin , showInfos)
+        self.logger.debug("switch")
+        self.change_way(new_way)
         
 
-    def change_mode(self , mode_name , info_margin , showInfos):
-        if(not self.isBlocked):
-            #On terminate l'ancien mode
-            self.modes[self.activ_mode].terminate( info_margin+"   " , showInfos)
-            if (not mode_name in self.modes_names):
-                print("bug chelou, on transforme ",mode_name, " en ", mode_name[1:])
-                mode_name = mode_name[1:]
-            for mode_index in range(len(self.modes)):
-                found_a_mode = False
-                if (self.modes_names[mode_index]==mode_name):
-                    # On change l'index et on start
-                    self.activ_mode = mode_index
-                    self.modes[self.activ_mode].start(info_margin+"   " , showInfos)
-                    if(showInfos):
-                        print(info_margin,"(S) ",self.name, " a changé de mode pour ", mode_name)
-                    found_a_mode = True
-                    break
-            if (not found_a_mode):
-                print("ALERTE CE MODE :" , mode_name ," n'existe pas pour " , self.name)
-        else:
-            if (self.show_modes_details):
-                print("(S) le "+self.name +" est bloqué et ne peut pas passer au "+mode_name)
-
-    def force_mode(self , mode_name , info_margin , showInfos):
-        #On terminate l'ancien mode
-        self.modes[self.activ_mode].terminate(info_margin +"   ", showInfos)
+    def execute_mode_swap(self, mode_name):
+        if self.state == "TRANSITION_DUAL":
+            return
+        self.state = "NORMAL"
+        self.transition_progress = 0.0
+        # On terminate l'ancien mode
+        self.modes[self.activ_mode].terminate()
+        if (not mode_name in self.modes_names):
+            self.logger.warning(f"bug chelou, on transforme {mode_name} en {mode_name[1:]}")
+            mode_name = mode_name[1:]
+        found_a_mode = False
         for mode_index in range(len(self.modes)):
             if (self.modes_names[mode_index]==mode_name):
                 # On change l'index et on start
                 self.activ_mode = mode_index
-                self.modes[self.activ_mode].start(info_margin +"   ", showInfos)
-                if (self.show_modes_details):
-                    print("(S) le segment ",self.name, " change de mode pour ", mode_name)
+                self.modes[self.activ_mode].start()
+                self.logger.info(f"{self.name} a changé de mode pour {mode_name}")
+                found_a_mode = True
+                break
+        if (not found_a_mode):
+            self.logger.warning(f"ALERTE CE MODE :{mode_name} n'existe pas pour {self.name}")
+
+    def change_mode(self, mode_name, transition_config=None):
+        if(not self.isBlocked):
+            if self.state == "TRANSITION_DUAL":
+                # Ignore new requests entirely if a transition is in progress
+                self.logger.debug(f"(S) Transition already in progress for {self.name}, ignoring request to {mode_name}")
+                return
+                
+            if transition_config is not None:
+                # Resolve target index
+                target_name = mode_name
+                if not target_name in self.modes_names:
+                    target_name = target_name[1:]
+                
+                try:
+                    self.target_index = self.modes_names.index(target_name)
+                    self.target_mode_name = target_name
+                except ValueError:
+                    self.logger.warning(f"Could not find mode {target_name} for transition")
+                    self.target_index = self.activ_mode
+                    self.target_mode_name = self.modes_names[self.activ_mode]
+
+                # Pre-start the incoming mode so it processes data immediately
+                if not self.modes[self.target_index].isActiv:
+                    self.modes[self.target_index].start()
+
+                self.state = "TRANSITION_DUAL"
+                self.transition_progress = 0.0
+                self.transition_type = transition_config["type"]
+                
+                # 30 fps approximation
+                duration = transition_config.get("duration", 2.0)
+                if duration > 0:
+                    self.transition_step = (1.0 / 30.0) / duration
+                else:
+                    self.transition_step = 1.0
+            else:
+                self.execute_mode_swap(mode_name)
+        else:
+            self.logger.debug(f"(S) le {self.name} est bloqué et ne peut pas passer au {mode_name}")
+
+    def force_mode(self , mode_name):
+        if self.state == "TRANSITION_DUAL":
+            return
+        self.state = "NORMAL"
+        self.transition_progress = 0.0
+        #On terminate l'ancien mode
+        self.modes[self.activ_mode].terminate()
+        for mode_index in range(len(self.modes)):
+            if (self.modes_names[mode_index]==mode_name):
+                # On change l'index et on start
+                self.activ_mode = mode_index
+                self.modes[self.activ_mode].start()
+                self.logger.debug(f"(S) le segment {self.name} change de mode pour {mode_name}")
                 
                 
     def get_current_mode(self):
