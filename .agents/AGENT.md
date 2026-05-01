@@ -21,7 +21,7 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
         ```
 *   `connectors/`: The `Connector.py` TCP server (Port 12345) and Microphones (`ESP32_Microphone` / `Local_Microphone`). 
 *   `hardware/`: Physical abstractions (currently houses `Fake_leds.py`).
-*   `Vialapp/`: The native Android Java application source code. Acts as the user's remote control by firing direct TCP socket commands to `Connector.py`.
+*   `wabb-interface/`: The React-based web application source code. Acts as the user's remote control by firing direct TCP socket commands to `Connector.py`.
 
 **The Hardware:**
 *   **LEDs**: ~1304 WS2812b (NeoPixels) grouped into 11 logical Segments.

@@ -11,9 +11,9 @@ To prevent hallucinations, avoid unnecessary generic libraries, and maintain our
 - Read **`.agents/AGENT.md`** for a high-level overview of the mathematical logic, the numpy-vectorized DSP engine, the directory structure, and the strict technical rules you must follow.
 - Read **`.agents/PLAN.md`** to understand our ongoing development roadmap (e.g., the 5-second Audio Lookahead and ESP32 routing) so you know how current tasks fit into the bigger picture.
 
-## 2. In-Depth Component Documentation (`/docs/`)
-Once you understand the overarching architecture from `.agents`, consult the `docs/` folder for specific algorithm designs and spatial orchestration rules.
-- Read **`docs/00_AGENT_NAVIGATION.md`** first. It serves as an index map for all the detailed documentation in the folder.
-- Inside `docs/`, you will find comprehensive explanations on rhythm tracking (Phase Inertia Flywheels), structural music event detection (Asserved Envelopes), and spatial LED transition logic (The Transition Director).
+## 2. In-Depth Component Documentation (`/.agents/docs/`)
+Once you understand the overarching architecture from `.agents`, consult the `.agents/docs/` folder for specific algorithm designs and spatial orchestration rules.
+- Read **`.agents/docs/00_AGENT_NAVIGATION.md`** first. It serves as an index map for all the detailed documentation in the folder.
+- Inside `.agents/docs/`, you will find comprehensive explanations on rhythm tracking (Phase Inertia Flywheels), structural music event detection (Asserved Envelopes), and spatial LED transition logic (The Transition Director).
 
 > ⚠️ **CRITICAL INSTRUCTION:** Do not proceed with code modifications without first checking these directories to ensure your proposed logic correctly aligns with the non-causal mathematical frameworks and asynchronous constraints established for Vialactée.

@@ -3,7 +3,7 @@
 ## 🤖 Directives for Future AI Agents
 Welcome to the *Vialactée* lighting orchestration system! If you are an AI reading this file, you have been summoned to help build, debug, or expand the Python-based reactive lighting architecture. 
 
-This `docs/` folder contains the canonical "Brain Trust" of the project's logic. Before proposing structural changes to the codebase, please review the relevant markdown files below to ensure your code aligns with our established mathematical frameworks.
+This `.agents/docs/` folder contains the canonical "Brain Trust" of the project's logic. Before proposing structural changes to the codebase, please review the relevant markdown files below to ensure your code aligns with our established mathematical frameworks.
 
 ---
 
@@ -24,9 +24,9 @@ These documents map out the **Output Layer**. Once the Rhythm Tracker detects an
 - **`transition_architecture.md`**
   *Read this to understand:* The **Transition Director** and the **Spatial Execution** of transitions. The probabilistic engine that listens to song energy and decides *what kind* of transition to trigger (Global vs Local), and how to stagger transitions physically based on physical X/Y coordinates and Aesthetic Sets.
 
-### 📱 3. External Interfaces & Control
-- **`vialapp_architecture.md`**
-  *Read this to understand:* The **Native Android Java App** (`Vialapp`). It details the TCP Socket communication protocol on Port 12345 used to push commands from the user's phone directly to the Raspberry Pi.
+### 🌐 3. External Interfaces & Control
+- **`wabb-interface/`**
+  *Explore this directory to understand:* The **React Web App** (`wabb-interface`). This web page acts as the remote controller, detailing the communication protocol used to push commands to the Raspberry Pi.
 
 ---
 
