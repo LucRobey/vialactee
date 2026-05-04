@@ -2,7 +2,7 @@
 
 :root {
   /* ============================================================================ */
-  /* 🧱 LEGO MATH ENGINE: Central Logic Panel for Grid & Physical Placement       */
+  /* ðŸ§± LEGO MATH ENGINE: Central Logic Panel for Grid & Physical Placement       */
   /* ============================================================================ */
   --stud: 30px;
   --tolerance: 4px;
@@ -229,6 +229,40 @@ body {
   top: 0;
   z-index: 100;
   box-sizing: border-box;
+  justify-content: space-between;
+}
+
+.tab-group {
+  display: flex;
+  gap: calc(var(--stud) / 2);
+}
+
+.brand-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  height: 100%;
+  padding-right: 20px;
+}
+
+.brand-vialactee {
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+}
+
+.brand-by {
+  color: #a0a5a9;
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+  opacity: 0.8;
+}
+
+.brand-luminos {
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
 }
 
 .tab {
@@ -1528,4 +1562,525 @@ body {
 .heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-bolt::after {
   background-color: #f56565; /* Red LED */
   box-shadow: 0 0 8px 2px #f56565, inset 0 1px 2px rgba(255,255,255,0.8);
+}/* ========================================= */
+/* SMART BRICK OLED DISPLAY & ANIMATIONS   */
+/* ========================================= */
+
+.embedded-oled {
+  position: absolute;
+  top: 50%; left: 50%;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.85);
+  transform-origin: center center;
+  border-radius: 3px;
+  border: 1px solid #222;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+  /* The width and rotation are handled inline in App.tsx */
+}
+
+.marquee-container {
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.oled-text {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.75rem;
+  font-weight: 900;
+  white-space: nowrap;
+  letter-spacing: 1px;
+}
+
+.marquee-scroll {
+  display: inline-block;
+  padding-left: 100%;
+  animation: marquee 4s linear infinite;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+/* Interactive Segment Hover States */
+.interactive-segment {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.interactive-segment:hover {
+  filter: brightness(1.3);
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+  z-index: 50 !important;
+}
+
+.segment-selected {
+  border: 2px solid white;
+  filter: brightness(1.5);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
+  transform: translateY(-3px);
+  z-index: 40 !important;
+}
+
+/* Mode Animations - Physically Accurate Replicas */
+/* 1. Alcool Randomer */
+/* White ball ping-ponging, spinning very fast at first, slowing down with phases, stopping. Fading white tail. */
+.anim-alcool-randomer {
+  background-image: radial-gradient(circle at 50% 50%, white 0%, rgba(255,255,255,0.4) 10%, transparent 40%);
+  background-size: 200% 200%;
+  animation: alcool-randomer 4s cubic-bezier(0.1, 0.9, 0.2, 1) infinite;
+}
+@keyframes alcool-randomer {
+  0% { background-position: -100% 50%; }
+  10% { background-position: 200% 50%; }
+  20% { background-position: -50% 50%; }
+  35% { background-position: 150% 50%; }
+  55% { background-position: 20% 50%; }
+  65% { background-position: 80% 50%; }
+  75% { background-position: 40% 50%; }
+  80% { background-position: 60% 50%; }
+  85%, 100% { background-position: 50% 50%; } /* Freezing on final position */
+}
+
+/* 2. Bary Rainbow */
+/* Static symmetrical rainbow gradient from center out. Red in center, blue at edges. Center intensely lit. */
+.anim-bary-rainbow {
+  background-image: linear-gradient(90deg, blue, cyan, green, yellow, red 50%, yellow, green, cyan, blue);
+  background-size: 100% 100%;
+  animation: bary-rainbow-pulse 1s ease-in-out infinite alternate;
+}
+@keyframes bary-rainbow-pulse {
+  0% { filter: brightness(0.8) hue-rotate(-10deg); box-shadow: inset 0 0 10px rgba(255,0,0,0.5); }
+  100% { filter: brightness(1.5) hue-rotate(10deg); box-shadow: inset 0 0 30px rgba(255,0,0,1); }
+}
+
+/* 3. Chromatic Chaser */
+/* Sweeping intensely colored laser head with a fading tail, color shifts from red to blue dynamically. */
+.anim-chromatic-chaser {
+  background-image: radial-gradient(circle at 50% 50%, white 0%, currentColor 15%, transparent 50%);
+  background-size: 150% 150%;
+  animation: chromatic-chaser 0.8s linear infinite alternate, color-sweep 3s linear infinite alternate;
+}
+@keyframes chromatic-chaser {
+  0% { background-position: -20% 50%; }
+  100% { background-position: 120% 50%; }
+}
+@keyframes color-sweep {
+  0% { color: red; }
+  50% { color: lime; }
+  100% { color: blue; }
+}
+
+/* 4. Coloured Middle Wave */
+/* Divided symmetrically. Center=Red (bass), Edges=Blue (treble). Throbs in place proportionally. */
+.anim-coloured-middle-wave {
+  background-image: linear-gradient(90deg, blue 0%, purple 20%, red 45%, red 55%, purple 80%, blue 100%);
+  background-size: 100% 100%;
+  animation: coloured-middle-wave 0.5s ease-out infinite alternate;
+}
+@keyframes coloured-middle-wave {
+  0% { filter: brightness(0.3); transform: scale(0.98); }
+  100% { filter: brightness(2); transform: scale(1.02); box-shadow: 0 0 20px rgba(255,0,0,0.8); }
+}
+
+/* 5. Extending Waves */
+/* Blocks of solid color injected in center, sliding outwards. */
+.anim-extending-waves {
+  background-image: repeating-radial-gradient(circle at 50% 50%, transparent 0%, transparent 10%, currentColor 11%, currentColor 15%, transparent 16%);
+  background-size: 200% 200%;
+  animation: extending-waves 1s linear infinite, color-sweep 2s linear infinite;
+}
+@keyframes extending-waves {
+  0% { background-size: 50% 50%; filter: brightness(2); }
+  100% { background-size: 300% 300%; filter: brightness(0.5); }
+}
+
+/* 6. Flying Ball */
+/* Cluster of LEDs darts left/right, leaves smooth trail. Green/blue to purple based on pitch. */
+.anim-flying-ball {
+  background-image: radial-gradient(circle at 50% 50%, white 0%, currentColor 20%, transparent 60%);
+  background-size: 120% 120%;
+  animation: flying-ball 1s ease-in-out infinite alternate, flying-color 2s infinite alternate;
+}
+@keyframes flying-ball {
+  0% { background-position: 10% 50%; }
+  30% { background-position: 80% 50%; }
+  60% { background-position: 40% 50%; }
+  100% { background-position: 90% 50%; }
+}
+@keyframes flying-color {
+  0% { color: #00ffaa; } /* Green/Blue */
+  100% { color: #8800ff; } /* Purple */
+}
+
+/* 7. Hyper Strobe */
+/* Dark most of the time, instantly flashes blinding white on kick, fades out extremely quickly. */
+.anim-hyper-strobe {
+  animation: hyper-strobe 0.8s infinite;
+}
+@keyframes hyper-strobe {
+  0% { background-color: white; box-shadow: 0 0 40px white; filter: brightness(4); }
+  10% { background-color: transparent; box-shadow: none; filter: brightness(0.1); }
+  100% { background-color: transparent; box-shadow: none; filter: brightness(0.1); }
+}
+
+/* 8. Magnetic Ball */
+/* Glowing ball pulled to center, violently kicked to edges, bounces elastically. Size expands. */
+.anim-magnetic-ball {
+  background-image: radial-gradient(circle at 50% 50%, white 0%, currentColor 30%, transparent 70%);
+  background-size: 100% 100%;
+  animation: magnetic-ball 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate;
+}
+@keyframes magnetic-ball {
+  0% { background-position: 50% 50%; background-size: 80% 80%; filter: brightness(1); } /* Resting in center */
+  20% { background-position: 0% 50%; background-size: 150% 150%; filter: brightness(2); } /* Kicked left, size expands */
+  40% { background-position: 50% 50%; background-size: 100% 100%; filter: brightness(1.2); } /* Pulled back to center */
+  60% { background-position: 100% 50%; background-size: 160% 160%; filter: brightness(2.2); } /* Kicked right */
+  100% { background-position: 50% 50%; background-size: 90% 90%; filter: brightness(1); } /* Pulled back */
+}
+
+/* 9. Matrix Rain */
+/* Bright green drops falling from top to bottom (right to left typically for strips), leaving fading tail. */
+.anim-matrix-rain {
+  background-image: linear-gradient(180deg, transparent 0%, rgba(0, 255, 0, 0.1) 60%, lime 95%, white 100%);
+  background-size: 100% 300%;
+  animation: matrix-rain 0.8s linear infinite;
+}
+@keyframes matrix-rain {
+  0% { background-position: 0% -50%; }
+  100% { background-position: 0% 150%; }
+}
+
+/* 10. Metronome */
+/* Primary beat flashes white, off-beat flashes blue. Sharp attack, smooth fade-out. */
+.anim-metronome {
+  animation: metronome 1s infinite;
+}
+@keyframes metronome {
+  0% { background-color: white; box-shadow: 0 0 30px white; filter: brightness(2.5); }
+  20% { background-color: transparent; box-shadow: none; filter: brightness(0.2); }
+  50% { background-color: blue; box-shadow: 0 0 30px blue; filter: brightness(2.5); }
+  70% { background-color: transparent; box-shadow: none; filter: brightness(0.2); }
+  100% { background-color: transparent; box-shadow: none; filter: brightness(0.2); }
+}
+
+/* 11. Middle Bar */
+/* Solid single-colored bar growing symmetrically outwards from exact center. Rest is black. */
+.anim-middle-bar {
+  background-image: linear-gradient(90deg, transparent 0%, transparent 40%, currentColor 40.1%, currentColor 59.9%, transparent 60%, transparent 100%);
+  background-size: 200% 100%;
+  background-position: 50% 50%;
+  animation: middle-bar 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite alternate, color-sweep 4s linear infinite alternate;
+}
+@keyframes middle-bar {
+  0% { background-size: 0% 100%; filter: brightness(0.5); }
+  100% { background-size: 100% 100%; filter: brightness(2) drop-shadow(0 0 10px currentColor); }
+}
+
+/* 12. Opposite Sides */
+/* Red/orange bar from middle-left towards far left. Blue/purple from middle-right to far right. Center gap unlit. */
+.anim-opposite-sides {
+  background-image: linear-gradient(90deg, #ff4500 0%, #ff4500 40%, transparent 40%, transparent 60%, #8a2be2 60%, #8a2be2 100%);
+  background-size: 300% 100%;
+  background-position: 50% 50%;
+  animation: opposite-sides 0.6s ease-out infinite alternate;
+}
+@keyframes opposite-sides {
+  0% { background-size: 50% 100%; filter: brightness(0.8); }
+  100% { background-size: 200% 100%; filter: brightness(2) drop-shadow(0 0 15px currentColor); }
+}
+
+/* 13. PSG */
+/* Solid red growing from left, solid blue from right. Center is black EXCEPT a stark white dot shifting at balance. */
+.anim-psg {
+  /* Using radial gradient for the white dot in the middle, and linear gradients for the red/blue sides */
+  background-image: 
+    radial-gradient(circle at 50% 50%, white 0%, white 10%, transparent 15%),
+    linear-gradient(90deg, red 0%, red 30%, transparent 30%, transparent 70%, blue 70%, blue 100%);
+  background-size: 200% 100%, 100% 100%;
+  background-position: 50% 50%, 0% 0%;
+  background-repeat: no-repeat;
+  animation: psg-balance 0.5s ease-in-out infinite alternate;
+}
+@keyframes psg-balance {
+  0% { 
+    background-position: 30% 50%, 0% 0%; 
+    background-image: radial-gradient(circle at 50% 50%, white 0%, white 10%, transparent 15%), linear-gradient(90deg, red 0%, red 40%, transparent 40%, transparent 80%, blue 80%, blue 100%);
+    filter: brightness(1.2);
+  }
+  100% { 
+    background-position: 70% 50%, 0% 0%; 
+    background-image: radial-gradient(circle at 50% 50%, white 0%, white 10%, transparent 15%), linear-gradient(90deg, red 0%, red 20%, transparent 20%, transparent 60%, blue 60%, blue 100%);
+    filter: brightness(2);
+  }
+}
+
+/* 14. Plasma Fire */
+/* Column of fire burning upwards. Deep red bottom to bright yellow/white top. Height shoots up/down. */
+.anim-plasma-fire {
+  background-image: linear-gradient(0deg, #8b0000 0%, #ff4500 40%, #ffd700 70%, #ffffff 90%, transparent 100%);
+  background-size: 100% 300%;
+  animation: plasma-fire 0.15s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+@keyframes plasma-fire {
+  0% { background-position: 0% 100%; filter: brightness(1); } /* Low flame */
+  100% { background-position: 0% 0%; filter: brightness(2) drop-shadow(0 -10px 15px orange); } /* High flame */
+}
+
+/* 15. Power Bar */
+/* Classic VU meter filling bottom to top. White dot at peak floating down. */
+.anim-power-bar {
+  background-image: 
+    linear-gradient(0deg, white 0%, transparent 5%), 
+    linear-gradient(0deg, lime 0%, yellow 50%, red 100%);
+  background-size: 100% 100%, 100% 100%;
+  background-position: 0% 100%, 0% 100%;
+  background-repeat: no-repeat;
+  animation: power-bar 0.4s ease-out infinite alternate;
+}
+@keyframes power-bar {
+  0% { 
+    background-size: 100% 20%, 100% 10%; /* Low volume: dot floating slightly above bar */
+    filter: brightness(0.8); 
+  }
+  100% { 
+    background-size: 100% 90%, 100% 90%; /* High volume: dot pushed by bar to the top */
+    filter: brightness(2) drop-shadow(0 0 10px lime); 
+  }
+}
+
+/* 16. Proportion Rainbow */
+/* Rainbow gradient where width of color bands accordion/stretch based on frequency. */
+.anim-proportion-rainbow {
+  background-image: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+  background-size: 300% 100%;
+  animation: proportion-rainbow 0.6s ease-in-out infinite alternate;
+}
+@keyframes proportion-rainbow {
+  0% { background-position: 0% 50%; filter: brightness(1.2); transform: scaleX(0.95); }
+  100% { background-position: 100% 50%; filter: brightness(1.8); transform: scaleX(1.05); }
+}
+
+/* 17. Rainbow */
+/* Full smooth static rainbow, brightness pulses dynamically. */
+.anim-rainbow {
+  background-image: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+  background-size: 100% 100%;
+  animation: rainbow-pulse 0.3s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+}
+@keyframes rainbow-pulse {
+  0% { filter: brightness(0.7) contrast(1.2); }
+  100% { filter: brightness(2) contrast(1.5) drop-shadow(0 0 10px white); }
+}
+
+/* 18. Shining Stars */
+/* Sparse dark mode. Individual stars (pixels) instantly pop up at random locations, then fade to black. */
+.anim-shining-stars {
+  background-color: black;
+  background-image: 
+    radial-gradient(circle at 10% 20%, white 1px, transparent 2px),
+    radial-gradient(circle at 90% 80%, blue 1px, transparent 2px),
+    radial-gradient(circle at 30% 70%, red 1px, transparent 2px),
+    radial-gradient(circle at 70% 30%, green 1px, transparent 2px),
+    radial-gradient(circle at 50% 50%, yellow 1px, transparent 2px);
+  background-size: 40px 40px;
+  animation: shining-stars 0.4s steps(1, end) infinite alternate;
+}
+@keyframes shining-stars {
+  0% { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; filter: brightness(0.2); }
+  25% { background-position: 15px 5px, -10px -20px, 0 0, 0 0, 0 0; filter: brightness(2); box-shadow: 0 0 5px white; }
+  50% { background-position: 0 0, 0 0, 25px -15px, -5px 15px, 0 0; filter: brightness(1); }
+  75% { background-position: 0 0, 0 0, 0 0, 0 0, -20px 10px; filter: brightness(2.5); box-shadow: 0 0 8px yellow; }
+  100% { background-position: -10px 10px, 20px -5px, 0 0, 10px 10px, 0 0; filter: brightness(0.5); }
+}
+
+/* 19. Static Wave */
+/* Thick symmetrical band in center pulsing thicker/thinner to bass. Extreme outer edges have sharp bright white tips. */
+.anim-static-wave {
+  /* The white tips at 30% and 70%, and solid color inside */
+  background-image: linear-gradient(90deg, transparent 0%, white 28%, currentColor 30%, currentColor 70%, white 72%, transparent 100%);
+  background-size: 200% 100%;
+  background-position: 50% 50%;
+  animation: static-wave 0.5s ease-in-out infinite alternate;
+}
+@keyframes static-wave {
+  0% { background-size: 50% 100%; filter: brightness(0.8); } /* Thinner */
+  100% { background-size: 150% 100%; filter: brightness(2.5) drop-shadow(0 0 15px currentColor); } /* Thicker */
+}
+
+/* 20. Synesthesia */
+/* Entire strip single perfectly uniform color that smoothly morphs. Overall brightness pulses. */
+.anim-synesthesia {
+  background-color: currentColor; /* Inherits the dynamic React state color if any, but we'll override with animation */
+  animation: synesthesia 3s ease-in-out infinite alternate;
+}
+@keyframes synesthesia {
+  0% { background-color: #ff0055; filter: brightness(0.6); }
+  20% { background-color: #aa00ff; filter: brightness(2) drop-shadow(0 0 20px #aa00ff); }
+  40% { background-color: #0088ff; filter: brightness(0.8); }
+  60% { background-color: #00ffaa; filter: brightness(1.5) drop-shadow(0 0 15px #00ffaa); }
+  80% { background-color: #ffdd00; filter: brightness(0.5); }
+  100% { background-color: #ff4400; filter: brightness(2.5) drop-shadow(0 0 25px #ff4400); }
+}
+
+/* Inspector Layout */
+.topology-inspector {
+  width: 350px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: var(--plastic-shadow);
+}
+
+/* Telemetry Pill */
+.telemetry-pill {
+  background: #222;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--lego-cyan);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #333;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.pulsing-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--lego-cyan);
+  border-radius: 50%;
+  animation: pulse-dot 1s infinite alternate;
+}
+
+@keyframes pulse-dot {
+  0% { opacity: 0.3; box-shadow: 0 0 0 transparent; }
+  100% { opacity: 1; box-shadow: 0 0 10px var(--lego-cyan); }
+}
+
+/* Equalizer Bars */
+@keyframes equalizer {
+  0% { height: 10%; }
+  100% { height: 90%; }
+}
+
+/* ========================================= */
+/* LEGO GRILLE SCROLLBAR                     */
+/* ========================================= */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 14px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background-color: #111;
+  border-left: 2px solid rgba(0,0,0,0.8);
+  border-right: 2px solid rgba(0,0,0,0.8);
+  box-shadow: inset 2px 0 5px rgba(0,0,0,1);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #da291c;
+  border-radius: 2px;
+  border-top: 2px solid rgba(255,255,255,0.5);
+  border-left: 1px solid rgba(255,255,255,0.3);
+  border-bottom: 2px solid rgba(0,0,0,0.8);
+  border-right: 1px solid rgba(0,0,0,0.6);
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.5) 3px,
+      rgba(0,0,0,0.5) 5px,
+      rgba(255,255,255,0.2) 5px,
+      rgba(255,255,255,0.2) 6px
+    );
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.8);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #f03030;
+}
+
+/* ========================================= */
+/* CHEESE SLOPE BUTTONS                      */
+/* ========================================= */
+.cheese-slope-btn {
+  width: 30px;
+  height: 30px;
+  background-color: #fcd000;
+  border: none;
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111;
+  font-weight: 900;
+  font-size: 0.8rem;
+  box-shadow: 
+    0 5px 8px rgba(0,0,0,0.7),
+    inset 0 -2px 0 rgba(0,0,0,0.5);
+  transition: all 0.1s;
+  overflow: hidden;
+}
+.cheese-slope-btn.left {
+  background-image: linear-gradient(90deg, rgba(0,0,0,0.2) 0%, rgba(255,255,255,0.7) 70%, rgba(255,255,255,0.9) 82%, #e0b800 86%, #ccaa00 100%);
+  border-left: 1px solid rgba(0,0,0,0.4);
+  border-right: 2px solid rgba(0,0,0,0.8);
+  border-top: 2px solid rgba(255,255,255,0.4);
+  border-bottom: 2px solid rgba(0,0,0,0.5);
+}
+.cheese-slope-btn.left::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; right: 4px; width: 1px;
+  background: rgba(0,0,0,0.2);
+}
+.cheese-slope-btn.right {
+  background-image: linear-gradient(-90deg, rgba(0,0,0,0.2) 0%, rgba(255,255,255,0.7) 70%, rgba(255,255,255,0.9) 82%, #e0b800 86%, #ccaa00 100%);
+  border-right: 1px solid rgba(0,0,0,0.4);
+  border-left: 2px solid rgba(0,0,0,0.8);
+  border-top: 2px solid rgba(255,255,255,0.4);
+  border-bottom: 2px solid rgba(0,0,0,0.5);
+}
+.cheese-slope-btn.right::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 4px; width: 1px;
+  background: rgba(0,0,0,0.2);
+}
+.cheese-slope-btn:active {
+  transform: translateY(2px);
+  box-shadow: 
+    0 1px 2px rgba(0,0,0,0.6),
+    inset 0 -1px 0 rgba(0,0,0,0.8);
+}
+
+/* ========================================= */
+/* LCD SCREEN FX                             */
+/* ========================================= */
+.lcd-screen-fx {
+  position: relative;
+  overflow: hidden;
+}
+.lcd-screen-fx::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  background-image: 
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px),
+    linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.2) 100%);
+  z-index: 10;
 }

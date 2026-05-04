@@ -24,20 +24,20 @@ class FakeLedsVisualizer:
             cls._instance.segments_def = [
                 # Strip 0 (segs_1)
                 [
-                    (173, "vertical_up", 1062, 826, "segment_v4", (50, 100, 255)),
-                    (48, "horizontal", 966, 100, "segment_h32", (255, 50, 50)),
-                    (48, "horizontal", 966, 300, "segment_h31", (255, 0, 255)),
-                    (47, "horizontal", 966, 480, "segment_h30", (150, 150, 150)),
-                    (173, "vertical_up", 966, 586, "segment_v3", (0, 255, 255)),
-                    (91, "horizontal", 784, 200, "segment_h20", (150, 255, 150)),
-                    (205, "horizontal", 200, 200, "segment_h00", (0, 0, 255))
+                    (173, "vertical_up", 962, 508, "segment_v4", (50, 100, 255)),
+                    (48, "horizontal", 866, 270, "segment_h32", (255, 50, 50)),
+                    (48, "horizontal", 866, 442, "segment_h31", (255, 0, 255)),
+                    (47, "horizontal", 866, 102, "segment_h30", (150, 150, 150)),
+                    (173, "vertical_up", 684, 590, "segment_v3", (0, 255, 255)),
+                    (91, "horizontal", 684, 132, "segment_h20", (150, 255, 150)),
+                    (205, "horizontal", 100, 132, "segment_h00", (0, 0, 255))
                 ],
                 # Strip 1 (segs_2)
                 [
-                    (173, "vertical_up", 784, 606, "segment_v2", (0, 255, 0)),
-                    (87, "horizontal", 610, 280, "segment_h11", (255, 150, 100)),
-                    (86, "horizontal", 610, 546, "segment_h10", (150, 50, 200)),
-                    (173, "vertical_up", 610, 546, "segment_v1", (255, 255, 0))
+                    (173, "vertical_up", 510, 476, "segment_v2", (0, 255, 0)),
+                    (87, "horizontal", 510, 246, "segment_h11", (255, 150, 100)),
+                    (86, "horizontal", 510, 478, "segment_h10", (150, 50, 200)),
+                    (173, "vertical_up", 866, 476, "segment_v1", (255, 255, 0))
                 ]
             ]
             
