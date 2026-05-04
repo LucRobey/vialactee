@@ -1,6 +1,6 @@
-import csv
-import requests
+import json
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -8,90 +8,32 @@ class Data_reader:
 
     configurations = {}
     playlists = []
-    file_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSQMOg2yZp2tJaOK20D9RetwFd92GDbuIKQNrnZfl8KgQmrbA9TAa1Npr3rPI8tYIbqw_E9NC6RE7uR/pub?gid=452631794&single=true&output=csv"
+    file_path = os.path.join(os.path.dirname(__file__), "configurations.json")
 
-    def __init__(self , infos):
-        self.printConfigurationLoads = infos["printConfigurationLoads"]
+    def __init__(self, infos):
+        self.printConfigurationLoads = infos.get("printConfigurationLoads", False)
 
-        self.configurations , self.playlists = self.read_csv_from_google_drive()
+        self.configurations, self.playlists = self.read_json()
 
-
-
-    
-    def read_csv_from_google_drive(self):
+    def read_json(self):
         try:
-            # Send a GET request to the file URL
-            response = requests.get(self.file_url)
-            
-            # Check if the request was successful
-            if response.status_code != 200:
-                logger.error(f"Failed to download file. HTTP Response Code: {response.status_code}")
-                return
-            
-            # Check content type to verify it's a CSV file
-            content_type = response.headers.get('Content-Type', '')
-            if ( self.printConfigurationLoads):
-                logger.debug(f"(DR) Content Type: {content_type}")
-            if 'text/csv' not in content_type:
-                logger.warning("The file does not appear to be a CSV file.")
-                return
+            if not os.path.exists(self.file_path):
+                logger.error(f"Configuration file not found: {self.file_path}")
+                return {}, []
 
-            # Read the CSV content line by line
-            csv_data = response.text
-            csv_reader = csv.reader(csv_data.splitlines())
+            with open(self.file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            configurations = data.get('configurations', {})
+            playlists = data.get('playlists', [])
             
-            configurations = {}
-            playlists = []
-            active_configurations = []
-
-            # Process and print each row
-            for row_index, row in enumerate(csv_reader):
-
-              
-              if ( self.printConfigurationLoads):
-                  row_data = " | ".join(cell.strip() for cell in row)
-                  logger.debug(f"(DR)  Row {row_index}: {row_data}")
-              if(row_index>0):
-                if(row[0]!=""):
-                  playlist = row[0]
-                  name = row[1]
-                  modes={}
-                  way={}
-                  
-                  modes["Segment h00"] = row[2]
-                  way["Segment h00"] = row[3]
-                  modes["Segment v1"] = row[4]
-                  way["Segment v1"] = row[5]
-                  modes["Segment h10"] = row[6]
-                  way["Segment h10"] = row[7]
-                  modes["Segment h11"] = row[8]
-                  way["Segment h11"] = row[9]
-                  modes["Segment v2"] = row[10]
-                  way["Segment v2"] = row[11]
-                  modes["Segment h20"] = row[12]
-                  way["Segment h20"] = row[13]
-                  modes["Segment v3"] = row[14]
-                  way["Segment v3"] = row[15]
-                  modes["Segment h30"] = row[16]
-                  way["Segment h30"] = row[17]
-                  modes["Segment h31"] = row[18]
-                  way["Segment h31"] = row[19]
-                  modes["Segment h32"] = row[20]
-                  way["Segment h32"] = row[21]
-                  modes["Segment v4"] = row[22]
-                  way["Segment v4"] = row[23]
-                  if row[24] == "TRUE":
-                      active_configurations.append(True)
-                  else:
-                      active_configurations.append(False)
-                  if(active_configurations[-1]):
-                    if(playlist in configurations):
-                        configurations[playlist].append({"name":name , "modes":modes , "way":way})
-                    else:
-                        playlists.append(playlist)
-                        configurations[playlist]=[{"name":name , "modes":modes , "way":way}]
-                  
-            return configurations , playlists
-        
+            if self.printConfigurationLoads:
+                logger.debug(f"(DR) Loaded {len(playlists)} playlists from {self.file_path}")
+                for playlist in playlists:
+                    logger.debug(f"(DR)  Playlist: {playlist} -> {len(configurations.get(playlist, []))} modes")
+                    
+            return configurations, playlists
+            
         except Exception as e:
-            logger.error(f"Error reading CSV file from Google Drive: {e}")
+            logger.error(f"Error reading JSON configuration file: {e}")
+            return {}, []

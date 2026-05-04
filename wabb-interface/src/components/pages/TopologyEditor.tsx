@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { AVAILABLE_MODES } from '../../constants/modes';
 import { initialTopology, MAP_OFFSET_C, MAP_OFFSET_R, INSPECTOR_OFFSET_C, INSPECTOR_OFFSET_R } from '../../constants/topologyData';
 
 export type EditorMode = 'LIVE' | 'MODIFY' | 'BUILD';
-
-const MOCK_CONFIGURATIONS: Record<string, string[]> = {
-  'PLAYLIST_A': ['CONFIG_A1', 'CONFIG_A2', 'CONFIG_A3'],
-  'PLAYLIST_B': ['CONFIG_B1', 'CONFIG_B2']
-};
 
 // SVG Cable helper
 const Cable = ({ start, end, cp1, cp2 }: { start: number[], end: number[], cp1: number[], cp2: number[] }) => {
@@ -47,12 +42,107 @@ export const TopologyEditor = () => {
   const [selectedSegId, setSelectedSegId] = useState(initialTopology[0].id);
   const [editorMode, setEditorMode] = useState<EditorMode>('LIVE');
   const [configName, setConfigName] = useState('');
-  const [playlist, setPlaylist] = useState('PLAYLIST_A');
+  
+  // Real API state
+  const [apiPlaylists, setApiPlaylists] = useState<string[]>(['PLAYLIST_A']);
+  const [apiConfigurations, setApiConfigurations] = useState<Record<string, any[]>>({});
+  
+  const [playlistIndex, setPlaylistIndex] = useState(0);
+  const playlist = apiPlaylists[playlistIndex] || 'PLAYLIST_A';
+
+  useEffect(() => {
+    fetch('/api/configurations')
+      .then(res => res.json())
+      .then(data => {
+        if(data.playlists && data.playlists.length > 0) {
+          setApiPlaylists(data.playlists);
+        }
+        if(data.configurations) {
+          setApiConfigurations(data.configurations);
+        }
+      })
+      .catch(err => console.error("Could not load configurations", err));
+  }, []);
+
+  const handlePlaylistCycle = (dir: 1 | -1) => {
+    setPlaylistIndex(prev => {
+      let next = prev + dir;
+      if (next >= apiPlaylists.length) next = 0;
+      if (next < 0) next = apiPlaylists.length - 1;
+      return next;
+    });
+  };
+
+  const handleConfigSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedName = e.target.value;
+    setConfigName(selectedName);
+    const configsForPlaylist = apiConfigurations[playlist] || [];
+    const selectedConfig = configsForPlaylist.find((c: any) => c.name === selectedName);
+    if (selectedConfig) {
+      // Map it back to segments
+      setSegments(prev => prev.map(seg => {
+        const key = `Segment ${seg.id}`;
+        const mode = selectedConfig.modes[key] || seg.mode;
+        const direction = selectedConfig.way ? (selectedConfig.way[key] || (seg as any).direction || 'UP') : ((seg as any).direction || 'UP');
+        return { ...seg, mode, direction };
+      }));
+    }
+  };
+
+  const handleSave = () => {
+    if (!configName) return alert("Please enter a configuration name.");
+
+    const newModes: Record<string, string> = {};
+    const newWay: Record<string, string> = {};
+    segments.forEach(seg => {
+      const key = `Segment ${seg.id}`;
+      newModes[key] = seg.mode;
+      newWay[key] = (seg as any).direction || 'UP';
+    });
+
+    const newConfig = {
+      name: configName,
+      modes: newModes,
+      way: newWay
+    };
+
+    const updatedConfigs = { ...apiConfigurations };
+    if (!updatedConfigs[playlist]) updatedConfigs[playlist] = [];
+
+    if (editorMode === 'MODIFY') {
+      const idx = updatedConfigs[playlist].findIndex((c:any) => c.name === configName);
+      if (idx !== -1) {
+        updatedConfigs[playlist][idx] = newConfig;
+      } else {
+        updatedConfigs[playlist].push(newConfig);
+      }
+    } else {
+      updatedConfigs[playlist].push(newConfig);
+    }
+
+    const payload = {
+      playlists: apiPlaylists,
+      configurations: updatedConfigs
+    };
+
+    fetch('/api/configurations', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }).then(() => {
+      setApiConfigurations(updatedConfigs);
+      alert(`Configuration ${configName} saved successfully to ${playlist}!`);
+    }).catch(err => console.error(err));
+  };
 
   const selectedSeg = segments.find(s => s.id === selectedSegId)!;
 
   const handleModeSelect = (modeName: string) => {
     setSegments(prev => prev.map(seg => seg.id === selectedSegId ? { ...seg, mode: modeName } : seg));
+  };
+
+  const handleDirectionToggle = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSegments(prev => prev.map(seg => seg.id === id ? { ...seg, direction: (seg as any).direction === 'UP' ? 'DOWN' : 'UP' } : seg));
   };
 
   const getModeClass = (modeName: string) => `anim-${modeName.toLowerCase().replace(/\s+/g, '-')}`;
@@ -273,7 +363,10 @@ export const TopologyEditor = () => {
                 zIndex: 10,
                 boxShadow: '2px 2px 5px rgba(0,0,0,0.6), 0 0 15px rgba(0,0,0,0.8)' // strong shadow against the glowing background
               }}>
-                <span style={{ color: '#000', fontWeight: '900', fontFamily: 'Arial, sans-serif', fontSize: '0.55rem', letterSpacing: '0.5px' }}>
+                <span 
+                  onClick={(e) => handleDirectionToggle(e, seg.id)}
+                  style={{ color: '#000', fontWeight: '900', fontFamily: 'Arial, sans-serif', fontSize: '0.55rem', letterSpacing: '0.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '0.7rem' }}>{(seg as any).direction === 'UP' ? '▲' : '▼'}</span>
                   {seg.mode.toUpperCase()}
                 </span>
               </div>
@@ -412,7 +505,7 @@ export const TopologyEditor = () => {
             {editorMode === 'MODIFY' ? (
               <select
                 value={configName}
-                onChange={(e) => setConfigName(e.target.value)}
+                onChange={handleConfigSelect}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -430,9 +523,9 @@ export const TopologyEditor = () => {
                 }}
               >
                 <option value="" disabled style={{ background: '#0a0a0a' }}>[SELECT CONFIG]</option>
-                {(MOCK_CONFIGURATIONS[playlist] || []).map(cfg => (
-                  <option key={cfg} value={cfg} style={{ background: '#0a0a0a', color: '#fcd000' }}>
-                    {cfg}
+                {(apiConfigurations[playlist] || []).map((cfg: any) => (
+                  <option key={cfg.name} value={cfg.name} style={{ background: '#0a0a0a', color: '#fcd000' }}>
+                    {cfg.name}
                   </option>
                 ))}
               </select>
@@ -508,12 +601,12 @@ export const TopologyEditor = () => {
 
           {/* Cycle Buttons */}
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button className="cheese-slope-btn left" onClick={() => setPlaylist(p => p === 'PLAYLIST_A' ? 'PLAYLIST_B' : 'PLAYLIST_A')}>{"<"}</button>
-            <button className="cheese-slope-btn right" onClick={() => setPlaylist(p => p === 'PLAYLIST_A' ? 'PLAYLIST_B' : 'PLAYLIST_A')}>{">"}</button>
+            <button className="cheese-slope-btn left" onClick={() => handlePlaylistCycle(-1)}>{"<"}</button>
+            <button className="cheese-slope-btn right" onClick={() => handlePlaylistCycle(1)}>{">"}</button>
           </div>
 
           {/* Save Button (1x1 Round Plate) */}
-          <button style={{
+          <button onClick={handleSave} style={{
             position: 'relative',
             width: '45px', height: '45px', borderRadius: '50%', border: 'none', outline: 'none',
             backgroundColor: editorMode === 'BUILD' ? '#da291c' : '#ffcd00', 

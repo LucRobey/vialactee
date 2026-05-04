@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vialactée - Playlist Tabular Editor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { color: #fcd000; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        input, button {
+            background-color: #2a2a2a;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #0078d7;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #005a9e; }
+        button.danger { background-color: #d13438; }
+        button.danger:hover { background-color: #a80000; }
+        button.success { background-color: #107c10; padding: 10px 20px; font-size: 1.1em;}
+        button.success:hover { background-color: #0b5a0b; }
+        
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid #333;
+            border-radius: 6px;
+            max-height: 80vh;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #1e1e1e;
+            white-space: nowrap;
+        }
+        th, td {
+            padding: 4px 8px;
+            border: 1px solid #333;
+            text-align: left;
+        }
+        th {
+            background-color: #2d2d2d;
+            font-size: 0.85em;
+            color: #aaa;
+            position: sticky;
+            top: 29px;
+            z-index: 10;
+        }
+        .th-group-row th {
+            top: 0;
+            z-index: 11;
+            text-align: center;
+            border-bottom: 2px solid #555;
+            background-color: #222;
+        }
+        
+        td.sticky-col, th.sticky-col {
+            position: sticky;
+            z-index: 5;
+            background-color: #1e1e1e;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+        }
+        th.sticky-col { background-color: #2d2d2d; z-index: 15; }
+        .th-group-row th.sticky-col { background-color: #222; z-index: 16; }
+        
+        td.sticky-col-1, th.sticky-col-1 { left: 0px; }
+        td.sticky-col-2, th.sticky-col-2 { left: 45px; }
+        td.sticky-col-3, th.sticky-col-3 { left: 165px; }
+
+        td input, td select {
+            width: 120px;
+            box-sizing: border-box;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #fff;
+        }
+        td input:focus, td select:focus { background: #000; border: 1px solid #0078d7; }
+        td select { cursor: pointer; }
+        td select option { background: #1e1e1e; color: #fff; }
+        .playlist-input { color: #00ffff; font-weight: bold; width: 100px; }
+        .name-input { font-weight: bold; color: #fcd000; width: 120px; }
+        .way-input { width: 50px; text-align: center; }
+        
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #107c10;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Vialactée Standalone Editor</h1>
+    
+    <div class="header-controls">
+        <label style="background-color: #444; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            📂 1. Load "configurations.json"
+            <input type="file" accept=".json" style="display: none;" onchange="handleFileSelect(event)">
+        </label>
+        
+        <button onclick="addRow()" style="display: none;" id="btn-add-row">+ Add New Row</button>
+        <div style="flex-grow: 1;"></div>
+        <button onclick="saveData()" class="success" style="display: none;" id="btn-save">💾 2. Download Updated JSON</button>
+    </div>
+
+    <div class="table-container" id="table-wrap" style="display: none;">
+        <table id="data-table">
+            <thead>
+                <tr id="table-header-groups" class="th-group-row"></tr>
+                <tr id="table-headers"></tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Rows go here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="toast">Downloaded Successfully! Please overwrite your old file.</div>
+
+    <script>
+        const AVAILABLE_MODES = [
+            "Alcool Randomer", "Bary Rainbow", "Chromatic Chaser", "Coloured Middle Wave",
+            "Extending Waves", "Flying Ball", "Hyper Strobe", "Magnetic Ball", "Matrix Rain",
+            "Metronome", "Middle Bar", "Opposite Sides", "PSG", "Plasma Fire", "Power Bar",
+            "Proportion Rainbow", "Rainbow", "Shining Stars", "Static Wave", "Synesthesia"
+        ];
+
+        const segments = [
+            "Segment h00", "Segment v1", "Segment h10", "Segment h11", 
+            "Segment v2", "Segment h20", "Segment v3", "Segment h30", 
+            "Segment h31", "Segment h32", "Segment v4"
+        ];
+
+        let globalData = { playlists: [], configurations: {} };
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    globalData = JSON.parse(e.target.result);
+                    if (!globalData.playlists) globalData.playlists = [];
+                    if (!globalData.configurations) globalData.configurations = {};
+                    
+                    document.getElementById('table-wrap').style.display = 'block';
+                    document.getElementById('btn-add-row').style.display = 'block';
+                    document.getElementById('btn-save').style.display = 'block';
+
+                    buildTableHeaders();
+                    renderTable();
+                } catch (err) {
+                    alert("Invalid JSON file. Please ensure it is the correct configurations.json.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function buildTableHeaders() {
+            const grp = document.getElementById('table-header-groups');
+            const hdr = document.getElementById('table-headers');
+            grp.innerHTML = ''; hdr.innerHTML = '';
+
+            grp.innerHTML += `<th class="sticky-col sticky-col-1" style="width: 45px;"></th>`;
+            grp.innerHTML += `<th class="sticky-col sticky-col-2">Group</th>`;
+            grp.innerHTML += `<th class="sticky-col sticky-col-3">Group</th>`;
+            
+            hdr.innerHTML += `<th class="sticky-col sticky-col-1" style="width: 45px;">DEL</th>`;
+            hdr.innerHTML += `<th class="sticky-col sticky-col-2">Playlist</th>`;
+            hdr.innerHTML += `<th class="sticky-col sticky-col-3">Config Name</th>`;
+
+            segments.forEach(seg => {
+                grp.innerHTML += `<th colspan="2">${seg.replace('Segment ', '')}</th>`;
+                hdr.innerHTML += `<th>Mode</th><th>Way</th>`;
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            const allRows = [];
+            globalData.playlists.forEach(playlist => {
+                const configs = globalData.configurations[playlist] || [];
+                configs.forEach(config => {
+                    allRows.push({ playlist, config });
+                });
+            });
+
+            allRows.forEach(row => appendRowToTable(row.playlist, row.config));
+        }
+
+        function appendRowToTable(playlistName, configObj) {
+            const tbody = document.getElementById('table-body');
+            const tr = document.createElement('tr');
+            
+            let tdAction = document.createElement('td');
+            tdAction.className = 'sticky-col sticky-col-1';
+            tdAction.innerHTML = `<button class="danger" style="padding: 4px 8px;" onclick="this.closest('tr').remove()">X</button>`;
+            tr.appendChild(tdAction);
+
+            let tdPlaylist = document.createElement('td');
+            tdPlaylist.className = 'sticky-col sticky-col-2';
+            tdPlaylist.innerHTML = `<input type="text" class="playlist-input" value="${playlistName}">`;
+            tr.appendChild(tdPlaylist);
+
+            let tdName = document.createElement('td');
+            tdName.className = 'sticky-col sticky-col-3';
+            tdName.innerHTML = `<input type="text" class="name-input" value="${configObj.name || ''}">`;
+            tr.appendChild(tdName);
+
+            segments.forEach(seg => {
+                const modeVal = configObj.modes && configObj.modes[seg] ? configObj.modes[seg] : '';
+                const wayVal = configObj.way && configObj.way[seg] ? configObj.way[seg] : 'UP';
+                
+                let tdMode = document.createElement('td');
+                let modeSelectHTML = `<select class="mode-input" data-seg="${seg}">`;
+                let foundMatch = false;
+                
+                AVAILABLE_MODES.forEach(m => {
+                    // Match "Hyper Strobe" with "Hyper_strobe_mode" or exact string
+                    const isMatch = (m === modeVal) || 
+                                    (m.replace(/ /g, '_').toLowerCase() === modeVal.replace('_mode', '').toLowerCase());
+                    if (isMatch) foundMatch = true;
+                    modeSelectHTML += `<option value="${m}" ${isMatch ? 'selected' : ''}>${m}</option>`;
+                });
+                
+                // If it's a completely unknown mode from the JSON, add it to preserve data
+                if (modeVal && !foundMatch) {
+                    modeSelectHTML += `<option value="${modeVal}" selected>${modeVal} (Legacy)</option>`;
+                }
+                modeSelectHTML += `</select>`;
+                tdMode.innerHTML = modeSelectHTML;
+                tr.appendChild(tdMode);
+
+                let tdWay = document.createElement('td');
+                tdWay.innerHTML = `
+                    <select class="way-input" data-seg="${seg}">
+                        <option value="UP" ${wayVal === 'UP' ? 'selected' : ''}>UP</option>
+                        <option value="DOWN" ${wayVal === 'DOWN' ? 'selected' : ''}>DOWN</option>
+                    </select>
+                `;
+                tr.appendChild(tdWay);
+            });
+
+            tbody.appendChild(tr);
+        }
+
+        function addRow() {
+            const rows = document.querySelectorAll('#table-body tr');
+            let lastPlaylist = 'New Playlist';
+            if (rows.length > 0) {
+                const lastRow = rows[rows.length - 1];
+                lastPlaylist = lastRow.querySelector('.playlist-input').value;
+            }
+
+            const newConfig = { name: "new_config", modes: {}, way: {} };
+            segments.forEach(seg => {
+                newConfig.modes[seg] = "Rainbow";
+                newConfig.way[seg] = "UP";
+            });
+            
+            appendRowToTable(lastPlaylist, newConfig);
+            
+            const container = document.querySelector('.table-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function saveData() {
+            const rows = document.querySelectorAll('#table-body tr');
+            const newData = { playlists: [], configurations: {} };
+            
+            rows.forEach(tr => {
+                const playlistName = tr.querySelector('.playlist-input').value.trim();
+                const configName = tr.querySelector('.name-input').value.trim();
+                
+                if (!playlistName) return;
+                
+                if (!newData.playlists.includes(playlistName)) {
+                    newData.playlists.push(playlistName);
+                    newData.configurations[playlistName] = [];
+                }
+                
+                const modes = {};
+                const way = {};
+                
+                const modeInputs = tr.querySelectorAll('.mode-input');
+                const wayInputs = tr.querySelectorAll('.way-input');
+                
+                modeInputs.forEach(inp => modes[inp.getAttribute('data-seg')] = inp.value.trim());
+                wayInputs.forEach(inp => way[inp.getAttribute('data-seg')] = inp.value.trim());
+                
+                newData.configurations[playlistName].push({
+                    name: configName,
+                    modes: modes,
+                    way: way
+                });
+            });
+
+            // Trigger download of the updated JSON file
+            const dataStr = JSON.stringify(newData, null, 4);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "configurations.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            const toast = document.getElementById('toast');
+            toast.style.opacity = 1;
+            setTimeout(() => toast.style.opacity = 0, 4000);
+            
+            globalData = newData; 
+        }
+    </script>
+</body>
+</html>
