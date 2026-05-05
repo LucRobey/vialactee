@@ -1,6 +1,6 @@
 import modes.Mode as Mode
 import random
-import calculations.rgb_hsv as RGB_HSV
+import utils.rgb_hsv as RGB_HSV
 import time
 
 class Middle_bar_mode(Mode.Mode):

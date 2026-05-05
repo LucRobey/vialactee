@@ -4,11 +4,11 @@ import logging
 import random
 import time
 
-from Mode_Globaux import Matrix_General as Matrix_General
-from Mode_Globaux import Matrix as Matrix
-from Mode_Globaux import Matrix_data as Matrix_data
-from Mode_Globaux import Segments_Locations as Segments_Locations
-from Mode_Globaux import Mode_Tchou_Tchou as Mode_Tchou_Tchou
+from geometry import Matrix_General as Matrix_General
+from geometry import Matrix as Matrix
+from geometry import Matrix_data as Matrix_data
+from geometry import Segments_Locations as Segments_Locations
+from geometry import Mode_Tchou_Tchou as Mode_Tchou_Tchou
 
 import core.Segment as Segment
 import core.Listener as Listener

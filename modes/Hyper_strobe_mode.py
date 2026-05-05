@@ -1,6 +1,6 @@
 import numpy as np
 import modes.Mode as Mode
-import calculations.colors as colors
+import utils.colors as colors
 
 class Hyper_strobe_mode(Mode.Mode):
     def __init__(self, name, segment_name, listener, leds, indexes, rgb_list, infos):

@@ -1,5 +1,5 @@
 import modes.Mode as Mode
-import calculations.colors as colors
+import utils.colors as colors
 import time
 
 class PSG_mode(Mode.Mode):

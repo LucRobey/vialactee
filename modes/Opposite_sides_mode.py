@@ -1,6 +1,6 @@
 import modes.Mode as Mode
-import calculations.colors as colors
-import calculations.rgb_hsv as RGB_HSV
+import utils.colors as colors
+import utils.rgb_hsv as RGB_HSV
 import time
 
 class Opposite_sides_mode(Mode.Mode):

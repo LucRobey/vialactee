@@ -1,6 +1,6 @@
 import sys
 sys.path.append('c:/Users/Users/Desktop/vialactée/vialactee')
-from Mode_Globaux.Matrix_data import Matrix_data
+from geometry.Matrix_data import Matrix_data
 
 m = Matrix_data().matrix
 height = len(m)

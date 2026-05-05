@@ -1,5 +1,5 @@
 import numpy as np
-import calculations.rgb_hsv as RGB_HSV
+import utils.rgb_hsv as RGB_HSV
 import modes.Mode as Mode
 
 class Plasma_fire_mode(Mode.Mode):

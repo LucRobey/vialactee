@@ -1,6 +1,6 @@
 import modes.Mode as Mode
-import calculations.rgb_hsv as RGB_HSV
-import calculations.colors as colors
+import utils.rgb_hsv as RGB_HSV
+import utils.colors as colors
 import time
 import numpy as np
 from typing import List, Dict, Any

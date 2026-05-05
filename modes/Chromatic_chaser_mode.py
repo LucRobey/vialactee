@@ -1,5 +1,5 @@
 import numpy as np
-import calculations.rgb_hsv as RGB_HSV
+import utils.rgb_hsv as RGB_HSV
 import modes.Mode as Mode
 
 class Chromatic_chaser_mode(Mode.Mode):

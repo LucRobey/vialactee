@@ -1,5 +1,5 @@
 import modes.Mode as Mode
-import calculations.rgb_hsv as RGB_HSV
+import utils.rgb_hsv as RGB_HSV
 import numpy as np
 
 class Flying_ball_mode(Mode.Mode):

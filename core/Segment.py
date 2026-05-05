@@ -19,7 +19,7 @@ import modes.Metronome_mode as Metronome_mode
 
 import modes.Alcool_randomer as Alcool_randomer
 
-import Mode_Globaux.Segments_Locations as Segments_Locations
+import geometry.Segments_Locations as Segments_Locations
 import core.Transition_Engine as Transition_Engine
 
 import numpy as np
