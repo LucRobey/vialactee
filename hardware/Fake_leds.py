@@ -24,20 +24,20 @@ class FakeLedsVisualizer:
             cls._instance.segments_def = [
                 # Strip 0 (segs_1)
                 [
-                    (173, "vertical_up", 962, 508, "segment_v4", (50, 100, 255)),
+                    (173, "vertical", 962, 164, "segment_v4", (50, 100, 255)),
                     (48, "horizontal", 866, 270, "segment_h32", (255, 50, 50)),
                     (48, "horizontal", 866, 442, "segment_h31", (255, 0, 255)),
                     (47, "horizontal", 866, 102, "segment_h30", (150, 150, 150)),
-                    (173, "vertical_up", 684, 590, "segment_v3", (0, 255, 255)),
+                    (173, "vertical", 684, 246, "segment_v3", (0, 255, 255)),
                     (91, "horizontal", 684, 132, "segment_h20", (150, 255, 150)),
                     (205, "horizontal", 100, 132, "segment_h00", (0, 0, 255))
                 ],
                 # Strip 1 (segs_2)
                 [
-                    (173, "vertical_up", 510, 476, "segment_v2", (0, 255, 0)),
+                    (173, "vertical", 510, 132, "segment_v2", (0, 255, 0)),
                     (87, "horizontal", 510, 246, "segment_h11", (255, 150, 100)),
                     (86, "horizontal", 510, 478, "segment_h10", (150, 50, 200)),
-                    (173, "vertical_up", 866, 476, "segment_v1", (255, 255, 0))
+                    (173, "vertical", 866, 132, "segment_v1", (255, 255, 0))
                 ]
             ]
             

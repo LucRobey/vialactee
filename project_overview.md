@@ -21,22 +21,26 @@ graph TD
     %% Network and Audio Ingestion
     subgraph Connectors [Connectors]
         Conn["Connector (TCP/WS Server)"]
-        Listener["Listener (DSP & Beat Tracking)"]
+        Mic["Microphones (Local / ESP32)"]
     end
 
     Wabb -->|User Commands| Conn
-    Mic -->|Audio PCM Stream| Listener
 
     %% Core Processing Engine
     subgraph Core [Core Engine]
         Config["Configuration_manager"]
+        AudioIngest["AudioIngestion (FFT & Buffers)"]
+        AudioAnalyz["AudioAnalyzer (DSP & Rhythm)"]
         ModeMaster["Mode_master (Orchestrator)"]
         TransDir["Transition_Director"]
     end
 
+    Mic -->|PCM Stream| AudioIngest
     Conn -->|Overrides / Requests| ModeMaster
-    Listener -->|DSP State / Flux / BPM| ModeMaster
-    Listener -->|Structural Music Drops| TransDir
+    AudioIngest -->|Raw Values| AudioAnalyz
+    AudioIngest -->|Smoothed FFT / Power| ModeMaster
+    AudioAnalyz -->|BPM / Phase| ModeMaster
+    AudioAnalyz -->|Structural Music Drops| TransDir
     TransDir -->|Forces Mode Transitions| ModeMaster
 
     %% Animation and Visuals
@@ -70,7 +74,7 @@ graph TD
 
 Here is a breakdown of the core directories in this project:
 
-- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Listener (audio DSP), and the Transition Director.
+- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `AudioAnalyzer`, and the `Listener` facade), and the Transition Director.
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
 - **`/config`**: JSON files and managers detailing the hardware geometry and global settings.
 - **`/connectors`**: The external communication handlers. This includes the TCP/WebSocket server that talks to the web interface, as well as microphone stream capture tools.
