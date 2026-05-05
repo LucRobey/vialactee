@@ -1,0 +1,15 @@
+aiohttp
+Cython
+IPython
+librosa
+matplotlib
+nbformat
+numpy
+Pillow
+pygame
+pyserial
+scipy
+setuptools
+torch
+torchaudio
+adafruit-circuitpython-neopixel
