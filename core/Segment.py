@@ -7,6 +7,8 @@ import modes.Shining_stars_mode as Shining_stars_mode
 import modes.Proportion_rainbow_mode as Proportion_rainbow_mode
 import modes.PSG_mode as PSG_mode
 import modes.Opposite_sides_mode as Opposite_sides_mode
+import modes.Flying_ball_mode as Flying_ball_mode
+import modes.Coloured_middle_wave_mode as Coloured_middle_wave_mode
 
 import modes.Matrix_rain_mode as Matrix_rain_mode
 import modes.Plasma_fire_mode as Plasma_fire_mode
@@ -14,9 +16,6 @@ import modes.Hyper_strobe_mode as Hyper_strobe_mode
 import modes.Chromatic_chaser_mode as Chromatic_chaser_mode
 import modes.Synesthesia_mode as Synesthesia_mode
 import modes.Metronome_mode as Metronome_mode
-
-import modes.christmas_modes.Christmas_mode_1 as Christmas_mode_1
-import modes.christmas_modes.Christmas_mode_2 as Christmas_mode_2
 
 import modes.Alcool_randomer as Alcool_randomer
 
@@ -136,14 +135,14 @@ class Segment:
                         Proportion_rainbow_mode.Proportion_rainbow_mode("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         PSG_mode.PSG_mode                              ("PSG"               , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         Opposite_sides_mode.Opposite_sides_mode        ("Opposite Sides"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Matrix_rain_mode.Matrix_rain_mode              ("Matrix_rain_mode"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Plasma_fire_mode.Plasma_fire_mode              ("Plasma_fire_mode"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Hyper_strobe_mode.Hyper_strobe_mode            ("Hyper_strobe_mode" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Chromatic_chaser_mode.Chromatic_chaser_mode    ("Chromatic_chaser_mode", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Synesthesia_mode.Synesthesia_mode              ("Synesthesia_mode"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Metronome_mode.Metronome_mode                  ("Metronome_mode"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        #Christmas_mode_1.Christmas_mode_1              ("Christmas_mode_1"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        #Christmas_mode_2.Christmas_mode_2              ("Christmas_mode_2"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos)
+                        Matrix_rain_mode.Matrix_rain_mode              ("Matrix Rain"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Plasma_fire_mode.Plasma_fire_mode              ("Plasma Fire"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Hyper_strobe_mode.Hyper_strobe_mode            ("Hyper Strobe"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Chromatic_chaser_mode.Chromatic_chaser_mode    ("Chromatic Chaser"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Synesthesia_mode.Synesthesia_mode              ("Synesthesia"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Metronome_mode.Metronome_mode                  ("Metronome"         , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Flying_ball_mode.Flying_ball_mode              ("Flying Ball"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
+                        Coloured_middle_wave_mode.Coloured_middle_wave_mode("Coloured Middle Wave"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
                         ]
         self.modes_names = ["Rainbow",
                                 "Bary Rainbow",
@@ -152,14 +151,15 @@ class Segment:
                                 "Proportion Rainbow",
                                 "PSG",
                                 "Opposite Sides",
-                                "Matrix_rain_mode",
-                                "Plasma_fire_mode",
-                                "Hyper_strobe_mode",
-                                "Chromatic_chaser_mode",
-                                "Synesthesia_mode",
-                                "Metronome_mode",
-                                #"Christmas 1",
-                                #"Christmas 2"
+                                "Matrix Rain",
+                                "Plasma Fire",
+                                "Hyper Strobe",
+                                "Chromatic Chaser",
+                                "Synesthesia",
+                                "Metronome",
+                                "Flying Ball",
+                                "Coloured Middle Wave",
+
                                 ]
 
         if(orientation == "horizontal"):
@@ -172,6 +172,10 @@ class Segment:
         if (alcool):
             self.modes.append(Alcool_randomer.Alcool_randomer("Shot" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
             self.modes_names.append("Shot")
+            
+        # Ensure the default mode is started upon initialization
+        if 0 <= self.activ_mode < len(self.modes):
+            self.modes[self.activ_mode].start()
         
     def update_leds(self, fusion_type):
         luminosite = self.listener.luminosite
@@ -212,24 +216,25 @@ class Segment:
     def execute_mode_swap(self, mode_name):
         if self.state == "TRANSITION_DUAL":
             return
+            
+        mode_name = mode_name.strip()
+        if mode_name not in self.modes_names:
+            self.logger.warning(f"ALERTE CE MODE :{mode_name} n'existe pas pour {self.name}")
+            return
+            
+        target_index = self.modes_names.index(mode_name)
+        if target_index == self.activ_mode:
+            return
+
         self.state = "NORMAL"
         self.transition_progress = 0.0
         # On terminate l'ancien mode
         self.modes[self.activ_mode].terminate()
-        if (not mode_name in self.modes_names):
-            self.logger.warning(f"bug chelou, on transforme {mode_name} en {mode_name[1:]}")
-            mode_name = mode_name[1:]
-        found_a_mode = False
-        for mode_index in range(len(self.modes)):
-            if (self.modes_names[mode_index]==mode_name):
-                # On change l'index et on start
-                self.activ_mode = mode_index
-                self.modes[self.activ_mode].start()
-                self.logger.info(f"{self.name} a changé de mode pour {mode_name}")
-                found_a_mode = True
-                break
-        if (not found_a_mode):
-            self.logger.warning(f"ALERTE CE MODE :{mode_name} n'existe pas pour {self.name}")
+        
+        # On change l'index et on start
+        self.activ_mode = target_index
+        self.modes[self.activ_mode].start()
+        self.logger.info(f"{self.name} a changé de mode pour {mode_name}")
 
     def change_mode(self, mode_name, transition_config=None):
         if(not self.isBlocked):
@@ -240,17 +245,16 @@ class Segment:
                 
             if transition_config is not None:
                 # Resolve target index
-                target_name = mode_name
+                target_name = mode_name.strip()
                 if not target_name in self.modes_names:
-                    target_name = target_name[1:]
+                    self.logger.warning(f"ALERTE CE MODE :{target_name} n'existe pas pour {self.name}")
+                    return
                 
-                try:
-                    self.target_index = self.modes_names.index(target_name)
-                    self.target_mode_name = target_name
-                except ValueError:
-                    self.logger.warning(f"Could not find mode {target_name} for transition")
-                    self.target_index = self.activ_mode
-                    self.target_mode_name = self.modes_names[self.activ_mode]
+                self.target_index = self.modes_names.index(target_name)
+                self.target_mode_name = target_name
+
+                if self.target_index == self.activ_mode:
+                    return
 
                 # Pre-start the incoming mode so it processes data immediately
                 if not self.modes[self.target_index].isActiv:
@@ -274,16 +278,25 @@ class Segment:
     def force_mode(self , mode_name):
         if self.state == "TRANSITION_DUAL":
             return
+            
+        mode_name = mode_name.strip()
+        if mode_name not in self.modes_names:
+            self.logger.warning(f"ALERTE CE MODE :{mode_name} n'existe pas pour {self.name}")
+            return
+
+        target_index = self.modes_names.index(mode_name)
+        if target_index == self.activ_mode:
+            return
+
         self.state = "NORMAL"
         self.transition_progress = 0.0
         #On terminate l'ancien mode
         self.modes[self.activ_mode].terminate()
-        for mode_index in range(len(self.modes)):
-            if (self.modes_names[mode_index]==mode_name):
-                # On change l'index et on start
-                self.activ_mode = mode_index
-                self.modes[self.activ_mode].start()
-                self.logger.debug(f"(S) le segment {self.name} change de mode pour {mode_name}")
+        
+        # On change l'index et on start
+        self.activ_mode = target_index
+        self.modes[self.activ_mode].start()
+        self.logger.debug(f"(S) le segment {self.name} change de mode pour {mode_name}")
                 
                 
     def get_current_mode(self):

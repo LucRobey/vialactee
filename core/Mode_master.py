@@ -13,7 +13,6 @@ from Mode_Globaux import Mode_Tchou_Tchou as Mode_Tchou_Tchou
 import core.Segment as Segment
 import core.Listener as Listener
 import core.Transition_Director as Transition_Director
-import data.Data_reader as Data_reader
 
 
 
@@ -145,9 +144,21 @@ class Mode_master:
 
 
     def load_configurations(self):
-        # Le Data_reader load depuis google excel et construit notre dictionnaire
-        self.data_reader = Data_reader.Data_reader(self.infos)
-        self.configurations, self.playlists = self.data_reader.configurations, self.data_reader.playlists
+        import json
+        import os
+        file_path = os.path.join(os.path.dirname(__file__), "..", "data", "configurations.json")
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            self.configurations = data.get('configurations', {})
+            self.playlists = data.get('playlists', [])
+            if self.printConfigChanges:
+                self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists from {file_path}")
+        except Exception as e:
+            self.logger.error(f"Error reading JSON configuration file: {e}")
+            self.configurations = {}
+            self.playlists = []
+
         # On initialise le bloquage des playlists (Par défaut, on les prend toutes)
         for _ in self.playlists:
             self.blocked_playlists.append(False)
