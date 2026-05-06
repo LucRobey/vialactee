@@ -202,7 +202,9 @@ class Mode_master:
                 self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
                 
         import json
-        with open("config/segments.json", "r") as f:
+        import os
+        file_path = os.path.join(os.path.dirname(__file__), "..", "config", "segments.json")
+        with open(file_path, "r", encoding='utf-8') as f:
             data = json.load(f)
             
         add_segments(data["segs_1"],self.leds)
