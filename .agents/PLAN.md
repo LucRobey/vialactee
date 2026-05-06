@@ -4,64 +4,19 @@ This document outlines the architecture and software changes required to impleme
 
 ## 1. Hardware Pipeline Overview
 
-To achieve perfect synchronization while avoiding radio frequency coexistence bottlenecks, the physical architecture is designed as follows:
+To achieve perfect synchronization and offload Bluetooth processing, the physical architecture will be wired as follows:
 
-1.  **The Brain (Raspberry Pi):**
-    *   Acts as the primary Bluetooth A2DP Sink to receive the audio stream directly from the user's phone.
-    *   Vialactée Python code processes the audio instantly for FFT and music analysis.
-    *   Queues the audio in a 5-second delay buffer and pushes the delayed audio out via a high-quality analog output (e.g., USB Sound Card) directly to the main Speakers.
-    *   Runs the asynchronous TCP/WebSocket server for the Wabb-Interface to manage user settings.
-    *   Calculates the LED math and broadcasts the RGB frames via Wi-Fi UDP.
-2.  **LED Controller (ESP32):**
+1.  **Audio Receiver (ESP32 #1):**
+    *   Runs an A2DP Sink library to appear as a standard Bluetooth speaker to the user's phone.
+    *   Wired to a **PCM5102 I2S DAC** module to convert digital Bluetooth audio into pristine analog audio.
+    *   *Connection:* 3.5mm Aux cable from the DAC to the Raspberry Pi.
+2.  **The Processor (Raspberry Pi):**
+    *   Uses a simple **USB Sound Card** to receive the analog audio from the ESP32.
+    *   Vialactée Python code processes the audio instantly, queues it in a 5-second delay buffer, and pushes the delayed audio out via the pristine analog output.
+    *   *Connection:* 3.5mm Aux cable from the Raspberry Pi's USB Sound Card output directly to the main Speakers.
+3.  **LED Controller (ESP32 #2):**
     *   Receives pre-calculated RGB UDP packets from the Raspberry Pi over the local Wi-Fi router.
-    *   Uses a DMA driver to push data in parallel to two WS2812B NeoPixel strips (e.g., 650 LEDs each), achieving 50+ FPS without needing to compute the heavy audio DSP or process Bluetooth.
-
-### Architecture Diagram
-
-```mermaid
-graph TD
-    subgraph External [External Devices]
-        Phone["Smartphone"]
-        PC["Computer Web Interface"]
-    end
-
-    subgraph RPi [Raspberry Pi]
-        BT["Bluetooth Receiver"]
-        FFT["Audio Processing & Delay Buffer"]
-        Audio_Out["USB Sound Card (AUX)"]
-        Server["TCP/WebSocket Server"]
-        Math["Mode Orchestrator"]
-        UDP_Out["Wi-Fi UDP Sender"]
-    end
-
-    subgraph ESP [ESP32]
-        UDP_In["Wi-Fi UDP Receiver"]
-        Driver["LED DMA Driver"]
-    end
-
-    subgraph Hardware [Physical Hardware]
-        Speakers["Main Speakers"]
-        Strip1["LED Strip 1"]
-        Strip2["LED Strip 2"]
-    end
-
-    Phone -->|Bluetooth Audio| BT
-    PC <-->|Commands via Wi-Fi| Server
-    
-    BT -->|Raw Audio Data| FFT
-    FFT -->|Delayed Audio| Audio_Out
-    Audio_Out -->|Analog AUX Cable| Speakers
-    
-    FFT -->|Analyzed Music Data| Math
-    Server <-->|User Settings| Math
-    Math -->|Calculated RGB Frames| UDP_Out
-    
-    UDP_Out -.->|High-Speed UDP Packets| UDP_In
-    
-    UDP_In --> Driver
-    Driver -->|GPIO Pin A| Strip1
-    Driver -->|GPIO Pin B| Strip2
-```
+    *   Pushes local data to the WS2812B NeoPixel strips.
 
 ## 2. Software Changes Needed in Vialactée
 
