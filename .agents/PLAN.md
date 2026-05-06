@@ -27,7 +27,8 @@ graph TD
 
     subgraph RPi [Raspberry Pi]
         BT["Bluetooth Receiver"]
-        FFT["Audio Processing"]
+        FFT["Audio Processing & Delay Buffer"]
+        Audio_Out["USB Sound Card (AUX)"]
         Server["TCP/WebSocket Server"]
         Math["Mode Orchestrator"]
         UDP_Out["Wi-Fi UDP Sender"]
@@ -38,7 +39,8 @@ graph TD
         Driver["LED DMA Driver"]
     end
 
-    subgraph Hardware [Physical LEDs]
+    subgraph Hardware [Physical Hardware]
+        Speakers["Main Speakers"]
         Strip1["LED Strip 1"]
         Strip2["LED Strip 2"]
     end
@@ -47,6 +49,9 @@ graph TD
     PC <-->|Commands via Wi-Fi| Server
     
     BT -->|Raw Audio Data| FFT
+    FFT -->|Delayed Audio| Audio_Out
+    Audio_Out -->|Analog AUX Cable| Speakers
+    
     FFT -->|Analyzed Music Data| Math
     Server <-->|User Settings| Math
     Math -->|Calculated RGB Frames| UDP_Out
