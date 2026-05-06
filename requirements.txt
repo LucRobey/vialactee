@@ -13,3 +13,4 @@ setuptools
 torch
 torchaudio
 adafruit-circuitpython-neopixel
+sounddevice
