@@ -1,6 +1,5 @@
 {
     "startServer": true,
-    "useGlobalMatrix": false,
     "useMicrophone": true,
     "HARDWARE_MODE": "auto",
     "printTimeOfCalculation": false,

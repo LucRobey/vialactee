@@ -4,12 +4,6 @@ import logging
 import random
 import time
 
-from geometry import Matrix_General as Matrix_General
-from geometry import Matrix as Matrix
-from geometry import Matrix_data as Matrix_data
-from geometry import Segments_Locations as Segments_Locations
-from geometry import Mode_Tchou_Tchou as Mode_Tchou_Tchou
-
 import core.Segment as Segment
 import core.Listener as Listener
 import core.Transition_Director as Transition_Director
@@ -64,7 +58,6 @@ class Mode_master:
     def __init__(self, listener, infos, leds1, leds2):
         self.infos = infos
         self.listener = listener
-        self.useGlobalMatrix        = infos.get("useGlobalMatrix", False)
         self.onRaspberry            = infos.get("onRaspberry", False)
         self.printTimeOfCalculation = infos.get("printTimeOfCalculation", False)
         self.printModesDetails      = infos.get("printModesDetails", False)
@@ -77,11 +70,6 @@ class Mode_master:
         self.profiler = Profiler(self.printTimeOfCalculation, self.logger)
 
         self.load_configurations()
-
-        if (self.useGlobalMatrix):
-            self.matrix = Matrix.Matrix()
-            self.mode_tchou_tchou = Mode_Tchou_Tchou.Mode_Tchou_Tchou(self.matrix)
-            self.matrix_general = Matrix_General.Matrix_General(self.mode_tchou_tchou)
 
         self.initiate_segments()
         self.initiate_configuration()
@@ -100,10 +88,6 @@ class Mode_master:
         with self.profiler.measure("listener.update()"):
             self.listener.update()
 
-        if self.useGlobalMatrix:
-            with self.profiler.measure("matrix_general.update()"):
-                self.matrix_general.update()
-
         with self.profiler.measure("leds.show()"):
             is_rpi_hardware = "Rpi_NeoPixels" in str(type(self.leds))
             if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or is_rpi_hardware:
@@ -115,11 +99,6 @@ class Mode_master:
                 self.leds2.show()
 
         with self.profiler.measure("segments.update()"):
-            if self.useGlobalMatrix:
-                #get each segment its global value
-                getsegments = self.matrix_general.get_segments()
-                for seg in self.segments_list:
-                    seg.global_rgb_list = getsegments[seg.name]
             for seg_index in range(len(self.segments_list)):
                 self.segments_list[seg_index].update()
 

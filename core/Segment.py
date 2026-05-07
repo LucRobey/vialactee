@@ -19,7 +19,7 @@ import modes.Metronome_mode as Metronome_mode
 
 import modes.Alcool_randomer as Alcool_randomer
 
-import geometry.Segments_Locations as Segments_Locations
+import config.Segments_Locations as Segments_Locations
 import core.Transition_Engine as Transition_Engine
 
 import numpy as np
@@ -35,7 +35,6 @@ class Segment:
         self.leds = leds
         self.indexes = indexes
         self.infos = infos
-        self.useGlobalMatrix = infos["useGlobalMatrix"]
         self.nb_of_leds=len(self.indexes)
         if(self.listener==None):
             self.listener = listener
@@ -179,26 +178,11 @@ class Segment:
         
     def update_leds(self, fusion_type):
         luminosite = self.listener.luminosite
-        if (self.useGlobalMatrix):
-            if fusion_type == "Priority":
-                # print("len of global rgb list " ,len(self.global_rgb_list), "for segment ", {self.name}, " |len of fused list" ,len(self.fused_list) )
-                for led_index in range(len(self.global_rgb_list)):
-                    if (self.global_rgb_list[led_index] != (0,0,0)):
-                        # print(f'led_index: {led_index}, length of leds: {len(self.global_rgb_list)}, segment name: {self.name}')
-                        self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.global_rgb_list[led_index]]
-                    else:
-                        if(self.way=="UP"):
-                            
-                            self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
-                        else:
-                            self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
-        else:
-            
-            for led_index in range(self.nb_of_leds):
-                if(self.way=="UP"):
-                    self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
-                else:
-                    self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
+        for led_index in range(self.nb_of_leds):
+            if(self.way=="UP"):
+                self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
+            else:
+                self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
 
     def change_way(self , new_way):
         self.logger.debug(f"le {self.name} change de sens {self.way} pour {new_way}")

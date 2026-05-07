@@ -2,6 +2,47 @@
 
 The Transition Engine prevents the installation from turning into chaotic visual noise by applying an **Aesthetic Logic Filter** before a transition fires. It operates across Global sweeps, Local staggered cascades, and relies on strict probabilistic state management.
 
+```mermaid
+graph TD
+    %% Inputs
+    Audio["Audio Analyzer"] -->|"Event Triggers: Drop, Verse, Change"| Trigger["Trigger Event"]
+    Timer["Timer Safety-Net"] -->|"30s Stagnation"| Trigger
+    Playlist["Playlist Mood"] -->|"Constraints (Electro, Lo-Fi)"| Gate
+    
+    Trigger -->|"Request Transition"| Gate["Probabilistic Gate"]
+    
+    %% Probabilistic Gate
+    subgraph Director["Transition Director"]
+        Gate -->|"Evaluates"| Hist["Historical Memory"]
+        Gate -->|"Evaluates"| Conf["Signal Confidence"]
+        Gate -->|"Evaluates"| Geom["Spatial Configuration"]
+        Gate -->|"Evaluates"| Cool["Segment Cooldowns"]
+        
+        Hist --> Logic["Aesthetic Logic Filter"]
+        Conf --> Logic
+        Geom --> Logic
+        Cool --> Logic
+    end
+    
+    %% Outputs
+    Logic -->|"Massive Energy Spike"| Global["Global Spatial Transition"]
+    Logic -->|"Low/Sustained Energy"| Local["Local Staggered Cascade"]
+    
+    %% Global Transitions
+    subgraph Global_Sweeps["Global Sweeps"]
+        Global --> G1["Radar Scan / Matrix Rain"]
+        Global --> G2["Radial Explosion / Pendulum"]
+        Global --> G3["Audio-Spatial Gravity Cannon"]
+    end
+    
+    %% Local Transitions
+    subgraph Local_Cascades["Local Cascades"]
+        Local --> L1["Smart Configuration Diffing"]
+        Local --> L2["Spatial Domino Cascade"]
+        Local --> L3["Aesthetic Sets & Symmetries"]
+    end
+```
+
 ---
 
 ## 1. Global vs. Local Decision Matrix (`Transition_Director`)

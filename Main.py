@@ -18,10 +18,8 @@ async def main():
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         default_config = {
             "startServer"     : False,
-            "useGlobalMatrix" : False,
             "useMicrophone"   : True,
             "HARDWARE_MODE"   : "auto", # 'auto', 'rpi', or 'simulation'
-            
             "printTimeOfCalculation" : False,
             "printModesDetails"      : True,
             "printMicrophoneDetails" : False,
