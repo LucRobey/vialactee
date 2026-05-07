@@ -1,0 +1,79 @@
+{
+  "standard_modes": [
+    {
+      "name": "Rainbow",
+      "module": "Rainbow_mode",
+      "class": "Rainbow_mode"
+    },
+    {
+      "name": "Bary Rainbow",
+      "module": "Bary_rainbow_mode",
+      "class": "Bary_rainbow_mode"
+    },
+    {
+      "name": "Middle Bar",
+      "module": "Middle_bar_mode",
+      "class": "Middle_bar_mode"
+    },
+    {
+      "name": "Shining Stars",
+      "module": "Shining_stars_mode",
+      "class": "Shining_stars_mode"
+    },
+    {
+      "name": "Proportion Rainbow",
+      "module": "Proportion_rainbow_mode",
+      "class": "Proportion_rainbow_mode"
+    },
+    {
+      "name": "PSG",
+      "module": "PSG_mode",
+      "class": "PSG_mode"
+    },
+    {
+      "name": "Opposite Sides",
+      "module": "Opposite_sides_mode",
+      "class": "Opposite_sides_mode"
+    },
+    {
+      "name": "Matrix Rain",
+      "module": "Matrix_rain_mode",
+      "class": "Matrix_rain_mode"
+    },
+    {
+      "name": "Plasma Fire",
+      "module": "Plasma_fire_mode",
+      "class": "Plasma_fire_mode"
+    },
+    {
+      "name": "Hyper Strobe",
+      "module": "Hyper_strobe_mode",
+      "class": "Hyper_strobe_mode"
+    },
+    {
+      "name": "Chromatic Chaser",
+      "module": "Chromatic_chaser_mode",
+      "class": "Chromatic_chaser_mode"
+    },
+    {
+      "name": "Synesthesia",
+      "module": "Synesthesia_mode",
+      "class": "Synesthesia_mode"
+    },
+    {
+      "name": "Metronome",
+      "module": "Metronome_mode",
+      "class": "Metronome_mode"
+    },
+    {
+      "name": "Flying Ball",
+      "module": "Flying_ball_mode",
+      "class": "Flying_ball_mode"
+    },
+    {
+      "name": "Coloured Middle Wave",
+      "module": "Coloured_middle_wave_mode",
+      "class": "Coloured_middle_wave_mode"
+    }
+  ]
+}

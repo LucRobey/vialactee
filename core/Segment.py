@@ -1,29 +1,11 @@
-import modes.Mode as Mode
-import modes.Rainbow_mode as Rainbow_mode
-import modes.Middle_bar_mode as Middle_bar_mode
-import modes.Power_bar_mode as Power_bar_mode
-import modes.Bary_rainbow_mode as Bary_rainbow_mode
-import modes.Shining_stars_mode as Shining_stars_mode
-import modes.Proportion_rainbow_mode as Proportion_rainbow_mode
-import modes.PSG_mode as PSG_mode
-import modes.Opposite_sides_mode as Opposite_sides_mode
-import modes.Flying_ball_mode as Flying_ball_mode
-import modes.Coloured_middle_wave_mode as Coloured_middle_wave_mode
-
-import modes.Matrix_rain_mode as Matrix_rain_mode
-import modes.Plasma_fire_mode as Plasma_fire_mode
-import modes.Hyper_strobe_mode as Hyper_strobe_mode
-import modes.Chromatic_chaser_mode as Chromatic_chaser_mode
-import modes.Synesthesia_mode as Synesthesia_mode
-import modes.Metronome_mode as Metronome_mode
-
-import modes.Alcool_randomer as Alcool_randomer
-
 import config.Segments_Locations as Segments_Locations
 import core.Transition_Engine as Transition_Engine
 
 import numpy as np
 import logging
+import importlib
+import json
+import os
 
 class Segment:
     
@@ -125,52 +107,44 @@ class Segment:
         
         self.update_leds("Priority")
         
-
+    #Load the json modes.json and initiate the modes 
     def initiate_modes(self , orientation , alcool):
-        self.modes = [Rainbow_mode.Rainbow_mode                        ("Rainbow"           , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Bary_rainbow_mode.Bary_rainbow_mode            ("Bary Rainbow"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Middle_bar_mode.Middle_bar_mode                ("Middle Bar"        , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Shining_stars_mode.Shining_stars_mode          ("Shining Stars"     , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Proportion_rainbow_mode.Proportion_rainbow_mode("Proportion Rainbow", self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        PSG_mode.PSG_mode                              ("PSG"               , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Opposite_sides_mode.Opposite_sides_mode        ("Opposite Sides"    , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Matrix_rain_mode.Matrix_rain_mode              ("Matrix Rain"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Plasma_fire_mode.Plasma_fire_mode              ("Plasma Fire"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Hyper_strobe_mode.Hyper_strobe_mode            ("Hyper Strobe"      , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Chromatic_chaser_mode.Chromatic_chaser_mode    ("Chromatic Chaser"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Synesthesia_mode.Synesthesia_mode              ("Synesthesia"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Metronome_mode.Metronome_mode                  ("Metronome"         , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Flying_ball_mode.Flying_ball_mode              ("Flying Ball"       , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        Coloured_middle_wave_mode.Coloured_middle_wave_mode("Coloured Middle Wave"  , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos),
-                        ]
-        self.modes_names = ["Rainbow",
-                                "Bary Rainbow",
-                                "Middle Bar",
-                                "Shining Stars",
-                                "Proportion Rainbow",
-                                "PSG",
-                                "Opposite Sides",
-                                "Matrix Rain",
-                                "Plasma Fire",
-                                "Hyper Strobe",
-                                "Chromatic Chaser",
-                                "Synesthesia",
-                                "Metronome",
-                                "Flying Ball",
-                                "Coloured Middle Wave",
+        self.modes = []
+        self.modes_names = []
+        
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'modes.json')
+        try:
+            with open(config_path, 'r') as f:
+                mode_config = json.load(f)
+        except Exception as e:
+            self.logger.error(f"Failed to load modes.json: {e}")
+            return
+            
+        args = (self.name, self.listener, self.leds, self.indexes, self.rgb_list, self.infos)
+        
+        def load_mode_list(mode_list):
+            for mode_info in mode_list:
+                try:
+                    mode_name = mode_info["name"]
+                    module_name = f"modes.{mode_info['module']}"
+                    class_name = mode_info["class"]
+                    
+                    module = importlib.import_module(module_name)
+                    mode_class = getattr(module, class_name)
+                    
+                    self.modes_names.append(mode_name)
+                    self.modes.append(mode_class(mode_name, *args))
+                except Exception as e:
+                    self.logger.error(f"Failed to load mode {mode_info.get('name', 'Unknown')}: {e}")
 
-                                ]
+        # Load standard modes
+        load_mode_list(mode_config.get("standard_modes", []))
 
         if(orientation == "horizontal"):
             pass
                       
         if(orientation == "vertical"):
-            self.modes.append(Power_bar_mode.Power_bar_mode("Power_bar" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
-            self.modes_names.append("Power Bar")
-
-        if (alcool):
-            self.modes.append(Alcool_randomer.Alcool_randomer("Shot" , self.name , self.listener , self.leds , self.indexes , self.rgb_list , self.infos))
-            self.modes_names.append("Shot")
+            load_mode_list(mode_config.get("vertical_modes", []))
             
         # Ensure the default mode is started upon initialization
         if 0 <= self.activ_mode < len(self.modes):
