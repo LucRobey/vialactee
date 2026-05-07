@@ -38,7 +38,7 @@ class Segment:
     def _load_coordinates(self):
         coords_list = self._configuration_manager.get_segment_coordinates(self.name)
         if coords_list is None:
-            self.logger.warning(f"Could not find coordinates for {self.name} in segments_locations.json")
+            self.logger.warning(f"Could not find coordinates for {self.name} in segments.json")
         elif len(coords_list) < self.nb_of_leds:
             self.logger.warning(f"Coordinate length mismatch for {self.name}. Expected {self.nb_of_leds}, got {len(coords_list)}")
         else:

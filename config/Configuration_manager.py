@@ -9,16 +9,28 @@ class Configurations_manager:
     def _build_line_coordinates(self, length, start_x, start_y, step_x, step_y):
         return [[start_x + (i * step_x), start_y + (i * step_y)] for i in range(length)]
 
+    def _iter_segment_definitions(self, payload):
+        if isinstance(payload.get("segments"), list):
+            return payload["segments"]
+
+        segment_definitions = []
+        for key, value in payload.items():
+            if isinstance(value, list):
+                segment_definitions.extend(value)
+        return segment_definitions
+
     def _load_segments_locations(self):
-        config_path = os.path.join(os.path.dirname(__file__), "segments_locations.json")
+        config_path = os.path.join(os.path.dirname(__file__), "segments.json")
         with open(config_path, "r", encoding="utf-8") as file:
             payload = json.load(file)
 
-        segments = payload.get("segments", [])
+        segments = self._iter_segment_definitions(payload)
         coords_by_name = {}
         for segment in segments:
+            if "start" not in segment or "step" not in segment:
+                continue
             name = segment["name"]
-            length = int(segment["length"])
+            length = int(segment.get("length", segment.get("size", 0)))
             start_x = int(segment["start"]["x"])
             start_y = int(segment["start"]["y"])
             step_x = int(segment["step"]["x"])
