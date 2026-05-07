@@ -30,8 +30,16 @@ class Segment:
         
         self.isBlocked = False
 
-        self.modes=[]
-        self.modes_names=[]
+        self.way = "UP"
+        self.activ_mode = "Shining Stars"
+
+        self.state = "NORMAL"
+        self.transition_progress = 0.0
+        self.transition_step = 0.05
+        self.target_mode_name = None
+        self.transition_type = None
+
+        self.modes = {}
         self.initiate_modes(orientation , alcool)
 
     def _load_coordinates(self):
@@ -45,18 +53,6 @@ class Segment:
                 self.logger.warning(f"Coordinate length mismatch for {self.name}. Expected {self.nb_of_leds}, got {len(coords_list)}")
         else:
             self.logger.warning(f"Could not find coordinates for {self.name} in Segments_Locations")
-
-        
-        self.way="UP"
-
-        self.activ_mode = 3
-
-        self.state = "NORMAL"
-        self.transition_progress = 0.0
-        self.transition_step = 0.05
-        self.target_mode_name = None
-        self.target_index = None
-        self.transition_type = None
 
 
 
@@ -75,12 +71,12 @@ class Segment:
                 
                 # --- UPDATE NEW MODE INTO SECONDARY BUFFER ---
                 # We point the incoming mode exclusively to our dual_rgb_list buffer
-                self.modes[self.target_index].rgb_list = self.dual_rgb_list
-                if self.modes[self.target_index].isActiv:
-                    self.modes[self.target_index].update()
+                self.modes[self.target_mode_name].rgb_list = self.dual_rgb_list
+                if self.modes[self.target_mode_name].isActiv:
+                    self.modes[self.target_mode_name].update()
                 
                 # Immediately restore the pointer for data safety
-                self.modes[self.target_index].rgb_list = self.rgb_list
+                self.modes[self.target_mode_name].rgb_list = self.rgb_list
 
                 # --- SPATIAL MIX BOTH BUFFERS INTO PRIMARY BUFFER ---
                 active_coords = self.coords_array
@@ -100,7 +96,7 @@ class Segment:
             if self.transition_progress >= 1.0 or self.modes[self.activ_mode].has_custom_transition:
                 # Execution complete! Swap the modes and terminate old one.
                 self.modes[self.activ_mode].terminate()
-                self.activ_mode = self.target_index
+                self.activ_mode = self.target_mode_name
                 
                 self.state = "NORMAL"
                 self.transition_progress = 0.0
@@ -109,8 +105,7 @@ class Segment:
         
     #Load the json modes.json and initiate the modes 
     def initiate_modes(self , orientation , alcool):
-        self.modes = []
-        self.modes_names = []
+        self.modes = {}
         
         config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'modes.json')
         try:
@@ -132,8 +127,7 @@ class Segment:
                     module = importlib.import_module(module_name)
                     mode_class = getattr(module, class_name)
                     
-                    self.modes_names.append(mode_name)
-                    self.modes.append(mode_class(mode_name, *args))
+                    self.modes[mode_name] = mode_class(mode_name, *args)
                 except Exception as e:
                     self.logger.error(f"Failed to load mode {mode_info.get('name', 'Unknown')}: {e}")
 
@@ -147,7 +141,7 @@ class Segment:
             load_mode_list(mode_config.get("vertical_modes", []))
             
         # Ensure the default mode is started upon initialization
-        if 0 <= self.activ_mode < len(self.modes):
+        if self.activ_mode in self.modes:
             self.modes[self.activ_mode].start()
         
     def update_leds(self, fusion_type):
@@ -171,17 +165,18 @@ class Segment:
         self.change_way(new_way)
         
 
+    
+
     def execute_mode_swap(self, mode_name):
         if self.state == "TRANSITION_DUAL":
             return
             
-        mode_name = mode_name.strip()
-        if mode_name not in self.modes_names:
+        mode_name = self._normalize_mode_name(mode_name)
+        if mode_name not in self.modes:
             self.logger.warning(f"ALERTE CE MODE :{mode_name} n'existe pas pour {self.name}")
             return
             
-        target_index = self.modes_names.index(mode_name)
-        if target_index == self.activ_mode:
+        if mode_name == self.activ_mode:
             return
 
         self.state = "NORMAL"
@@ -190,7 +185,7 @@ class Segment:
         self.modes[self.activ_mode].terminate()
         
         # On change l'index et on start
-        self.activ_mode = target_index
+        self.activ_mode = mode_name
         self.modes[self.activ_mode].start()
         self.logger.info(f"{self.name} a changé de mode pour {mode_name}")
 
@@ -203,20 +198,19 @@ class Segment:
                 
             if transition_config is not None:
                 # Resolve target index
-                target_name = mode_name.strip()
-                if not target_name in self.modes_names:
+                target_name = self._normalize_mode_name(mode_name)
+                if target_name not in self.modes:
                     self.logger.warning(f"ALERTE CE MODE :{target_name} n'existe pas pour {self.name}")
                     return
                 
-                self.target_index = self.modes_names.index(target_name)
                 self.target_mode_name = target_name
 
-                if self.target_index == self.activ_mode:
+                if self.target_mode_name == self.activ_mode:
                     return
 
                 # Pre-start the incoming mode so it processes data immediately
-                if not self.modes[self.target_index].isActiv:
-                    self.modes[self.target_index].start()
+                if not self.modes[self.target_mode_name].isActiv:
+                    self.modes[self.target_mode_name].start()
 
                 self.state = "TRANSITION_DUAL"
                 self.transition_progress = 0.0
@@ -237,13 +231,12 @@ class Segment:
         if self.state == "TRANSITION_DUAL":
             return
             
-        mode_name = mode_name.strip()
-        if mode_name not in self.modes_names:
+        mode_name = self._normalize_mode_name(mode_name)
+        if mode_name not in self.modes:
             self.logger.warning(f"ALERTE CE MODE :{mode_name} n'existe pas pour {self.name}")
             return
 
-        target_index = self.modes_names.index(mode_name)
-        if target_index == self.activ_mode:
+        if mode_name == self.activ_mode:
             return
 
         self.state = "NORMAL"
@@ -252,16 +245,30 @@ class Segment:
         self.modes[self.activ_mode].terminate()
         
         # On change l'index et on start
-        self.activ_mode = target_index
+        self.activ_mode = mode_name
         self.modes[self.activ_mode].start()
         self.logger.debug(f"(S) le segment {self.name} change de mode pour {mode_name}")
                 
                 
     def get_current_mode(self):
-        return self.modes_names[self.activ_mode]
+        return self.activ_mode
          
     def block(self):
         self.isBlocked = True
 
     def unBlock(self):
         self.isBlocked = False
+
+
+    #Pass from user friendly name (example : plasma fire) to the internal name (example : Plasma_Fire_mode)
+    def _normalize_mode_name(self, mode_name):
+        mode_name = mode_name.strip()
+        if mode_name in self.modes:
+            return mode_name
+            
+        # Legacy support for "Metronome_mode", "Plasma_fire_mode", etc.
+        for name in self.modes:
+            if name.replace(" ", "").lower() == mode_name.replace("_mode", "").replace("_", "").lower():
+                return name
+                
+        return mode_name
