@@ -1,4 +1,4 @@
-import config.Segments_Locations as Segments_Locations
+import config.Configuration_manager as Configuration_manager
 import core.Transition_Engine as Transition_Engine
 
 import numpy as np
@@ -10,6 +10,7 @@ import os
 class Segment:
     
     listener = None
+    _configuration_manager = Configuration_manager.Configurations_manager()
 
     def __init__(self , name ,listener , leds , indexes , orientation , alcool , infos):
         self.name = name
@@ -43,16 +44,13 @@ class Segment:
         self.initiate_modes(orientation , alcool)
 
     def _load_coordinates(self):
-        locations = Segments_Locations.Segments_Locations()
-        if self.name in locations.segment_names:
-            idx = locations.segment_names.index(self.name)
-            coords_list = locations.segment_coords[idx]
-            if len(coords_list) >= self.nb_of_leds:
-                self.coords_array = np.array(coords_list[:self.nb_of_leds])
-            else:
-                self.logger.warning(f"Coordinate length mismatch for {self.name}. Expected {self.nb_of_leds}, got {len(coords_list)}")
+        coords_list = self._configuration_manager.get_segment_coordinates(self.name)
+        if coords_list is None:
+            self.logger.warning(f"Could not find coordinates for {self.name} in segments.json")
+        elif len(coords_list) < self.nb_of_leds:
+            self.logger.warning(f"Coordinate length mismatch for {self.name}. Expected {self.nb_of_leds}, got {len(coords_list)}")
         else:
-            self.logger.warning(f"Could not find coordinates for {self.name} in Segments_Locations")
+            self.coords_array = np.array(coords_list[:self.nb_of_leds])
 
 
 

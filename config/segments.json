@@ -1,17 +1,17 @@
 {
   "segs_1": [
-    {"name": "Segment v4", "size": 173, "order": 0, "orientation": "vertical", "alcool": false},
-    {"name": "Segment h32", "size": 48, "order": 1, "orientation": "horizontal", "alcool": false},
-    {"name": "Segment h31", "size": 48, "order": 2, "orientation": "horizontal", "alcool": false},
-    {"name": "Segment h30", "size": 47, "order": 3, "orientation": "horizontal", "alcool": false},
-    {"name": "Segment v3", "size": 173, "order": 4, "orientation": "vertical", "alcool": false},
-    {"name": "Segment h20", "size": 91, "order": 5, "orientation": "horizontal", "alcool": true},
-    {"name": "Segment h00", "size": 205, "order": 6, "orientation": "horizontal", "alcool": true}
+    {"name": "Segment v4", "size": 173, "order": 0, "orientation": "vertical", "alcool": false, "start": {"x": 430, "y": 204}, "step": {"x": 0, "y": -1}},
+    {"name": "Segment h32", "size": 48, "order": 1, "orientation": "horizontal", "alcool": false, "start": {"x": 382, "y": 1}, "step": {"x": 1, "y": 0}},
+    {"name": "Segment h31", "size": 48, "order": 2, "orientation": "horizontal", "alcool": false, "start": {"x": 382, "y": 85}, "step": {"x": 1, "y": 0}},
+    {"name": "Segment h30", "size": 47, "order": 3, "orientation": "horizontal", "alcool": false, "start": {"x": 382, "y": 171}, "step": {"x": 1, "y": 0}},
+    {"name": "Segment v3", "size": 173, "order": 4, "orientation": "vertical", "alcool": false, "start": {"x": 382, "y": 188}, "step": {"x": 0, "y": -1}},
+    {"name": "Segment h20", "size": 91, "order": 5, "orientation": "horizontal", "alcool": true, "start": {"x": 291, "y": 16}, "step": {"x": 1, "y": 0}},
+    {"name": "Segment h00", "size": 205, "order": 6, "orientation": "horizontal", "alcool": true, "start": {"x": 0, "y": 16}, "step": {"x": 1, "y": 0}}
   ],
   "segs_2": [
-    {"name": "Segment v2", "size": 173, "order": 7, "orientation": "vertical", "alcool": false},
-    {"name": "Segment h11", "size": 87, "order": 8, "orientation": "horizontal", "alcool": false},
-    {"name": "Segment h10", "size": 86, "order": 9, "orientation": "horizontal", "alcool": false},
-    {"name": "Segment v1", "size": 173, "order": 10, "orientation": "vertical", "alcool": false}
+    {"name": "Segment v2", "size": 173, "order": 7, "orientation": "vertical", "alcool": false, "start": {"x": 291, "y": 245}, "step": {"x": 0, "y": -1}},
+    {"name": "Segment h11", "size": 87, "order": 8, "orientation": "horizontal", "alcool": false, "start": {"x": 205, "y": 73}, "step": {"x": 1, "y": 0}},
+    {"name": "Segment h10", "size": 86, "order": 9, "orientation": "horizontal", "alcool": false, "start": {"x": 205, "y": 189}, "step": {"x": 1, "y": 0}},
+    {"name": "Segment v1", "size": 173, "order": 10, "orientation": "vertical", "alcool": false, "start": {"x": 205, "y": 188}, "step": {"x": 0, "y": -1}}
   ]
 }

@@ -26,7 +26,12 @@ class Transition_Director:
             config_path = os.path.join(os.path.dirname(__file__), "..", "config", "segments.json")
             with open(config_path, "r") as f:
                 data = json.load(f)
-                for group_name, segment_list in data.items():
+                if isinstance(data.get("segments"), list):
+                    segment_lists = [data["segments"]]
+                else:
+                    segment_lists = [value for value in data.values() if isinstance(value, list)]
+
+                for segment_list in segment_lists:
                     for seg in segment_list:
                         name = seg["name"]
                         self.all_segments.append(name)
