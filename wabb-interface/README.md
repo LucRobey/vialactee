@@ -11,8 +11,17 @@ It serves as the official remote control for the chandelier. We pivoted to this 
 - **Interface Capabilities**: Provides sliders, toggle buttons, and visual feedback for the user to manipulate playlist rotation, override colors, force mode changes, and observe the system's real-time performance metrics.
 
 ## Development:
-To run the interface locally:
+The interface now auto-launches when you run `Main.py` (if `startWebApp` is `true` in `config/app_config.json`).
+
+To run the interface manually:
 ```bash
 npm install
 npm run dev
+```
+
+If you want to disable auto-launch, set:
+```json
+{
+  "startWebApp": false
+}
 ```

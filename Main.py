@@ -2,12 +2,76 @@ import asyncio
 import logging
 import json
 import os
+import contextlib
+import shutil
 
 import core.Listener as Listener
 import connectors.Connector as Connector
 import connectors.Local_Microphone as Local_Microphone
 import core.Mode_master as Mode_master
 import hardware.HardwareFactory as HardwareFactory
+
+
+def resolve_npm_executable():
+    # On Windows, npm is usually exposed as npm.cmd.
+    npm_exec = shutil.which("npm") or shutil.which("npm.cmd")
+    if npm_exec:
+        return npm_exec
+    return None
+
+
+async def launch_webapp(infos):
+    if not infos.get("startWebApp", True):
+        logging.info("Web app autostart disabled by config.")
+        return
+
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    webapp_dir = os.path.join(project_root, "wabb-interface")
+    package_json_path = os.path.join(webapp_dir, "package.json")
+    node_modules_path = os.path.join(webapp_dir, "node_modules")
+    npm_exec = resolve_npm_executable()
+
+    if not os.path.exists(package_json_path):
+        logging.warning("Web app package.json not found at %s. Skipping web app launch.", webapp_dir)
+        return
+    if not npm_exec:
+        logging.error("`npm` command not found. Install Node.js to autostart the web app.")
+        return
+
+    try:
+        if not os.path.exists(node_modules_path):
+            logging.info("Installing web app dependencies (first launch)...")
+            install_process = await asyncio.create_subprocess_exec(
+                npm_exec, "install",
+                cwd=webapp_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT
+            )
+            await install_process.communicate()
+            if install_process.returncode != 0:
+                raise RuntimeError(f"`npm install` failed with code {install_process.returncode}")
+
+        logging.info("Starting web app at http://localhost:5173 ...")
+        webapp_process = await asyncio.create_subprocess_exec(
+            npm_exec, "run", "dev", "--", "--host", "0.0.0.0",
+            cwd=webapp_dir,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT
+        )
+    except FileNotFoundError:
+        logging.error("`npm` command not found. Install Node.js to autostart the web app.")
+        return
+
+    try:
+        await webapp_process.wait()
+        if webapp_process.returncode != 0:
+            raise RuntimeError(f"Web app process exited with code {webapp_process.returncode}")
+    except asyncio.CancelledError:
+        logging.info("Stopping web app process...")
+        webapp_process.terminate()
+        with contextlib.suppress(ProcessLookupError):
+            await webapp_process.wait()
+        raise
 
 
 async def main():
@@ -18,6 +82,7 @@ async def main():
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         default_config = {
             "startServer"     : False,
+            "startWebApp"     : True,
             "useGlobalMatrix" : False,
             "useMicrophone"   : True,
             "HARDWARE_MODE"   : "auto", # 'auto', 'rpi', or 'simulation'
@@ -58,6 +123,7 @@ async def main():
     ]
     if infos.get("startServer", False):
         tasks.append(asyncio.create_task(connector.start_server(), name="Server"))
+    tasks.append(asyncio.create_task(launch_webapp(infos), name="WebApp"))
 
     try:
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
