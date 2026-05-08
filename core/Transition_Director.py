@@ -5,7 +5,22 @@ import json
 import os
 
 class Transition_Director:
+    """
+    Directs transitions between visual modes based on audio context and timers.
+    
+    This class evaluates the current audio state (via the Listener) and geometry 
+    to decide when and how to transition between different display modes.
+    """
+
     def __init__(self, listener, infos):
+        """
+        Initialize the Transition_Director.
+
+        Args:
+            listener: The listener object providing audio analysis data.
+            infos (dict): Configuration dictionary containing settings like 
+                silence thresholds.
+        """
         self.listener = listener
         self.logger = logging.getLogger("Transition_Director")
         self.silence_threshold = infos.get("silence_threshold", 150)
@@ -21,7 +36,12 @@ class Transition_Director:
         self._load_segments()
 
     def _load_segments(self):
-        """Reads the segments.json config directly to understand the hardware layout."""
+        """
+        Read the segments configuration to understand the hardware layout.
+
+        Parses the segments.json file to classify available segments into 
+        vertical and horizontal groups for geometric-based logic.
+        """
         try:
             config_path = os.path.join(os.path.dirname(__file__), "..", "config", "segments.json")
             with open(config_path, "r") as f:
@@ -43,42 +63,22 @@ class Transition_Director:
         except Exception as e:
             self.logger.error(f"(TD) Failed to load segments.json: {e}")
 
-    def choose_a_local_group(self):
-        """Returns a list of segment names selected based on geometric logic."""
-        if not self.all_segments:
-            return []
-            
-        ideas = []
-        
-        # Idea 1: All Verticals
-        if self.verticals:
-            ideas.append(self.verticals)
-            
-        # Idea 2: All Horizontals
-        if self.horizontals:
-            ideas.append(self.horizontals)
-            
-        # Idea 3: Symmetrical pairs (v1 & v4, or v2 & v3)
-        v_outer = [s for s in self.verticals if "v1" in s or "v4" in s]
-        v_inner = [s for s in self.verticals if "v2" in s or "v3" in s]
-        if v_outer: ideas.append(v_outer)
-        if v_inner: ideas.append(v_inner)
-        
-        # Idea 4: Small random subset (e.g. 2 to 4 random segments)
-        random_count = random.randint(2, min(4, len(self.all_segments)))
-        random_subset = random.sample(self.all_segments, random_count)
-        ideas.append(random_subset)
-        
-        # Return a randomly selected logic group
-        chosen = random.choice(ideas)
-        self.logger.debug(f"(TD) Selected Local Group: {chosen}")
-        return chosen
 
     def evaluate_context(self, current_time, next_change_time):
         """
-        Analyzes the audio state from the Listener and dictates if we should change modes.
-        Returns a tuple: (action_string, transition_config_dict)
-        Valid actions: "force_standby", "allow_change", "delay_change", "none"
+        Analyze the audio state and dictate whether to change modes.
+
+        Evaluates silence, audio events, and timers to determine the next 
+        transition action and configuration.
+
+        Args:
+            current_time (float): The current system time.
+            next_change_time (float): The scheduled time for the next transition.
+
+        Returns:
+            tuple: A pair (action_string, transition_config_dict) defining the 
+                action to take (e.g., "force_standby", "allow_change", "none") 
+                and the configuration for the transition.
         """
         is_silence = self.listener.smoothed_total_power < self.silence_threshold
         
@@ -100,14 +100,6 @@ class Transition_Director:
         #     chosen_effect = random.choice(["global_change", "radar_scan", "gravity_drop"])
         #     return "allow_change", {"type": chosen_effect, "duration": 4.0}
 
-        # if getattr(self.listener, "is_verse_chorus_change", False):
-        #     self.logger.info("(TD) Audio Event: VERSE/CHORUS BOUNDARY DETECTED -> LOCAL")
-        #     targeted_segs = self.choose_a_local_group()
-        #     return "allow_change", {
-        #         "type": "local_change", 
-        #         "duration": 2.0,
-        #         "segments": targeted_segs
-        #     }
 
         # 3. Evaluate Standard Transitions based on internal timers -> Fallback LOCAL
         if current_time > next_change_time:
