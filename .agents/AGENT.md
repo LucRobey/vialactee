@@ -18,7 +18,6 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
       "size": 173,
       "order": 0,
       "orientation": "vertical",
-      "alcool": false
     }
     ```
 * `connectors/`: The `Connector.py` TCP server (Port 12345) and Microphones (`ESP32_Microphone` / `Local_Microphone`).

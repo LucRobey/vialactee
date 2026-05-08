@@ -11,6 +11,7 @@ The `core` directory is the engine room of Vialactée. It contains the primary m
 - **`Segment.py`**: A logical abstraction of the physical LED strips, mapping mathematical vectors to physical addresses.
 
 ## How it works:
+
 The `Mode_master` runs an asynchronous loop, asking the `Listener` for the current state of the music. Based on rules handled by the `Transition_Director`, it updates the LED `Segment`s using the algorithms defined in the `modes/` directory.
 
 ## Core Architecture Diagram
@@ -56,7 +57,7 @@ classDiagram
     class AudioIngestion {
         +smoothed_total_power
     }
-    
+  
     class AudioAnalyzer {
         +bpm
         +is_song_change
@@ -87,13 +88,9 @@ classDiagram
 
 1. **Audio Ingestion & Calculation:**
    `Mode_master` fires `listener.update()` every frame. The `Listener` (acting as a facade) processes raw audio through `AudioIngestion` and runs the algorithmic detections in `AudioAnalyzer`.
-
 2. **Context Evaluation:**
    `Mode_master` immediately asks the `Transition_Director` what to do by passing the time state: `transition_director.evaluate_context(current_time, next_change_time)`.
-   
 3. **Probabilistic Decision:**
    `Transition_Director` looks at the state of the `Listener` (checking variables like `smoothed_total_power`, `is_song_change`, `is_verse_chorus_change`). It determines whether to allow a transition to happen, force the system to go into standby (due to silence), or wait. It then packages its decision into an instruction tuple: `(action, transition_config)`.
-
 4. **Execution:**
    `Mode_master` receives the `action` returned by the director. If the action is `"allow_change"`, the orchestrator executes `change_configuration()` passing along the spatial transition configuration matrix requested by the director to all the underlying physical `Segment` objects.
-

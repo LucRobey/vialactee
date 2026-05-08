@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,49 +13,79 @@
             margin: 0;
             padding: 20px;
         }
-        h1 { color: #fcd000; border-bottom: 2px solid #333; padding-bottom: 10px; }
+
+        h1 {
+            color: #fcd000;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
         .header-controls {
             display: flex;
             gap: 15px;
             margin-bottom: 20px;
             align-items: center;
         }
-        input, button {
+
+        input,
+        button {
             background-color: #2a2a2a;
             color: #fff;
             border: 1px solid #444;
             padding: 8px 12px;
             border-radius: 4px;
         }
+
         button {
             background-color: #0078d7;
             border: none;
             cursor: pointer;
             font-weight: bold;
         }
-        button:hover { background-color: #005a9e; }
-        button.danger { background-color: #d13438; }
-        button.danger:hover { background-color: #a80000; }
-        button.success { background-color: #107c10; padding: 10px 20px; font-size: 1.1em;}
-        button.success:hover { background-color: #0b5a0b; }
-        
+
+        button:hover {
+            background-color: #005a9e;
+        }
+
+        button.danger {
+            background-color: #d13438;
+        }
+
+        button.danger:hover {
+            background-color: #a80000;
+        }
+
+        button.success {
+            background-color: #107c10;
+            padding: 10px 20px;
+            font-size: 1.1em;
+        }
+
+        button.success:hover {
+            background-color: #0b5a0b;
+        }
+
         .table-container {
             overflow-x: auto;
             border: 1px solid #333;
             border-radius: 6px;
             max-height: 80vh;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             background-color: #1e1e1e;
             white-space: nowrap;
         }
-        th, td {
+
+        th,
+        td {
             padding: 4px 8px;
             border: 1px solid #333;
             text-align: left;
         }
+
         th {
             background-color: #2d2d2d;
             font-size: 0.85em;
@@ -63,6 +94,7 @@
             top: 29px;
             z-index: 10;
         }
+
         .th-group-row th {
             top: 0;
             z-index: 11;
@@ -70,34 +102,81 @@
             border-bottom: 2px solid #555;
             background-color: #222;
         }
-        
-        td.sticky-col, th.sticky-col {
+
+        td.sticky-col,
+        th.sticky-col {
             position: sticky;
             z-index: 5;
             background-color: #1e1e1e;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
         }
-        th.sticky-col { background-color: #2d2d2d; z-index: 15; }
-        .th-group-row th.sticky-col { background-color: #222; z-index: 16; }
-        
-        td.sticky-col-1, th.sticky-col-1 { left: 0px; }
-        td.sticky-col-2, th.sticky-col-2 { left: 45px; }
-        td.sticky-col-3, th.sticky-col-3 { left: 165px; }
 
-        td input, td select {
+        th.sticky-col {
+            background-color: #2d2d2d;
+            z-index: 15;
+        }
+
+        .th-group-row th.sticky-col {
+            background-color: #222;
+            z-index: 16;
+        }
+
+        td.sticky-col-1,
+        th.sticky-col-1 {
+            left: 0px;
+        }
+
+        td.sticky-col-2,
+        th.sticky-col-2 {
+            left: 45px;
+        }
+
+        td.sticky-col-3,
+        th.sticky-col-3 {
+            left: 165px;
+        }
+
+        td input,
+        td select {
             width: 120px;
             box-sizing: border-box;
             background: transparent;
             border: 1px solid transparent;
             color: #fff;
         }
-        td input:focus, td select:focus { background: #000; border: 1px solid #0078d7; }
-        td select { cursor: pointer; }
-        td select option { background: #1e1e1e; color: #fff; }
-        .playlist-input { color: #00ffff; font-weight: bold; width: 100px; }
-        .name-input { font-weight: bold; color: #fcd000; width: 120px; }
-        .way-input { width: 50px; text-align: center; }
-        
+
+        td input:focus,
+        td select:focus {
+            background: #000;
+            border: 1px solid #0078d7;
+        }
+
+        td select {
+            cursor: pointer;
+        }
+
+        td select option {
+            background: #1e1e1e;
+            color: #fff;
+        }
+
+        .playlist-input {
+            color: #00ffff;
+            font-weight: bold;
+            width: 100px;
+        }
+
+        .name-input {
+            font-weight: bold;
+            color: #fcd000;
+            width: 120px;
+        }
+
+        .way-input {
+            width: 50px;
+            text-align: center;
+        }
+
         #toast {
             position: fixed;
             bottom: 20px;
@@ -113,19 +192,22 @@
         }
     </style>
 </head>
+
 <body>
 
     <h1>Vialactée Standalone Editor</h1>
-    
+
     <div class="header-controls">
-        <label style="background-color: #444; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+        <label
+            style="background-color: #444; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">
             📂 1. Load "configurations.json"
             <input type="file" accept=".json" style="display: none;" onchange="handleFileSelect(event)">
         </label>
-        
+
         <button onclick="addRow()" style="display: none;" id="btn-add-row">+ Add New Row</button>
         <div style="flex-grow: 1;"></div>
-        <button onclick="saveData()" class="success" style="display: none;" id="btn-save">💾 2. Download Updated JSON</button>
+        <button onclick="saveData()" class="success" style="display: none;" id="btn-save">💾 2. Download Updated
+            JSON</button>
     </div>
 
     <div class="table-container" id="table-wrap" style="display: none;">
@@ -144,15 +226,15 @@
 
     <script>
         const AVAILABLE_MODES = [
-            "Alcool Randomer", "Bary Rainbow", "Chromatic Chaser", "Coloured Middle Wave",
+            "Bary Rainbow", "Chromatic Chaser", "Coloured Middle Wave",
             "Extending Waves", "Flying Ball", "Hyper Strobe", "Magnetic Ball", "Matrix Rain",
             "Metronome", "Middle Bar", "Opposite Sides", "PSG", "Plasma Fire", "Power Bar",
             "Proportion Rainbow", "Rainbow", "Shining Stars", "Static Wave", "Synesthesia"
         ];
 
         const segments = [
-            "Segment h00", "Segment v1", "Segment h10", "Segment h11", 
-            "Segment v2", "Segment h20", "Segment v3", "Segment h30", 
+            "Segment h00", "Segment v1", "Segment h10", "Segment h11",
+            "Segment v2", "Segment h20", "Segment v3", "Segment h30",
             "Segment h31", "Segment h32", "Segment v4"
         ];
 
@@ -163,12 +245,12 @@
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 try {
                     globalData = JSON.parse(e.target.result);
                     if (!globalData.playlists) globalData.playlists = [];
                     if (!globalData.configurations) globalData.configurations = {};
-                    
+
                     document.getElementById('table-wrap').style.display = 'block';
                     document.getElementById('btn-add-row').style.display = 'block';
                     document.getElementById('btn-save').style.display = 'block';
@@ -190,7 +272,7 @@
             grp.innerHTML += `<th class="sticky-col sticky-col-1" style="width: 45px;"></th>`;
             grp.innerHTML += `<th class="sticky-col sticky-col-2">Group</th>`;
             grp.innerHTML += `<th class="sticky-col sticky-col-3">Group</th>`;
-            
+
             hdr.innerHTML += `<th class="sticky-col sticky-col-1" style="width: 45px;">DEL</th>`;
             hdr.innerHTML += `<th class="sticky-col sticky-col-2">Playlist</th>`;
             hdr.innerHTML += `<th class="sticky-col sticky-col-3">Config Name</th>`;
@@ -204,7 +286,7 @@
         function renderTable() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
-            
+
             const allRows = [];
             globalData.playlists.forEach(playlist => {
                 const configs = globalData.configurations[playlist] || [];
@@ -219,7 +301,7 @@
         function appendRowToTable(playlistName, configObj) {
             const tbody = document.getElementById('table-body');
             const tr = document.createElement('tr');
-            
+
             let tdAction = document.createElement('td');
             tdAction.className = 'sticky-col sticky-col-1';
             tdAction.innerHTML = `<button class="danger" style="padding: 4px 8px;" onclick="this.closest('tr').remove()">X</button>`;
@@ -238,19 +320,19 @@
             segments.forEach(seg => {
                 const modeVal = configObj.modes && configObj.modes[seg] ? configObj.modes[seg] : '';
                 const wayVal = configObj.way && configObj.way[seg] ? configObj.way[seg] : 'UP';
-                
+
                 let tdMode = document.createElement('td');
                 let modeSelectHTML = `<select class="mode-input" data-seg="${seg}">`;
                 let foundMatch = false;
-                
+
                 AVAILABLE_MODES.forEach(m => {
                     // Match "Hyper Strobe" with "Hyper_strobe_mode" or exact string
-                    const isMatch = (m === modeVal) || 
-                                    (m.replace(/ /g, '_').toLowerCase() === modeVal.replace('_mode', '').toLowerCase());
+                    const isMatch = (m === modeVal) ||
+                        (m.replace(/ /g, '_').toLowerCase() === modeVal.replace('_mode', '').toLowerCase());
                     if (isMatch) foundMatch = true;
                     modeSelectHTML += `<option value="${m}" ${isMatch ? 'selected' : ''}>${m}</option>`;
                 });
-                
+
                 // If it's a completely unknown mode from the JSON, add it to preserve data
                 if (modeVal && !foundMatch) {
                     modeSelectHTML += `<option value="${modeVal}" selected>${modeVal} (Legacy)</option>`;
@@ -285,9 +367,9 @@
                 newConfig.modes[seg] = "Rainbow";
                 newConfig.way[seg] = "UP";
             });
-            
+
             appendRowToTable(lastPlaylist, newConfig);
-            
+
             const container = document.querySelector('.table-container');
             container.scrollTop = container.scrollHeight;
         }
@@ -295,27 +377,27 @@
         function saveData() {
             const rows = document.querySelectorAll('#table-body tr');
             const newData = { playlists: [], configurations: {} };
-            
+
             rows.forEach(tr => {
                 const playlistName = tr.querySelector('.playlist-input').value.trim();
                 const configName = tr.querySelector('.name-input').value.trim();
-                
+
                 if (!playlistName) return;
-                
+
                 if (!newData.playlists.includes(playlistName)) {
                     newData.playlists.push(playlistName);
                     newData.configurations[playlistName] = [];
                 }
-                
+
                 const modes = {};
                 const way = {};
-                
+
                 const modeInputs = tr.querySelectorAll('.mode-input');
                 const wayInputs = tr.querySelectorAll('.way-input');
-                
+
                 modeInputs.forEach(inp => modes[inp.getAttribute('data-seg')] = inp.value.trim());
                 wayInputs.forEach(inp => way[inp.getAttribute('data-seg')] = inp.value.trim());
-                
+
                 newData.configurations[playlistName].push({
                     name: configName,
                     modes: modes,
@@ -327,7 +409,7 @@
             const dataStr = JSON.stringify(newData, null, 4);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = "configurations.json";
@@ -335,13 +417,14 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             const toast = document.getElementById('toast');
             toast.style.opacity = 1;
             setTimeout(() => toast.style.opacity = 0, 4000);
-            
-            globalData = newData; 
+
+            globalData = newData;
         }
     </script>
 </body>
+
 </html>

@@ -6,7 +6,7 @@
   /* ============================================================================ */
   --stud: 30px;
   --tolerance: 4px;
-  
+
   /* Layout Dimensions (in studs) */
   --col-left-studs: 3;
   --col-center-studs: 25;
@@ -86,21 +86,29 @@ body {
 /* Large Orange Mount Plate */
 .large-orange-baseplate {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background-color: #e67300; /* Classic Lego Orange */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #e67300;
+  /* Classic Lego Orange */
   border-radius: 4px;
   border: 1px solid #b35900;
-  box-shadow: 
-    0 10px 20px rgba(0,0,0,0.8), /* Deep shadow on main board */
-    inset 2px 2px 4px rgba(255,255,255,0.3),
-    inset -2px -2px 4px rgba(0,0,0,0.4);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.8),
+    /* Deep shadow on main board */
+    inset 2px 2px 4px rgba(255, 255, 255, 0.3),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.4);
   z-index: 0;
 }
+
 .large-orange-baseplate::before {
   content: "";
   position: absolute;
-  top: 0; bottom: 0; left: 0; right: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background-size: var(--stud) var(--stud);
   transition: all 0.3s;
 }
@@ -129,8 +137,10 @@ body {
 .large-orange-baseplate::after {
   content: "";
   position: absolute;
-  top: var(--stud); bottom: var(--stud); 
-  left: var(--stud); right: var(--stud);
+  top: var(--stud);
+  bottom: var(--stud);
+  left: var(--stud);
+  right: var(--stud);
   background-color: #e67300;
   background-image:
     /* Stud top highlight */
@@ -334,7 +344,8 @@ body {
 .live-deck-grid {
   position: relative;
   width: 100%;
-  height: calc(30 * var(--stud)); /* Ensure there is enough vertical space for absolute items */
+  height: calc(30 * var(--stud));
+  /* Ensure there is enough vertical space for absolute items */
 }
 
 /* SLIDERS COLUMN */
@@ -346,18 +357,21 @@ body {
 
 .lego-label {
   height: calc((var(--lego-label-height-studs) * var(--stud)) - var(--tolerance));
-  width: calc((var(--col-left-studs) * var(--stud)) - var(--tolerance)); /* Matches slider width */
-  background-color: #a0a5a9; /* Light Bluish Gray */
+  width: calc((var(--col-left-studs) * var(--stud)) - var(--tolerance));
+  /* Matches slider width */
+  background-color: #a0a5a9;
+  /* Light Bluish Gray */
   border: 1px solid #333;
   border-radius: 3px;
-  box-shadow: 
+  box-shadow:
     inset 0 2px 2px rgba(255, 255, 255, 0.5),
     inset 0 -2px 2px rgba(0, 0, 0, 0.3),
     0 4px 6px rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #111; /* Dark text on light gray */
+  color: #111;
+  /* Dark text on light gray */
   font-size: 0.65rem;
   font-weight: 900;
   letter-spacing: 1px;
@@ -399,7 +413,8 @@ body {
 
 .slider-scale span {
   width: 100%;
-  flex-grow: 1; /* Divides the 296px container evenly, preventing the bottom '1' from being cut off */
+  flex-grow: 1;
+  /* Divides the 296px container evenly, preventing the bottom '1' from being cut off */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -421,12 +436,15 @@ body {
 .slider-scale span:nth-child(even) {
   transform: rotate(0.8deg) translateX(0.5px);
 }
+
 .slider-scale span:nth-child(3n) {
   transform: rotate(-0.5deg) translateX(-0.5px);
 }
+
 .slider-scale span:nth-child(5n) {
   transform: rotate(1.2deg) translateY(-0.5px);
 }
+
 .slider-scale span:nth-child(7n) {
   transform: rotate(-1deg) translateY(0.5px);
 }
@@ -435,21 +453,27 @@ body {
 .slider-scale:first-child span:nth-child(2),
 .slider-scale:last-child span:nth-child(6),
 .slider-scale:first-child span:nth-child(9) {
-  background-color: #42516b; /* Lighter, slightly washed-out grey */
-  color: #c4cadd; /* Slightly fresher print color */
-  border-top: 1px solid #5a6e8f; /* Lighter highlight on top edge */
+  background-color: #42516b;
+  /* Lighter, slightly washed-out grey */
+  color: #c4cadd;
+  /* Slightly fresher print color */
+  border-top: 1px solid #5a6e8f;
+  /* Lighter highlight on top edge */
 }
 
 /* Careless builder: 4 pieces are snapped on completely sideways or upside down! */
 .slider-scale:first-child span:nth-child(4) {
   transform: rotate(90deg);
 }
+
 .slider-scale:last-child span:nth-child(3) {
   transform: rotate(180deg);
 }
+
 .slider-scale:first-child span:nth-child(7) {
   transform: rotate(270deg);
 }
+
 .slider-scale:last-child span:nth-child(8) {
   transform: rotate(90deg);
 }
@@ -481,11 +505,13 @@ body {
 .slider-track-groove::before {
   content: "";
   position: absolute;
-  top: 0; bottom: 0; left: 50%;
+  top: 0;
+  bottom: 0;
+  left: 50%;
   width: 4px;
   transform: translateX(-50%);
   background: linear-gradient(to right, #333, #888 50%, #333);
-  box-shadow: 0 0 5px rgba(0,0,0,0.8);
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
 }
 
 /* ========================================= */
@@ -498,24 +524,26 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 20; /* Renders ON TOP of the slider container */
-  pointer-events: none; /* Passes clicks through to the slider */
+  z-index: 20;
+  /* Renders ON TOP of the slider container */
+  pointer-events: none;
+  /* Passes clicks through to the slider */
 }
 
 .absurd-gear {
   position: absolute;
-  background-color: #a0a5a9; /* Light Bluish Gray Lego */
+  background-color: #a0a5a9;
+  /* Light Bluish Gray Lego */
   border-radius: 50%;
   /* Make teeth with conic gradient and a solid inner mask */
-  background-image: repeating-conic-gradient(
-    from 0deg,
-    #718096 0deg 10deg,
-    #a0a5a9 10deg 20deg
-  );
-  box-shadow: 
-    0 5px 10px rgba(0,0,0,0.7), 
-    inset 0 0 0 4px #a0a5a9, /* solid ring inside the teeth */
-    inset 2px 2px 4px rgba(255,255,255,0.4);
+  background-image: repeating-conic-gradient(from 0deg,
+      #718096 0deg 10deg,
+      #a0a5a9 10deg 20deg);
+  box-shadow:
+    0 5px 10px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 4px #a0a5a9,
+    /* solid ring inside the teeth */
+    inset 2px 2px 4px rgba(255, 255, 255, 0.4);
   transition: transform 0.05s linear;
 }
 
@@ -523,122 +551,222 @@ body {
 .absurd-gear::after {
   content: "";
   position: absolute;
-  top: 50%; left: 50%;
-  width: 12px; height: 12px;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
   transform: translate(-50%, -50%);
-  background-color: #c91a09; /* Red Lego Axle */
+  background-color: #c91a09;
+  /* Red Lego Axle */
   /* Cross shape */
   clip-path: polygon(30% 0%, 70% 0%, 70% 30%, 100% 30%, 100% 70%, 70% 70%, 70% 100%, 30% 100%, 30% 70%, 0% 70%, 0% 30%, 30% 30%);
-  box-shadow: inset 0 0 2px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.8);
 }
 
 .absurd-bar {
   position: absolute;
   width: 8px;
-  background: repeating-linear-gradient(
-    90deg,
-    #a0a5a9,
-    #a0a5a9 2px,
-    #718096 2px,
-    #718096 4px
-  );
+  background: repeating-linear-gradient(90deg,
+      #a0a5a9,
+      #a0a5a9 2px,
+      #718096 2px,
+      #718096 4px);
   border: 1px solid #2d3748;
   border-radius: 4px;
-  box-shadow: 0 5px 8px rgba(0,0,0,0.6);
+  box-shadow: 0 5px 8px rgba(0, 0, 0, 0.6);
   transition: transform 0.05s linear;
 }
 
 .absurd-weight {
   position: absolute;
   width: 24px;
-  height: 60px; /* Exact 2-stud height */
+  height: 60px;
+  /* Exact 2-stud height */
   border-radius: 2px;
-  box-shadow: 
-    0 8px 12px rgba(0,0,0,0.8), /* Deep drop shadow */
-    inset 2px 2px 2px rgba(255,255,255,0.3),
-    inset -2px -2px 2px rgba(0,0,0,0.2);
+  box-shadow:
+    0 8px 12px rgba(0, 0, 0, 0.8),
+    /* Deep drop shadow */
+    inset 2px 2px 2px rgba(255, 255, 255, 0.3),
+    inset -2px -2px 2px rgba(0, 0, 0, 0.2);
   transition: transform 0.05s linear;
 }
-.weight-drop-1 { background-color: #f2cd37; /* Bright Yellow Lego */ border: 1px solid #e1b400; }
-.weight-drop-2 { background-color: #c91a09; /* Red Lego */ border: 1px solid #a31205; }
-.weight-drop-3 { background-color: #0055bf; /* Blue Lego */ border: 1px solid #004299; }
-.weight-drop-green { background-color: #238823; /* Green Lego */ border: 1px solid #1a641a; }
 
-.absurd-weight::before, .absurd-weight::after {
+.weight-drop-1 {
+  background-color: #f2cd37;
+  /* Bright Yellow Lego */
+  border: 1px solid #e1b400;
+}
+
+.weight-drop-2 {
+  background-color: #c91a09;
+  /* Red Lego */
+  border: 1px solid #a31205;
+}
+
+.weight-drop-3 {
+  background-color: #0055bf;
+  /* Blue Lego */
+  border: 1px solid #004299;
+}
+
+.weight-drop-green {
+  background-color: #238823;
+  /* Green Lego */
+  border: 1px solid #1a641a;
+}
+
+.absurd-weight::before,
+.absurd-weight::after {
   content: "";
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 10px; height: 10px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: #111;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.4);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(255, 255, 255, 0.4);
 }
-.absurd-weight::before { top: 10px; }
-.absurd-weight::after { bottom: 10px; }
+
+.absurd-weight::before {
+  top: 10px;
+}
+
+.absurd-weight::after {
+  bottom: 10px;
+}
 
 /* Guide Rails for weights (Now thick light-grey Technic Axles) */
 .guide-rail {
   position: absolute;
-  width: 8px; /* Thicker, realistic axle width */
+  width: 8px;
+  /* Thicker, realistic axle width */
   background: linear-gradient(to right, #718096, #cbd5e0 40%, #a0a5a9 60%, #4a5568);
   border-radius: 4px;
   z-index: -1;
-  box-shadow: 0 10px 15px rgba(0,0,0,0.9); /* Heavy shadow dropping into the trench */
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.9);
+  /* Heavy shadow dropping into the trench */
 }
-.rail-3 { left: -15px; top: 5px; height: 250px; } /* For weight 1 */
-.rail-4 { left: -25px; top: -15px; height: 280px; } /* For weight 2 */
-.rail-5 { left: -52px; top: 25px; height: 220px; } /* For weight 3 */
+
+.rail-3 {
+  left: -15px;
+  top: 5px;
+  height: 250px;
+}
+
+/* For weight 1 */
+.rail-4 {
+  left: -25px;
+  top: -15px;
+  height: 280px;
+}
+
+/* For weight 2 */
+.rail-5 {
+  left: -52px;
+  top: 25px;
+  height: 220px;
+}
+
+/* For weight 3 */
 
 /* Structural Mounts for Rails and Beams */
 .rail-mount {
   position: absolute;
-  background-color: #3f4756; /* Dark Grey Lego */
+  background-color: #3f4756;
+  /* Dark Grey Lego */
   border-radius: 2px;
   border: 1px solid #1a202c;
-  box-shadow: 
-    0 8px 12px rgba(0,0,0,0.8), 
-    inset 2px 2px 2px rgba(255,255,255,0.3),
-    inset -2px -2px 2px rgba(0,0,0,0.2);
+  box-shadow:
+    0 8px 12px rgba(0, 0, 0, 0.8),
+    inset 2px 2px 2px rgba(255, 255, 255, 0.3),
+    inset -2px -2px 2px rgba(0, 0, 0, 0.2);
   z-index: 10;
-  background-image: radial-gradient(circle at center, #111 0%, #111 3px, rgba(0,0,0,0.9) 4px, transparent 5px);
+  background-image: radial-gradient(circle at center, #111 0%, #111 3px, rgba(0, 0, 0, 0.9) 4px, transparent 5px);
   background-size: 20px 100%;
   background-position: center;
 }
-.mount-1 { left: -34px; top: -5px; width: 32px; height: 16px; } /* Top of beam 1 / rail 3 */
-.mount-2 { left: -44px; top: 235px; width: 32px; height: 16px; } /* Bottom of beam 2 */
-.mount-3 { left: -23px; top: 255px; width: 24px; height: 16px; } /* Bottom of rail 3 */
 
-.mount-4 { left: -54px; top: -5px; width: 32px; height: 16px; } /* Top of beam 3 */
-.mount-5 { left: -29px; top: -25px; width: 16px; height: 16px; } /* Top of rail 4 */
-.mount-6 { left: -60px; top: 265px; width: 50px; height: 16px; } /* Bottom wide mount for rails 4 & 5 */
+.mount-1 {
+  left: -34px;
+  top: -5px;
+  width: 32px;
+  height: 16px;
+}
+
+/* Top of beam 1 / rail 3 */
+.mount-2 {
+  left: -44px;
+  top: 235px;
+  width: 32px;
+  height: 16px;
+}
+
+/* Bottom of beam 2 */
+.mount-3 {
+  left: -23px;
+  top: 255px;
+  width: 24px;
+  height: 16px;
+}
+
+/* Bottom of rail 3 */
+
+.mount-4 {
+  left: -54px;
+  top: -5px;
+  width: 32px;
+  height: 16px;
+}
+
+/* Top of beam 3 */
+.mount-5 {
+  left: -29px;
+  top: -25px;
+  width: 16px;
+  height: 16px;
+}
+
+/* Top of rail 4 */
+.mount-6 {
+  left: -60px;
+  top: 265px;
+  width: 50px;
+  height: 16px;
+}
+
+/* Bottom wide mount for rails 4 & 5 */
 
 /* Structural Housing (Now a deep sunken trench cut into the baseplate) */
 .absurd-chassis {
   position: absolute;
   top: 0;
-  left: -90px; /* extends left further to fit everything */
+  left: -90px;
+  /* extends left further to fit everything */
   width: 90px;
   height: 100%;
-  background-color: #0d1015; /* Extremely dark pit */
+  background-color: #0d1015;
+  /* Extremely dark pit */
   border-right: 2px solid #000;
   border-radius: 8px 0 0 8px;
   /* Massive inset shadow makes it look like a physical hole */
-  box-shadow: 
-    inset 10px 10px 20px rgba(0,0,0,0.9),
-    inset 0 -10px 20px rgba(0,0,0,0.9);
+  box-shadow:
+    inset 10px 10px 20px rgba(0, 0, 0, 0.9),
+    inset 0 -10px 20px rgba(0, 0, 0, 0.9);
   z-index: -2;
 }
 
 /* Lego Technic Beams */
 .technic-beam {
   position: absolute;
-  background-color: #a0a5a9; /* Light Bluish Gray */
+  background-color: #a0a5a9;
+  /* Light Bluish Gray */
   border-radius: 12px;
-  box-shadow: 
-    0 10px 15px rgba(0,0,0,0.8), /* Strong shadow into the trench */
-    inset 2px 2px 3px rgba(255,255,255,0.4),
-    inset -2px -2px 3px rgba(0,0,0,0.3);
+  box-shadow:
+    0 10px 15px rgba(0, 0, 0, 0.8),
+    /* Strong shadow into the trench */
+    inset 2px 2px 3px rgba(255, 255, 255, 0.4),
+    inset -2px -2px 3px rgba(0, 0, 0, 0.3);
   z-index: -1;
 }
 
@@ -646,11 +774,15 @@ body {
 .technic-beam::before {
   content: "";
   position: absolute;
-  top: 0; bottom: 0; left: 0; right: 0;
-  background-image: 
-    radial-gradient(circle at 12px 15px, transparent 0%, transparent 4px, rgba(0,0,0,0.5) 5px, rgba(0,0,0,0) 6px),
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-image:
+    radial-gradient(circle at 12px 15px, transparent 0%, transparent 4px, rgba(0, 0, 0, 0.5) 5px, rgba(0, 0, 0, 0) 6px),
     radial-gradient(circle at 12px 15px, #111 0%, #111 4px, transparent 5px);
-  background-size: 24px 30px; /* 30px matches exactly 1 stud height! */
+  background-size: 24px 30px;
+  /* 30px matches exactly 1 stud height! */
   background-position: top center;
 }
 
@@ -658,30 +790,93 @@ body {
 .technic-beam::after {
   content: "";
   position: absolute;
-  top: 0; bottom: 0; left: 0; right: 0;
-  background-image: 
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-image:
     radial-gradient(circle at 12px 15px, #2a2a2a 0%, #000 4px, transparent 5px),
     radial-gradient(circle at 12px calc(100% - 15px), #2a2a2a 0%, #000 4px, transparent 5px);
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
 }
 
-.beam-1 { width: 24px; height: 150px; left: -30px; top: 15px; } /* 5 holes */
-.beam-2 { width: 24px; height: 120px; left: -40px; top: 105px; } /* 4 holes */
-.beam-3 { width: 24px; height: 180px; left: -50px; top: 15px; } /* 6 holes */
+.beam-1 {
+  width: 24px;
+  height: 150px;
+  left: -30px;
+  top: 15px;
+}
+
+/* 5 holes */
+.beam-2 {
+  width: 24px;
+  height: 120px;
+  left: -40px;
+  top: 105px;
+}
+
+/* 4 holes */
+.beam-3 {
+  width: 24px;
+  height: 180px;
+  left: -50px;
+  top: 15px;
+}
+
+/* 6 holes */
 
 /* Physics Mapped to --slider-val (1 to 100) */
 /* Slider going from 1 -> 100 means moving UP visually. */
 
 /* Gears */
-.gear-spin-1 { width: 60px; height: 60px; left: -40px; top: 20px; transform: rotate(calc(var(--slider-val) * 8.5deg)); }
-.gear-spin-2 { width: 40px; height: 40px; left: -25px; top: 75px; transform: rotate(calc(var(--slider-val) * -12.75deg)); }
-.gear-spin-3 { width: 80px; height: 80px; left: -50px; bottom: 40px; transform: rotate(calc(var(--slider-val) * 6deg)); }
+.gear-spin-1 {
+  width: 60px;
+  height: 60px;
+  left: -40px;
+  top: 20px;
+  transform: rotate(calc(var(--slider-val) * 8.5deg));
+}
+
+.gear-spin-2 {
+  width: 40px;
+  height: 40px;
+  left: -25px;
+  top: 75px;
+  transform: rotate(calc(var(--slider-val) * -12.75deg));
+}
+
+.gear-spin-3 {
+  width: 80px;
+  height: 80px;
+  left: -50px;
+  bottom: 40px;
+  transform: rotate(calc(var(--slider-val) * 6deg));
+}
 
 /* Counter-weights (Slide precisely OPPOSITE to the slider. As slider goes UP, weight goes DOWN / +Y) */
-.weight-drop-1 { left: -23px; top: 10px; transform: translateY(calc(var(--slider-val) * 1.85px)); }
-.weight-drop-2 { left: -33px; top: -10px; transform: translateY(calc(var(--slider-val) * 2.6px)); }
-.weight-drop-3 { left: -60px; top: 30px; transform: translateY(calc(var(--slider-val) * 1.8px)); }
-.weight-drop-green { left: -23px; top: 10px; transform: translateY(calc(var(--slider-val) * 1.85px)); }
+.weight-drop-1 {
+  left: -23px;
+  top: 10px;
+  transform: translateY(calc(var(--slider-val) * 1.85px));
+}
+
+.weight-drop-2 {
+  left: -33px;
+  top: -10px;
+  transform: translateY(calc(var(--slider-val) * 2.6px));
+}
+
+.weight-drop-3 {
+  left: -60px;
+  top: 30px;
+  transform: translateY(calc(var(--slider-val) * 1.8px));
+}
+
+.weight-drop-green {
+  left: -23px;
+  top: 10px;
+  transform: translateY(calc(var(--slider-val) * 1.85px));
+}
 
 .vertical-slider {
   -webkit-appearance: none;
@@ -965,10 +1160,10 @@ body {
   width: 26px;
   height: 26px;
   background-color: #f4f4f4;
-  box-shadow: 
-    inset 1px 1px 1px rgba(255,255,255,0.9),
-    inset -1px -2px 3px rgba(0,0,0,0.2),
-    2px 4px 6px rgba(0,0,0,0.6);
+  box-shadow:
+    inset 1px 1px 1px rgba(255, 255, 255, 0.9),
+    inset -1px -2px 3px rgba(0, 0, 0, 0.2),
+    2px 4px 6px rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -992,13 +1187,14 @@ body {
   background-image:
     radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9) 0%, transparent 40%),
     radial-gradient(circle at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.2) 70%, transparent 80%);
-  box-shadow: 1px 2px 3px rgba(0,0,0,0.3);
+  box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Color overrides for pieces */
 .stud-piece.piece-yellow {
   background-color: var(--lego-yellow);
 }
+
 .stud-piece.piece-yellow::after {
   background-color: var(--lego-yellow);
 }
@@ -1006,6 +1202,7 @@ body {
 .stud-piece.piece-grey {
   background-color: var(--lego-light-grey);
 }
+
 .stud-piece.piece-grey::after {
   background-color: var(--lego-light-grey);
 }
@@ -1355,7 +1552,7 @@ body {
   margin-bottom: 10px;
   background-color: #111;
   border-radius: 4px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
   border: 1px solid #222;
   position: relative;
 }
@@ -1370,13 +1567,13 @@ body {
 }
 
 /* Visibility logic */
-.heavy-duty-checkbox:checked ~ .lock-status-display .lock-text-hold {
+.heavy-duty-checkbox:checked~.lock-status-display .lock-text-hold {
   display: block;
   color: var(--lego-red);
   text-shadow: 0 0 10px var(--lego-red);
 }
 
-.heavy-duty-checkbox:not(:checked) ~ .lock-status-display .lock-text-live {
+.heavy-duty-checkbox:not(:checked)~.lock-status-display .lock-text-live {
   display: block;
   color: var(--lego-green);
   text-shadow: 0 0 10px var(--lego-green);
@@ -1386,12 +1583,13 @@ body {
 .heavy-duty-track {
   width: 100%;
   flex-grow: 1;
-  background-color: #3b4048; /* Solid Dark Bluish Gray */
+  background-color: #3b4048;
+  /* Solid Dark Bluish Gray */
   border-radius: 4px;
-  box-shadow: 
-    inset 0 10px 20px rgba(0,0,0,0.9),
-    inset 0 2px 5px rgba(0,0,0,1),
-    0 1px 1px rgba(255,255,255,0.05);
+  box-shadow:
+    inset 0 10px 20px rgba(0, 0, 0, 0.9),
+    inset 0 2px 5px rgba(0, 0, 0, 1),
+    0 1px 1px rgba(255, 255, 255, 0.05);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -1410,15 +1608,18 @@ body {
 .mech-weight {
   width: 14px;
   height: 25px;
-  background-color: #2a2a2a; /* Dark metallic */
+  background-color: #2a2a2a;
+  /* Dark metallic */
   border: 1px solid #111;
   border-radius: 2px;
   position: absolute;
-  top: 10px; /* starts at the top when brick is bottom */
-  box-shadow: 2px 5px 8px rgba(0,0,0,0.8), inset 0 2px 2px rgba(255,255,255,0.1);
+  top: 10px;
+  /* starts at the top when brick is bottom */
+  box-shadow: 2px 5px 8px rgba(0, 0, 0, 0.8), inset 0 2px 2px rgba(255, 255, 255, 0.1);
   transition: top 0.8s cubic-bezier(0.65, 0, 0.35, 1);
   z-index: 0;
 }
+
 /* The physical cable */
 .mech-weight::before {
   content: "";
@@ -1426,29 +1627,46 @@ body {
   bottom: 100%;
   left: 50%;
   width: 2px;
-  height: 300px; /* super long to go offscreen */
+  height: 300px;
+  /* super long to go offscreen */
   background: linear-gradient(to right, #111, #444, #111);
   transform: translateX(-50%);
 }
-.weight-left { left: 10px; }
-.weight-right { right: 10px; }
+
+.weight-left {
+  left: 10px;
+}
+
+.weight-right {
+  right: 10px;
+}
 
 /* TECHNIC GEARS */
 .mech-gear {
-  width: 44px; height: 44px;
-  background: 
-    radial-gradient(circle, #111 4px, transparent 5px), /* Axle hole */
-    radial-gradient(circle, #5b5f66 14px, transparent 15px), /* Gear body */
-    repeating-conic-gradient(from 0deg, #444 0deg 10deg, transparent 10deg 20deg); /* Teeth */
+  width: 44px;
+  height: 44px;
+  background:
+    radial-gradient(circle, #111 4px, transparent 5px),
+    /* Axle hole */
+    radial-gradient(circle, #5b5f66 14px, transparent 15px),
+    /* Gear body */
+    repeating-conic-gradient(from 0deg, #444 0deg 10deg, transparent 10deg 20deg);
+  /* Teeth */
   border-radius: 50%;
   position: absolute;
   bottom: 10px;
   transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6);
   z-index: 1;
 }
-.gear-left { left: -15px; }
-.gear-right { right: -15px; }
+
+.gear-left {
+  left: -15px;
+}
+
+.gear-right {
+  right: -15px;
+}
 
 
 /* TECHNIC CROSS AXLE (PISTON) */
@@ -1461,7 +1679,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   transition: height 0.8s cubic-bezier(0.65, 0, 0.35, 1);
-  box-shadow: 0 0 10px rgba(0,0,0,0.9);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
   border-radius: 2px;
 }
 
@@ -1471,30 +1689,45 @@ body {
   top: 10px;
   width: 30px;
   height: 20px;
-  background-color: #a0a5a9; /* Light Bluish Gray */
+  background-color: #a0a5a9;
+  /* Light Bluish Gray */
   border: 1px solid #333;
-  border-radius: 10px; /* rounded ends like a liftarm */
-  box-shadow: inset 0 2px 3px rgba(255,255,255,0.5), 0 5px 10px rgba(0,0,0,0.6);
+  border-radius: 10px;
+  /* rounded ends like a liftarm */
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.5), 0 5px 10px rgba(0, 0, 0, 0.6);
   z-index: 3;
 }
+
 .mech-bolt::after {
   content: "";
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 6px; height: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   /* Default LIVE state: Green */
   background-color: #48bb78;
-  box-shadow: 0 0 6px 2px #48bb78, inset 0 1px 2px rgba(255,255,255,0.8);
+  box-shadow: 0 0 6px 2px #48bb78, inset 0 1px 2px rgba(255, 255, 255, 0.8);
   border: 1px solid #111;
   transition: all 0.3s;
 }
-.bolt-left { left: 0; }
-.bolt-left::after { left: 6px; }
 
-.bolt-right { right: 0; }
-.bolt-right::after { right: 6px; }
+.bolt-left {
+  left: 0;
+}
+
+.bolt-left::after {
+  left: 6px;
+}
+
+.bolt-right {
+  right: 0;
+}
+
+.bolt-right::after {
+  right: 6px;
+}
 
 
 /* The thick 2x2 Cherry Red sliding brick */
@@ -1503,16 +1736,17 @@ body {
   height: calc(3 * var(--stud));
   background-color: var(--lego-red);
   position: absolute;
-  bottom: 5px; /* Starting position (Unlocked / LIVE) */
-  border: 2px solid rgba(0,0,0,0.8);
+  bottom: 5px;
+  /* Starting position (Unlocked / LIVE) */
+  border: 2px solid rgba(0, 0, 0, 0.8);
   border-radius: 3px;
   transition: bottom 0.8s cubic-bezier(0.65, 0, 0.35, 1);
-  box-shadow: 
-    inset 0 3px 0 rgba(255,255,255,0.3),
-    inset 0 -4px 0 rgba(0,0,0,0.4),
-    inset 3px 0 0 rgba(255,255,255,0.2),
-    inset -3px 0 0 rgba(0,0,0,0.2),
-    0 8px 15px rgba(0,0,0,0.6);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.4),
+    inset 3px 0 0 rgba(255, 255, 255, 0.2),
+    inset -3px 0 0 rgba(0, 0, 0, 0.2),
+    0 8px 15px rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1532,43 +1766,52 @@ body {
 /* Give the studs on this specific block realistic lighting */
 .round-stud-grid-2x2 .stud {
   background-color: var(--lego-red);
-  box-shadow: 
-    inset 2px 2px 4px rgba(255,255,255,0.7), 
-    inset -2px -2px 4px rgba(0,0,0,0.4),
-    2px 2px 4px rgba(0,0,0,0.6);
-  border: 1px solid rgba(0,0,0,0.3);
+  box-shadow:
+    inset 2px 2px 4px rgba(255, 255, 255, 0.7),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.4),
+    2px 2px 4px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.3);
 }
 
 /* Movement & Mechanical Animation Logic */
-.heavy-duty-checkbox:checked ~ .heavy-duty-track .heavy-duty-brick {
-  bottom: calc(100% - 3 * var(--stud) - 5px); /* Slide to the top */
+.heavy-duty-checkbox:checked~.heavy-duty-track .heavy-duty-brick {
+  bottom: calc(100% - 3 * var(--stud) - 5px);
+  /* Slide to the top */
 }
 
-.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-weight {
-  top: calc(100% - 40px); /* Counterweights drop to the bottom */
+.heavy-duty-checkbox:checked~.heavy-duty-track .mech-weight {
+  top: calc(100% - 40px);
+  /* Counterweights drop to the bottom */
 }
 
-.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-gear.gear-left {
+.heavy-duty-checkbox:checked~.heavy-duty-track .mech-gear.gear-left {
   transform: rotate(720deg);
 }
-.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-gear.gear-right {
+
+.heavy-duty-checkbox:checked~.heavy-duty-track .mech-gear.gear-right {
   transform: rotate(-720deg);
 }
-.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-piston {
-  height: calc(100% - 3 * var(--stud) - 5px); /* Piston extends all the way up under the brick */
+
+.heavy-duty-checkbox:checked~.heavy-duty-track .mech-piston {
+  height: calc(100% - 3 * var(--stud) - 5px);
+  /* Piston extends all the way up under the brick */
 }
 
 /* Bolts act as LED indicators, turning Red when in HOLD state */
-.heavy-duty-checkbox:checked ~ .heavy-duty-track .mech-bolt::after {
-  background-color: #f56565; /* Red LED */
-  box-shadow: 0 0 8px 2px #f56565, inset 0 1px 2px rgba(255,255,255,0.8);
-}/* ========================================= */
+.heavy-duty-checkbox:checked~.heavy-duty-track .mech-bolt::after {
+  background-color: #f56565;
+  /* Red LED */
+  box-shadow: 0 0 8px 2px #f56565, inset 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* ========================================= */
 /* SMART BRICK OLED DISPLAY & ANIMATIONS   */
 /* ========================================= */
 
 .embedded-oled {
   position: absolute;
-  top: 50%; left: 50%;
+  top: 50%;
+  left: 50%;
   height: 20px;
   background: rgba(0, 0, 0, 0.85);
   transform-origin: center center;
@@ -1577,7 +1820,7 @@ body {
   display: flex;
   align-items: center;
   overflow: hidden;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
   /* The width and rotation are handled inline in App.tsx */
 }
 
@@ -1603,8 +1846,13 @@ body {
 }
 
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-100%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 /* Interactive Segment Hover States */
@@ -1616,7 +1864,7 @@ body {
 .interactive-segment:hover {
   filter: brightness(1.3);
   transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
   z-index: 50 !important;
 }
 
@@ -1632,20 +1880,50 @@ body {
 /* 1. Alcool Randomer */
 /* White ball ping-ponging, spinning very fast at first, slowing down with phases, stopping. Fading white tail. */
 .anim-alcool-randomer {
-  background-image: radial-gradient(circle at 50% 50%, white 0%, rgba(255,255,255,0.4) 10%, transparent 40%);
+  background-image: radial-gradient(circle at 50% 50%, white 0%, rgba(255, 255, 255, 0.4) 10%, transparent 40%);
   background-size: 200% 200%;
   animation: alcool-randomer 4s cubic-bezier(0.1, 0.9, 0.2, 1) infinite;
 }
+
 @keyframes alcool-randomer {
-  0% { background-position: -100% 50%; }
-  10% { background-position: 200% 50%; }
-  20% { background-position: -50% 50%; }
-  35% { background-position: 150% 50%; }
-  55% { background-position: 20% 50%; }
-  65% { background-position: 80% 50%; }
-  75% { background-position: 40% 50%; }
-  80% { background-position: 60% 50%; }
-  85%, 100% { background-position: 50% 50%; } /* Freezing on final position */
+  0% {
+    background-position: -100% 50%;
+  }
+
+  10% {
+    background-position: 200% 50%;
+  }
+
+  20% {
+    background-position: -50% 50%;
+  }
+
+  35% {
+    background-position: 150% 50%;
+  }
+
+  55% {
+    background-position: 20% 50%;
+  }
+
+  65% {
+    background-position: 80% 50%;
+  }
+
+  75% {
+    background-position: 40% 50%;
+  }
+
+  80% {
+    background-position: 60% 50%;
+  }
+
+  85%,
+  100% {
+    background-position: 50% 50%;
+  }
+
+  /* Freezing on final position */
 }
 
 /* 2. Bary Rainbow */
@@ -1655,9 +1933,17 @@ body {
   background-size: 100% 100%;
   animation: bary-rainbow-pulse 1s ease-in-out infinite alternate;
 }
+
 @keyframes bary-rainbow-pulse {
-  0% { filter: brightness(0.8) hue-rotate(-10deg); box-shadow: inset 0 0 10px rgba(255,0,0,0.5); }
-  100% { filter: brightness(1.5) hue-rotate(10deg); box-shadow: inset 0 0 30px rgba(255,0,0,1); }
+  0% {
+    filter: brightness(0.8) hue-rotate(-10deg);
+    box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.5);
+  }
+
+  100% {
+    filter: brightness(1.5) hue-rotate(10deg);
+    box-shadow: inset 0 0 30px rgba(255, 0, 0, 1);
+  }
 }
 
 /* 3. Chromatic Chaser */
@@ -1667,14 +1953,29 @@ body {
   background-size: 150% 150%;
   animation: chromatic-chaser 0.8s linear infinite alternate, color-sweep 3s linear infinite alternate;
 }
+
 @keyframes chromatic-chaser {
-  0% { background-position: -20% 50%; }
-  100% { background-position: 120% 50%; }
+  0% {
+    background-position: -20% 50%;
+  }
+
+  100% {
+    background-position: 120% 50%;
+  }
 }
+
 @keyframes color-sweep {
-  0% { color: red; }
-  50% { color: lime; }
-  100% { color: blue; }
+  0% {
+    color: red;
+  }
+
+  50% {
+    color: lime;
+  }
+
+  100% {
+    color: blue;
+  }
 }
 
 /* 4. Coloured Middle Wave */
@@ -1684,9 +1985,18 @@ body {
   background-size: 100% 100%;
   animation: coloured-middle-wave 0.5s ease-out infinite alternate;
 }
+
 @keyframes coloured-middle-wave {
-  0% { filter: brightness(0.3); transform: scale(0.98); }
-  100% { filter: brightness(2); transform: scale(1.02); box-shadow: 0 0 20px rgba(255,0,0,0.8); }
+  0% {
+    filter: brightness(0.3);
+    transform: scale(0.98);
+  }
+
+  100% {
+    filter: brightness(2);
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+  }
 }
 
 /* 5. Extending Waves */
@@ -1696,9 +2006,17 @@ body {
   background-size: 200% 200%;
   animation: extending-waves 1s linear infinite, color-sweep 2s linear infinite;
 }
+
 @keyframes extending-waves {
-  0% { background-size: 50% 50%; filter: brightness(2); }
-  100% { background-size: 300% 300%; filter: brightness(0.5); }
+  0% {
+    background-size: 50% 50%;
+    filter: brightness(2);
+  }
+
+  100% {
+    background-size: 300% 300%;
+    filter: brightness(0.5);
+  }
 }
 
 /* 6. Flying Ball */
@@ -1708,15 +2026,36 @@ body {
   background-size: 120% 120%;
   animation: flying-ball 1s ease-in-out infinite alternate, flying-color 2s infinite alternate;
 }
+
 @keyframes flying-ball {
-  0% { background-position: 10% 50%; }
-  30% { background-position: 80% 50%; }
-  60% { background-position: 40% 50%; }
-  100% { background-position: 90% 50%; }
+  0% {
+    background-position: 10% 50%;
+  }
+
+  30% {
+    background-position: 80% 50%;
+  }
+
+  60% {
+    background-position: 40% 50%;
+  }
+
+  100% {
+    background-position: 90% 50%;
+  }
 }
+
 @keyframes flying-color {
-  0% { color: #00ffaa; } /* Green/Blue */
-  100% { color: #8800ff; } /* Purple */
+  0% {
+    color: #00ffaa;
+  }
+
+  /* Green/Blue */
+  100% {
+    color: #8800ff;
+  }
+
+  /* Purple */
 }
 
 /* 7. Hyper Strobe */
@@ -1724,10 +2063,25 @@ body {
 .anim-hyper-strobe {
   animation: hyper-strobe 0.8s infinite;
 }
+
 @keyframes hyper-strobe {
-  0% { background-color: white; box-shadow: 0 0 40px white; filter: brightness(4); }
-  10% { background-color: transparent; box-shadow: none; filter: brightness(0.1); }
-  100% { background-color: transparent; box-shadow: none; filter: brightness(0.1); }
+  0% {
+    background-color: white;
+    box-shadow: 0 0 40px white;
+    filter: brightness(4);
+  }
+
+  10% {
+    background-color: transparent;
+    box-shadow: none;
+    filter: brightness(0.1);
+  }
+
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+    filter: brightness(0.1);
+  }
 }
 
 /* 8. Magnetic Ball */
@@ -1737,12 +2091,43 @@ body {
   background-size: 100% 100%;
   animation: magnetic-ball 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate;
 }
+
 @keyframes magnetic-ball {
-  0% { background-position: 50% 50%; background-size: 80% 80%; filter: brightness(1); } /* Resting in center */
-  20% { background-position: 0% 50%; background-size: 150% 150%; filter: brightness(2); } /* Kicked left, size expands */
-  40% { background-position: 50% 50%; background-size: 100% 100%; filter: brightness(1.2); } /* Pulled back to center */
-  60% { background-position: 100% 50%; background-size: 160% 160%; filter: brightness(2.2); } /* Kicked right */
-  100% { background-position: 50% 50%; background-size: 90% 90%; filter: brightness(1); } /* Pulled back */
+  0% {
+    background-position: 50% 50%;
+    background-size: 80% 80%;
+    filter: brightness(1);
+  }
+
+  /* Resting in center */
+  20% {
+    background-position: 0% 50%;
+    background-size: 150% 150%;
+    filter: brightness(2);
+  }
+
+  /* Kicked left, size expands */
+  40% {
+    background-position: 50% 50%;
+    background-size: 100% 100%;
+    filter: brightness(1.2);
+  }
+
+  /* Pulled back to center */
+  60% {
+    background-position: 100% 50%;
+    background-size: 160% 160%;
+    filter: brightness(2.2);
+  }
+
+  /* Kicked right */
+  100% {
+    background-position: 50% 50%;
+    background-size: 90% 90%;
+    filter: brightness(1);
+  }
+
+  /* Pulled back */
 }
 
 /* 9. Matrix Rain */
@@ -1752,9 +2137,15 @@ body {
   background-size: 100% 300%;
   animation: matrix-rain 0.8s linear infinite;
 }
+
 @keyframes matrix-rain {
-  0% { background-position: 0% -50%; }
-  100% { background-position: 0% 150%; }
+  0% {
+    background-position: 0% -50%;
+  }
+
+  100% {
+    background-position: 0% 150%;
+  }
 }
 
 /* 10. Metronome */
@@ -1762,12 +2153,37 @@ body {
 .anim-metronome {
   animation: metronome 1s infinite;
 }
+
 @keyframes metronome {
-  0% { background-color: white; box-shadow: 0 0 30px white; filter: brightness(2.5); }
-  20% { background-color: transparent; box-shadow: none; filter: brightness(0.2); }
-  50% { background-color: blue; box-shadow: 0 0 30px blue; filter: brightness(2.5); }
-  70% { background-color: transparent; box-shadow: none; filter: brightness(0.2); }
-  100% { background-color: transparent; box-shadow: none; filter: brightness(0.2); }
+  0% {
+    background-color: white;
+    box-shadow: 0 0 30px white;
+    filter: brightness(2.5);
+  }
+
+  20% {
+    background-color: transparent;
+    box-shadow: none;
+    filter: brightness(0.2);
+  }
+
+  50% {
+    background-color: blue;
+    box-shadow: 0 0 30px blue;
+    filter: brightness(2.5);
+  }
+
+  70% {
+    background-color: transparent;
+    box-shadow: none;
+    filter: brightness(0.2);
+  }
+
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+    filter: brightness(0.2);
+  }
 }
 
 /* 11. Middle Bar */
@@ -1778,9 +2194,17 @@ body {
   background-position: 50% 50%;
   animation: middle-bar 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite alternate, color-sweep 4s linear infinite alternate;
 }
+
 @keyframes middle-bar {
-  0% { background-size: 0% 100%; filter: brightness(0.5); }
-  100% { background-size: 100% 100%; filter: brightness(2) drop-shadow(0 0 10px currentColor); }
+  0% {
+    background-size: 0% 100%;
+    filter: brightness(0.5);
+  }
+
+  100% {
+    background-size: 100% 100%;
+    filter: brightness(2) drop-shadow(0 0 10px currentColor);
+  }
 }
 
 /* 12. Opposite Sides */
@@ -1791,16 +2215,24 @@ body {
   background-position: 50% 50%;
   animation: opposite-sides 0.6s ease-out infinite alternate;
 }
+
 @keyframes opposite-sides {
-  0% { background-size: 50% 100%; filter: brightness(0.8); }
-  100% { background-size: 200% 100%; filter: brightness(2) drop-shadow(0 0 15px currentColor); }
+  0% {
+    background-size: 50% 100%;
+    filter: brightness(0.8);
+  }
+
+  100% {
+    background-size: 200% 100%;
+    filter: brightness(2) drop-shadow(0 0 15px currentColor);
+  }
 }
 
 /* 13. PSG */
 /* Solid red growing from left, solid blue from right. Center is black EXCEPT a stark white dot shifting at balance. */
 .anim-psg {
   /* Using radial gradient for the white dot in the middle, and linear gradients for the red/blue sides */
-  background-image: 
+  background-image:
     radial-gradient(circle at 50% 50%, white 0%, white 10%, transparent 15%),
     linear-gradient(90deg, red 0%, red 30%, transparent 30%, transparent 70%, blue 70%, blue 100%);
   background-size: 200% 100%, 100% 100%;
@@ -1808,14 +2240,16 @@ body {
   background-repeat: no-repeat;
   animation: psg-balance 0.5s ease-in-out infinite alternate;
 }
+
 @keyframes psg-balance {
-  0% { 
-    background-position: 30% 50%, 0% 0%; 
+  0% {
+    background-position: 30% 50%, 0% 0%;
     background-image: radial-gradient(circle at 50% 50%, white 0%, white 10%, transparent 15%), linear-gradient(90deg, red 0%, red 40%, transparent 40%, transparent 80%, blue 80%, blue 100%);
     filter: brightness(1.2);
   }
-  100% { 
-    background-position: 70% 50%, 0% 0%; 
+
+  100% {
+    background-position: 70% 50%, 0% 0%;
     background-image: radial-gradient(circle at 50% 50%, white 0%, white 10%, transparent 15%), linear-gradient(90deg, red 0%, red 20%, transparent 20%, transparent 60%, blue 60%, blue 100%);
     filter: brightness(2);
   }
@@ -1828,30 +2262,45 @@ body {
   background-size: 100% 300%;
   animation: plasma-fire 0.15s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
 }
+
 @keyframes plasma-fire {
-  0% { background-position: 0% 100%; filter: brightness(1); } /* Low flame */
-  100% { background-position: 0% 0%; filter: brightness(2) drop-shadow(0 -10px 15px orange); } /* High flame */
+  0% {
+    background-position: 0% 100%;
+    filter: brightness(1);
+  }
+
+  /* Low flame */
+  100% {
+    background-position: 0% 0%;
+    filter: brightness(2) drop-shadow(0 -10px 15px orange);
+  }
+
+  /* High flame */
 }
 
 /* 15. Power Bar */
 /* Classic VU meter filling bottom to top. White dot at peak floating down. */
 .anim-power-bar {
-  background-image: 
-    linear-gradient(0deg, white 0%, transparent 5%), 
+  background-image:
+    linear-gradient(0deg, white 0%, transparent 5%),
     linear-gradient(0deg, lime 0%, yellow 50%, red 100%);
   background-size: 100% 100%, 100% 100%;
   background-position: 0% 100%, 0% 100%;
   background-repeat: no-repeat;
   animation: power-bar 0.4s ease-out infinite alternate;
 }
+
 @keyframes power-bar {
-  0% { 
-    background-size: 100% 20%, 100% 10%; /* Low volume: dot floating slightly above bar */
-    filter: brightness(0.8); 
+  0% {
+    background-size: 100% 20%, 100% 10%;
+    /* Low volume: dot floating slightly above bar */
+    filter: brightness(0.8);
   }
-  100% { 
-    background-size: 100% 90%, 100% 90%; /* High volume: dot pushed by bar to the top */
-    filter: brightness(2) drop-shadow(0 0 10px lime); 
+
+  100% {
+    background-size: 100% 90%, 100% 90%;
+    /* High volume: dot pushed by bar to the top */
+    filter: brightness(2) drop-shadow(0 0 10px lime);
   }
 }
 
@@ -1862,9 +2311,19 @@ body {
   background-size: 300% 100%;
   animation: proportion-rainbow 0.6s ease-in-out infinite alternate;
 }
+
 @keyframes proportion-rainbow {
-  0% { background-position: 0% 50%; filter: brightness(1.2); transform: scaleX(0.95); }
-  100% { background-position: 100% 50%; filter: brightness(1.8); transform: scaleX(1.05); }
+  0% {
+    background-position: 0% 50%;
+    filter: brightness(1.2);
+    transform: scaleX(0.95);
+  }
+
+  100% {
+    background-position: 100% 50%;
+    filter: brightness(1.8);
+    transform: scaleX(1.05);
+  }
 }
 
 /* 17. Rainbow */
@@ -1874,16 +2333,22 @@ body {
   background-size: 100% 100%;
   animation: rainbow-pulse 0.3s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
 }
+
 @keyframes rainbow-pulse {
-  0% { filter: brightness(0.7) contrast(1.2); }
-  100% { filter: brightness(2) contrast(1.5) drop-shadow(0 0 10px white); }
+  0% {
+    filter: brightness(0.7) contrast(1.2);
+  }
+
+  100% {
+    filter: brightness(2) contrast(1.5) drop-shadow(0 0 10px white);
+  }
 }
 
 /* 18. Shining Stars */
 /* Sparse dark mode. Individual stars (pixels) instantly pop up at random locations, then fade to black. */
 .anim-shining-stars {
   background-color: black;
-  background-image: 
+  background-image:
     radial-gradient(circle at 10% 20%, white 1px, transparent 2px),
     radial-gradient(circle at 90% 80%, blue 1px, transparent 2px),
     radial-gradient(circle at 30% 70%, red 1px, transparent 2px),
@@ -1892,12 +2357,34 @@ body {
   background-size: 40px 40px;
   animation: shining-stars 0.4s steps(1, end) infinite alternate;
 }
+
 @keyframes shining-stars {
-  0% { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; filter: brightness(0.2); }
-  25% { background-position: 15px 5px, -10px -20px, 0 0, 0 0, 0 0; filter: brightness(2); box-shadow: 0 0 5px white; }
-  50% { background-position: 0 0, 0 0, 25px -15px, -5px 15px, 0 0; filter: brightness(1); }
-  75% { background-position: 0 0, 0 0, 0 0, 0 0, -20px 10px; filter: brightness(2.5); box-shadow: 0 0 8px yellow; }
-  100% { background-position: -10px 10px, 20px -5px, 0 0, 10px 10px, 0 0; filter: brightness(0.5); }
+  0% {
+    background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+    filter: brightness(0.2);
+  }
+
+  25% {
+    background-position: 15px 5px, -10px -20px, 0 0, 0 0, 0 0;
+    filter: brightness(2);
+    box-shadow: 0 0 5px white;
+  }
+
+  50% {
+    background-position: 0 0, 0 0, 25px -15px, -5px 15px, 0 0;
+    filter: brightness(1);
+  }
+
+  75% {
+    background-position: 0 0, 0 0, 0 0, 0 0, -20px 10px;
+    filter: brightness(2.5);
+    box-shadow: 0 0 8px yellow;
+  }
+
+  100% {
+    background-position: -10px 10px, 20px -5px, 0 0, 10px 10px, 0 0;
+    filter: brightness(0.5);
+  }
 }
 
 /* 19. Static Wave */
@@ -1909,24 +2396,60 @@ body {
   background-position: 50% 50%;
   animation: static-wave 0.5s ease-in-out infinite alternate;
 }
+
 @keyframes static-wave {
-  0% { background-size: 50% 100%; filter: brightness(0.8); } /* Thinner */
-  100% { background-size: 150% 100%; filter: brightness(2.5) drop-shadow(0 0 15px currentColor); } /* Thicker */
+  0% {
+    background-size: 50% 100%;
+    filter: brightness(0.8);
+  }
+
+  /* Thinner */
+  100% {
+    background-size: 150% 100%;
+    filter: brightness(2.5) drop-shadow(0 0 15px currentColor);
+  }
+
+  /* Thicker */
 }
 
 /* 20. Synesthesia */
 /* Entire strip single perfectly uniform color that smoothly morphs. Overall brightness pulses. */
 .anim-synesthesia {
-  background-color: currentColor; /* Inherits the dynamic React state color if any, but we'll override with animation */
+  background-color: currentColor;
+  /* Inherits the dynamic React state color if any, but we'll override with animation */
   animation: synesthesia 3s ease-in-out infinite alternate;
 }
+
 @keyframes synesthesia {
-  0% { background-color: #ff0055; filter: brightness(0.6); }
-  20% { background-color: #aa00ff; filter: brightness(2) drop-shadow(0 0 20px #aa00ff); }
-  40% { background-color: #0088ff; filter: brightness(0.8); }
-  60% { background-color: #00ffaa; filter: brightness(1.5) drop-shadow(0 0 15px #00ffaa); }
-  80% { background-color: #ffdd00; filter: brightness(0.5); }
-  100% { background-color: #ff4400; filter: brightness(2.5) drop-shadow(0 0 25px #ff4400); }
+  0% {
+    background-color: #ff0055;
+    filter: brightness(0.6);
+  }
+
+  20% {
+    background-color: #aa00ff;
+    filter: brightness(2) drop-shadow(0 0 20px #aa00ff);
+  }
+
+  40% {
+    background-color: #0088ff;
+    filter: brightness(0.8);
+  }
+
+  60% {
+    background-color: #00ffaa;
+    filter: brightness(1.5) drop-shadow(0 0 15px #00ffaa);
+  }
+
+  80% {
+    background-color: #ffdd00;
+    filter: brightness(0.5);
+  }
+
+  100% {
+    background-color: #ff4400;
+    filter: brightness(2.5) drop-shadow(0 0 25px #ff4400);
+  }
 }
 
 /* Inspector Layout */
@@ -1954,7 +2477,7 @@ body {
   align-items: center;
   gap: 8px;
   border: 1px solid #333;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .pulsing-dot {
@@ -1966,14 +2489,26 @@ body {
 }
 
 @keyframes pulse-dot {
-  0% { opacity: 0.3; box-shadow: 0 0 0 transparent; }
-  100% { opacity: 1; box-shadow: 0 0 10px var(--lego-cyan); }
+  0% {
+    opacity: 0.3;
+    box-shadow: 0 0 0 transparent;
+  }
+
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 10px var(--lego-cyan);
+  }
 }
 
 /* Equalizer Bars */
 @keyframes equalizer {
-  0% { height: 10%; }
-  100% { height: 90%; }
+  0% {
+    height: 10%;
+  }
+
+  100% {
+    height: 90%;
+  }
 }
 
 /* ========================================= */
@@ -1982,31 +2517,32 @@ body {
 .custom-scrollbar::-webkit-scrollbar {
   width: 14px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background-color: #111;
-  border-left: 2px solid rgba(0,0,0,0.8);
-  border-right: 2px solid rgba(0,0,0,0.8);
-  box-shadow: inset 2px 0 5px rgba(0,0,0,1);
+  border-left: 2px solid rgba(0, 0, 0, 0.8);
+  border-right: 2px solid rgba(0, 0, 0, 0.8);
+  box-shadow: inset 2px 0 5px rgba(0, 0, 0, 1);
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #da291c;
   border-radius: 2px;
-  border-top: 2px solid rgba(255,255,255,0.5);
-  border-left: 1px solid rgba(255,255,255,0.3);
-  border-bottom: 2px solid rgba(0,0,0,0.8);
-  border-right: 1px solid rgba(0,0,0,0.6);
-  background-image: 
-    repeating-linear-gradient(
-      0deg,
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.8);
+  border-right: 1px solid rgba(0, 0, 0, 0.6);
+  background-image:
+    repeating-linear-gradient(0deg,
       transparent,
       transparent 3px,
-      rgba(0,0,0,0.5) 3px,
-      rgba(0,0,0,0.5) 5px,
-      rgba(255,255,255,0.2) 5px,
-      rgba(255,255,255,0.2) 6px
-    );
-  box-shadow: 2px 2px 5px rgba(0,0,0,0.8);
+      rgba(0, 0, 0, 0.5) 3px,
+      rgba(0, 0, 0, 0.5) 5px,
+      rgba(255, 255, 255, 0.2) 5px,
+      rgba(255, 255, 255, 0.2) 6px);
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.8);
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #f03030;
 }
@@ -2028,43 +2564,54 @@ body {
   color: #111;
   font-weight: 900;
   font-size: 0.8rem;
-  box-shadow: 
-    0 5px 8px rgba(0,0,0,0.7),
-    inset 0 -2px 0 rgba(0,0,0,0.5);
+  box-shadow:
+    0 5px 8px rgba(0, 0, 0, 0.7),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.5);
   transition: all 0.1s;
   overflow: hidden;
 }
+
 .cheese-slope-btn.left {
-  background-image: linear-gradient(90deg, rgba(0,0,0,0.2) 0%, rgba(255,255,255,0.7) 70%, rgba(255,255,255,0.9) 82%, #e0b800 86%, #ccaa00 100%);
-  border-left: 1px solid rgba(0,0,0,0.4);
-  border-right: 2px solid rgba(0,0,0,0.8);
-  border-top: 2px solid rgba(255,255,255,0.4);
-  border-bottom: 2px solid rgba(0,0,0,0.5);
+  background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, rgba(255, 255, 255, 0.7) 70%, rgba(255, 255, 255, 0.9) 82%, #e0b800 86%, #ccaa00 100%);
+  border-left: 1px solid rgba(0, 0, 0, 0.4);
+  border-right: 2px solid rgba(0, 0, 0, 0.8);
+  border-top: 2px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.5);
 }
+
 .cheese-slope-btn.left::before {
   content: "";
   position: absolute;
-  top: 0; bottom: 0; right: 4px; width: 1px;
-  background: rgba(0,0,0,0.2);
+  top: 0;
+  bottom: 0;
+  right: 4px;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.2);
 }
+
 .cheese-slope-btn.right {
-  background-image: linear-gradient(-90deg, rgba(0,0,0,0.2) 0%, rgba(255,255,255,0.7) 70%, rgba(255,255,255,0.9) 82%, #e0b800 86%, #ccaa00 100%);
-  border-right: 1px solid rgba(0,0,0,0.4);
-  border-left: 2px solid rgba(0,0,0,0.8);
-  border-top: 2px solid rgba(255,255,255,0.4);
-  border-bottom: 2px solid rgba(0,0,0,0.5);
+  background-image: linear-gradient(-90deg, rgba(0, 0, 0, 0.2) 0%, rgba(255, 255, 255, 0.7) 70%, rgba(255, 255, 255, 0.9) 82%, #e0b800 86%, #ccaa00 100%);
+  border-right: 1px solid rgba(0, 0, 0, 0.4);
+  border-left: 2px solid rgba(0, 0, 0, 0.8);
+  border-top: 2px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.5);
 }
+
 .cheese-slope-btn.right::before {
   content: "";
   position: absolute;
-  top: 0; bottom: 0; left: 4px; width: 1px;
-  background: rgba(0,0,0,0.2);
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.2);
 }
+
 .cheese-slope-btn:active {
   transform: translateY(2px);
-  box-shadow: 
-    0 1px 2px rgba(0,0,0,0.6),
-    inset 0 -1px 0 rgba(0,0,0,0.8);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.8);
 }
 
 /* ========================================= */
@@ -2074,13 +2621,17 @@ body {
   position: relative;
   overflow: hidden;
 }
+
 .lcd-screen-fx::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   pointer-events: none;
-  background-image: 
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px),
-    linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.2) 100%);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 2px),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 40%, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.2) 100%);
   z-index: 10;
 }

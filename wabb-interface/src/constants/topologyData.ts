@@ -16,7 +16,7 @@ export const relativeTopology = [
   { id: "v2", name: "segment_v2", col: 29, row: 4, w: 2, h: 18, color: '#00ff00', orientation: 'vertical', mode: 'Opposite Sides', direction: 'UP' },
   { id: "h11", name: "segment_h11", col: 21, row: 2, w: 9, h: 2, color: '#ff9664', orientation: 'horizontal', mode: 'Flying Ball', direction: 'UP' },
   { id: "h10", name: "segment_h10", col: 21, row: 16, w: 9, h: 2, color: '#9632c8', orientation: 'horizontal', mode: 'PSG', direction: 'UP' },
-  { id: "v1", name: "segment_v1", col: 21, row: -1, w: 2, h: 18, color: '#ffff00', orientation: 'vertical', mode: 'Alcool Randomer', direction: 'UP' },
+  { id: "v1", name: "segment_v1", col: 21, row: -1, w: 2, h: 18, color: '#ffff00', orientation: 'vertical', mode: 'Bary Rainbow', direction: 'UP' },
 ];
 
 export const initialTopology = relativeTopology.map(seg => ({

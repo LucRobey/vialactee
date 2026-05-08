@@ -8,18 +8,36 @@ import json
 import os
 
 class Segment:
+    """
+    Represents a physical LED segment in the installation.
+    
+    A segment manages its own local buffer, active mode, and transition state.
+    It acts as the intermediary between the visual modes and the actual hardware 
+    LED array.
+    """
     
     listener = None
     _configuration_manager = Configuration_manager.Configurations_manager()
 
-    def __init__(self , name ,listener , leds , indexes , orientation , alcool , infos):
+    def __init__(self , name ,listener , leds , indexes , orientation , infos):
+        """
+        Initialize a new Segment.
+
+        Args:
+            name (str): The unique identifier name of the segment (e.g., 'Segment v4').
+            listener: Reference to the global audio listener for reactivity.
+            leds: Shared list/array of the global LED strip.
+            indexes (list): The specific hardware indices belonging to this segment.
+            orientation (str): 'horizontal' or 'vertical' layout orientation.
+            infos: Additional configuration metadata.
+        """
         self.name = name
         self.logger = logging.getLogger(f"Segment.{self.name}")
         self.leds = leds
         self.indexes = indexes
         self.infos = infos
         self.nb_of_leds=len(self.indexes)
-        if(self.listener==None):
+        if self.listener is None:
             self.listener = listener
         self.fused_list = []
         self.rgb_list = np.zeros((len(indexes), 3), dtype=np.int32)
@@ -41,9 +59,14 @@ class Segment:
         self.transition_type = None
 
         self.modes = {}
-        self.initiate_modes(orientation , alcool)
+        self.initiate_modes(orientation)
 
     def _load_coordinates(self):
+        """
+        Load the 2D spatial coordinates for this segment's LEDs from the configuration.
+        
+        This is used for physics-based spatial transitions (e.g., gravity drops).
+        """
         coords_list = self._configuration_manager.get_segment_coordinates(self.name)
         if coords_list is None:
             self.logger.warning(f"Could not find coordinates for {self.name} in segments.json")
@@ -55,9 +78,16 @@ class Segment:
 
 
     def update(self):
+        """
+        Update the current active mode and handle any ongoing visual transitions.
+        
+        This method executes the active visual mode, processes dual-buffer mixing 
+        if a transition is in progress, and finally flushes the local buffer to 
+        the global hardware LED array.
+        """
         
         #sécurité, enlevable
-        if(self.modes[self.activ_mode].isActiv):
+        if self.modes[self.activ_mode].isActiv:
             self.modes[self.activ_mode].update()
         else:
             self.logger.warning("(S) erreur, on update un mode qui n'a pas été start ")
@@ -99,10 +129,17 @@ class Segment:
                 self.state = "NORMAL"
                 self.transition_progress = 0.0
         
-        self.update_leds("Priority")
+        self.update_leds()
         
     #Load the json modes.json and initiate the modes 
-    def initiate_modes(self , orientation , alcool):
+    def initiate_modes(self , orientation ):
+        """
+        Dynamically load and instantiate all available visual modes for this segment
+        based on the modes.json configuration file.
+
+        Args:
+            orientation (str): Segment orientation ('vertical' or 'horizontal').
+        """
         self.modes = {}
         
         config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'modes.json')
@@ -132,30 +169,42 @@ class Segment:
         # Load standard modes
         load_mode_list(mode_config.get("standard_modes", []))
 
-        if(orientation == "horizontal"):
+        if orientation == "horizontal":
             pass
                       
-        if(orientation == "vertical"):
+        if orientation == "vertical":
             load_mode_list(mode_config.get("vertical_modes", []))
             
         # Ensure the default mode is started upon initialization
         if self.activ_mode in self.modes:
             self.modes[self.activ_mode].start()
         
-    def update_leds(self, fusion_type):
+    def update_leds(self):
+        """
+        Flush the local segment RGB buffer to the global LED array.
+        """
         luminosite = self.listener.luminosite
         for led_index in range(self.nb_of_leds):
-            if(self.way=="UP"):
+            if self.way == "UP":
                 self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
             else:
                 self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
 
     def change_way(self , new_way):
+        """
+        Change the propagation direction of visual effects on the segment.
+
+        Args:
+            new_way (str): The new direction ('UP' or 'DOWN').
+        """
         self.logger.debug(f"le {self.name} change de sens {self.way} pour {new_way}")
         self.way = new_way
 
     def switch_way(self):
-        if(self.way == "UP"):
+        """
+        Toggle the current propagation direction between 'UP' and 'DOWN'.
+        """
+        if self.way == "UP":
             new_way = "DOWN"
         else:
             new_way = "UP"
@@ -166,6 +215,12 @@ class Segment:
     
 
     def execute_mode_swap(self, mode_name):
+        """
+        Instantly swap to a new visual mode without any transition effects.
+
+        Args:
+            mode_name (str): The name of the target mode to switch to.
+        """
         if self.state == "TRANSITION_DUAL":
             return
             
@@ -188,7 +243,15 @@ class Segment:
         self.logger.info(f"{self.name} a changé de mode pour {mode_name}")
 
     def change_mode(self, mode_name, transition_config=None):
-        if(not self.isBlocked):
+        """
+        Request a mode change, optionally using a dual-buffer transition effect.
+
+        Args:
+            mode_name (str): The name of the target mode.
+            transition_config (dict, optional): Configuration defining the type and 
+                duration of the transition. Defaults to None (instant swap).
+        """
+        if not self.isBlocked:
             if self.state == "TRANSITION_DUAL":
                 # Ignore new requests entirely if a transition is in progress
                 self.logger.debug(f"(S) Transition already in progress for {self.name}, ignoring request to {mode_name}")
@@ -226,6 +289,12 @@ class Segment:
             self.logger.debug(f"(S) le {self.name} est bloqué et ne peut pas passer au {mode_name}")
 
     def force_mode(self , mode_name):
+        """
+        Forcefully change to a new mode, overriding any current state.
+
+        Args:
+            mode_name (str): The name of the target mode.
+        """
         if self.state == "TRANSITION_DUAL":
             return
             
@@ -249,17 +318,41 @@ class Segment:
                 
                 
     def get_current_mode(self):
+        """
+        Get the name of the currently active mode.
+
+        Returns:
+            str: The name of the active mode.
+        """
         return self.activ_mode
          
     def block(self):
+        """
+        Block the segment from accepting new mode change requests.
+        """
         self.isBlocked = True
 
     def unBlock(self):
+        """
+        Unblock the segment, allowing it to accept mode change requests again.
+        """
         self.isBlocked = False
 
 
     #Pass from user friendly name (example : plasma fire) to the internal name (example : Plasma_Fire_mode)
     def _normalize_mode_name(self, mode_name):
+        """
+        Normalize a mode name, resolving legacy formatting.
+
+        Converts old-style names (e.g., 'Plasma_fire_mode') to the standard 
+        human-readable keys used in the modes dictionary (e.g., 'Plasma Fire').
+
+        Args:
+            mode_name (str): The requested mode name.
+
+        Returns:
+            str: The normalized mode name, or the original if no match was found.
+        """
         mode_name = mode_name.strip()
         if mode_name in self.modes:
             return mode_name

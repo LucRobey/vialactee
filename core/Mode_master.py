@@ -13,7 +13,17 @@ import core.Transition_Director as Transition_Director
 from contextlib import contextmanager
 
 class Profiler:
+    """
+    A simple context-manager based profiler to measure execution time of code blocks.
+    """
     def __init__(self, active, logger):
+        """
+        Initialize the Profiler.
+
+        Args:
+            active (bool): Whether the profiler is active and should record times.
+            logger (logging.Logger): The logger instance to use for output.
+        """
         self.active = active
         self.logger = logger
         self.durations = []
@@ -22,6 +32,12 @@ class Profiler:
 
     @contextmanager
     def measure(self, name):
+        """
+        Context manager to measure the execution time of a block of code.
+
+        Args:
+            name (str): The name/label for this measurement block.
+        """
         if self.active:
             start = time.time()
             yield
@@ -31,6 +47,9 @@ class Profiler:
             yield
 
     def print_results(self):
+        """
+        Print the accumulated profiling results to the logger.
+        """
         if self.active and self.durations:
             self.logger.debug("=======================================================================")
             total = np.sum(self.durations)
@@ -44,6 +63,12 @@ class Profiler:
 
 
 class Mode_master:
+    """
+    Master controller for all visual segments, modes, and configurations.
+
+    Manages the global state, playlists, and transitions between different
+    configurations across the entire installation.
+    """
 
     segments_list = []
     segments_names_to_index = {}
@@ -56,6 +81,15 @@ class Mode_master:
     current_time = time.time()
 
     def __init__(self, listener, infos, leds1, leds2):
+        """
+        Initialize the Mode_master.
+
+        Args:
+            listener: Reference to the global audio listener.
+            infos (dict): Dictionary containing global configuration and metadata.
+            leds1: Reference to the primary LED strip hardware/simulator.
+            leds2: Reference to the secondary LED strip hardware/simulator.
+        """
         self.infos = infos
         self.listener = listener
         self.onRaspberry            = infos.get("onRaspberry", False)
@@ -76,14 +110,29 @@ class Mode_master:
         self.transition_director = Transition_Director.Transition_Director(self.listener, self.infos)
 
     def set_connector(self, connector):
+        """
+        Set the application connector for external communications.
+
+        Args:
+            connector: The connector instance.
+        """
         self.appli_connector = connector
 
     async def update_forever(self):
+        """
+        Continuously update the system at approximately 30 FPS.
+        """
         while True:
             await self.update()
             await asyncio.sleep(1/30)
 
     async def update(self):
+        """
+        Perform a single update loop iteration.
+
+        Updates the audio listener, flushes hardware LED buffers, updates all
+        segments, and evaluates global transitions via the Transition_Director.
+        """
         # Profiler cleans up the time_time() boilerplate
         with self.profiler.measure("listener.update()"):
             self.listener.update()
@@ -123,6 +172,9 @@ class Mode_master:
 
 
     def load_configurations(self):
+        """
+        Load modes and playlists from the configurations.json file.
+        """
         import json
         import os
         file_path = os.path.join(os.path.dirname(__file__), "..", "data", "configurations.json")
@@ -143,6 +195,13 @@ class Mode_master:
             self.blocked_playlists.append(False)
         self.shuffle_bag = []
     def update_segments_modes(self, transition_config=None):
+        """
+        Apply the active configuration to all relevant segments.
+
+        Args:
+            transition_config (dict, optional): Configuration defining the type and
+                duration of the transition. Defaults to None.
+        """
         targeted_segments = None
         if transition_config and "segments" in transition_config:
             targeted_segments = transition_config["segments"]
@@ -160,6 +219,9 @@ class Mode_master:
  
 
     def initiate_configuration(self):
+        """
+        Initialize the starting configuration by picking a random one from available playlists.
+        """
         #On initialise en prenant une conf au pif dans une playlist au pif
         self.activ_configuration = self.pick_a_random_conf()
         self.update_segments_modes()
@@ -170,12 +232,15 @@ class Mode_master:
         
 
     def initiate_segments(self):
+        """
+        Initialize all segments based on the segments.json configuration file.
+        """
         def add_segments(info_list , leds):
             offset = 0
             for segment_index in range(len(info_list)):
                 seg_infos = info_list[segment_index]
                 indexes = [i for i in range(offset,offset+seg_infos["size"])]
-                new_segment = Segment.Segment(seg_infos["name"],self.listener, leds ,indexes,seg_infos["orientation"],seg_infos["alcool"],self.infos)
+                new_segment = Segment.Segment(seg_infos["name"],self.listener, leds ,indexes,seg_infos["orientation"],self.infos)
                 offset += seg_infos["size"]
                 self.segments_list.append(new_segment)
                 self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
@@ -191,6 +256,13 @@ class Mode_master:
 
 
     async def change_configuration(self, transition_config=None):
+        """
+        Change the global active configuration to a new random one.
+
+        Args:
+            transition_config (dict, optional): Configuration defining the type and
+                duration of the transition. Defaults to None.
+        """
         #on pick une conf nouvelle au pif
         last_configuration = self.activ_configuration
         loop_guard = 0
@@ -204,6 +276,13 @@ class Mode_master:
         self.logger.debug(f"(MM)   change_configuration()  :     next_change_of_conf_time = {self.next_change_of_configuration_time}")
 
     async def force_standby_playlist(self, transition_config=None):
+        """
+        Force the system into a standby or chill playlist.
+
+        Args:
+            transition_config (dict, optional): Configuration defining the type and
+                duration of the transition. Defaults to None.
+        """
         target_playlist = None
         for p in self.playlists:
             if "chill" in p.lower() or "standby" in p.lower():
@@ -227,6 +306,12 @@ class Mode_master:
             self.next_change_of_configuration_time = self.current_time + self.configuration_duration
 
     def pick_a_random_conf(self):
+        """
+        Select a random configuration from the unblocked playlists using a shuffle bag approach.
+
+        Returns:
+            dict: The selected configuration dictionary.
+        """
         # If our shuffle bag is empty, we must refill it with all available configurations
         if len(self.shuffle_bag) == 0:
             for playlist_index in range(len(self.playlists)):
@@ -255,10 +340,22 @@ class Mode_master:
         return new_conf
 
     def obey_orders(self,orders):
+        """
+        Process a list of external orders/commands.
+
+        Args:
+            orders (list): A list of command strings.
+        """
         for order in orders:
             self.obey_order(order)
         
     def obey_order(self,order):
+        """
+        Process a single external order/command.
+
+        Args:
+            order (str): The command string to process, formatted as 'category:param1:param2'.
+        """
         splited_order = order.split(":")
         category = splited_order[0]                     #str category c ["block","unblock","change","force","update","special"]
         
