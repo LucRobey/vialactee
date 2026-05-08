@@ -161,9 +161,6 @@ class Mode_master:
             self.transition_director.is_in_standby = True
         elif action == "allow_change":
             await self.change_configuration(transition_config)
-        elif action == "delay_change":
-            self.logger.debug("(MM) Delaying configuration change due to audio context.")
-            self.next_change_of_configuration_time += 1.0
 
         self.profiler.print_results()
         # Clean profiler values for next frame
@@ -275,36 +272,6 @@ class Mode_master:
         self.next_change_of_configuration_time = self.current_time + self.configuration_duration
         self.logger.debug(f"(MM)   change_configuration()  :     next_change_of_conf_time = {self.next_change_of_configuration_time}")
 
-    async def force_standby_playlist(self, transition_config=None):
-        """
-        Force the system into a standby or chill playlist.
-
-        Args:
-            transition_config (dict, optional): Configuration defining the type and
-                duration of the transition. Defaults to None.
-        """
-        target_playlist = None
-        for p in self.playlists:
-            if "chill" in p.lower() or "standby" in p.lower():
-                target_playlist = p
-                break
-                
-        if not target_playlist and len(self.playlists) > 0:
-            target_playlist = self.playlists[0]
-            
-        if target_playlist and len(self.configurations.get(target_playlist, [])) > 0:
-            self.logger.info(f"(MM) Forcing Standby Playlist: {target_playlist}")
-            conf = random.choice(self.configurations[target_playlist])
-            self.activ_configuration = {
-                "playlist": target_playlist,
-                "index": self.configurations[target_playlist].index(conf),
-                "name": conf["name"],
-                "modes": conf["modes"],
-                "way": conf["way"]
-            }
-            self.update_segments_modes(transition_config)
-            self.next_change_of_configuration_time = self.current_time + self.configuration_duration
-
     def pick_a_random_conf(self):
         """
         Select a random configuration from the unblocked playlists using a shuffle bag approach.
@@ -338,105 +305,5 @@ class Mode_master:
 
         self.logger.debug(f"(MM)   pick_a_random_conf() :     conf = {new_conf}")
         return new_conf
-
-    def obey_orders(self,orders):
-        """
-        Process a list of external orders/commands.
-
-        Args:
-            orders (list): A list of command strings.
-        """
-        for order in orders:
-            self.obey_order(order)
-        
-    def obey_order(self,order):
-        """
-        Process a single external order/command.
-
-        Args:
-            order (str): The command string to process, formatted as 'category:param1:param2'.
-        """
-        splited_order = order.split(":")
-        category = splited_order[0]                     #str category c ["block","unblock","change","force","update","special"]
-        
-        self.logger.debug(f"category = {category}")
-        if (category == "block"):
-            segment_name = splited_order[1]
-            if (self.printAppDetails):
-                self.logger.debug(f"(MM) On veut bloquer le segment {segment_name}")
-            self.segments_list[self.segments_names_to_index[segment_name]].block()
-            
-
-        elif (category == "unblock"):
-            segment_name = splited_order[1]
-            if (self.printAppDetails):
-                self.logger.debug(f"(MM) On veut débloquer le segment {segment_name}")
-            self.segments_list[self.segments_names_to_index[segment_name]].unBlock()
-            
-
-        elif (category == "change_mode"):
-            segment_name = splited_order[1]
-            new_mode = splited_order[2]
-            if (self.printAppDetails):
-                self.logger.debug(f"(MM) On veut changer le segment {segment_name} pour le mode {new_mode}")
-            self.segments_list[self.segments_names_to_index[segment_name]].change_mode(new_mode)
-            
-        elif (category == "change_way"):
-            segment_name = splited_order[1]
-            new_way = splited_order[2]
-            if (self.printAppDetails):
-                self.logger.debug(f"(MM) On veut changer le {segment_name} pour le sens {new_way}")
-            self.segments_list[self.segments_names_to_index[segment_name]].change_way(new_way)
-            
-        elif (category == "switch_way"):
-            segment_name = splited_order[1]
-            if (self.printAppDetails):
-                self.logger.debug(f"(MM) On veut switch le {segment_name}")
-            self.segments_list[self.segments_names_to_index[segment_name]].switch_way()
-            
-
-        elif (category == "force"):
-            segment_name = splited_order[1]
-            new_mode = splited_order[2]
-            if (self.printAppDetails):
-                self.logger.debug(f"(MM) On veut FORCER le segment {segment_name} pour le mode {new_mode}")
-            self.segments_list[self.segments_names_to_index[segment_name]].force_mode(new_mode)
-
-        elif (category == "update"):
-            parametre = splited_order[1]                            #str parametre c ["sensibilite","luminosite"]
-            new_value = int(splited_order[2])
-            if (self.printAppDetails):#int sensi,lum c [0:100]
-                self.logger.debug(f"(MM) On veut changer {parametre} = {new_value}")
-            if (parametre == "sensibilite"):
-                self.listener.sensi = float(new_value)/100          #On ramene la sensi entre 0 et 1 
-            if (parametre == "luminosite"):
-                self.listener.luminosite = float(new_value)/100     #On ramene la luminosite entre 0 et 1
-                
-        elif (category == "calibration"):
-            type_cal = splited_order[1]
-            phase = splited_order[2]     #str type_cal c ["silence , "bb"]
-            if (self.printAppDetails):
-                    self.logger.debug(f"(MM) On veut {phase} une calibration {type_cal}")
-            if (type_cal == "silence"):
-                if (phase == "start"):
-                    self.listener.start_silence_calibration()
-                elif(phase == "end"):
-                    self.listener.stop_silence_calibration()
-            elif (type_cal == "bb"):
-                if (phase == "start"):
-                    self.listener.start_bb_calibration()
-                elif(phase == "end"):
-                    self.listener.stop_bb_calibration()
-            
-        elif (category == "special"):
-            if (self.printAppDetails):
-                self.logger.debug("(MM) On veut lancer le shot ")
-            for target_seg in ["Segment h20", "Segment h00"]:
-                seg = self.segments_list[self.segments_names_to_index[target_seg]]
-                for m_idx, m_name in enumerate(seg.modes_names):
-                    if m_name == "Shot":
-                        seg.modes[m_idx].activate()
-                        break
-
 
             

@@ -77,22 +77,9 @@ class Transition_Director:
 
         Returns:
             tuple: A pair (action_string, transition_config_dict) defining the 
-                action to take (e.g., "force_standby", "allow_change", "none") 
+                action to take (e.g., "allow_change", "none") 
                 and the configuration for the transition.
         """
-        is_silence = self.listener.smoothed_total_power < self.silence_threshold
-        
-        # 1. Evaluate Silence
-        if is_silence:
-            if self.silence_start_time is None:
-                self.silence_start_time = current_time
-            elif current_time - self.silence_start_time > self.silence_duration_trigger:
-                if not self.is_in_standby:
-                    return "force_standby", {"type": "global_change", "duration": 2.0} # Fades out fully
-                return "none", None
-        else:
-            self.silence_start_time = None
-            self.is_in_standby = False
 
         # 2. Evaluate Audio Event Triggers natively mapped
         # if getattr(self.listener, "is_song_change", False):
