@@ -57,7 +57,7 @@ flowchart TD
         RunBoth --> Mix[Transition_Engine.py]:::engine
         Mix -->|Spatially mixes RGB2 into RGB1\nusing td.transition_progress| RGB1
   
-        CheckTD -->|NORMAL| FinishTrans[Swap Active Mode\nis_in_transition = False]
+        CheckTD -->|PASSATION| FinishTrans[Swap Active Mode\nis_in_transition = False]
         FinishTrans -.-> StateNormal
     end
 
@@ -81,6 +81,6 @@ flowchart TD
 3. **State Machine**:
    - When `self.is_in_transition` is false, the active mode does its math and directly mutates `rgb_list`.
    - When `self.is_in_transition` is true, it queries the `Transition_Director` (`td`). If `td.state == "TRANSITION_DUAL"`, the *old* mode continues mutating `rgb_list`, but the *new* mode is temporarily redirected to mutate `dual_rgb_list`.
-   - If `td.state == "NORMAL"`, the segment finalizes the swap and turns off `is_in_transition`.
+   - If `td.state == "PASSATION"`, the segment finalizes the swap and turns off `is_in_transition`.
 4. **Transition Engine**: During a transition, the `Transition_Engine` is called. It applies physics and spatial mapping (like a gravity drop or a fade) to smoothly overwrite `rgb_list` with the pixels from `dual_rgb_list` based on the synchronized global `td.transition_progress`.
 5. **Hardware Flush**: At the very end of the `update()` loop, `update_leds()` takes whatever is finalized in `rgb_list`, reverses the direction if `self.way == "DOWN"`, and writes it into the global hardware `self.leds` array to be sent to the Pi/ESP32.

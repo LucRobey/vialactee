@@ -31,12 +31,10 @@ graph TD
         H["1. listener.update()"]:::loop
         I["2. leds.show()"]:::loop
         J["3. segments.update(transition_director)"]:::loop
-        K["4. transition_director.update()"]:::loop
-        K2["5. Evaluate Global Context"]:::loop
-        L{"Transition_Director Action?"}:::decision
+        K["4. transition_director.update(current_time)"]:::loop
+        L{"Transition_Director triggers change?"}:::decision
         M[force_standby_playlist]:::action
         N[change_configuration]:::action
-        O[Delay next change]:::action
         P[End of Frame / Wait]:::loop
         
         F --> G
@@ -44,17 +42,14 @@ graph TD
         H --> I
         I --> J
         J --> K
-        K --> K2
-        K2 --> L
+        K --> L
         
-        L -->|force_standby| M
-        L -->|allow_change| N
-        L -->|delay_change| O
-        L -->|None| P
+        L -->|Yes: Standby| M
+        L -->|Yes: New Config| N
+        L -->|No| P
         
         M --> P
         N --> P
-        O --> P
         P --> F
     end
 
@@ -105,10 +100,7 @@ Running at approximately 30 frames per second (`update_forever`), the core loop 
 1.  **Audio Sync**: `listener.update()` fetches the latest audio FFT and volume data.
 2.  **Hardware Flush**: `leds.show()` flushes the **previous frame's** buffer to the physical LED strips to ensure minimum latency.
 3.  **Segment Execution**: Iterates over `segments_list` calling `update(transition_director)` on each. Segments calculate their new pixel data and perform dual-buffer mixing using the synchronized global transition progress.
-4.  **Global Transitions Check**: Ticks `Transition_Director.update()` to advance any ongoing transition progress, then asks `evaluate_context()` if it is time to trigger a new configuration change.
-    *   If `force_standby`, it switches to a chill mode (e.g., silence detected).
-    *   If `allow_change`, it triggers a new random configuration.
-    *   If `delay_change`, it postpones the change slightly because the current audio context (e.g., a drop building up) isn't right for a transition.
+4.  **Global Transitions Check**: Ticks `transition_director.update(current_time)` to advance any ongoing transition progress and evaluate audio context. The `Transition_Director` has full autonomy to command the `Mode_master` to change configurations (e.g., via `change_configuration()`) when a music event or timer occurs. The `Mode_master` strictly obeys.
 
 ### 3. Configuration Management (The Shuffle Bag)
 To ensure that all configurations in the allowed playlists are seen before repeating, `Mode_master` uses a **Shuffle Bag** (`pick_a_random_conf()`):

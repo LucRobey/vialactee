@@ -76,8 +76,6 @@ class Mode_master:
     configurations = {}
     playlists = []
     blocked_playlists = []
-    configuration_duration = 6
-    next_change_of_configuration_time = 0
     current_time = time.time()
 
     def __init__(self, listener, infos, leds1, leds2):
@@ -107,7 +105,7 @@ class Mode_master:
 
         self.initiate_segments()
         self.initiate_configuration()
-        self.transition_director = Transition_Director.Transition_Director(self.listener, self.infos)
+        self.transition_director = Transition_Director.Transition_Director(self, self.listener, self.infos)
 
     def set_connector(self, connector):
         """
@@ -154,14 +152,7 @@ class Mode_master:
         #==============================================
         self.current_time = time.time()
         
-        self.transition_director.update()
-        action, transition_config = self.transition_director.evaluate_context(self.current_time, self.next_change_of_configuration_time)
-        
-        if action == "force_standby":
-            await self.force_standby_playlist(transition_config)
-            self.transition_director.is_in_standby = True
-        elif action == "allow_change":
-            await self.change_configuration(transition_config)
+        await self.transition_director.update(self.current_time)
 
         self.profiler.print_results()
         # Clean profiler values for next frame
@@ -218,9 +209,6 @@ class Mode_master:
         #On initialise en prenant une conf au pif dans une playlist au pif
         self.activ_configuration = self.pick_a_random_conf()
         self.update_segments_modes()
-        #On set un temps pour le futur changement de conf
-        self.next_change_of_configuration_time = time.time() + self.configuration_duration
-        self.logger.debug(f"(MM)   initiate_configuration()  :     next_change_of_conf_time = {self.next_change_of_configuration_time}")
 
         
 
@@ -264,9 +252,6 @@ class Mode_master:
             loop_guard += 1
         #on l'applique à tous les segments
         self.update_segments_modes(transition_config)
-        #On set un temps pour le futur changement de conf
-        self.next_change_of_configuration_time = self.current_time + self.configuration_duration
-        self.logger.debug(f"(MM)   change_configuration()  :     next_change_of_conf_time = {self.next_change_of_configuration_time}")
 
     def pick_a_random_conf(self):
         """

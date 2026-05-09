@@ -12,15 +12,17 @@ class Transition_Director:
     to decide when and how to transition between different display modes.
     """
 
-    def __init__(self, listener, infos):
+    def __init__(self, mode_master, listener, infos):
         """
         Initialize the Transition_Director.
 
         Args:
+            mode_master: The orchestrator to command for transitions.
             listener: The listener object providing audio analysis data.
             infos (dict): Configuration dictionary containing settings like 
                 silence thresholds.
         """
+        self.mode_master = mode_master
         self.listener = listener
         self.logger = logging.getLogger("Transition_Director")
         self.silence_threshold = infos.get("silence_threshold", 150)
@@ -29,7 +31,10 @@ class Transition_Director:
         self.silence_start_time = None
         self.is_in_standby = False
 
-        self.state = "NORMAL"
+        self.configuration_duration = 6.0
+        self.next_change_time = time.time() + self.configuration_duration
+
+        self.state = "PASSATION"
         self.transition_progress = 0.0
         self.transition_step = 0.0
         self.transition_type = None
@@ -81,49 +86,37 @@ class Transition_Director:
         else:
             self.transition_step = 1.0
 
-    def update(self):
-        """ Advance the global transition progress. """
+    async def update(self, current_time):
+        """
+        Advance the global transition progress and analyze audio context.
+        If a transition is needed, it directly commands the mode_master.
+        
+        Args:
+            current_time (float): The current system time.
+        """
         if self.state == "TRANSITION_DUAL":
             self.transition_progress += self.transition_step
             if self.transition_progress >= 1.0:
                 self.transition_progress = 1.0
-                self.state = "NORMAL"
-
-
-    def evaluate_context(self, current_time, next_change_time):
-        """
-        Analyze the audio state and dictate whether to change modes.
-
-        Evaluates silence, audio events, and timers to determine the next 
-        transition action and configuration.
-
-        Args:
-            current_time (float): The current system time.
-            next_change_time (float): The scheduled time for the next transition.
-
-        Returns:
-            tuple: A pair (action_string, transition_config_dict) defining the 
-                action to take (e.g., "allow_change", "none") 
-                and the configuration for the transition.
-        """
+                self.state = "PASSATION"
 
         # 2. Evaluate Audio Event Triggers natively mapped
         # if getattr(self.listener, "is_song_change", False):
         #     self.logger.info("(TD) Massive Audio Event: SONG CHANGE DETECTED -> GLOBAL")
         #     chosen_effect = random.choice(["global_change", "radar_scan", "gravity_drop"])
-        #     return "allow_change", {"type": chosen_effect, "duration": 4.0}
-
+        #     await self.mode_master.change_configuration({"type": chosen_effect, "duration": 4.0})
+        #     self.next_change_time = current_time + self.configuration_duration
 
         # 3. Evaluate Standard Transitions based on internal timers -> Fallback LOCAL
-        if current_time > next_change_time:
+        if current_time > self.next_change_time:
             self.logger.info(f"(TD) Timer Expired")
             
             # Temporary override for testing!
             self.logger.info("(TD) TEST OVERRIDE: Forcing spatial global transition via timer!")
             chosen_effect = "explosion"
-            return "allow_change", {
+            transition_config = {
                 "type": chosen_effect, 
                 "duration": 5.0
             }
-                
-        return "none", None
+            await self.mode_master.change_configuration(transition_config)
+            self.next_change_time = current_time + self.configuration_duration

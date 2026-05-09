@@ -112,7 +112,7 @@ class Segment:
                     Transition_Engine.apply_transition(self.rgb_list, self.dual_rgb_list, td.transition_progress, td.transition_type, active_coords)
 
                 
-            if td.state == "NORMAL" or self.modes[self.activ_mode].has_custom_transition:
+            if td.state == "PASSATION" or self.modes[self.activ_mode].has_custom_transition:
                 # Execution complete! Swap the modes and terminate old one.
                 self.modes[self.activ_mode].terminate()
                 self.activ_mode = self.target_mode_name

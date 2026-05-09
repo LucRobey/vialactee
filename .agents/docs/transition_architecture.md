@@ -37,6 +37,8 @@ graph TD
 
 ## 1. The Global Decision Matrix (`Transition_Director`)
 
+The `Transition_Director` operates autonomously, constantly evaluating the audio context and internal timers. When it decides a change is necessary, it issues direct commands (e.g., `change_configuration`) to the `Mode_master`. The `Mode_master` acts purely as an executor, obeying the director's orders without questioning the transition logic.
+
 Transitions are exclusively global by design. The timing and intensity of a global sweep are governed by **Audio Context** and **Playlist Mood**:
 
 - **Massive Energy Spikes:**
