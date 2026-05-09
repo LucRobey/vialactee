@@ -29,8 +29,8 @@ graph TD
     %% Core Processing Engine
     subgraph Core [Core Engine]
         Config["Configuration_manager"]
-        AudioIngest["AudioIngestion (FFT & Buffers)"]
-        AudioAnalyz["AudioAnalyzer (DSP & Rhythm)"]
+        AudioIngest["AudioIngestion (FFT and Buffers)"]
+        AudioAnalyz["AudioAnalyzer (DSP and Rhythm)"]
         ModeMaster["Mode_master (Orchestrator)"]
         TransDir["Transition_Director"]
     end
@@ -41,7 +41,7 @@ graph TD
     AudioIngest -->|Smoothed FFT / Power| ModeMaster
     AudioAnalyz -->|BPM / Phase| ModeMaster
     AudioAnalyz -->|Structural Music Drops| TransDir
-    TransDir -->|Forces Mode Transitions| ModeMaster
+    TransDir -->|Commands Configuration Changes| ModeMaster
 
     %% Animation and Visuals
     subgraph Visuals [Visual Algorithms]
@@ -50,22 +50,27 @@ graph TD
     end
 
     Config -->|Loads app_config.json| ModeMaster
-    Config -->|Loads segments.json| Seg
+    Config -->|Loads segments.json| ModeMaster
+    Config -->|Loads segments.json| TransDir
 
-    ModeMaster -->|Executes run| Mode
-    Mode -->|Updates RGB matrix| Seg
-    Seg -->|Returns stitched Frame| ModeMaster
+    ModeMaster -->|Calls segment update| Seg
+    Seg -->|Queries State and Progress| TransDir
+    Seg -->|Executes mode update| Mode
+    Mode -->|Mutates RGB buffer| Seg
+    Seg -->|Flushes to Global LED Array| HwFac
 
     %% Hardware Output Layer
     subgraph Hardware [Hardware Abstraction]
         HwFac["HardwareFactory"]
         Fake["Fake_leds (Pygame Simulator)"]
         Rpi["Rpi_NeoPixels (Raspberry Pi GPIO)"]
+        UDP["Udp_Sender (ESP32 / Fake_ESP32)"]
     end
 
     ModeMaster -->|Flushes Frame Array| HwFac
     HwFac -->|If Windows| Fake
     HwFac -->|If Linux/Pi| Rpi
+    HwFac -->|If Network| UDP
 ```
 
 ---
@@ -78,7 +83,7 @@ Here is a breakdown of the core directories in this project:
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
 - **`/config`**: JSON files and managers detailing the hardware geometry and global settings.
 - **`/connectors`**: The external communication handlers. This includes the TCP/WebSocket server that talks to the web interface, as well as microphone stream capture tools.
-- **`/hardware`**: Hardware abstractions. Allows switching seamlessly between testing on a PC (with Pygame simulated LEDs) and running on the real Raspberry Pi (with WS2812b NeoPixels).
+- **`/hardware`**: Hardware abstractions. Allows switching seamlessly between testing on a PC (with Pygame simulated LEDs or UDP Fake ESP32) and running on real hardware (Raspberry Pi GPIO or real ESP32s over network).
 - **`/wabb-interface`**: A React-based web application serving as the remote controller for the user to change playlists, transition modes, or tweak settings on the fly.
 - **`/.agents`**: Core context, architectural rules, and technical specifications designed for AI agents working on the codebase.
 
