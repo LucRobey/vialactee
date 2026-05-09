@@ -78,15 +78,14 @@ class Mode_master:
     blocked_playlists = []
     current_time = time.time()
 
-    def __init__(self, listener, infos, leds1, leds2):
+    def __init__(self, listener, infos, *leds):
         """
         Initialize the Mode_master.
 
         Args:
             listener: Reference to the global audio listener.
             infos (dict): Dictionary containing global configuration and metadata.
-            leds1: Reference to the primary LED strip hardware/simulator.
-            leds2: Reference to the secondary LED strip hardware/simulator.
+            *leds: References to the LED strip hardware/simulators.
         """
         self.infos = infos
         self.listener = listener
@@ -96,8 +95,7 @@ class Mode_master:
         self.printAppDetails        = infos.get("printAppDetails", False)
         self.printConfigChanges     = infos.get("printConfigChanges", False)
 
-        self.leds = leds1
-        self.leds2 = leds2
+        self.leds_list = leds
         self.logger = logging.getLogger("Mode_master")
         self.profiler = Profiler(self.printTimeOfCalculation, self.logger)
 
@@ -136,14 +134,14 @@ class Mode_master:
             self.listener.update()
 
         with self.profiler.measure("leds.show()"):
-            is_rpi_hardware = "Rpi_NeoPixels" in str(type(self.leds))
+            is_rpi_hardware = len(self.leds_list) > 0 and "Rpi_NeoPixels" in str(type(self.leds_list[0]))
             if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or is_rpi_hardware:
                 loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, self.leds.show)
-                await loop.run_in_executor(None, self.leds2.show)
+                for led_strip in self.leds_list:
+                    await loop.run_in_executor(None, led_strip.show)
             else:
-                self.leds.show()
-                self.leds2.show()
+                for led_strip in self.leds_list:
+                    led_strip.show()
 
         with self.profiler.measure("segments.update()"):
             for seg_index in range(len(self.segments_list)):
@@ -216,7 +214,7 @@ class Mode_master:
         """
         Initialize all segments based on the segments.json configuration file.
         """
-        def add_segments(info_list , leds):
+        def add_segments(info_list, leds):
             offset = 0
             for segment_index in range(len(info_list)):
                 seg_infos = info_list[segment_index]
@@ -232,8 +230,10 @@ class Mode_master:
         with open(file_path, "r", encoding='utf-8') as f:
             data = json.load(f)
             
-        add_segments(data["segs_1"],self.leds)
-        add_segments(data["segs_2"],self.leds2)
+        for i, leds in enumerate(self.leds_list):
+            key = f"segs_{i+1}"
+            if key in data:
+                add_segments(data[key], leds)
 
 
     async def change_configuration(self, transition_config=None):
