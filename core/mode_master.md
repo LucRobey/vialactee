@@ -2,15 +2,14 @@
 
 The `Mode_master` acts as the central conductor for the entire installation. It manages global state, configurations, playlists, segments, and external commands. 
 
-Here is a visual breakdown of how it operates internally, followed by a detailed explanation of its core loops and logic paths.
+Here is a visual breakdown of how it operates internally, followed by a detailed explanation of its core mechanisms.
 
+## 1. Flowchart & Architecture
+
+### Initialization
 ```mermaid
 graph TD
     classDef init fill:#2d3748,stroke:#4fd1c5,stroke-width:2px,color:#fff;
-    classDef loop fill:#1a365d,stroke:#63b3ed,stroke-width:2px,color:#fff;
-    classDef decision fill:#742a2a,stroke:#fc8181,stroke-width:2px,color:#fff;
-    classDef action fill:#276749,stroke:#68d391,stroke-width:2px,color:#fff;
-    classDef external fill:#5f370e,stroke:#f6ad55,stroke-width:2px,color:#fff;
 
     subgraph init_phase [Initialization Phase]
         A[__init__]:::init
@@ -24,6 +23,14 @@ graph TD
         C --> D
         D --> E
     end
+```
+
+### Main Execution & Configuration
+```mermaid
+graph TD
+    classDef loop fill:#1a365d,stroke:#63b3ed,stroke-width:2px,color:#fff;
+    classDef decision fill:#742a2a,stroke:#fc8181,stroke-width:2px,color:#fff;
+    classDef action fill:#276749,stroke:#68d391,stroke-width:2px,color:#fff;
 
     subgraph main_loop [Main Execution Loop at 30 FPS]
         F[update_forever]:::loop
@@ -53,8 +60,6 @@ graph TD
         P --> F
     end
 
-    E --> F
-
     subgraph config_management [Configuration Management]
         Q[pick_a_random_conf]:::action
         R{"Shuffle Bag Empty?"}:::decision
@@ -73,6 +78,12 @@ graph TD
         T --> U
         U --> V
     end
+```
+
+### External Inputs
+```mermaid
+graph TD
+    classDef external fill:#5f370e,stroke:#f6ad55,stroke-width:2px,color:#fff;
 
     subgraph external_inputs [External Inputs and Overrides]
         W[External App or Network]:::external
@@ -86,7 +97,7 @@ graph TD
     end
 ```
 
-## Internal Workflow Explained
+## 2. Internal Workflow Explained
 
 ### 1. Initialization (`__init__`)
 When `Mode_master` starts, it sets up the environment:
