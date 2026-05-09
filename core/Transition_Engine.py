@@ -3,6 +3,7 @@ from PIL import Image
 import os
 import glob
 import logging
+from typing import Optional
 
 ROOM_MAX_X = 430
 ROOM_MAX_Y = 246
@@ -10,7 +11,7 @@ ROOM_MAX_Y = 246
 spatial_images = {}
 logger = logging.getLogger("Transition_Engine")
 
-def load_spatial_images():
+def load_spatial_images() -> None:
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'assets', 'transitions'))
     if not os.path.exists(assets_dir):
         logger.warning(f"Spatial transition folder not found at {assets_dir}")
@@ -33,7 +34,7 @@ def load_spatial_images():
 # Load immediately on import
 load_spatial_images()
 
-def apply_dual_fade(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float):
+def apply_dual_fade(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float) -> None:
     """ Crossfades old mode softly into new mode """
     progress = max(0.0, min(1.0, progress))
     if progress == 0.0: return
@@ -44,7 +45,7 @@ def apply_dual_fade(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress
     np.multiply(rgb_list_old, 1.0 - progress, out=rgb_list_old, casting='unsafe')
     np.add(rgb_list_old, rgb_list_new * progress, out=rgb_list_old, casting='unsafe')
 
-def apply_colorful_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float):
+def apply_colorful_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float) -> None:
     """ A 'not smooth', blocky, colorful rave flash to mask the mode transition. """
     progress = max(0.0, min(1.0, progress))
     if progress == 0.0: return
@@ -86,7 +87,7 @@ def apply_colorful_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, pr
         np.copyto(rgb_list_old, rgb_list_new, where=mask_glitch[:, np.newaxis])
         np.copyto(rgb_list_old, np.array([0, 0, 0]), where=(~mask_glitch)[:, np.newaxis])
 
-def apply_gravity_drop(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float):
+def apply_gravity_drop(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
     """ 
     Discrete numerical integrator that simulates realistic physical mechanics for multiple bouncing balls.
     The primary ball (Index 0) defines the wipe boundary and transition states.
@@ -209,7 +210,7 @@ def apply_gravity_drop(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coord
             blended = (base_color * (1.0 - fade) + res["color"] * fade).astype(np.int32)
             rgb_list_old[mask_ball_1d] = blended
             
-def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float):
+def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
     """ Digital sector corruption transition that spreads like a virus. """
     progress = max(0.0, min(1.0, progress))
     if progress <= 0.0: return
@@ -273,7 +274,7 @@ def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coord
         
         rgb_list_old[mask_glitching] = glitch_colors
 
-def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float):
+def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
     """ Concentric inwards falling rings accelerating to a blackout, then violently expelling bright branching beams. """
     progress = max(0.0, min(1.0, progress))
     if progress <= 0.0: return
@@ -363,7 +364,7 @@ def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: 
             blended = (base_color * (1.0 - fire_alpha) + blast_color * fire_alpha).astype(np.int32)
             rgb_list_old[mask_blast] = blended
 
-def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float, transition_name: str, coords: np.ndarray = None, beam_thickness: float = 0.04):
+def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float, transition_name: str, coords: Optional[np.ndarray] = None, beam_thickness: float = 0.04) -> None:
     """ 
     Route transition requests to specifically written geometric handlers or PNG spatial maps.
     """

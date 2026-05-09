@@ -1,3 +1,4 @@
+from typing import Dict, Any, Optional
 import time
 import logging
 import random
@@ -12,7 +13,7 @@ class Transition_Director:
     to decide when and how to transition between different display modes.
     """
 
-    def __init__(self, mode_master, listener, infos):
+    def __init__(self, mode_master: Any, listener: Any, infos: Dict[str, Any]) -> None:
         """
         Initialize the Transition_Director.
 
@@ -45,7 +46,7 @@ class Transition_Director:
         self.all_segments = []
         self._load_segments()
 
-    def _load_segments(self):
+    def _load_segments(self) -> None:
         """
         Read the segments configuration to understand the hardware layout.
 
@@ -73,7 +74,7 @@ class Transition_Director:
         except Exception as e:
             self.logger.error(f"(TD) Failed to load segments.json: {e}")
 
-    def start_transition(self, transition_config):
+    def start_transition(self, transition_config: Optional[Dict[str, Any]]) -> None:
         """ Start tracking a new global transition. """
         if transition_config is None:
             return
@@ -86,7 +87,7 @@ class Transition_Director:
         else:
             self.transition_step = 1.0
 
-    async def update(self, current_time):
+    async def update(self, current_time: float) -> None:
         """
         Advance the global transition progress and analyze audio context.
         If a transition is needed, it directly commands the mode_master.

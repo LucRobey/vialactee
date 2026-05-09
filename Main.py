@@ -1,3 +1,4 @@
+from typing import Dict, Any, Optional
 import asyncio
 import logging
 import json
@@ -11,7 +12,7 @@ import core.Mode_master as Mode_master
 import hardware.HardwareFactory as HardwareFactory
 
 
-def resolve_npm_executable():
+def resolve_npm_executable() -> Optional[str]:
     # On Windows, npm is usually exposed as npm.cmd.
     npm_exec = shutil.which("npm") or shutil.which("npm.cmd")
     if npm_exec:
@@ -19,7 +20,7 @@ def resolve_npm_executable():
     return None
 
 
-async def launch_webapp(infos):
+async def launch_webapp(infos: Dict[str, Any]) -> None:
     if not infos.get("startWebApp", True):
         logging.info("Web app autostart disabled by config.")
         return
@@ -73,7 +74,7 @@ async def launch_webapp(infos):
         raise
 
 
-async def main():
+async def main() -> None:
     logging.basicConfig(level=logging.INFO, format='%(levelname)s - [%(name)s] - %(message)s')
     
     config_path = "config/app_config.json"

@@ -1,12 +1,13 @@
 import time
 import numpy as np
 import random
+from typing import Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
 
 class AudioIngestion:
-    def __init__(self, infos):
+    def __init__(self, infos: Dict[str, Any]) -> None:
         self.printAsservmentDetails = infos.get("printAsservmentDetails", False)
         self.useMicrophone          = infos.get("useMicrophone", True)
         self.momentum_multiplier = infos.get("momentum_mult", 0.05)
@@ -22,7 +23,7 @@ class AudioIngestion:
         self.prepare_for_calibration()
 
 
-    def build_asserved_fft_lists(self):
+    def build_asserved_fft_lists(self) -> None:
         """
         This function prepares the asservissement of the fft
 
@@ -102,13 +103,13 @@ class AudioIngestion:
         self.manual_calibration = [1500,300,120,140,220,350,300,270,250,310,318,380,467,630,850,1266]
         
         
-    def build_asserved_total_power(self):
+    def build_asserved_total_power(self) -> None:
         self.smoothed_total_power = 0
         self.asserved_total_power = 0
         self.total_power_gm = 100
         self.total_power_lm = 100
 
-    def prepare_for_calibration(self):
+    def prepare_for_calibration(self) -> None:
         self.duration_of_calibration = 5
         
         self.isSilenceCalibrating = False
@@ -125,36 +126,36 @@ class AudioIngestion:
         self.nb_of_listen_bb = 0
         self.mean_bb = np.zeros(self.nb_of_fft_band)
         
-    def start_silence_calibration(self, fps_ratio):
+    def start_silence_calibration(self, fps_ratio: float) -> None:
         self.isSilenceCalibrating = True
         
-    def start_bb_calibration(self, fps_ratio):
+    def start_bb_calibration(self, fps_ratio: float) -> None:
         self.isBBCalibrating = True
         
-    def stop_silence_calibration(self, fps_ratio):
+    def stop_silence_calibration(self, fps_ratio: float) -> None:
         self.isSilenceCalibrating = False
         self.hasBeenSilenceCalibrated = True
         logger.debug(f"mean_silence = {self.mean_silence}")
     
-    def stop_bb_calibration(self, fps_ratio):
+    def stop_bb_calibration(self, fps_ratio: float) -> None:
         self.isBBCalibrating = False
         self.hasBeenBBCalibrated = True
         logger.debug(f"mean_bb = {self.mean_bb}")
             
-    def calibrate_silence(self, fps_ratio):
+    def calibrate_silence(self, fps_ratio: float) -> None:
         #on calcule la moyenne sur la durée de calibration
         self.nb_of_listen_silence += 1
         self.mean_silence = (1/(self.nb_of_listen_silence+1)) * (self.nb_of_listen_silence* self.mean_silence + self.fft_band_values)
         logger.debug(f"{self.fft_band_values} {self.mean_silence}")
                     
         
-    def calibrate_bb(self, fps_ratio):
+    def calibrate_bb(self, fps_ratio: float) -> None:
         #on calcule la moyenne sur la durée de calibration
         self.nb_of_listen_bb += 1
         self.mean_bb = (1/(self.nb_of_listen_bb+1)) * (self.nb_of_listen_bb* self.mean_bb + self.fft_band_values)
         
 
-    def update_band_means_and_smoothed_values(self, fps_ratio):
+    def update_band_means_and_smoothed_values(self, fps_ratio: float) -> None:
         # ADSR Vectorization: Fast attack, slow release instead of static smooth_sensi
         attack = 0.2 ** fps_ratio
         release = 0.85 ** fps_ratio
@@ -199,7 +200,7 @@ class AudioIngestion:
                 
                     
         
-    def asserv_fft_bands_2(self, fps_ratio):
+    def asserv_fft_bands_2(self, fps_ratio: float) -> None:
         min_bar = np.maximum(self.band_means - 2*self.band_mean_distances, 0)
         max_bar = self.band_means + 2*self.band_mean_distances
         
@@ -213,7 +214,7 @@ class AudioIngestion:
         
         self.asserved_fft_band = np.clip(self.asserved_fft_band, 0.0, 1.0)
 
-    def asserv_fft_bands(self, fps_ratio):
+    def asserv_fft_bands(self, fps_ratio: float) -> None:
         """
         we use a glomal_max and local_max to asser each band's value
 
@@ -234,7 +235,7 @@ class AudioIngestion:
 
             self.asserved_fft_band[band_index] += min(1.0, 0.4 * fps_ratio) * (self.smoothed_fft_band_values[band_index]/self.band_gm[band_index] - self.asserved_fft_band[band_index])
 
-    def apply_fake_fft(self, fps_ratio):
+    def apply_fake_fft(self, fps_ratio: float) -> None:
         for band_index in range(self.nb_of_fft_band):
             self.fft_band_values[band_index] += random.randint(-10,10)
             if ( self.fft_band_values[band_index] <= 0):
@@ -248,7 +249,7 @@ class AudioIngestion:
         self.fft_bary =  (num/denom) /(self.nb_of_fft_band-1)
         
 
-    def asserv_total_power(self, fps_ratio):
+    def asserv_total_power(self, fps_ratio: float) -> None:
         instantPower = 0
         for band_index in range(self.nb_of_fft_band):
             instantPower+= self.fft_band_values[band_index]

@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Optional
 import config.Configuration_manager as Configuration_manager
 import core.Transition_Engine as Transition_Engine
 
@@ -19,7 +20,7 @@ class Segment:
     listener = None
     _configuration_manager = Configuration_manager.Configurations_manager()
 
-    def __init__(self , name ,listener , leds , indexes , orientation , infos):
+    def __init__(self, name: str, listener: Any, leds: Any, indexes: List[int], orientation: str, infos: Dict[str, Any]) -> None:
         """
         Initialize a new Segment.
 
@@ -58,7 +59,7 @@ class Segment:
         self.modes = {}
         self.initiate_modes(orientation)
 
-    def _load_coordinates(self):
+    def _load_coordinates(self) -> None:
         """
         Load the 2D spatial coordinates for this segment's LEDs from the configuration.
         
@@ -74,7 +75,7 @@ class Segment:
 
 
 
-    def update(self, td):
+    def update(self, td: Any) -> None:
         """
         Update the current active mode and handle any ongoing visual transitions.
         
@@ -121,7 +122,7 @@ class Segment:
         self.update_leds()
         
     #Load the json modes.json and initiate the modes 
-    def initiate_modes(self , orientation ):
+    def initiate_modes(self, orientation: str) -> None:
         """
         Dynamically load and instantiate all available visual modes for this segment
         based on the modes.json configuration file.
@@ -168,7 +169,7 @@ class Segment:
         if self.activ_mode in self.modes:
             self.modes[self.activ_mode].start()
         
-    def update_leds(self):
+    def update_leds(self) -> None:
         """
         Flush the local segment RGB buffer to the global LED array.
         """
@@ -179,7 +180,7 @@ class Segment:
             else:
                 self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
 
-    def change_way(self , new_way):
+    def change_way(self, new_way: str) -> None:
         """
         Change the propagation direction of visual effects on the segment.
 
@@ -189,7 +190,7 @@ class Segment:
         self.logger.debug(f"le {self.name} change de sens {self.way} pour {new_way}")
         self.way = new_way
 
-    def switch_way(self):
+    def switch_way(self) -> None:
         """
         Toggle the current propagation direction between 'UP' and 'DOWN'.
         """
@@ -203,7 +204,7 @@ class Segment:
 
     
 
-    def execute_mode_swap(self, mode_name):
+    def execute_mode_swap(self, mode_name: str) -> None:
         """
         Instantly swap to a new visual mode without any transition effects.
 
@@ -230,7 +231,7 @@ class Segment:
         self.modes[self.activ_mode].start()
         self.logger.info(f"{self.name} a changé de mode pour {mode_name}")
 
-    def change_mode(self, mode_name, transition_config=None):
+    def change_mode(self, mode_name: str, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
         Request a mode change, optionally using a dual-buffer transition effect.
 
@@ -267,7 +268,7 @@ class Segment:
         else:
             self.logger.debug(f"(S) le {self.name} est bloqué et ne peut pas passer au {mode_name}")
 
-    def force_mode(self , mode_name):
+    def force_mode(self, mode_name: str) -> None:
         """
         Forcefully change to a new mode, overriding any current state.
 
@@ -295,7 +296,7 @@ class Segment:
         self.logger.debug(f"(S) le segment {self.name} change de mode pour {mode_name}")
                 
                 
-    def get_current_mode(self):
+    def get_current_mode(self) -> str:
         """
         Get the name of the currently active mode.
 
@@ -304,13 +305,13 @@ class Segment:
         """
         return self.activ_mode
          
-    def block(self):
+    def block(self) -> None:
         """
         Block the segment from accepting new mode change requests.
         """
         self.isBlocked = True
 
-    def unBlock(self):
+    def unBlock(self) -> None:
         """
         Unblock the segment, allowing it to accept mode change requests again.
         """
@@ -318,7 +319,7 @@ class Segment:
 
 
     #Pass from user friendly name (example : plasma fire) to the internal name (example : Plasma_Fire_mode)
-    def _normalize_mode_name(self, mode_name):
+    def _normalize_mode_name(self, mode_name: str) -> str:
         """
         Normalize a mode name, resolving legacy formatting.
 

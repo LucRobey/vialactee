@@ -1,19 +1,20 @@
 import time
 import numpy as np
+from typing import Dict, Any, Optional, Tuple
 import logging
 from collections import deque
 
 logger = logging.getLogger(__name__)
 
 class AudioAnalyzer:
-    def __init__(self, ingestion, infos):
+    def __init__(self, ingestion: Any, infos: Dict[str, Any]) -> None:
         self.ingestion = ingestion
         self.hardware_latency = infos.get("latency", 0.0)
         self.decay_base = infos.get("decay_base", 0.98)
         self.build_band_peaks()
 
 
-    def build_band_peaks(self):
+    def build_band_peaks(self) -> None:
         # We start looking for peaks roughly 2.0 "standard deviations" above the exponential mean
         self.peak_sensitivity = np.ones(self.ingestion.nb_of_fft_band) * 2.0
         self.delta_time_peak = 0.15 #seconde
@@ -105,7 +106,7 @@ class AudioAnalyzer:
         self.ACAPELLA_COOLDOWN_SECONDS = 5.0
         
         
-    def update_structural_novelty(self, current_time, fps_ratio):
+    def update_structural_novelty(self, current_time: float, fps_ratio: float) -> None:
         # current_time from param
         
         # 1. Reset boolean triggers from last frame
@@ -204,7 +205,7 @@ class AudioAnalyzer:
                 
                 self.silence_frames = 0
                 
-    def detect_band_peaks(self, current_time, dt, fps_ratio):
+    def detect_band_peaks(self, current_time: float, dt: float, fps_ratio: float) -> None:
         """
         Spectral Flux onset detection.
         Calculates positive energy influx to find sharp transients.
@@ -588,7 +589,7 @@ class AudioAnalyzer:
 
         self.previous_best_p = best_p
 
-    def localized_continuous_phase_sweep(self, center_bpm, search_radius=1.5, step=0.1, expected_phase=None):
+    def localized_continuous_phase_sweep(self, center_bpm: float, search_radius: float = 1.5, step: float = 0.1, expected_phase: Optional[float] = None) -> Tuple[float, float]:
         odf_size = len(self.odf_buffer)
         decay_curve = np.exp(-1.5 * np.linspace(1.0, 0.0, odf_size))
         weighted_buffer = self.odf_buffer * decay_curve

@@ -3,6 +3,7 @@ import asyncio
 import logging
 import random
 import time
+from typing import Dict, Any, List, Optional, Tuple
 
 import core.Segment as Segment
 import core.Listener as Listener
@@ -16,7 +17,7 @@ class Profiler:
     """
     A simple context-manager based profiler to measure execution time of code blocks.
     """
-    def __init__(self, active, logger):
+    def __init__(self, active: bool, logger: logging.Logger) -> None:
         """
         Initialize the Profiler.
 
@@ -31,7 +32,7 @@ class Profiler:
         self.start_times = {}
 
     @contextmanager
-    def measure(self, name):
+    def measure(self, name: str) -> Any:
         """
         Context manager to measure the execution time of a block of code.
 
@@ -46,7 +47,7 @@ class Profiler:
         else:
             yield
 
-    def print_results(self):
+    def print_results(self) -> None:
         """
         Print the accumulated profiling results to the logger.
         """
@@ -78,7 +79,7 @@ class Mode_master:
     blocked_playlists = []
     current_time = time.time()
 
-    def __init__(self, listener, infos, *leds):
+    def __init__(self, listener: Any, infos: Dict[str, Any], *leds: Any) -> None:
         """
         Initialize the Mode_master.
 
@@ -105,7 +106,7 @@ class Mode_master:
         self.initiate_configuration()
         self.transition_director = Transition_Director.Transition_Director(self, self.listener, self.infos)
 
-    def set_connector(self, connector):
+    def set_connector(self, connector: Any) -> None:
         """
         Set the application connector for external communications.
 
@@ -114,7 +115,7 @@ class Mode_master:
         """
         self.appli_connector = connector
 
-    async def update_forever(self):
+    async def update_forever(self) -> None:
         """
         Continuously update the system at approximately 30 FPS.
         """
@@ -122,7 +123,7 @@ class Mode_master:
             await self.update()
             await asyncio.sleep(1/30)
 
-    async def update(self):
+    async def update(self) -> None:
         """
         Perform a single update loop iteration.
 
@@ -158,7 +159,7 @@ class Mode_master:
         self.profiler.names.clear()
 
 
-    def load_configurations(self):
+    def load_configurations(self) -> None:
         """
         Load modes and playlists from the configurations.json file.
         """
@@ -181,7 +182,7 @@ class Mode_master:
         for _ in self.playlists:
             self.blocked_playlists.append(False)
         self.shuffle_bag = []
-    def update_segments_modes(self, transition_config=None):
+    def update_segments_modes(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
         Apply the active configuration to all relevant segments.
 
@@ -200,7 +201,7 @@ class Mode_master:
 
  
 
-    def initiate_configuration(self):
+    def initiate_configuration(self) -> None:
         """
         Initialize the starting configuration by picking a random one from available playlists.
         """
@@ -210,11 +211,11 @@ class Mode_master:
 
         
 
-    def initiate_segments(self):
+    def initiate_segments(self) -> None:
         """
         Initialize all segments based on the segments.json configuration file.
         """
-        def add_segments(info_list, leds):
+        def add_segments(info_list: List[Dict[str, Any]], leds: Any) -> None:
             offset = 0
             for segment_index in range(len(info_list)):
                 seg_infos = info_list[segment_index]
@@ -236,7 +237,7 @@ class Mode_master:
                 add_segments(data[key], leds)
 
 
-    async def change_configuration(self, transition_config=None):
+    async def change_configuration(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
         Change the global active configuration to a new random one.
 
@@ -253,7 +254,7 @@ class Mode_master:
         #on l'applique à tous les segments
         self.update_segments_modes(transition_config)
 
-    def pick_a_random_conf(self):
+    def pick_a_random_conf(self) -> Dict[str, Any]:
         """
         Select a random configuration from the unblocked playlists using a shuffle bag approach.
 

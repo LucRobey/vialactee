@@ -1,3 +1,4 @@
+from typing import Dict, Any, Optional
 import time
 import asyncio
 import logging
@@ -9,16 +10,16 @@ from core.AudioAnalyzer import AudioAnalyzer
 logger = logging.getLogger(__name__)
 
 class Listener:
-    def __init__(self, infos):
+    def __init__(self, infos: Dict[str, Any]) -> None:
         self.ingestion = AudioIngestion(infos)
         self.analyzer = AudioAnalyzer(self.ingestion, infos)
         
-    async def update_forever(self):
+    async def update_forever(self) -> None:
         while True:
             self.update()
             await asyncio.sleep(1/60)
 
-    def update(self):
+    def update(self) -> None:
         if not hasattr(self, 'last_env_time'):
             self.last_env_time = time.time()
         
@@ -101,10 +102,10 @@ class Listener:
     def band_means(self): return self.ingestion.band_means
 
     # Calibrations
-    def start_silence_calibration(self): self.ingestion.start_silence_calibration(self.fps_ratio)
-    def stop_silence_calibration(self): self.ingestion.stop_silence_calibration(self.fps_ratio)
-    def start_bb_calibration(self): self.ingestion.start_bb_calibration(self.fps_ratio)
-    def stop_bb_calibration(self): self.ingestion.stop_bb_calibration(self.fps_ratio)
+    def start_silence_calibration(self) -> None: self.ingestion.start_silence_calibration(self.fps_ratio)
+    def stop_silence_calibration(self) -> None: self.ingestion.stop_silence_calibration(self.fps_ratio)
+    def start_bb_calibration(self) -> None: self.ingestion.start_bb_calibration(self.fps_ratio)
+    def stop_bb_calibration(self) -> None: self.ingestion.stop_bb_calibration(self.fps_ratio)
 
     @property
     def hasBeenSilenceCalibrated(self): return self.ingestion.hasBeenSilenceCalibrated
