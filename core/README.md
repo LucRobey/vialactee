@@ -41,7 +41,6 @@ classDiagram
         -verticals : list
         -horizontals : list
         +evaluate_context(current_time, next_change_time) : tuple[str, dict]
-        +choose_a_local_group() : list
     }
 
     %% Audio Facade & Analyzers
@@ -81,7 +80,7 @@ classDiagram
     %% Logic Flow
     Transition_Director ..> Listener : Polls audio state \n(Power, Drops, Events)
     Mode_master ..> Transition_Director : Requests action via\nevaluate_context()
-    Mode_master ..> Segment : Pushes local/global\ntransition states
+    Mode_master ..> Segment : Pushes global\ntransition states
 ```
 
 ### Interaction within the Execution Loop (`update()`):

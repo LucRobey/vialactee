@@ -30,8 +30,9 @@ graph TD
         G[update]:::loop
         H["1. listener.update()"]:::loop
         I["2. leds.show()"]:::loop
-        J["3. segments.update()"]:::loop
-        K["4. Evaluate Global Context"]:::loop
+        J["3. segments.update(transition_director)"]:::loop
+        K["4. transition_director.update()"]:::loop
+        K2["5. Evaluate Global Context"]:::loop
         L{"Transition_Director Action?"}:::decision
         M[force_standby_playlist]:::action
         N[change_configuration]:::action
@@ -43,7 +44,8 @@ graph TD
         H --> I
         I --> J
         J --> K
-        K --> L
+        K --> K2
+        K2 --> L
         
         L -->|force_standby| M
         L -->|allow_change| N
@@ -102,8 +104,8 @@ When `Mode_master` starts, it sets up the environment:
 Running at approximately 30 frames per second (`update_forever`), the core loop is strictly ordered:
 1.  **Audio Sync**: `listener.update()` fetches the latest audio FFT and volume data.
 2.  **Hardware Flush**: `leds.show()` flushes the **previous frame's** buffer to the physical LED strips to ensure minimum latency.
-3.  **Segment Execution**: Iterates over `segments_list` calling `update()` on each. Segments calculate their new pixel data for the current frame based on the audio data just synced.
-4.  **Global Transitions Check**: Asks the `Transition_Director` if it is time to change the global configuration.
+3.  **Segment Execution**: Iterates over `segments_list` calling `update(transition_director)` on each. Segments calculate their new pixel data and perform dual-buffer mixing using the synchronized global transition progress.
+4.  **Global Transitions Check**: Ticks `Transition_Director.update()` to advance any ongoing transition progress, then asks `evaluate_context()` if it is time to trigger a new configuration change.
     *   If `force_standby`, it switches to a chill mode (e.g., silence detected).
     *   If `allow_change`, it triggers a new random configuration.
     *   If `delay_change`, it postpones the change slightly because the current audio context (e.g., a drop building up) isn't right for a transition.

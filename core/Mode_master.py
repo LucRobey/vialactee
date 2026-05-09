@@ -149,11 +149,12 @@ class Mode_master:
 
         with self.profiler.measure("segments.update()"):
             for seg_index in range(len(self.segments_list)):
-                self.segments_list[seg_index].update()
+                self.segments_list[seg_index].update(self.transition_director)
 
         #==============================================
         self.current_time = time.time()
         
+        self.transition_director.update()
         action, transition_config = self.transition_director.evaluate_context(self.current_time, self.next_change_of_configuration_time)
         
         if action == "force_standby":
@@ -199,16 +200,11 @@ class Mode_master:
             transition_config (dict, optional): Configuration defining the type and
                 duration of the transition. Defaults to None.
         """
-        targeted_segments = None
-        if transition_config and "segments" in transition_config:
-            targeted_segments = transition_config["segments"]
-
+        if transition_config is not None:
+            self.transition_director.start_transition(transition_config)
+            
         for segment in self.segments_list:
             if not segment.isBlocked:
-                # Skip segments entirely if a local change targeted specific ones
-                if targeted_segments is not None and segment.name not in targeted_segments:
-                    continue
-
                 self.logger.debug(f"(MM) update_segments_modes : {segment.name} non bloqué donc on ordonne de le changer")
                 segment.change_mode(self.activ_configuration["modes"][segment.name], transition_config)
                 segment.change_way(self.activ_configuration["way"][segment.name])

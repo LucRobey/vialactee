@@ -363,11 +363,18 @@ def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: 
             blended = (base_color * (1.0 - fire_alpha) + blast_color * fire_alpha).astype(np.int32)
             rgb_list_old[mask_blast] = blended
 
-def apply_spatial_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, transition_name: str, beam_thickness: float = 0.04):
+def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float, transition_name: str, coords: np.ndarray = None, beam_thickness: float = 0.04):
     """ 
     Route transition requests to specifically written geometric handlers or PNG spatial maps.
     """
-    if transition_name == "wipe_left_to_right":
+    if transition_name == "fade_to_black":
+        apply_dual_fade(rgb_list_old, rgb_list_new, progress)
+    elif transition_name == "global_change":
+        apply_colorful_glitch(rgb_list_old, rgb_list_new, progress)
+    elif coords is None:
+        # Fallback if coordinates are completely missing for spatial
+        apply_dual_fade(rgb_list_old, rgb_list_new, progress)
+    elif transition_name == "wipe_left_to_right":
         apply_horizontal_wipe(rgb_list_old, rgb_list_new, coords, progress, beam_thickness, reverse=False)
     elif transition_name == "wipe_right_to_left":
         apply_horizontal_wipe(rgb_list_old, rgb_list_new, coords, progress, beam_thickness, reverse=True)

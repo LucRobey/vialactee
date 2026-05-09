@@ -31,33 +31,33 @@ flowchart TD
     subgraph Mode Swapping Logic
         CmdChange[change_mode]:::state
         CmdForce[force_mode / execute_mode_swap]:::state
-        State[(self.state)]:::state
+        State[(self.is_in_transition)]:::state
   
-        CmdForce -->|Instant Swap| StateNormal[NORMAL]
-        CmdChange -->|Set Target & Progress| StateTrans[TRANSITION_DUAL]
+        CmdForce -->|Instant Swap| StateNormal[False]
+        CmdChange -->|Set Target| StateTrans[True]
   
         StateNormal -.-> State
         StateTrans -.-> State
     end
 
     subgraph Main Execution Loop: update
-        UpdateLoop[self.update]:::engine
+        UpdateLoop[self.update_td]:::engine
   
-        UpdateLoop --> CheckState{Is self.state ?}
+        UpdateLoop --> CheckState{self.is_in_transition?}
   
-        CheckState -->|NORMAL| RunActive[Run self.modes\nactive_mode]
+        CheckState -->|False| RunActive[Run self.modes\nactive_mode]
         RunActive -->|Writes to| RGB1
   
-        CheckState -->|TRANSITION_DUAL| RunBoth[Run Active Mode\n&\nRun Target Mode]
+        CheckState -->|True| CheckTD{td.state?}
+        CheckTD -->|TRANSITION_DUAL| RunBoth[Run Active Mode\n&\nRun Target Mode]
   
         RunBoth -->|Active Writes to| RGB1
         RunBoth -->|Target Writes to| RGB2
   
         RunBoth --> Mix[Transition_Engine.py]:::engine
-        Mix -->|Spatially mixes RGB2 into RGB1| RGB1
+        Mix -->|Spatially mixes RGB2 into RGB1\nusing td.transition_progress| RGB1
   
-        Mix --> TransDone{Progress >= 1.0?}
-        TransDone -->|Yes| FinishTrans[Swap Active Mode\nSet state NORMAL]
+        CheckTD -->|NORMAL| FinishTrans[Swap Active Mode\nis_in_transition = False]
         FinishTrans -.-> StateNormal
     end
 
@@ -66,7 +66,7 @@ flowchart TD
         GlobalLEDs[(Global LED Array\nself.leds)]:::hw
   
         CheckState -->|End of Loop| UpdateLeds
-        TransDone -->|No| UpdateLeds
+        CheckTD -->|End of Loop| UpdateLeds
   
         RGB1 -->|Flushed using self.way\nUP/DOWN direction| UpdateLeds
         UpdateLeds -->|Writes to Hardware Indexes| GlobalLEDs
@@ -79,7 +79,8 @@ flowchart TD
 1. **Dynamic Initialization**: On boot, the segment reads `modes.json` and instantiates every allowed visual pattern (e.g. `Rainbow`, `Matrix Rain`). These are stored in the `self.modes` dictionary for $O(1)$ instant lookup.
 2. **Dual Buffering**: The segment owns two $N \times 3$ NumPy matrices (`rgb_list` and `dual_rgb_list`).
 3. **State Machine**:
-   - Under `NORMAL` state, the active mode does its math and directly mutates `rgb_list`.
-   - Under `TRANSITION_DUAL` state, the *old* mode continues mutating `rgb_list`, but the *new* mode is temporarily redirected to mutate `dual_rgb_list`.
-4. **Transition Engine**: During a transition, the `Transition_Engine` is called. It applies physics and spatial mapping (like a gravity drop or a fade) to smoothly overwrite `rgb_list` with the pixels from `dual_rgb_list`.
+   - When `self.is_in_transition` is false, the active mode does its math and directly mutates `rgb_list`.
+   - When `self.is_in_transition` is true, it queries the `Transition_Director` (`td`). If `td.state == "TRANSITION_DUAL"`, the *old* mode continues mutating `rgb_list`, but the *new* mode is temporarily redirected to mutate `dual_rgb_list`.
+   - If `td.state == "NORMAL"`, the segment finalizes the swap and turns off `is_in_transition`.
+4. **Transition Engine**: During a transition, the `Transition_Engine` is called. It applies physics and spatial mapping (like a gravity drop or a fade) to smoothly overwrite `rgb_list` with the pixels from `dual_rgb_list` based on the synchronized global `td.transition_progress`.
 5. **Hardware Flush**: At the very end of the `update()` loop, `update_leds()` takes whatever is finalized in `rgb_list`, reverses the direction if `self.way == "DOWN"`, and writes it into the global hardware `self.leds` array to be sent to the Pi/ESP32.

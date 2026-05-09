@@ -29,6 +29,11 @@ class Transition_Director:
         self.silence_start_time = None
         self.is_in_standby = False
 
+        self.state = "NORMAL"
+        self.transition_progress = 0.0
+        self.transition_step = 0.0
+        self.transition_type = None
+
         # Discover segment geometry
         self.verticals = []
         self.horizontals = []
@@ -62,6 +67,27 @@ class Transition_Director:
             self.logger.info(f"(TD) Instantiated geometry maps: {len(self.verticals)} Verticals, {len(self.horizontals)} Horizontals")
         except Exception as e:
             self.logger.error(f"(TD) Failed to load segments.json: {e}")
+
+    def start_transition(self, transition_config):
+        """ Start tracking a new global transition. """
+        if transition_config is None:
+            return
+        self.state = "TRANSITION_DUAL"
+        self.transition_progress = 0.0
+        self.transition_type = transition_config["type"]
+        duration = transition_config.get("duration", 2.0)
+        if duration > 0:
+            self.transition_step = (1.0 / 30.0) / duration
+        else:
+            self.transition_step = 1.0
+
+    def update(self):
+        """ Advance the global transition progress. """
+        if self.state == "TRANSITION_DUAL":
+            self.transition_progress += self.transition_step
+            if self.transition_progress >= 1.0:
+                self.transition_progress = 1.0
+                self.state = "NORMAL"
 
 
     def evaluate_context(self, current_time, next_change_time):
