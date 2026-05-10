@@ -39,8 +39,8 @@ class Opposite_sides_mode(Mode.Mode):
                 RGB_HSV.fromHSV_toRGB_vectorized(hues, 1.0, 1.0, out=view)
             self.firstUpdate = False
 
-        self.lower_height  = int(self.maxSize * (self.listener.asserved_fft_band[0]  + self.listener.asserved_fft_band[1] )/2)
-        self.higher_height = int(self.maxSize * (self.listener.asserved_fft_band[-1] + self.listener.asserved_fft_band[-2])/2)
+        self.lower_height  = int(self.maxSize * (self.listener._delayed_asserved_fft_band[0]  + self.listener._delayed_asserved_fft_band[1] )/2)
+        self.higher_height = int(self.maxSize * (self.listener._delayed_asserved_fft_band[-1] + self.listener._delayed_asserved_fft_band[-2])/2)
 
         self.fade_to_black_segment_vectorized(0.5,0,self.middle_start_index-1-self.lower_height-1)
         self.smooth_segment_vectorized(0.5,self.middle_start_index-1-self.lower_height,self.middle_start_index-1,self.bass_color)

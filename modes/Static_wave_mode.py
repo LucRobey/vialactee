@@ -19,7 +19,7 @@ class Static_wave_mode(Mode.Mode):
     def run(self):
         # We average the lowest 2 bands out of 8 (which represents the low bass and kick)
         # Old code used 0-3 out of 16.
-        valuef = (self.listener.asserved_fft_band[0] + self.listener.asserved_fft_band[1]) / 2.0
+        valuef = (self.listener._delayed_asserved_fft_band[0] + self.listener._delayed_asserved_fft_band[1]) / 2.0
         
         self.real_size = 0.5 * (self.real_size + (valuef * self.max_size))
         if self.real_size >= self.max_size:

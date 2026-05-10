@@ -15,30 +15,34 @@ graph TD
     %% External Inputs
     subgraph Inputs [External Data and Interfaces]
         Wabb["Wabb-Interface (React Web App)"]
-        Mic["Microphones (Local / ESP32)"]
+        RoomAudio["Live Audio"]
     end
 
     %% Network and Audio Ingestion
     subgraph Connectors [Connectors]
         Conn["Connector (TCP/WS Server)"]
-        Mic["Microphones (Local / ESP32)"]
+        Mic["Local_Microphone (Raw PCM Push)"]
     end
 
     Wabb -->|User Commands| Conn
+    RoomAudio --> Mic
 
     %% Core Processing Engine
     subgraph Core [Core Engine]
         Config["Configuration_manager"]
-        AudioIngest["AudioIngestion (FFT and Buffers)"]
-        AudioAnalyz["AudioAnalyzer (DSP and Rhythm)"]
+        ListenerFacade["Listener (Facade & 5s Delay Buffer)"]
+        AudioIngest["AudioIngestion (FFT Math & Smoothers)"]
+        AudioAnalyz["AudioAnalyzer (DSP and Rhythm Lookahead)"]
         ModeMaster["Mode_master (Orchestrator)"]
         TransDir["Transition_Director"]
     end
 
-    Mic -->|PCM Stream| AudioIngest
+    Mic -->|Raw PCM Push| ListenerFacade
     Conn -->|Overrides / Requests| ModeMaster
+    ListenerFacade -->|Routes Audio| AudioIngest
     AudioIngest -->|Raw Values| AudioAnalyz
-    AudioIngest -->|Smoothed FFT / Power| ModeMaster
+    AudioIngest -->|Raw FFT / Power| ListenerFacade
+    ListenerFacade -->|Delayed Smoothed FFT / Power| ModeMaster
     AudioAnalyz -->|BPM / Phase| ModeMaster
     AudioAnalyz -->|Structural Music Drops| TransDir
     TransDir -->|Commands Configuration Changes| ModeMaster
@@ -82,7 +86,7 @@ Here is a breakdown of the core directories in this project:
 - **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `AudioAnalyzer`, and the `Listener` facade), and the Transition Director.
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
 - **`/config`**: JSON files and managers detailing the hardware geometry and global settings.
-- **`/connectors`**: The external communication handlers. This includes the TCP/WebSocket server that talks to the web interface, as well as microphone stream capture tools.
+- **`/connectors`**: The external communication handlers. This includes the TCP/WebSocket server that talks to the web interface, as well as the microphone stream capture tool (`Local_Microphone.py`).
 - **`/hardware`**: Hardware abstractions. Allows switching seamlessly between testing on a PC (with Pygame simulated LEDs or UDP Fake ESP32) and running on real hardware (Raspberry Pi GPIO or real ESP32s over network).
 - **`/wabb-interface`**: A React-based web application serving as the remote controller for the user to change playlists, transition modes, or tweak settings on the fly.
 - **`/.agents`**: Core context, architectural rules, and technical specifications designed for AI agents working on the codebase.

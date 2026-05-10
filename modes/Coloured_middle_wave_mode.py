@@ -27,8 +27,8 @@ class Coloured_middle_wave_mode(Mode.Mode):
         upper_idxs = np.clip(lower_idxs + 1, 0, self.listener.nb_of_fft_band - 1)
         blend_factors = float_band_idxs - lower_idxs
         
-        vol_lowers = self.listener.asserved_fft_band[lower_idxs]
-        vol_uppers = self.listener.asserved_fft_band[upper_idxs]
+        vol_lowers = self.listener._delayed_asserved_fft_band[lower_idxs]
+        vol_uppers = self.listener._delayed_asserved_fft_band[upper_idxs]
         local_powers = (vol_lowers * (1.0 - blend_factors)) + (vol_uppers * blend_factors)
         
         band_hues_arr = np.array(self.band_hues)

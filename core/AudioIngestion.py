@@ -22,6 +22,53 @@ class AudioIngestion:
         self.build_asserved_total_power()
         self.prepare_for_calibration()
 
+        # FFT Settings
+        self.sample_rate = 44100
+        self.buffer_size = 4096
+        self.hanning_window = np.hanning(self.buffer_size)
+        
+        fft_size = self.buffer_size // 2 + 1
+        self.weight_matrix = np.zeros((self.nb_of_fft_band, fft_size))
+        
+        def hz_to_mel(f): return 2595 * np.log10(1 + f / 700.0)
+        def mel_to_hz(m): return 700 * (10**(m / 2595.0) - 1)
+        
+        lower_mel = hz_to_mel(20)
+        upper_mel = hz_to_mel(20000)
+        mel_points = np.linspace(lower_mel, upper_mel, self.nb_of_fft_band + 2)
+        hz_points = mel_to_hz(mel_points)
+        bin_points = np.floor((self.buffer_size + 1) * hz_points / self.sample_rate).astype(int)
+        
+        for i in range(self.nb_of_fft_band):
+            start = min(bin_points[i], fft_size - 1)
+            mid = min(bin_points[i + 1], fft_size - 1)
+            end = min(bin_points[i + 2], fft_size - 1)
+            
+            if mid > start:
+                self.weight_matrix[i, start:mid] = np.linspace(0, 1, mid - start, endpoint=False)
+            if end > mid:
+                self.weight_matrix[i, mid:end] = np.linspace(1, 0, end - mid, endpoint=False)
+            
+            band_sum = np.sum(self.weight_matrix[i, :])
+            if band_sum > 0:
+                self.weight_matrix[i, :] /= band_sum
+
+        self.chroma_matrix = np.zeros((self.nb_of_chroma, fft_size))
+        bin_freqs = np.fft.rfftfreq(self.buffer_size, 1 / self.sample_rate)
+        
+        for k in range(fft_size):
+            f = bin_freqs[k]
+            if f > 30:
+                pitch_midi = 69 + 12 * np.log2(f / 440.0)
+                pitch_class = int(np.round(pitch_midi)) % 12
+                self.chroma_matrix[pitch_class, k] = 1.0
+                
+        for i in range(self.nb_of_chroma):
+            s = np.sum(self.chroma_matrix[i, :])
+            if s > 0:
+                self.chroma_matrix[i, :] /= s
+
+
 
     def build_asserved_fft_lists(self) -> None:
         """
@@ -248,6 +295,21 @@ class AudioIngestion:
             denom+=self.fft_band_values[i]
         self.fft_bary =  (num/denom) /(self.nb_of_fft_band-1)
         
+    def process_raw_audio(self, audio_data: np.ndarray) -> None:
+        windowed_data = audio_data * self.hanning_window
+        fft_result = np.abs(np.fft.rfft(windowed_data))
+        scale = 150.0 / (self.buffer_size / 1024.0)
+        
+        mel_bands = np.dot(self.weight_matrix, fft_result) * scale
+        for i in range(self.nb_of_fft_band):
+            self.fft_band_values[i] = int(mel_bands[i])
+
+        if hasattr(self, 'chroma_values'):
+            chroma_bands = np.dot(self.chroma_matrix, fft_result) * scale
+            for i in range(12):
+                self.chroma_values[i] = chroma_bands[i]
+
+
 
     def asserv_total_power(self, fps_ratio: float) -> None:
         instantPower = 0

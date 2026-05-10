@@ -32,7 +32,7 @@ class Transition_Director:
         self.silence_start_time = None
         self.is_in_standby = False
 
-        self.configuration_duration = 6.0
+        self.configuration_duration = 20.0
         self.next_change_time = time.time() + self.configuration_duration
 
         self.state = "PASSATION"
@@ -117,7 +117,7 @@ class Transition_Director:
             chosen_effect = "explosion"
             transition_config = {
                 "type": chosen_effect, 
-                "duration": 5.0
+                "duration": 4.0
             }
             await self.mode_master.change_configuration(transition_config)
             self.next_change_time = current_time + self.configuration_duration

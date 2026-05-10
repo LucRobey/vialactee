@@ -22,8 +22,8 @@ class Proportion_rainbow_mode(Mode.Mode):
         self.target_rgb = np.zeros((self.nb_of_leds - 1, 3), dtype=np.int32)
         self.hues = np.zeros(self.nb_of_leds - 1)
     def run(self):
-        sum_dhue = ((self.N+1)/2) * (self.listener.asserved_fft_band[0]+self.listener.asserved_fft_band[-1]) + self.N * np.sum(self.listener.asserved_fft_band[1:-1])
-        self.fft_bands_array[:] = self.listener.asserved_fft_band
+        sum_dhue = ((self.N+1)/2) * (self.listener._delayed_asserved_fft_band[0]+self.listener._delayed_asserved_fft_band[-1]) + self.N * np.sum(self.listener.asserved_fft_band[1:-1])
+        self.fft_bands_array[:] = self.listener._delayed_asserved_fft_band
         
         # Calculate dhues
         dhues = (self.maximum_hue - self.minimum_hue) * (

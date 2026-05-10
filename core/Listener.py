@@ -3,6 +3,7 @@ import time
 import asyncio
 import logging
 import numpy as np
+from collections import deque
 
 from core.AudioIngestion import AudioIngestion
 from core.AudioAnalyzer import AudioAnalyzer
@@ -14,6 +15,18 @@ class Listener:
         self.ingestion = AudioIngestion(infos)
         self.analyzer = AudioAnalyzer(self.ingestion, infos)
         
+        # Delayed state queues for perfect sync with beat predictions
+        self.spectral_delay_queue = deque()
+        self._delayed_fft_band_values = np.zeros(self.ingestion.nb_of_fft_band)
+        self._delayed_chroma_values = np.zeros(self.ingestion.nb_of_chroma)
+        self._delayed_smoothed_fft_band_values = np.zeros(self.ingestion.nb_of_fft_band)
+        self._delayed_smoothed_chroma_values = np.zeros(self.ingestion.nb_of_chroma)
+        self._delayed_asserved_fft_band = np.zeros(self.ingestion.nb_of_fft_band)
+        self._delayed_band_proportion = np.zeros(self.ingestion.nb_of_fft_band)
+        self._delayed_band_means = np.zeros(self.ingestion.nb_of_fft_band)
+        self._delayed_smoothed_total_power = 0.0
+        self._delayed_asserved_total_power = 0.0
+
     async def update_forever(self) -> None:
         while True:
             self.update()
@@ -35,7 +48,7 @@ class Listener:
                 self.ingestion.calibrate_bb(self.fps_ratio)
             else:
                 self.ingestion.update_band_means_and_smoothed_values(self.fps_ratio)
-                self.ingestion.asserv_fft_bands_2(self.fps_ratio)
+                self.ingestion.asserv_fft_bands(self.fps_ratio)
                 self.ingestion.asserv_total_power(self.fps_ratio)
                 self.analyzer.update_structural_novelty(current_time, self.fps_ratio)
                 self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
@@ -47,18 +60,53 @@ class Listener:
             self.analyzer.update_structural_novelty(current_time, self.fps_ratio)
             self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
 
+        # -------------------------------------------------------------
+        # SPECTRAL DELAY BUFFER
+        # We capture the instantaneous audio state and delay it by exactly
+        # lookahead_seconds so it aligns perfectly with the delayed beat triggers.
+        # -------------------------------------------------------------
+        self.spectral_delay_queue.append({
+            'time': current_time,
+            'fft_band_values': np.copy(self.ingestion.fft_band_values),
+            'chroma_values': np.copy(self.ingestion.chroma_values) if hasattr(self.ingestion, 'chroma_values') else None,
+            'smoothed_fft_band_values': np.copy(self.ingestion.smoothed_fft_band_values),
+            'smoothed_chroma_values': np.copy(self.ingestion.smoothed_chroma_values) if hasattr(self.ingestion, 'smoothed_chroma_values') else None,
+            'asserved_fft_band': np.copy(self.ingestion.asserved_fft_band),
+            'band_proportion': np.copy(self.ingestion.band_proportion),
+            'band_means': np.copy(self.ingestion.band_means),
+            'smoothed_total_power': self.ingestion.smoothed_total_power,
+            'asserved_total_power': self.ingestion.asserved_total_power
+        })
+
+        while len(self.spectral_delay_queue) > 0:
+            if current_time - self.spectral_delay_queue[0]['time'] >= self.analyzer.lookahead_seconds:
+                popped = self.spectral_delay_queue.popleft()
+                self._delayed_fft_band_values = popped['fft_band_values']
+                if popped['chroma_values'] is not None:
+                    self._delayed_chroma_values = popped['chroma_values']
+                self._delayed_smoothed_fft_band_values = popped['smoothed_fft_band_values']
+                if popped['smoothed_chroma_values'] is not None:
+                    self._delayed_smoothed_chroma_values = popped['smoothed_chroma_values']
+                self._delayed_asserved_fft_band = popped['asserved_fft_band']
+                self._delayed_band_proportion = popped['band_proportion']
+                self._delayed_band_means = popped['band_means']
+                self._delayed_smoothed_total_power = popped['smoothed_total_power']
+                self._delayed_asserved_total_power = popped['asserved_total_power']
+            else:
+                break
+
     # ==========================================
     # FACADE PROPERTIES FOR MODES AND CONNECTORS
     # ==========================================
 
     # 1. Ingestion properties
     @property
-    def fft_band_values(self): return self.ingestion.fft_band_values
+    def fft_band_values(self): return self._delayed_fft_band_values
     @fft_band_values.setter
     def fft_band_values(self, val): self.ingestion.fft_band_values = val
 
     @property
-    def chroma_values(self): return self.ingestion.chroma_values
+    def chroma_values(self): return self._delayed_chroma_values
     @chroma_values.setter
     def chroma_values(self, val): self.ingestion.chroma_values = val
 
@@ -66,22 +114,22 @@ class Listener:
     def nb_of_fft_band(self): return self.ingestion.nb_of_fft_band
 
     @property
-    def smoothed_fft_band_values(self): return self.ingestion.smoothed_fft_band_values
+    def smoothed_fft_band_values(self): return self._delayed_smoothed_fft_band_values
 
     @property
-    def smoothed_chroma_values(self): return self.ingestion.smoothed_chroma_values
+    def smoothed_chroma_values(self): return self._delayed_smoothed_chroma_values
 
     @property
-    def asserved_fft_band(self): return self.ingestion.asserved_fft_band
+    def asserved_fft_band(self): return self._delayed_asserved_fft_band
 
     @property
-    def band_proportion(self): return self.ingestion.band_proportion
+    def band_proportion(self): return self._delayed_band_proportion
 
     @property
-    def smoothed_total_power(self): return self.ingestion.smoothed_total_power
+    def smoothed_total_power(self): return self._delayed_smoothed_total_power
 
     @property
-    def asserved_total_power(self): return self.ingestion.asserved_total_power
+    def asserved_total_power(self): return self._delayed_asserved_total_power
 
     @property
     def dynamic_audio_latency(self): return self.ingestion.dynamic_audio_latency
@@ -99,7 +147,7 @@ class Listener:
     def luminosite(self, val): self.ingestion.luminosite = val
 
     @property
-    def band_means(self): return self.ingestion.band_means
+    def band_means(self): return self._delayed_band_means
 
     # Calibrations
     def start_silence_calibration(self) -> None: self.ingestion.start_silence_calibration(self.fps_ratio)
@@ -141,3 +189,7 @@ class Listener:
 
     @property
     def standalone_bpm(self): return self.analyzer.standalone_bpm
+
+    def process_raw_audio(self, audio_data: np.ndarray) -> None:
+        self.ingestion.process_raw_audio(audio_data)
+

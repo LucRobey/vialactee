@@ -40,7 +40,7 @@ class Synesthesia_mode(Mode.Mode):
             saturation = np.clip(magnitude * 1.5, 0.4, 1.0)
             
             # 4. Use overall volume scaling for brightness
-            asserv_total = self.listener.asserved_fft_band
+            asserv_total = self.listener._delayed_asserved_fft_band
             brightness = np.clip(np.sum(asserv_total) * 0.3 * self.brightness_multiplier, 0.0, 1.0)
             
             # Generate the true target color of the musical chord!

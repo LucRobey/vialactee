@@ -29,7 +29,7 @@ class Middle_bar_mode(Mode.Mode):
 
     def run(self):
         #We listen to the chosen band
-        new_size = self.listener.asserved_fft_band[self.band_to_listen] * self.max_size
+        new_size = self.listener._delayed_asserved_fft_band[self.band_to_listen] * self.max_size
 
         #could put some sensi here
         self.size = int((self.size + new_size)/2)

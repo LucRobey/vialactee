@@ -17,7 +17,7 @@ class Flying_ball_mode(Mode.Mode):
         
     def run(self):
         # We square the band powers like the old physical C++ engine did
-        squared_powers = (self.listener.asserved_fft_band * self.band_weights) ** 2
+        squared_powers = (self.listener._delayed_asserved_fft_band * self.band_weights) ** 2
         
         # Multiply by indices to find the Center of Mass
         music_gravity_center = np.sum(np.arange(8) * squared_powers)

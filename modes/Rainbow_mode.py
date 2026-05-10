@@ -40,8 +40,7 @@ class Rainbow_mode(Mode.Mode):
         self.target_rgb = np.zeros((self.nb_of_leds, 3), dtype=np.int32)
 
     def run(self):
-        self.fft_bands_array[:] = self.listener.asserved_fft_band
-        
+        self.fft_bands_array[:] = self.listener._delayed_asserved_fft_band
         self.intensities[:] = self.intensity_base + self.intensity_mult * (
             self.position_coefs * self.fft_bands_array[self.low_margins] + 
             (1.0 - self.position_coefs) * self.fft_bands_array[self.high_margins]

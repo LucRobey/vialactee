@@ -22,8 +22,8 @@ class PSG_mode(Mode.Mode):
         #====================================================================================
         
 
-        self.lower_height  = int(self.maxSize * (self.listener.asserved_fft_band[0]  + self.listener.asserved_fft_band[1] )/2)
-        self.higher_height = int(self.maxSize * (self.listener.asserved_fft_band[-1] + self.listener.asserved_fft_band[-2])/2)
+        self.lower_height  = int(self.maxSize * (self.listener._delayed_asserved_fft_band[0]  + self.listener._delayed_asserved_fft_band[1] )/2)
+        self.higher_height = int(self.maxSize * (self.listener._delayed_asserved_fft_band[-1] + self.listener._delayed_asserved_fft_band[-2])/2)
 
         self.smooth_segment(0.5,0,self.lower_height,colors.red)
         self.fade_to_black_segment(0.5,self.lower_height+1,self.nb_of_leds-1-self.higher_height-1)

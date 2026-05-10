@@ -5,6 +5,8 @@ import json
 import os
 import contextlib
 import shutil
+import sys
+import subprocess
 
 import core.Listener as Listener
 import connectors.Local_Microphone as Local_Microphone
@@ -38,6 +40,8 @@ async def launch_webapp(infos: Dict[str, Any]) -> None:
         logging.error("`npm` command not found. Install Node.js to autostart the web app.")
         return
 
+    webapp_process = None
+    install_process = None
     try:
         if not os.path.exists(node_modules_path):
             logging.info("Installing web app dependencies (first launch)...")
@@ -58,19 +62,30 @@ async def launch_webapp(infos: Dict[str, Any]) -> None:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT
         )
-    except FileNotFoundError:
-        logging.error("`npm` command not found. Install Node.js to autostart the web app.")
-        return
-
-    try:
+        
         await webapp_process.wait()
         if webapp_process.returncode != 0:
             raise RuntimeError(f"Web app process exited with code {webapp_process.returncode}")
+            
+    except FileNotFoundError:
+        logging.error("`npm` command not found. Install Node.js to autostart the web app.")
+        return
     except asyncio.CancelledError:
-        logging.info("Stopping web app process...")
-        webapp_process.terminate()
-        with contextlib.suppress(ProcessLookupError):
-            await webapp_process.wait()
+        logging.info("Stopping web app processes...")
+        if webapp_process:
+            if sys.platform == "win32":
+                subprocess.run(['taskkill', '/F', '/T', '/PID', str(webapp_process.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                webapp_process.terminate()
+            with contextlib.suppress(ProcessLookupError):
+                await webapp_process.wait()
+        elif install_process:
+            if sys.platform == "win32":
+                subprocess.run(['taskkill', '/F', '/T', '/PID', str(install_process.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                install_process.terminate()
+            with contextlib.suppress(ProcessLookupError):
+                await install_process.wait()
         raise
 
 
@@ -135,4 +150,7 @@ async def main() -> None:
 
 # Run the event loop
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
