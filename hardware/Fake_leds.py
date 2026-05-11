@@ -19,6 +19,8 @@ class FakeLedsVisualizer:
             pygame.display.set_caption("Vialactée - LED Simulator")
             cls._instance.strips = []
             cls._instance.clock = pygame.time.Clock()
+            # Maps the segment_def internal name (e.g. "segment_v4") to its current mode info
+            cls._instance.segment_modes = {}
             
             # Exact chandelier geometry mapping
             cls._instance.segments_def = [
@@ -50,7 +52,18 @@ class FakeLedsVisualizer:
 
     def update_strip(self, strip_id, data):
         self.strips[strip_id] = data
-        
+
+    def set_segment_mode(self, internal_name, mode_name, target_mode_name=None):
+        """
+        Register the current active mode for a segment so it can be rendered as
+        a label next to that segment in the simulator. `internal_name` matches
+        the keys defined in `segments_def` (e.g. "segment_v4").
+        """
+        self.segment_modes[internal_name] = {
+            "mode": mode_name,
+            "target": target_mode_name,
+        }
+
     def show(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -70,6 +83,8 @@ class FakeLedsVisualizer:
                 if not hasattr(self, 'font'):
                     pygame.font.init()
                     self.font = pygame.font.SysFont('arial', 16, bold=True)
+                if not hasattr(self, 'mode_font'):
+                    self.mode_font = pygame.font.SysFont('arial', 11, italic=True)
                 
                 text_surface = self.font.render(name, True, (0, 0, 0))
                 text_rect = text_surface.get_rect()
@@ -85,6 +100,22 @@ class FakeLedsVisualizer:
                 pygame.draw.rect(self.screen, (245, 245, 245), bg_rect)
                 pygame.draw.rect(self.screen, border_color, bg_rect, 2)
                 self.screen.blit(text_surface, text_rect)
+
+                # Draw the active mode label right below the name label
+                mode_info = self.segment_modes.get(name)
+                if mode_info is not None and mode_info.get("mode"):
+                    mode_label = mode_info["mode"]
+                    if mode_info.get("target"):
+                        mode_label = f"{mode_label} -> {mode_info['target']}"
+
+                    mode_surface = self.mode_font.render(mode_label, True, (35, 35, 35))
+                    mode_rect = mode_surface.get_rect()
+                    mode_rect.center = (bg_rect.centerx, bg_rect.bottom + 10)
+
+                    mode_bg = mode_rect.inflate(8, 4)
+                    pygame.draw.rect(self.screen, (255, 255, 255), mode_bg)
+                    pygame.draw.rect(self.screen, border_color, mode_bg, 1)
+                    self.screen.blit(mode_surface, mode_rect)
             
                 x, y = start_x, start_y
                 for _ in range(size):
@@ -141,3 +172,13 @@ class Fake_leds(HardwareInterface):
     def show(self):
         visualizer.update_strip(self.strip_id, self.data)
         visualizer.show()
+
+    def set_segment_mode(self, segment_name, mode_name, target_mode_name=None):
+        """
+        Forward the current active mode (and optional in-transition target mode)
+        for a logical segment to the shared visualizer so it can be rendered.
+        Converts the public segment name (e.g. "Segment v4") to the internal
+        key used by the visualizer (e.g. "segment_v4").
+        """
+        internal_name = segment_name.lower().replace(" ", "_")
+        visualizer.set_segment_mode(internal_name, mode_name, target_mode_name)

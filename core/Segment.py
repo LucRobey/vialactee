@@ -120,6 +120,12 @@ class Segment:
                 self.is_in_transition = False
         
         self.update_leds()
+
+        # Forward mode info to hardware-side visualizers (only Fake_leds reacts;
+        # real hardware does not implement this method and is bypassed).
+        if hasattr(self.leds, "set_segment_mode"):
+            target = self.target_mode_name if self.is_in_transition else None
+            self.leds.set_segment_mode(self.name, self.activ_mode, target)
         
     #Load the json modes.json and initiate the modes 
     def initiate_modes(self, orientation: str) -> None:
