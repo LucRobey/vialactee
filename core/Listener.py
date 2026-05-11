@@ -26,6 +26,10 @@ class Listener:
         self._delayed_band_means = np.zeros(self.ingestion.nb_of_fft_band)
         self._delayed_smoothed_total_power = 0.0
         self._delayed_asserved_total_power = 0.0
+        self._delayed_band_peak = np.zeros(self.ingestion.nb_of_fft_band)
+        self._delayed_band_flux = np.zeros(self.ingestion.nb_of_fft_band)
+        self._delayed_is_song_change = False
+        self._delayed_is_verse_chorus_change = False
 
     async def update_forever(self) -> None:
         while True:
@@ -50,14 +54,14 @@ class Listener:
                 self.ingestion.update_band_means_and_smoothed_values(self.fps_ratio)
                 self.ingestion.asserv_fft_bands(self.fps_ratio)
                 self.ingestion.asserv_total_power(self.fps_ratio)
-                self.analyzer.update_structural_novelty(current_time, self.fps_ratio)
+                self.analyzer.update_structural_novelty(current_time, self.dt, self.fps_ratio)
                 self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
         else:
             self.ingestion.apply_fake_fft(self.fps_ratio)
             self.ingestion.asserv_fft_bands(self.fps_ratio)
             self.ingestion.update_band_means_and_smoothed_values(self.fps_ratio)
             self.ingestion.asserv_total_power(self.fps_ratio)
-            self.analyzer.update_structural_novelty(current_time, self.fps_ratio)
+            self.analyzer.update_structural_novelty(current_time, self.dt, self.fps_ratio)
             self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
 
         # -------------------------------------------------------------
@@ -75,7 +79,11 @@ class Listener:
             'band_proportion': np.copy(self.ingestion.band_proportion),
             'band_means': np.copy(self.ingestion.band_means),
             'smoothed_total_power': self.ingestion.smoothed_total_power,
-            'asserved_total_power': self.ingestion.asserved_total_power
+            'asserved_total_power': self.ingestion.asserved_total_power,
+            'band_peak': np.copy(self.analyzer.band_peak) if hasattr(self.analyzer, 'band_peak') else np.zeros(self.ingestion.nb_of_fft_band),
+            'band_flux': np.copy(self.analyzer.band_flux) if hasattr(self.analyzer, 'band_flux') else np.zeros(self.ingestion.nb_of_fft_band),
+            'is_song_change': getattr(self.analyzer, 'is_song_change', False),
+            'is_verse_chorus_change': getattr(self.analyzer, 'is_verse_chorus_change', False)
         })
 
         while len(self.spectral_delay_queue) > 0:
@@ -92,6 +100,10 @@ class Listener:
                 self._delayed_band_means = popped['band_means']
                 self._delayed_smoothed_total_power = popped['smoothed_total_power']
                 self._delayed_asserved_total_power = popped['asserved_total_power']
+                self._delayed_band_peak = popped['band_peak']
+                self._delayed_band_flux = popped['band_flux']
+                self._delayed_is_song_change = popped['is_song_change']
+                self._delayed_is_verse_chorus_change = popped['is_verse_chorus_change']
             else:
                 break
 
@@ -167,10 +179,10 @@ class Listener:
 
     # 2. Analyzer properties
     @property
-    def band_peak(self): return self.analyzer.band_peak
+    def band_peak(self): return self._delayed_band_peak
 
     @property
-    def band_flux(self): return self.analyzer.band_flux
+    def band_flux(self): return self._delayed_band_flux
 
     @property
     def beat_count(self): return self.analyzer.beat_count
@@ -179,10 +191,16 @@ class Listener:
     def beat_phase(self): return self.analyzer.beat_phase
 
     @property
-    def is_song_change(self): return self.analyzer.is_song_change
+    def is_song_change(self): return self._delayed_is_song_change
 
     @property
-    def is_verse_chorus_change(self): return self.analyzer.is_verse_chorus_change
+    def is_verse_chorus_change(self): return self._delayed_is_verse_chorus_change
+    
+    @property
+    def live_is_song_change(self): return getattr(self.analyzer, 'is_song_change', False)
+    
+    @property
+    def live_is_verse_chorus_change(self): return getattr(self.analyzer, 'is_verse_chorus_change', False)
 
     @property
     def bpm(self): return self.analyzer.bpm

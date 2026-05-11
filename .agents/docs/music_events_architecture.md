@@ -55,11 +55,21 @@ When a playlist jumps tracks, or a DJ hard-cuts into a brand new BPM, the rhythm
 - It simultaneously verifies that its mathematical correlation ("Trust") has collapsed below 60% of the song's established baseline.
 - **Action:** The system violently Flushes all rhythmic lookahead queues, resets its memory buffers, and surgically snaps its Phase alignment directly onto the new tempo to physically recover the groove within a fraction of a second.
 
-### D. The Acoustic Breakdown
+        # === D. The Acoustic Breakdown ===
 **Rule:** `bass_flux` flatlines AND `treble_flux` remains high.
 
 If the bass drum cuts out entirely but vocals or synths continue, the system flags an "Acoustic Breakdown."
 - **Action:** Triggers a delicate, slow fade configuration and suppresses aggressive strobes until the bass returns.
+
+---
+
+## 3. The Pre-Cog Architecture (5-Second Lookahead)
+
+Because the visual pipeline is delayed by exactly 5 seconds relative to the live microphone ingestion, the system has **5 seconds of guaranteed future knowledge**. 
+
+When a structural event or song change is detected on the live audio, the system simultaneously executes two tasks:
+1. **Synchronous Triggers:** It injects the 1-frame boolean trigger (`is_song_change`, `is_verse_chorus_change`) into the `spectral_delay_queue`. This guarantees that when the `Listener` property is read, it fires *flawlessly* in sync with the delayed FFT visual rendering.
+2. **Proactive Countdowns:** It immediately sets a public countdown timer (e.g., `upcoming_song_change_countdown = 5.0`). This timer counts down to 0.0, allowing the `Transition_Director` to be **proactive rather than reactive**—preparing fade-to-black sequences or crossfades *before* the drop hits the speakers.
 
 ---
 
@@ -113,14 +123,16 @@ graph TD
 
 ---
 
-## 4. API & Orchestration Integration
+## 5. API & Orchestration Integration
 
-The real-time calculations from the rhythm tracker are translated into extremely simple, 1-frame boolean broadcast events. In Python, your instances of the `Transition_Director` or `Mode_master` should read these variables directly from the `Listener.py` object every frame loop.
+The real-time calculations from the rhythm tracker are translated into simple properties and countdowns. In Python, your instances of the `Transition_Director` or `Mode_master` should read these variables directly from the `Listener.py` object every frame loop.
 
-| Boolean Flag | When it is `True` | Recommended Action |
+| Property | When it is `True` / Triggered | Recommended Action |
 | --- | --- | --- |
-| `listener.is_beat` | Instantly hits true roughly every 500ms aligned physically with transients. | Execute step-advances on color matrices, ripple effect expansions. |
+| `listener.upcoming_song_change_countdown` | Depletes from 5.0s to 0.0s when a song change is incoming. | Proactively start massive crossfades or fade-to-black sequences. |
+| `listener.upcoming_structural_change_countdown` | Depletes from 5.0s to 0.0s when a Verse/Chorus boundary is incoming. | Proactively begin shifting generative palettes or preparing intense drops. |
+| `listener.is_song_change` | True for exactly one frame. **Perfectly synchronized** with the delayed audio stream. | Finalize transition sequences. Restart generative palettes from seed parameters. |
+| `listener.is_verse_chorus_change` | True for exactly one frame. **Perfectly synchronized** with the delayed audio stream. | Execute dramatic blackout strobes or instant palette swaps. |
+| `listener.is_beat` | Instantly hits true roughly every 500ms aligned mathematically with the grid. | Execute step-advances on color matrices, ripple effect expansions. |
 | `listener.is_sub_beat` | Hits exactly half-way between primary `is_beat` ticks. | Flash tertiary strobe layers, inverse color staggers. |
-| `listener.is_verse_chorus_change` | True for exactly one frame when raw Novelty fractures the GM ceiling. (20s rigid cooldown). | Trigger massive Global Wipes, swap geometric base-palettes, execute dramatic blackout strobes. |
-| `listener.is_song_change` | True for exactly one frame on DJ Crossfade (`>0.8 Asserved`), Hard Cut, or `>1.5s` Silence. | Flush transition sequences. Restart generative palettes from seed parameters. |
-| `listener.vocals_present` | Active over chunks of time when Harmonic Product Spectrum isolates singing voice formats. | Activate secondary ACAPELLA / vocal isolation modes (e.g., wash the entire stage in warm analog white, deactivate erratic strobes), or suppress generative noise until lyrics finish. |
+| `listener.vocals_present` | Active over chunks of time when Harmonic Product Spectrum isolates singing. | Activate secondary ACAPELLA modes, deactivate erratic strobes. |

@@ -106,7 +106,7 @@ class AudioAnalyzer:
         self.ACAPELLA_COOLDOWN_SECONDS = 5.0
         
         
-    def update_structural_novelty(self, current_time: float, fps_ratio: float) -> None:
+    def update_structural_novelty(self, current_time: float, dt: float, fps_ratio: float) -> None:
         # current_time from param
         
         # 1. Reset boolean triggers from last frame
@@ -156,8 +156,8 @@ class AudioAnalyzer:
                 self.song_changes_times.append(current_time)
                 self.is_song_change = True
                 
-                # Flush the future queue to ditch old song transients
-                self.future_queue.clear()
+                # We no longer clear the future_queue here to allow the remaining 5 seconds 
+                # of the previous song's beats to play out accurately.
                 self.standalone_beat_count = 0
                 self.last_standalone_beat_count = 0
                 self.standalone_sub_beat_locked = -1
@@ -194,7 +194,7 @@ class AudioAnalyzer:
                 self.song_changes_times.append(current_time)
                 self.is_song_change = True
                 
-                self.future_queue.clear()
+                # We no longer clear the future_queue here
                 self.standalone_beat_count = 0
                 self.last_standalone_beat_count = 0
                 self.standalone_sub_beat_locked = -1
@@ -360,7 +360,9 @@ class AudioAnalyzer:
             base_inertia = max(0.992, self.decay_base + 0.012)
             decay_factor = min(0.9995, base_inertia + 0.007 * self.bpm_trust)
             self.bpm = decay_factor * self.bpm + (1.0 - decay_factor) * target_bpm
-            self.binary_trust = min(1.0, np.max(weighted_peaks) / (np.sum(weighted_acf) + 1e-6))
+            
+            baseline_variance = max(1e-4, unbiased_acf[0])
+            self.binary_trust = min(1.0, np.max(weighted_peaks) / baseline_variance)
             
         # 4. Phase Alignment (Bipolar Pulse Template Cross-Correlation)
         # We find the exact phase offset by rolling the hand-drawn discrete wave template 
@@ -459,8 +461,7 @@ class AudioAnalyzer:
                     self.song_changes_times.append(current_time)
                     self.is_song_change = True
                     
-                    # Flush queues due to Song Change (Trust Drop!)
-                    self.future_queue.clear()
+                    # We no longer clear the future_queue here
                     self.standalone_beat_count = 0
                     self.last_standalone_beat_count = 0
                     self.standalone_sub_beat_locked = -1
@@ -524,58 +525,15 @@ class AudioAnalyzer:
             'beat_count': self.standalone_beat_count
         })
         
-        # MAGNETIC LOOKAHEAD SNAPPING
-        window = 5
-        while len(self.future_queue) > 2 * window:
-            target = window
-            time_diff = current_time - self.future_queue[target]['timestamp']
+        # RIGID BEAT POPPING
+        # Pop beats precisely when they are lookahead_seconds old
+        best_p = 0
+        while len(self.future_queue) > 0:
+            time_diff = current_time - self.future_queue[0]['timestamp']
             
-            # Wait until the target frame is exactly `lookahead_seconds` old to snap
             if time_diff < self.lookahead_seconds:
                 break
                 
-            bass_flux_array = [f['bass_flux'] for f in self.future_queue]
-            treble_flux_array = [f['treble_flux'] for f in self.future_queue]
-            
-            # Snap main beats
-            if self.future_queue[target].get('is_beat', False) and not self.future_queue[target].get('main_snapped', False):
-                start_index = 0
-                end_index = 2 * window + 1
-                
-                best_idx = start_index + int(np.argmax(bass_flux_array[start_index:end_index]))
-                peak_power = bass_flux_array[best_idx]
-                target_power = bass_flux_array[window]
-                local_mean = np.mean(bass_flux_array[start_index:end_index])
-                
-                dist_penalty = 1.0 + 0.5 * (np.abs(best_idx - window) / window)
-                
-                if best_idx != window and peak_power > max(2.0, (local_mean * 1.5) * dist_penalty):
-                    self.future_queue[target]['is_beat'] = False
-                    self.future_queue[best_idx]['is_beat'] = True
-                    self.future_queue[best_idx]['main_snapped'] = True
-                else:
-                    self.future_queue[target]['main_snapped'] = True
-                    
-            # Snap sub beats
-            if self.future_queue[target].get('is_sub_beat', False) and not self.future_queue[target].get('sub_snapped', False):
-                start_index = 0
-                end_index = 2 * window + 1
-                
-                best_idx = start_index + int(np.argmax(treble_flux_array[start_index:end_index]))
-                peak_power = treble_flux_array[best_idx]
-                target_power = treble_flux_array[window]
-                local_mean = np.mean(treble_flux_array[start_index:end_index])
-                
-                dist_penalty = 1.0 + 0.5 * (np.abs(best_idx - window) / window)
-                
-                if best_idx != window and peak_power > max(2.0, (local_mean * 1.5) * dist_penalty):
-                    self.future_queue[target]['is_sub_beat'] = False
-                    self.future_queue[best_idx]['is_sub_beat'] = True
-                    self.future_queue[best_idx]['sub_snapped'] = True
-                else:
-                    self.future_queue[target]['sub_snapped'] = True
-                    
-            # Explode the corrected 5-second old state to the public class variables!
             popped = self.future_queue.popleft()
             self.bpm = popped['bpm']
             self.beat_phase = popped['phase']
@@ -585,7 +543,7 @@ class AudioAnalyzer:
                 self.beat_count += 1
                 self.last_beat_time = current_time
             elif popped['is_sub_beat']:
-                pass # You can use is_sub_beat trigger if Mode_master needs it 
+                pass # You can use is_sub_beat trigger if Mode_master needs it
 
         self.previous_best_p = best_p
 

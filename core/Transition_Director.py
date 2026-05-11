@@ -39,6 +39,10 @@ class Transition_Director:
         self.transition_progress = 0.0
         self.transition_step = 0.0
         self.transition_type = None
+        
+        self.upcoming_song_change_countdown = 0.0
+        self.upcoming_structural_change_countdown = 0.0
+        self.last_update_time = None
 
         # Discover segment geometry
         self.verticals = []
@@ -95,6 +99,25 @@ class Transition_Director:
         Args:
             current_time (float): The current system time.
         """
+        if self.last_update_time is None:
+            self.last_update_time = current_time
+        dt = current_time - self.last_update_time
+        self.last_update_time = current_time
+        
+        self.upcoming_song_change_countdown = max(0.0, self.upcoming_song_change_countdown - dt)
+        self.upcoming_structural_change_countdown = max(0.0, self.upcoming_structural_change_countdown - dt)
+
+        # Lookahead: Check live audio feed for incoming events 5 seconds before they render
+        if getattr(self.listener, "live_is_song_change", False):
+            lookahead = getattr(self.listener.analyzer, 'lookahead_seconds', 5.0) if hasattr(self.listener, 'analyzer') else 5.0
+            self.upcoming_song_change_countdown = lookahead
+            self.logger.info(f"(TD) Live Song Change detected! Visual impact in {lookahead}s.")
+
+        if getattr(self.listener, "live_is_verse_chorus_change", False):
+            lookahead = getattr(self.listener.analyzer, 'lookahead_seconds', 5.0) if hasattr(self.listener, 'analyzer') else 5.0
+            self.upcoming_structural_change_countdown = lookahead
+            self.logger.info(f"(TD) Live Structural Change detected! Visual impact in {lookahead}s.")
+
         if self.state == "TRANSITION_DUAL":
             self.transition_progress += self.transition_step
             if self.transition_progress >= 1.0:
