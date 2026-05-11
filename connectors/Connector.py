@@ -80,7 +80,12 @@ class Connector:
                         instruction["action"],
                     )
 
-                await ws.send_json({"ok": True, "received": instruction["action"]})
+                apply_result = await self.mode_master.process_instruction(instruction)
+                await ws.send_json({
+                    "ok": bool(apply_result.get("applied", False)),
+                    "received": instruction["action"],
+                    "result": apply_result,
+                })
         finally:
             self.active_websockets.discard(ws)
             if self.printAppDetails:
