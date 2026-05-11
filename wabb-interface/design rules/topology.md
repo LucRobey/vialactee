@@ -49,6 +49,7 @@ Topology uses `data/configurations.json` as its persistence layer:
 * The saved JSON shape is `{ "playlists": string[], "configurations": Record<string, Configuration[]> }`.
 * Segment mode keys must stay in Python format (`Segment v4`, `Segment h32`, etc.) so `Mode_master` can apply them directly.
 * The UI must not seed fake playlist names. If the JSON file is empty, the controls should display an empty/no-playlist state.
+* Playlist management lives in the same inspector panel: `NEW` creates a saved playlist with the typed name, and `REN` renames the selected playlist while preserving all configurations attached to it.
 
 ## 8. Live Backend Mirroring
 

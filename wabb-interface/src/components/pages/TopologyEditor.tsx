@@ -50,6 +50,7 @@ export const TopologyEditor = () => {
   
   const [playlistIndex, setPlaylistIndex] = useState(0);
   const playlist = apiPlaylists[playlistIndex] || '';
+  const [playlistNameDraft, setPlaylistNameDraft] = useState('');
   const playlistLightColor = playlist ? (playlistIndex % 2 === 0 ? '#00ffff' : '#ff00ff') : '#555';
 
   const applyModeMasterState = useCallback((state: ModeMasterState) => {
@@ -57,19 +58,19 @@ export const TopologyEditor = () => {
       setApiPlaylists(state.playlists);
     }
 
-    if (state.activePlaylist) {
-      const playlists = state.playlists.length > 0 ? state.playlists : apiPlaylists;
-      const nextPlaylistIndex = playlists.findIndex(name => name === state.activePlaylist);
-      if (nextPlaylistIndex >= 0) {
-        setPlaylistIndex(nextPlaylistIndex);
-      }
-    }
-
-    if (state.activeConfiguration) {
-      setConfigName(state.activeConfiguration);
-    }
-
     if (editorMode === 'LIVE') {
+      if (state.activePlaylist) {
+        const playlists = state.playlists.length > 0 ? state.playlists : apiPlaylists;
+        const nextPlaylistIndex = playlists.findIndex(name => name === state.activePlaylist);
+        if (nextPlaylistIndex >= 0) {
+          setPlaylistIndex(nextPlaylistIndex);
+        }
+      }
+
+      if (state.activeConfiguration) {
+        setConfigName(state.activeConfiguration);
+      }
+
       setSegments(prev => prev.map(seg => {
         const liveSegment = state.segments.find(remote => remote.id === seg.id);
         if (!liveSegment) {
@@ -96,6 +97,53 @@ export const TopologyEditor = () => {
   useEffect(() => {
     return subscribeModeMasterState(applyModeMasterState);
   }, [applyModeMasterState]);
+
+  useEffect(() => {
+    setPlaylistNameDraft(playlist);
+  }, [playlist]);
+
+  const persistPlaylistStore = (
+    playlists: string[],
+    configurations: Record<string, SegmentConfiguration[]>,
+    selectedIndex: number,
+    selectedConfigName = configName
+  ) => {
+    const payload = { playlists, configurations };
+    saveConfigurationStore(payload).then(() => {
+      setApiPlaylists(playlists);
+      setApiConfigurations(configurations);
+      setPlaylistIndex(Math.max(0, Math.min(selectedIndex, playlists.length - 1)));
+      setConfigName(selectedConfigName);
+      sendInstruction({
+        page: 'topology',
+        action: 'modify_configuration',
+        payload: { playlist: playlists[selectedIndex] || '', configuration: selectedConfigName }
+      });
+    }).catch(err => console.error(err));
+  };
+
+  const handleCreatePlaylist = () => {
+    const newName = playlistNameDraft.trim();
+    if (!newName) return alert("Please enter a playlist name.");
+    if (apiPlaylists.includes(newName)) return alert(`Playlist ${newName} already exists.`);
+
+    const nextPlaylists = [...apiPlaylists, newName];
+    const nextConfigurations = { ...apiConfigurations, [newName]: [] };
+    persistPlaylistStore(nextPlaylists, nextConfigurations, nextPlaylists.length - 1, '');
+  };
+
+  const handleRenamePlaylist = () => {
+    const newName = playlistNameDraft.trim();
+    if (!playlist) return alert("Please select a playlist to rename.");
+    if (!newName) return alert("Please enter a playlist name.");
+    if (newName === playlist) return;
+    if (apiPlaylists.includes(newName)) return alert(`Playlist ${newName} already exists.`);
+
+    const nextPlaylists = apiPlaylists.map(name => name === playlist ? newName : name);
+    const nextConfigurations = { ...apiConfigurations, [newName]: apiConfigurations[playlist] || [] };
+    delete nextConfigurations[playlist];
+    persistPlaylistStore(nextPlaylists, nextConfigurations, playlistIndex);
+  };
 
   const handlePlaylistCycle = (dir: 1 | -1) => {
     if (apiPlaylists.length === 0) {
@@ -660,10 +708,10 @@ export const TopologyEditor = () => {
           }}></div>
 
           {/* Playlist Info */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '50%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '58%', gap: '5px' }}>
             <div style={{ color: '#888', fontSize: '0.6rem', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '4px' }}>PLAYLIST</div>
             <div className="lcd-screen-fx" style={{
-              width: '100%', height: '24px', backgroundColor: '#050505',
+              width: '100%', height: '22px', backgroundColor: '#050505',
               color: '#00ffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: 'monospace', fontSize: '0.7rem', textAlign: 'center',
               boxShadow: 'inset 0 0 8px #000, 0 0 10px rgba(0, 255, 255, 0.2)', border: '1px solid #222',
@@ -671,10 +719,59 @@ export const TopologyEditor = () => {
             }}>
               {playlist || '[NO PLAYLIST]'}
             </div>
+            <input
+              type="text"
+              value={playlistNameDraft}
+              onChange={(e) => setPlaylistNameDraft(e.target.value)}
+              placeholder="[PLAYLIST NAME]"
+              style={{
+                width: '100%',
+                height: '22px',
+                backgroundColor: '#050505',
+                border: '1px solid #333',
+                borderRadius: '2px',
+                boxSizing: 'border-box',
+                color: '#fcd000',
+                fontFamily: 'monospace',
+                fontSize: '0.65rem',
+                fontWeight: 'bold',
+                letterSpacing: '0.5px',
+                outline: 'none',
+                padding: '0 7px',
+                textAlign: 'center',
+                textShadow: '0 0 6px rgba(252, 208, 0, 0.5)'
+              }}
+            />
+            <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+              {[
+                { label: 'NEW', onClick: handleCreatePlaylist, color: '#28a745' },
+                { label: 'REN', onClick: handleRenamePlaylist, color: '#fcd000' },
+              ].map(action => (
+                <button
+                  key={action.label}
+                  onClick={action.onClick}
+                  style={{
+                    flex: 1,
+                    height: '22px',
+                    border: '1px solid rgba(0,0,0,0.8)',
+                    borderRadius: '2px',
+                    backgroundColor: action.color,
+                    color: '#000',
+                    cursor: 'pointer',
+                    fontSize: '0.55rem',
+                    fontWeight: '900',
+                    letterSpacing: '1px',
+                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), inset -2px -2px 3px rgba(0,0,0,0.35), 2px 2px 4px rgba(0,0,0,0.7)'
+                  }}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Cycle Buttons */}
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <button className="cheese-slope-btn left" onClick={() => handlePlaylistCycle(-1)}>{"<"}</button>
             <button className="cheese-slope-btn right" onClick={() => handlePlaylistCycle(1)}>{">"}</button>
           </div>

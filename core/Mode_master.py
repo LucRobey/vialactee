@@ -358,6 +358,33 @@ class Mode_master:
         self.shuffle_bag = []
         return True
 
+    def _pick_random_conf_from_playlist(self, playlist_name: Any) -> Optional[Dict[str, Any]]:
+        if not isinstance(playlist_name, str):
+            return None
+
+        selected_playlist = None
+        for name in self.playlists:
+            if name.lower() == playlist_name.strip().lower():
+                selected_playlist = name
+                break
+
+        if selected_playlist is None:
+            return None
+
+        playlist_configs = self.configurations.get(selected_playlist, [])
+        if len(playlist_configs) == 0:
+            return None
+
+        conf_index = random.randrange(len(playlist_configs))
+        conf = playlist_configs[conf_index]
+        return {
+            "playlist": selected_playlist,
+            "index": conf_index,
+            "name": conf.get("name"),
+            "modes": conf.get("modes", {}),
+            "way": conf.get("way", {}),
+        }
+
     def _find_configuration(self, configuration_name: Any, playlist_name: Optional[Any] = None) -> Optional[Dict[str, Any]]:
         if not isinstance(configuration_name, str):
             return None
@@ -421,7 +448,13 @@ class Mode_master:
                 return {"applied": False, "reason": "unknown_configuration"}
 
             if action == "select_playlist":
-                if self._set_only_playlist_active(payload.get("playlist")):
+                playlist_name = payload.get("playlist")
+                if self._set_only_playlist_active(playlist_name):
+                    config = self._pick_random_conf_from_playlist(playlist_name)
+                    if config is not None:
+                        self.queued_configuration_name = config["name"]
+                        self._apply_configuration(config, self.selected_transition_config)
+                        return {"applied": True, "configuration": config["name"]}
                     return {"applied": True}
                 return {"applied": False, "reason": "unknown_playlist"}
 
