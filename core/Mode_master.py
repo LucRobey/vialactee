@@ -412,6 +412,24 @@ class Mode_master:
         self.activ_configuration = config
         self.update_segments_modes(transition_config)
 
+    def _persist_app_config_value(self, key: str, value: Any) -> None:
+        self.infos[key] = value
+
+        import json
+        import os
+        file_path = os.path.join(os.path.dirname(__file__), "..", "config", "app_config.json")
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                data = {}
+            data[key] = value
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+                f.write("\n")
+        except Exception as e:
+            self.logger.error(f"(MM) Failed to persist {key} in app_config.json: {e}")
+
     async def process_instruction(self, instruction: Dict[str, Any]) -> Dict[str, Any]:
         page = instruction.get("page")
         action = instruction.get("action")
@@ -424,14 +442,18 @@ class Mode_master:
             if action == "set_luminosity":
                 value = payload.get("value")
                 if isinstance(value, (int, float)):
-                    self.listener.luminosite = max(0.0, min(1.0, float(value) / 100.0))
+                    persisted_value = int(round(max(0.0, min(100.0, float(value)))))
+                    self.listener.luminosite = persisted_value / 100.0
+                    self._persist_app_config_value("luminosity", persisted_value)
                     return {"applied": True}
                 return {"applied": False, "reason": "invalid_value"}
 
             if action == "set_sensibility":
                 value = payload.get("value")
                 if isinstance(value, (int, float)):
-                    self.listener.sensi = max(0.0, float(value) / 100.0)
+                    persisted_value = int(round(max(0.0, min(100.0, float(value)))))
+                    self.listener.sensi = persisted_value / 100.0
+                    self._persist_app_config_value("sensibility", persisted_value)
                     return {"applied": True}
                 return {"applied": False, "reason": "invalid_value"}
 

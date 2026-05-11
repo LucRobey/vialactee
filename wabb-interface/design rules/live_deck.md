@@ -49,6 +49,8 @@ The Live Deck hydrates from two sources:
 * `GET /api/configurations` for saved playlist/configuration names.
 * `mode_master_state` over `/ws` for the live active playlist, active configuration, queued configuration, selected transition, lock state, luminosity, and sensibility.
 
+Luminosity and sensibility slider changes are persisted by Python into `config/app_config.json`, so closing or restarting the web app/backend restores the previous values.
+
 The telemetry bar must show backend state, not local placeholder state. Dropdowns may start empty while the JSON file loads.
 
 ## 5. Visual Priorities

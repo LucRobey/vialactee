@@ -14,8 +14,8 @@ class AudioIngestion:
         self.base_pull = infos.get("base_pull", 0.01)
         self.dynamic_audio_latency = 0.069
         self.decay_base = infos.get("decay_base", 0.98)
-        self.luminosite = 1.0
-        self.sensi = 1.0
+        self.luminosite = max(0.0, min(1.0, float(infos.get("luminosity", 100)) / 100.0))
+        self.sensi = max(0.0, float(infos.get("sensibility", 100)) / 100.0)
         self.nb_of_fft_band = 8
 
         self.build_asserved_fft_lists()

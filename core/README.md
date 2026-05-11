@@ -4,7 +4,7 @@ The `core` directory is the engine room of Vialactée. It contains the primary m
 
 ## Key Components:
 
-- **`AudioIngestion.py` & `AudioAnalyzer.py`**: The dual-engine audio pipeline. `AudioIngestion` receives raw PCM audio, applying pure `numpy` vectorization to compute FFTs, Mel-band weights, Chromagrams, and ADSR envelopes. `AudioAnalyzer` calculates the Phase-Locked Loop (PLL) beat tracking and structural event logic.
+- **`AudioIngestion.py` & `AudioAnalyzer.py`**: The dual-engine audio pipeline. `AudioIngestion` receives raw PCM audio, initializes persisted luminosity/sensibility from `config/app_config.json`, and applies pure `numpy` vectorization to compute FFTs, Mel-band weights, Chromagrams, and ADSR envelopes. `AudioAnalyzer` calculates the Phase-Locked Loop (PLL) beat tracking and structural event logic.
 - **`Listener.py`**: The transparent facade orchestrator. It instantiates both Ingestion and Analysis layers and provides a fully backward-compatible API to feed data into the visual modes and transition engine. It also manages a 5-second non-causal delay queue to synchronize real-time spectral arrays with the predictive lookahead of the beat tracker.
 - **`Mode_master.py`**: The 30FPS rendering engine. It polls the `Listener` for audio features, loads playlist/configuration rotation from `data/configurations.json`, routes state to the currently active visual modes, and exposes JSON-safe state snapshots for the web app.
 - **`Transition_Director.py` & `Transition_Engine.py`**: Orchestrates large-scale lighting changes based on musical structure (e.g., dropping the lights during a heavy bass drop or changing the animation style at a chorus).
