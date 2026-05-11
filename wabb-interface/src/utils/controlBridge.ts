@@ -14,7 +14,7 @@ const buildBridgeUrl = () => {
   }
 
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${window.location.hostname}:8765/ws`;
+  return `${proto}//${window.location.hostname}:8080/ws`;
 };
 
 class ControlBridge {

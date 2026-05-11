@@ -2,6 +2,8 @@ import asyncio
 import logging
 from aiohttp import web
 import os
+import json
+from core.Webapp_instruction_logger import WebappInstructionLogger
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,7 @@ class Connector:
         
         self.mode_master = mode_master
         self.active_websockets = set()
+        self.webapp_instruction_logger = WebappInstructionLogger()
         
     async def start_server(self):
         """Start the aiohttp web server with websockets."""
@@ -66,6 +69,7 @@ class Connector:
                     message = msg.data.strip()
                     if not message:
                         continue
+                    self.webapp_instruction_logger.log_raw_instruction(message)
                         
                     if self.printAppDetails:
                         logger.debug(f"(C) WS Message received: {message}")
@@ -85,6 +89,15 @@ class Connector:
 
     def process_message(self, message):
         """Process the incoming message and execute the appropriate command."""
+        # New webapp controls currently send JSON instructions.
+        # We log them elsewhere for now; skip the legacy colon parser.
+        if message.lstrip().startswith("{"):
+            try:
+                json.loads(message)
+                return None
+            except json.JSONDecodeError:
+                pass
+
         if(self.printAppDetails):
             logger.debug(f"(C) message reçu : {message}")
         splited_message = message.split(":")
