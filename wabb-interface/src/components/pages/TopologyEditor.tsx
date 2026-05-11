@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { AVAILABLE_MODES } from '../../constants/modes';
 import { initialTopology, MAP_OFFSET_C, MAP_OFFSET_R, INSPECTOR_OFFSET_C, INSPECTOR_OFFSET_R } from '../../constants/topologyData';
-import { sendInstruction } from '../../utils/controlBridge';
+import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from '../../utils/controlBridge';
 
 export type EditorMode = 'LIVE' | 'MODIFY' | 'BUILD';
 
@@ -51,6 +51,38 @@ export const TopologyEditor = () => {
   const [playlistIndex, setPlaylistIndex] = useState(0);
   const playlist = apiPlaylists[playlistIndex] || 'PLAYLIST_A';
 
+  const applyModeMasterState = useCallback((state: ModeMasterState) => {
+    if (state.playlists.length > 0) {
+      setApiPlaylists(state.playlists);
+    }
+
+    if (state.activePlaylist) {
+      const playlists = state.playlists.length > 0 ? state.playlists : apiPlaylists;
+      const nextPlaylistIndex = playlists.findIndex(name => name === state.activePlaylist);
+      if (nextPlaylistIndex >= 0) {
+        setPlaylistIndex(nextPlaylistIndex);
+      }
+    }
+
+    if (state.activeConfiguration) {
+      setConfigName(state.activeConfiguration);
+    }
+
+    if (editorMode === 'LIVE') {
+      setSegments(prev => prev.map(seg => {
+        const liveSegment = state.segments.find(remote => remote.id === seg.id);
+        if (!liveSegment) {
+          return seg;
+        }
+        return {
+          ...seg,
+          mode: liveSegment.mode,
+          direction: liveSegment.direction,
+        };
+      }));
+    }
+  }, [apiPlaylists, editorMode]);
+
   useEffect(() => {
     fetch('/api/configurations')
       .then(res => res.json())
@@ -64,6 +96,10 @@ export const TopologyEditor = () => {
       })
       .catch(err => console.error("Could not load configurations", err));
   }, []);
+
+  useEffect(() => {
+    return subscribeModeMasterState(applyModeMasterState);
+  }, [applyModeMasterState]);
 
   const handlePlaylistCycle = (dir: 1 | -1) => {
     setPlaylistIndex(prev => {

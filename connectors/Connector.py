@@ -18,6 +18,7 @@ class Connector:
         self.active_websockets = set()
         self.webapp_instruction_logger = WebappInstructionLogger()
         self.last_instruction = None
+        self.last_state_json = None
 
     async def start_server(self):
         """Start the aiohttp web server with websocket instruction endpoint."""
@@ -54,6 +55,7 @@ class Connector:
         self.active_websockets.add(ws)
         if self.printAppDetails:
             logger.debug("(C) New WebSocket connection")
+        await self.send_state(ws, self.mode_master.get_state_snapshot())
 
         try:
             async for msg in ws:
@@ -86,12 +88,39 @@ class Connector:
                     "received": instruction["action"],
                     "result": apply_result,
                 })
+                await self.broadcast_state_if_changed(self.mode_master.get_state_snapshot(), force=True)
         finally:
             self.active_websockets.discard(ws)
             if self.printAppDetails:
                 logger.debug("(C) WebSocket disconnected")
 
         return ws
+
+    async def send_state(self, ws, state):
+        await ws.send_json({
+            "type": "mode_master_state",
+            "payload": state,
+        })
+
+    async def broadcast_state_if_changed(self, state, force=False):
+        if len(self.active_websockets) == 0:
+            return
+
+        state_json = json.dumps(state, sort_keys=True, separators=(",", ":"))
+        if not force and state_json == self.last_state_json:
+            return
+
+        self.last_state_json = state_json
+        stale_websockets = []
+        for ws in list(self.active_websockets):
+            try:
+                await self.send_state(ws, state)
+            except Exception as exc:
+                stale_websockets.append(ws)
+                logger.debug("(C) Failed to send mode master state: %s", exc)
+
+        for ws in stale_websockets:
+            self.active_websockets.discard(ws)
 
     def parse_instruction(self, raw_message):
         """Parse controlBridge instruction JSON payload."""

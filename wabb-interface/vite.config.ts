@@ -1,8 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import type { IncomingMessage, ServerResponse } from 'http'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -10,9 +11,9 @@ const __dirname = path.dirname(__filename)
 // Custom Vite plugin to handle saving configurations
 const configurationApiPlugin = () => ({
   name: 'configuration-api',
-  configureServer(server) {
+  configureServer(server: ViteDevServer) {
     // We use express-like middleware for the Vite dev server
-    server.middlewares.use(async (req, res, next) => {
+    server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
       // The relative path to our python configuration JSON file
       const configPath = path.resolve(__dirname, '../data/configurations.json');
 
@@ -32,7 +33,7 @@ const configurationApiPlugin = () => ({
       // POST /api/configurations
       if (req.url === '/api/configurations' && req.method === 'POST') {
         let body = '';
-        req.on('data', chunk => {
+        req.on('data', (chunk: Buffer) => {
           body += chunk.toString();
         });
         req.on('end', () => {

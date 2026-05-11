@@ -123,6 +123,7 @@ async def main() -> None:
    
     local_microphone = Local_Microphone.Local_Microphone(listener, infos)
     connector = Connector.Connector(mode_master, infos)
+    mode_master.set_connector(connector)
 
     # Python 3.10 compatible task cancellation (since you're not on 3.11+)
     tasks = [

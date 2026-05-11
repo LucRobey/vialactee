@@ -119,6 +119,54 @@ class Mode_master:
         """
         self.appli_connector = connector
 
+    def _selected_transition_label(self) -> str:
+        transition_type = self.selected_transition_config.get("type")
+        if transition_type == "explosion":
+            return "CUT"
+        if transition_type == "global_change":
+            return "CROSSFADE"
+        if transition_type == "fade_in_out":
+            return "FADE IN/OUT"
+        return str(transition_type or "FADE IN/OUT")
+
+    def get_state_snapshot(self) -> Dict[str, Any]:
+        """
+        Build a JSON-serializable snapshot for the web interface.
+        """
+        active_playlist = self.activ_configuration.get("playlist")
+        enabled_playlists = [
+            playlist
+            for index, playlist in enumerate(self.playlists)
+            if index >= len(self.blocked_playlists) or not self.blocked_playlists[index]
+        ]
+
+        segments = []
+        for segment in self.segments_list:
+            segments.append({
+                "id": segment.name.replace("Segment ", "", 1),
+                "name": segment.name,
+                "mode": segment.get_current_mode(),
+                "direction": segment.way,
+                "blocked": segment.isBlocked,
+                "targetMode": segment.target_mode_name,
+                "inTransition": segment.is_in_transition,
+            })
+
+        return {
+            "activePlaylist": active_playlist,
+            "enabledPlaylists": enabled_playlists,
+            "activeConfiguration": self.activ_configuration.get("name"),
+            "queuedConfiguration": self.queued_configuration_name,
+            "selectedTransition": self._selected_transition_label(),
+            "transitionLocked": self.transition_locked,
+            "transitionState": getattr(self.transition_director, "state", None),
+            "transitionProgress": getattr(self.transition_director, "transition_progress", 0.0),
+            "luminosity": int(round(max(0.0, min(1.0, float(getattr(self.listener, "luminosite", 0.0)))) * 100)),
+            "sensibility": int(round(max(0.0, float(getattr(self.listener, "sensi", 0.0))) * 100)),
+            "playlists": list(self.playlists),
+            "segments": segments,
+        }
+
     async def update_forever(self) -> None:
         """
         Continuously update the system at approximately 30 FPS.
@@ -156,6 +204,9 @@ class Mode_master:
         self.current_time = time.time()
         
         await self.transition_director.update(self.current_time)
+
+        if self.appli_connector is not None:
+            await self.appli_connector.broadcast_state_if_changed(self.get_state_snapshot())
 
         self.profiler.print_results()
         # Clean profiler values for next frame

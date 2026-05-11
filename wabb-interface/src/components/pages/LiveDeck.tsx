@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { wideDropStudPattern } from '../../constants/dropPatterns';
-import { sendInstruction } from '../../utils/controlBridge';
+import { sendInstruction, subscribeModeMasterState } from '../../utils/controlBridge';
 
 export const LiveDeck = () => {
   const [lumValue, setLumValue] = useState(60);
@@ -11,9 +11,38 @@ export const LiveDeck = () => {
   const [selectedConfiguration, setSelectedConfiguration] = useState('TECHNO 1');
   const [selectedTransition, setSelectedTransition] = useState('CUT');
   const [currentPlaylist, setCurrentPlaylist] = useState('TECHNO 1');
+  const [currentConfiguration, setCurrentConfiguration] = useState('TECHNO 1');
+  const [availablePlaylists, setAvailablePlaylists] = useState(['TECHNO 1', 'HOUSE 2', 'LOFI', 'DNB', 'DISCO', 'BASS', 'TRAP', 'AMBIENT']);
+  const [availableConfigurations, setAvailableConfigurations] = useState(['TECHNO 1', 'HOUSE 2', 'LOFI', 'DNB']);
 
-  const configurations = ['TECHNO 1', 'HOUSE 2', 'LOFI', 'DNB'];
   const transitions = ['CUT', 'FADE IN/OUT', 'CROSSFADE'];
+  const presetColors = ['bg-blue', 'bg-orange', 'bg-green', 'bg-purple', 'bg-yellow', 'bg-red', 'bg-cyan', 'bg-magenta'];
+
+  useEffect(() => {
+    return subscribeModeMasterState((state) => {
+      setLumValue(state.luminosity);
+      setSensValue(state.sensibility);
+      setIsHold(state.transitionLocked);
+      setSelectedTransition(state.selectedTransition);
+
+      if (state.activePlaylist) {
+        setCurrentPlaylist(state.activePlaylist);
+      }
+      const activeConfiguration = state.activeConfiguration;
+      if (activeConfiguration) {
+        setCurrentConfiguration(activeConfiguration);
+        setAvailableConfigurations(prev => prev.includes(activeConfiguration) ? prev : [...prev, activeConfiguration]);
+      }
+      const queuedConfiguration = state.queuedConfiguration;
+      if (queuedConfiguration) {
+        setSelectedConfiguration(queuedConfiguration);
+        setAvailableConfigurations(prev => prev.includes(queuedConfiguration) ? prev : [...prev, queuedConfiguration]);
+      }
+      if (state.playlists.length > 0) {
+        setAvailablePlaylists(state.playlists);
+      }
+    });
+  }, []);
 
   return (
     <div className="live-deck-grid">
@@ -171,7 +200,7 @@ export const LiveDeck = () => {
             </div>
             <div className="status-item" style={{ textAlign: 'center' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>CONFIG</span>
-              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-purple)', fontWeight: 800, letterSpacing: '1px' }}>{selectedConfiguration}</span>
+              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-purple)', fontWeight: 800, letterSpacing: '1px' }}>{currentConfiguration}</span>
             </div>
             <div className="status-item" style={{ textAlign: 'right' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>LATENCY</span>
@@ -237,7 +266,7 @@ export const LiveDeck = () => {
               setSelectedConfiguration(configuration);
               sendInstruction({ page: 'live_deck', action: 'select_configuration', payload: { configuration } });
             }}>
-              {configurations.map((config) => (
+              {availableConfigurations.map((config) => (
                 <option key={config}>{config}</option>
               ))}
             </select>
@@ -420,19 +449,14 @@ export const LiveDeck = () => {
         </div>
       </GridSpot>
 
-      {[
-        { name: 'TECHNO 1', col: 'bg-blue' }, { name: 'HOUSE 2', col: 'bg-orange' },
-        { name: 'LOFI', col: 'bg-green' }, { name: 'DNB', col: 'bg-purple' },
-        { name: 'DISCO', col: 'bg-yellow' }, { name: 'BASS', col: 'bg-red' },
-        { name: 'TRAP', col: 'bg-cyan' }, { name: 'AMBIENT', col: 'bg-magenta' }
-      ].map((p, i) => (
-        <GridSpot key={p.name} col={35} row={2 + i * 3}>
+      {availablePlaylists.slice(0, 8).map((name, i) => (
+        <GridSpot key={name} col={35} row={2 + i * 3}>
           <button
-            className={`preset-brick ${p.col}`}
+            className={`preset-brick ${presetColors[i % presetColors.length]}`}
             style={{ width: '240px', position: 'relative' }}
             onClick={() => {
-              setCurrentPlaylist(p.name);
-              sendInstruction({ page: 'live_deck', action: 'select_playlist', payload: { playlist: p.name } });
+              setCurrentPlaylist(name);
+              sendInstruction({ page: 'live_deck', action: 'select_playlist', payload: { playlist: name } });
             }}
           >
             {/* Printed White Tile Label */}
@@ -443,7 +467,7 @@ export const LiveDeck = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '2px 2px 5px rgba(0,0,0,0.6)', borderRadius: '2px'
             }}>
-              <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.6rem', letterSpacing: '0.5px' }}>{p.name}</span>
+              <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.6rem', letterSpacing: '0.5px' }}>{name}</span>
             </div>
             {/* Round 1x1 Stud Indicator */}
             <div className="rogue-piece" style={{
