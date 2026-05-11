@@ -44,6 +44,7 @@ export const TopologyEditor = () => {
   const [selectedSegId, setSelectedSegId] = useState(initialTopology[0].id);
   const [editorMode, setEditorMode] = useState<EditorMode>('LIVE');
   const [configName, setConfigName] = useState('');
+  const [selectedConfigName, setSelectedConfigName] = useState('');
   
   const [apiPlaylists, setApiPlaylists] = useState<string[]>([]);
   const [apiConfigurations, setApiConfigurations] = useState<Record<string, SegmentConfiguration[]>>({});
@@ -69,6 +70,7 @@ export const TopologyEditor = () => {
 
       if (state.activeConfiguration) {
         setConfigName(state.activeConfiguration);
+        setSelectedConfigName(state.activeConfiguration);
       }
 
       setSegments(prev => prev.map(seg => {
@@ -171,6 +173,7 @@ export const TopologyEditor = () => {
 
     const selectedName = e.target.value;
     setConfigName(selectedName);
+    setSelectedConfigName(selectedName);
     sendInstruction({
       page: 'topology',
       action: 'select_configuration',
@@ -211,7 +214,8 @@ export const TopologyEditor = () => {
     if (!updatedConfigs[playlist]) updatedConfigs[playlist] = [];
 
     if (editorMode === 'MODIFY') {
-      const idx = updatedConfigs[playlist].findIndex(config => config.name === configName);
+      const configToUpdate = selectedConfigName || configName;
+      const idx = updatedConfigs[playlist].findIndex(config => config.name === configToUpdate);
       if (idx !== -1) {
         updatedConfigs[playlist][idx] = newConfig;
       } else {
@@ -228,12 +232,77 @@ export const TopologyEditor = () => {
 
     saveConfigurationStore(payload).then(() => {
       setApiConfigurations(updatedConfigs);
+      setSelectedConfigName(configName);
       sendInstruction({
         page: 'topology',
         action: editorMode === 'BUILD' ? 'build_configuration' : 'modify_configuration',
         payload: { playlist, configuration: configName }
       });
       alert(`Configuration ${configName} saved successfully to ${playlist}!`);
+    }).catch(err => console.error(err));
+  };
+
+  const handleRenameConfiguration = () => {
+    const newName = configName.trim();
+    if (!playlist) return alert("Please select a playlist first.");
+    if (!selectedConfigName) return alert("Please select a configuration to rename.");
+    if (!newName) return alert("Please enter a new configuration name.");
+    if (newName === selectedConfigName) return;
+
+    const configsForPlaylist = apiConfigurations[playlist] || [];
+    if (configsForPlaylist.some(config => config.name === newName)) {
+      return alert(`Configuration ${newName} already exists in ${playlist}.`);
+    }
+
+    const updatedConfigs = {
+      ...apiConfigurations,
+      [playlist]: configsForPlaylist.map(config =>
+        config.name === selectedConfigName ? { ...config, name: newName } : config
+      ),
+    };
+    const payload = {
+      playlists: apiPlaylists,
+      configurations: updatedConfigs,
+    };
+
+    saveConfigurationStore(payload).then(() => {
+      setApiConfigurations(updatedConfigs);
+      setSelectedConfigName(newName);
+      setConfigName(newName);
+      sendInstruction({
+        page: 'topology',
+        action: 'modify_configuration',
+        payload: { playlist, configuration: newName }
+      });
+    }).catch(err => console.error(err));
+  };
+
+  const handleDeleteConfiguration = () => {
+    if (!playlist) return alert("Please select a playlist first.");
+    if (!selectedConfigName) return alert("Please select a configuration to delete.");
+    if (!window.confirm(`Delete configuration ${selectedConfigName} from ${playlist}?`)) return;
+
+    const configsForPlaylist = apiConfigurations[playlist] || [];
+    const updatedPlaylistConfigs = configsForPlaylist.filter(config => config.name !== selectedConfigName);
+    const nextConfigName = updatedPlaylistConfigs[0]?.name || '';
+    const updatedConfigs = {
+      ...apiConfigurations,
+      [playlist]: updatedPlaylistConfigs,
+    };
+    const payload = {
+      playlists: apiPlaylists,
+      configurations: updatedConfigs,
+    };
+
+    saveConfigurationStore(payload).then(() => {
+      setApiConfigurations(updatedConfigs);
+      setSelectedConfigName(nextConfigName);
+      setConfigName(nextConfigName);
+      sendInstruction({
+        page: 'topology',
+        action: 'modify_configuration',
+        payload: { playlist, configuration: nextConfigName }
+      });
     }).catch(err => console.error(err));
   };
 
@@ -606,10 +675,10 @@ export const TopologyEditor = () => {
       </GridSpot>
 
       {/* Configuration Name Input Inset */}
-      <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 13} style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}>
+      <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 12} style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}>
         <div style={{
           width: `${LEGO_MATH.physicalSize(18)}px`,
-          height: `${LEGO_MATH.physicalSize(2)}px`,
+          height: `${LEGO_MATH.physicalSize(5)}px`,
           backgroundColor: '#0a0a0a',
           border: 'calc(0.2 * var(--stud)) solid #a0a5a9',
           borderTopColor: '#dcdcdc',
@@ -619,68 +688,168 @@ export const TopologyEditor = () => {
           borderRadius: '4px',
           boxShadow: editorMode !== 'LIVE' ? 'inset 4px 4px 15px rgba(0,0,0,0.9), inset 0 0 15px rgba(252, 208, 0, 0.1), 0 0 20px rgba(252, 208, 0, 0.2), 4px 4px 10px rgba(0,0,0,0.6)' : 'inset 4px 4px 15px rgba(0,0,0,0.9), 4px 4px 10px rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 10px',
+          padding: '8px 10px',
           boxSizing: 'border-box',
           position: 'relative'
         }}>
-          <div className="lcd-screen-fx" style={{ width: '100%', position: 'relative', display: 'flex', justifyContent: 'center' }}>
+          <div className="lcd-screen-fx" style={{ width: '100%', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
             {editorMode === 'MODIFY' ? (
-              <select
-                value={configName}
-                onChange={handleConfigSelect}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fcd000',
-                  fontFamily: 'monospace',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  textShadow: '0 0 8px rgba(252, 208, 0, 0.6)',
-                  width: '100%',
-                  textAlign: 'center',
-                  outline: 'none',
-                  letterSpacing: '1px',
-                  appearance: 'none',
-                  cursor: 'pointer'
+              <>
+                <select
+                  value={selectedConfigName}
+                  onChange={handleConfigSelect}
+                  style={{
+                    background: '#050505',
+                    border: '1px solid #333',
+                    borderRadius: '2px',
+                    color: '#00ffff',
+                    fontFamily: 'monospace',
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    textShadow: '0 0 8px rgba(0, 255, 255, 0.6)',
+                    width: '100%',
+                    height: '24px',
+                    textAlign: 'center',
+                    outline: 'none',
+                    letterSpacing: '1px',
+                    appearance: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="" disabled style={{ background: '#0a0a0a' }}>[SELECT CONFIG]</option>
+                  {(apiConfigurations[playlist] || []).map((cfg) => (
+                    <option key={cfg.name} value={cfg.name} style={{ background: '#0a0a0a', color: '#fcd000' }}>
+                      {cfg.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  placeholder="[CONFIG NAME]"
+                  style={{
+                    background: '#050505',
+                    border: '1px solid #333',
+                    borderRadius: '2px',
+                    color: '#fcd000',
+                    fontFamily: 'monospace',
+                    fontSize: '0.8rem',
+                    fontWeight: 'bold',
+                    textShadow: '0 0 8px rgba(252, 208, 0, 0.6)',
+                    width: '100%',
+                    height: '24px',
+                    textAlign: 'center',
+                    outline: 'none',
+                    letterSpacing: '1px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                  {[
+                    { label: 'REN', onClick: handleRenameConfiguration, color: '#fcd000' },
+                    { label: 'DEL', onClick: handleDeleteConfiguration, color: '#d22020' },
+                  ].map(action => (
+                    <button
+                      key={action.label}
+                      onClick={action.onClick}
+                      style={{
+                        flex: 1,
+                        height: '22px',
+                        border: '1px solid rgba(0,0,0,0.8)',
+                        borderRadius: '2px',
+                        backgroundColor: action.color,
+                        color: action.label === 'DEL' ? '#fff' : '#000',
+                        cursor: 'pointer',
+                        fontSize: '0.55rem',
+                        fontWeight: '900',
+                        letterSpacing: '1px',
+                        boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), inset -2px -2px 3px rgba(0,0,0,0.35), 2px 2px 4px rgba(0,0,0,0.7)'
+                      }}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={handleSave} style={{
+                  alignSelf: 'center',
+                  position: 'relative',
+                  width: '45px', height: '45px', borderRadius: '50%', border: 'none', outline: 'none',
+                  backgroundColor: '#ffcd00',
+                  cursor: 'pointer',
+                  boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.4), 3px 3px 6px rgba(0,0,0,0.8), 0 0 15px rgba(255,205,0,0.8)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#000', fontWeight: '900', fontSize: '0.6rem', letterSpacing: '0px', transition: 'all 0.1s ease', zIndex: 10
                 }}
-              >
-                <option value="" disabled style={{ background: '#0a0a0a' }}>[SELECT CONFIG]</option>
-                {(apiConfigurations[playlist] || []).map((cfg) => (
-                  <option key={cfg.name} value={cfg.name} style={{ background: '#0a0a0a', color: '#fcd000' }}>
-                    {cfg.name}
-                  </option>
-                ))}
-              </select>
+                onMouseDown={(e) => e.currentTarget.style.transform = 'translateY(2px)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{
+                    position: 'absolute', width: '28px', height: '28px', borderRadius: '50%',
+                    backgroundColor: '#ffcd00',
+                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), inset -1px -1px 3px rgba(0,0,0,0.3), 1px 1px 3px rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <span style={{ position: 'relative', zIndex: 10, opacity: 0.8 }}>UPD</span>
+                  </div>
+                </button>
+              </>
             ) : (
-              <input
-                type="text"
-                value={configName}
-                onChange={(e) => setConfigName(e.target.value)}
-                placeholder="[CONFIG NAME]"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fcd000',
-                  fontFamily: 'monospace',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  textShadow: '0 0 8px rgba(252, 208, 0, 0.6)',
-                  width: '100%',
-                  textAlign: 'center',
-                  outline: 'none',
-                  letterSpacing: '1px'
+              <>
+                <input
+                  type="text"
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  placeholder="[CONFIG NAME]"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fcd000',
+                    fontFamily: 'monospace',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    textShadow: '0 0 8px rgba(252, 208, 0, 0.6)',
+                    width: '100%',
+                    textAlign: 'center',
+                    outline: 'none',
+                    letterSpacing: '1px'
+                  }}
+                />
+                <button onClick={handleSave} style={{
+                  alignSelf: 'center',
+                  position: 'relative',
+                  width: '45px', height: '45px', borderRadius: '50%', border: 'none', outline: 'none',
+                  backgroundColor: '#da291c',
+                  cursor: 'pointer',
+                  boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.4), 3px 3px 6px rgba(0,0,0,0.8), 0 0 15px rgba(218,41,28,0.8)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#000', fontWeight: '900', fontSize: '0.6rem', letterSpacing: '0px', transition: 'all 0.1s ease', zIndex: 10
                 }}
-              />
+                onMouseDown={(e) => e.currentTarget.style.transform = 'translateY(2px)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{
+                    position: 'absolute', width: '28px', height: '28px', borderRadius: '50%',
+                    backgroundColor: '#da291c',
+                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), inset -1px -1px 3px rgba(0,0,0,0.3), 1px 1px 3px rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <span style={{ position: 'relative', zIndex: 10, opacity: 0.8 }}>SAVE</span>
+                  </div>
+                </button>
+              </>
             )}
           </div>
           {editorMode === 'MODIFY' && (
-            <div style={{ position: 'absolute', right: '15px', color: '#fcd000', pointerEvents: 'none', fontSize: '0.6rem' }}>▼</div>
+            <div style={{ position: 'absolute', right: '15px', top: '18px', color: '#00ffff', pointerEvents: 'none', fontSize: '0.6rem' }}>▼</div>
           )}
         </div>
       </GridSpot>
 
       {/* Playlist Selection Inset */}
-      <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 16} style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}>
+      <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 17} style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}>
         <div style={{
           width: `${LEGO_MATH.physicalSize(18)}px`,
           height: `${LEGO_MATH.physicalSize(5)}px`,
@@ -776,29 +945,6 @@ export const TopologyEditor = () => {
             <button className="cheese-slope-btn right" onClick={() => handlePlaylistCycle(1)}>{">"}</button>
           </div>
 
-          {/* Save Button (1x1 Round Plate) */}
-          <button onClick={handleSave} style={{
-            position: 'relative',
-            width: '45px', height: '45px', borderRadius: '50%', border: 'none', outline: 'none',
-            backgroundColor: editorMode === 'BUILD' ? '#da291c' : '#ffcd00', 
-            cursor: 'pointer',
-            boxShadow: `inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.4), 3px 3px 6px rgba(0,0,0,0.8), 0 0 15px ${editorMode === 'BUILD' ? 'rgba(218,41,28,0.8)' : 'rgba(255,205,0,0.8)'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#000', fontWeight: '900', fontSize: '0.6rem', letterSpacing: '0px', transition: 'all 0.1s ease', zIndex: 10
-          }}
-          onMouseDown={(e) => e.currentTarget.style.transform = 'translateY(2px)'}
-          onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            <div style={{
-              position: 'absolute', width: '28px', height: '28px', borderRadius: '50%',
-              backgroundColor: editorMode === 'BUILD' ? '#da291c' : '#ffcd00',
-              boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), inset -1px -1px 3px rgba(0,0,0,0.3), 1px 1px 3px rgba(0,0,0,0.5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <span style={{ position: 'relative', zIndex: 10, opacity: 0.8 }}>{editorMode === 'BUILD' ? 'SAVE' : 'UPD'}</span>
-            </div>
-          </button>
         </div>
       </GridSpot>
 
