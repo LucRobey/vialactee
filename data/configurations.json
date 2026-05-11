@@ -124,7 +124,7 @@
     ],
     "Camille": [
       {
-        "name": "c'est toi qui brille parmis toutes les étoiles du ciel",
+        "name": "parmi toutes les étoiles du cielleeeuh",
         "modes": {
           "Segment v4": "Shining Stars",
           "Segment h32": "Shining Stars",
@@ -150,6 +150,35 @@
           "Segment h11": "UP",
           "Segment h10": "UP",
           "Segment v1": "UP"
+        }
+      },
+      {
+        "name": "aaaaaaaaaaaaaaah",
+        "modes": {
+          "Segment v4": "Static Wave",
+          "Segment h32": "Plasma Fire",
+          "Segment h31": "Plasma Fire",
+          "Segment h30": "Metronome",
+          "Segment v3": "Plasma Fire",
+          "Segment h20": "Power Bar",
+          "Segment h00": "Metronome",
+          "Segment v2": "PSG",
+          "Segment h11": "Magnetic Ball",
+          "Segment h10": "Metronome",
+          "Segment v1": "Flying Ball"
+        },
+        "way": {
+          "Segment v4": "UP",
+          "Segment h32": "UP",
+          "Segment h31": "UP",
+          "Segment h30": "UP",
+          "Segment v3": "UP",
+          "Segment h20": "UP",
+          "Segment h00": "UP",
+          "Segment v2": "UP",
+          "Segment h11": "UP",
+          "Segment h10": "DOWN",
+          "Segment v1": "DOWN"
         }
       }
     ]
