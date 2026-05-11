@@ -9,8 +9,8 @@
     "printAsservmentDetails": false,
     "printConfigurationLoads": false,
     "printConfigChanges": false,
-    "luminosity": 100,
-    "sensibility": 100,
+    "luminosity": 37,
+    "sensibility": 45,
     "modesToPrintDetails": [
         "PSG"
     ]
