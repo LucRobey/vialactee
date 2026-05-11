@@ -3,7 +3,7 @@ import asyncio
 import logging
 import random
 import time
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 
 import core.Segment as Segment
 import core.Listener as Listener
@@ -71,14 +71,6 @@ class Mode_master:
     configurations across the entire installation.
     """
 
-    segments_list = []
-    segments_names_to_index = {}
-    activ_configuration = 0
-    configurations = {}
-    playlists = []
-    blocked_playlists = []
-    current_time = time.time()
-
     def __init__(self, listener: Any, infos: Dict[str, Any], *leds: Any) -> None:
         """
         Initialize the Mode_master.
@@ -99,6 +91,18 @@ class Mode_master:
         self.leds_list = leds
         self.logger = logging.getLogger("Mode_master")
         self.profiler = Profiler(self.printTimeOfCalculation, self.logger)
+        self.current_time = time.time()
+        self.appli_connector = None
+        self.segments_list: List[Segment.Segment] = []
+        self.segments_names_to_index: Dict[str, int] = {}
+        self.activ_configuration: Dict[str, Any] = {}
+        self.configurations: Dict[str, List[Dict[str, Any]]] = {}
+        self.playlists: List[str] = []
+        self.blocked_playlists: List[bool] = []
+        self.shuffle_bag: List[Dict[str, Any]] = []
+        self.transition_locked = False
+        self.selected_transition_config = {"type": "fade_in_out", "duration": 2.0}
+        self.queued_configuration_name: Optional[str] = None
 
         self.load_configurations()
 
@@ -178,9 +182,7 @@ class Mode_master:
             self.configurations = {}
             self.playlists = []
 
-        # On initialise le bloquage des playlists (Par défaut, on les prend toutes)
-        for _ in self.playlists:
-            self.blocked_playlists.append(False)
+        self.blocked_playlists = [False for _ in self.playlists]
         self.shuffle_bag = []
     def update_segments_modes(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -193,11 +195,17 @@ class Mode_master:
         if transition_config is not None:
             self.transition_director.start_transition(transition_config)
             
+        active_modes = self.activ_configuration.get("modes", {})
+        active_way = self.activ_configuration.get("way", {})
         for segment in self.segments_list:
             if not segment.isBlocked:
                 self.logger.debug(f"(MM) update_segments_modes : {segment.name} non bloqué donc on ordonne de le changer")
-                segment.change_mode(self.activ_configuration["modes"][segment.name], transition_config)
-                segment.change_way(self.activ_configuration["way"][segment.name])
+                mode_name = active_modes.get(segment.name)
+                if mode_name is not None:
+                    segment.change_mode(mode_name, transition_config)
+                way = active_way.get(segment.name)
+                if way is not None:
+                    segment.change_way(way)
 
  
 
@@ -253,6 +261,203 @@ class Mode_master:
             loop_guard += 1
         #on l'applique à tous les segments
         self.update_segments_modes(transition_config)
+
+    def _normalize_transition(self, transition_name: Any) -> Dict[str, Any]:
+        if not isinstance(transition_name, str):
+            return {"type": "fade_in_out", "duration": 2.0}
+
+        normalized = transition_name.strip().upper()
+        if normalized == "CUT":
+            return {"type": "explosion", "duration": 0.0}
+        if normalized == "CROSSFADE":
+            return {"type": "global_change", "duration": 3.0}
+        if normalized == "FADE IN/OUT":
+            return {"type": "fade_in_out", "duration": 2.0}
+        return {"type": "fade_in_out", "duration": 2.0}
+
+    def _segment_name_from_id(self, segment_id: Any) -> Optional[str]:
+        if not isinstance(segment_id, str) or len(segment_id.strip()) == 0:
+            return None
+        return f"Segment {segment_id.strip()}"
+
+    def _find_segment_by_name(self, segment_name: str) -> Optional[Segment.Segment]:
+        for segment in self.segments_list:
+            if segment.name == segment_name:
+                return segment
+        return None
+
+    def _set_only_playlist_active(self, playlist_name: Any) -> bool:
+        if not isinstance(playlist_name, str):
+            return False
+
+        normalized_name = playlist_name.strip()
+        if normalized_name.upper() == "CUSTOM":
+            return False
+
+        selected_index = None
+        for index, name in enumerate(self.playlists):
+            if name.lower() == normalized_name.lower():
+                selected_index = index
+                break
+
+        if selected_index is None:
+            return False
+
+        self.blocked_playlists = [idx != selected_index for idx in range(len(self.playlists))]
+        self.shuffle_bag = []
+        return True
+
+    def _find_configuration(self, configuration_name: Any, playlist_name: Optional[Any] = None) -> Optional[Dict[str, Any]]:
+        if not isinstance(configuration_name, str):
+            return None
+        wanted_name = configuration_name.strip().lower()
+
+        candidate_playlists = []
+        if isinstance(playlist_name, str):
+            candidate_playlists = [p for p in self.playlists if p.lower() == playlist_name.strip().lower()]
+        if len(candidate_playlists) == 0:
+            candidate_playlists = list(self.playlists)
+
+        for playlist in candidate_playlists:
+            for conf in self.configurations.get(playlist, []):
+                if conf.get("name", "").strip().lower() == wanted_name:
+                    return {
+                        "playlist": playlist,
+                        "index": -1,
+                        "name": conf.get("name"),
+                        "modes": conf.get("modes", {}),
+                        "way": conf.get("way", {}),
+                    }
+        return None
+
+    def _apply_configuration(self, config: Dict[str, Any], transition_config: Optional[Dict[str, Any]]) -> None:
+        self.activ_configuration = config
+        self.update_segments_modes(transition_config)
+
+    async def process_instruction(self, instruction: Dict[str, Any]) -> Dict[str, Any]:
+        page = instruction.get("page")
+        action = instruction.get("action")
+        payload = instruction.get("payload", {})
+
+        if not isinstance(payload, dict):
+            return {"applied": False, "reason": "invalid_payload"}
+
+        if page == "live_deck":
+            if action == "set_luminosity":
+                value = payload.get("value")
+                if isinstance(value, (int, float)):
+                    self.listener.luminosite = max(0.0, min(1.0, float(value) / 100.0))
+                    return {"applied": True}
+                return {"applied": False, "reason": "invalid_value"}
+
+            if action == "set_sensibility":
+                value = payload.get("value")
+                if isinstance(value, (int, float)):
+                    self.listener.sensi = max(0.0, float(value) / 100.0)
+                    return {"applied": True}
+                return {"applied": False, "reason": "invalid_value"}
+
+            if action == "select_transition":
+                self.selected_transition_config = self._normalize_transition(payload.get("transition"))
+                return {"applied": True}
+
+            if action == "select_configuration":
+                configuration_name = payload.get("configuration")
+                config = self._find_configuration(configuration_name)
+                if config is not None:
+                    self.queued_configuration_name = config["name"]
+                    return {"applied": True}
+                return {"applied": False, "reason": "unknown_configuration"}
+
+            if action == "select_playlist":
+                if self._set_only_playlist_active(payload.get("playlist")):
+                    return {"applied": True}
+                return {"applied": False, "reason": "unknown_playlist"}
+
+            if action == "go_to_next_configuration":
+                self.selected_transition_config = self._normalize_transition(payload.get("transition"))
+                configuration_name = payload.get("configuration")
+                config = self._find_configuration(configuration_name)
+                if config is None:
+                    config = self.pick_a_random_conf()
+                self._apply_configuration(config, self.selected_transition_config)
+                return {"applied": True}
+
+            if action == "manual_drop":
+                config = self._find_configuration(self.queued_configuration_name) if self.queued_configuration_name else None
+                if config is None:
+                    config = self.pick_a_random_conf()
+                self._apply_configuration(config, self.selected_transition_config)
+                return {"applied": True}
+
+            if action == "lock_current_configuration":
+                locked = payload.get("locked")
+                self.transition_locked = bool(locked)
+                return {"applied": True}
+
+        if page == "topology":
+            if action == "select_playlist_slot":
+                if self._set_only_playlist_active(payload.get("playlist")):
+                    return {"applied": True}
+                return {"applied": False, "reason": "unknown_playlist"}
+
+            if action == "select_configuration":
+                if self._set_only_playlist_active(payload.get("playlist")):
+                    self.shuffle_bag = []
+                config = self._find_configuration(payload.get("configuration"), payload.get("playlist"))
+                if config is not None:
+                    self._apply_configuration(config, self.selected_transition_config)
+                    return {"applied": True}
+                return {"applied": False, "reason": "unknown_configuration"}
+
+            if action == "select_segment_mode":
+                segment_name = self._segment_name_from_id(payload.get("segmentId"))
+                mode_name = payload.get("mode")
+                if segment_name is None or not isinstance(mode_name, str):
+                    return {"applied": False, "reason": "invalid_segment_or_mode"}
+                segment = self._find_segment_by_name(segment_name)
+                if segment is None:
+                    return {"applied": False, "reason": "unknown_segment"}
+                segment.execute_mode_swap(mode_name)
+                return {"applied": True}
+
+            if action == "toggle_segment_direction":
+                segment_name = self._segment_name_from_id(payload.get("segmentId"))
+                direction = payload.get("direction")
+                if segment_name is None or direction not in ("UP", "DOWN"):
+                    return {"applied": False, "reason": "invalid_segment_or_direction"}
+                segment = self._find_segment_by_name(segment_name)
+                if segment is None:
+                    return {"applied": False, "reason": "unknown_segment"}
+                segment.change_way(direction)
+                return {"applied": True}
+
+            if action in {"set_editor_mode", "select_segment", "build_configuration", "modify_configuration"}:
+                return {"applied": True}
+
+        if page == "auto_dj":
+            value = payload.get("value")
+            if isinstance(value, (int, float)):
+                if action == "set_rainbow_color_intensity":
+                    self.infos["rainbow_color_intensity"] = float(value)
+                    return {"applied": True}
+                if action == "set_pulsar_tail_length":
+                    self.infos["pulsar_tail_length"] = float(value)
+                    return {"applied": True}
+                if action == "set_trigger_interval":
+                    self.infos["trigger_interval"] = float(value)
+                    return {"applied": True}
+                if action == "set_sweep_duration":
+                    self.infos["sweep_duration"] = float(value)
+                    return {"applied": True}
+            return {"applied": False, "reason": "invalid_value"}
+
+        if page == "system":
+            if action in {"restart_python_loop", "restart_raspberry_pi"}:
+                self.logger.warning("(MM) System action requested via web interface: %s", action)
+                return {"applied": False, "reason": "system_action_not_implemented"}
+
+        return {"applied": False, "reason": "unsupported_instruction"}
 
     def pick_a_random_conf(self) -> Dict[str, Any]:
         """

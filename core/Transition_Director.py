@@ -133,6 +133,9 @@ class Transition_Director:
 
         # 3. Evaluate Standard Transitions based on internal timers -> Fallback LOCAL
         if current_time > self.next_change_time:
+            if getattr(self.mode_master, "transition_locked", False):
+                self.next_change_time = current_time + self.configuration_duration
+                return
             self.logger.info(f"(TD) Timer Expired")
             
             # Temporary override for testing!

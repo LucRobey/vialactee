@@ -10,6 +10,7 @@ import subprocess
 
 import core.Listener as Listener
 import connectors.Local_Microphone as Local_Microphone
+import connectors.Connector as Connector
 import core.Mode_master as Mode_master
 import hardware.HardwareFactory as HardwareFactory
 
@@ -121,12 +122,15 @@ async def main() -> None:
     mode_master = Mode_master.Mode_master(listener, infos, leds1, leds2)                                 
    
     local_microphone = Local_Microphone.Local_Microphone(listener, infos)
+    connector = Connector.Connector(mode_master, infos)
 
     # Python 3.10 compatible task cancellation (since you're not on 3.11+)
     tasks = [
         asyncio.create_task(mode_master.update_forever(), name="ModeMaster"),
         asyncio.create_task(local_microphone.listen_forever(), name="Microphone")
     ]
+    if infos.get("startServer", False):
+        tasks.append(asyncio.create_task(connector.start_server(), name="Connector"))
     tasks.append(asyncio.create_task(launch_webapp(infos), name="WebApp"))
 
     try:

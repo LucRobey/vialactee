@@ -2,11 +2,18 @@ import React, { useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { wideDropStudPattern } from '../../constants/dropPatterns';
+import { sendInstruction } from '../../utils/controlBridge';
 
 export const LiveDeck = () => {
   const [lumValue, setLumValue] = useState(60);
   const [sensValue, setSensValue] = useState(70);
   const [isHold, setIsHold] = useState(false);
+  const [selectedConfiguration, setSelectedConfiguration] = useState('TECHNO 1');
+  const [selectedTransition, setSelectedTransition] = useState('CUT');
+  const [currentPlaylist, setCurrentPlaylist] = useState('TECHNO 1');
+
+  const configurations = ['TECHNO 1', 'HOUSE 2', 'LOFI', 'DNB'];
+  const transitions = ['CUT', 'FADE IN/OUT', 'CROSSFADE'];
 
   return (
     <div className="live-deck-grid">
@@ -64,7 +71,18 @@ export const LiveDeck = () => {
                   <div className="slider-track-wrap">
                     <div className="slider-scale">{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <span key={n}>{n}</span>)}</div>
                     <div className="slider-track-groove">
-                      <input type="range" className="vertical-slider" min="1" max="100" value={lumValue} onChange={e => setLumValue(Number(e.target.value))} />
+                      <input
+                        type="range"
+                        className="vertical-slider"
+                        min="1"
+                        max="100"
+                        value={lumValue}
+                        onChange={e => {
+                          const value = Number(e.target.value);
+                          setLumValue(value);
+                          sendInstruction({ page: 'live_deck', action: 'set_luminosity', payload: { value } });
+                        }}
+                      />
                     </div>
                     <div className="slider-scale">{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <span key={n}>{n}</span>)}</div>
                   </div>
@@ -101,7 +119,18 @@ export const LiveDeck = () => {
                   <div className="slider-track-wrap">
                     <div className="slider-scale">{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <span key={n}>{n}</span>)}</div>
                     <div className="slider-track-groove">
-                      <input type="range" className="vertical-slider" min="1" max="100" value={sensValue} onChange={e => setSensValue(Number(e.target.value))} />
+                      <input
+                        type="range"
+                        className="vertical-slider"
+                        min="1"
+                        max="100"
+                        value={sensValue}
+                        onChange={e => {
+                          const value = Number(e.target.value);
+                          setSensValue(value);
+                          sendInstruction({ page: 'live_deck', action: 'set_sensibility', payload: { value } });
+                        }}
+                      />
                     </div>
                     <div className="slider-scale">{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <span key={n}>{n}</span>)}</div>
                   </div>
@@ -138,11 +167,11 @@ export const LiveDeck = () => {
             </div>
             <div className="status-item" style={{ textAlign: 'center' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>PLAYLIST</span>
-              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-cyan)', fontWeight: 800, letterSpacing: '1px' }}>TECHNO SET</span>
+              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-cyan)', fontWeight: 800, letterSpacing: '1px' }}>{currentPlaylist}</span>
             </div>
             <div className="status-item" style={{ textAlign: 'center' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>CONFIG</span>
-              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-purple)', fontWeight: 800, letterSpacing: '1px' }}>PEAK DROP</span>
+              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-purple)', fontWeight: 800, letterSpacing: '1px' }}>{selectedConfiguration}</span>
             </div>
             <div className="status-item" style={{ textAlign: 'right' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>LATENCY</span>
@@ -201,11 +230,16 @@ export const LiveDeck = () => {
               width: '100%', height: '100%', background: 'transparent', color: '#000', border: 'none',
               padding: '0 15px', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: '900',
               appearance: 'none', position: 'relative', zIndex: 2
+            }}
+            value={selectedConfiguration}
+            onChange={(e) => {
+              const configuration = e.target.value;
+              setSelectedConfiguration(configuration);
+              sendInstruction({ page: 'live_deck', action: 'select_configuration', payload: { configuration } });
             }}>
-              <option>TECHNO 1</option>
-              <option>HOUSE 2</option>
-              <option>LOFI</option>
-              <option>DNB</option>
+              {configurations.map((config) => (
+                <option key={config}>{config}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -249,10 +283,16 @@ export const LiveDeck = () => {
               width: '100%', height: '100%', background: 'transparent', color: '#000', border: 'none',
               padding: '0 15px', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: '900',
               appearance: 'none', position: 'relative', zIndex: 2
+            }}
+            value={selectedTransition}
+            onChange={(e) => {
+              const transition = e.target.value;
+              setSelectedTransition(transition);
+              sendInstruction({ page: 'live_deck', action: 'select_transition', payload: { transition } });
             }}>
-              <option>CUT</option>
-              <option>FADE IN/OUT</option>
-              <option>CROSSFADE</option>
+              {transitions.map((transition) => (
+                <option key={transition}>{transition}</option>
+              ))}
             </select>
           </div>
           {/* Round 2x2 Plate Button */}
@@ -262,7 +302,12 @@ export const LiveDeck = () => {
             backgroundColor: '#0055bf', cursor: 'pointer',
             boxShadow: 'inset 2px 2px 5px rgba(255,255,255,0.4), inset -3px -3px 8px rgba(0,0,0,0.6), 4px 4px 10px rgba(0,0,0,0.7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
+          }}
+          onClick={() => sendInstruction({
+            page: 'live_deck',
+            action: 'go_to_next_configuration',
+            payload: { configuration: selectedConfiguration, transition: selectedTransition }
+          })}>
             <div className="round-stud-grid" style={{ transform: 'scale(0.85)', margin: 0 }}>
               <div className="stud stud-blue"></div>
               <div className="stud stud-blue"></div>
@@ -276,7 +321,16 @@ export const LiveDeck = () => {
       {/* Lock Trans Switch */}
       <GridSpot col={28} row={5}>
         <label className="lock-switch-container">
-          <input type="checkbox" className="heavy-duty-checkbox" checked={isHold} onChange={(e) => setIsHold(e.target.checked)} />
+          <input
+            type="checkbox"
+            className="heavy-duty-checkbox"
+            checked={isHold}
+            onChange={(e) => {
+              const locked = e.target.checked;
+              setIsHold(locked);
+              sendInstruction({ page: 'live_deck', action: 'lock_current_configuration', payload: { locked } });
+            }}
+          />
 
           <div className="lock-status-display">
             <span className="lock-text lock-text-hold">HOLD</span>
@@ -310,7 +364,11 @@ export const LiveDeck = () => {
       {/* Drop Button */}
       <GridSpot col={8} row={16}>
         <div className="drop-button-container" style={{ width: '750px' }}>
-          <button className="giant-drop-button" style={{ width: '100%' }}>
+          <button
+            className="giant-drop-button"
+            style={{ width: '100%' }}
+            onClick={() => sendInstruction({ page: 'live_deck', action: 'manual_drop' })}
+          >
             <div className="drop-stud-grid">
               {(() => {
                 let whiteIndex = 0;
@@ -369,7 +427,14 @@ export const LiveDeck = () => {
         { name: 'TRAP', col: 'bg-cyan' }, { name: 'AMBIENT', col: 'bg-magenta' }
       ].map((p, i) => (
         <GridSpot key={p.name} col={35} row={2 + i * 3}>
-          <button className={`preset-brick ${p.col}`} style={{ width: '240px', position: 'relative' }}>
+          <button
+            className={`preset-brick ${p.col}`}
+            style={{ width: '240px', position: 'relative' }}
+            onClick={() => {
+              setCurrentPlaylist(p.name);
+              sendInstruction({ page: 'live_deck', action: 'select_playlist', payload: { playlist: p.name } });
+            }}
+          >
             {/* Printed White Tile Label */}
             <div className="rogue-piece" style={{
               position: 'absolute', top: '50%', left: '15px', transform: 'translateY(-50%)',
@@ -393,7 +458,14 @@ export const LiveDeck = () => {
         </GridSpot>
       ))}
       <GridSpot col={35} row={26}>
-        <button className="preset-brick bg-dark-blue" style={{ width: '240px', position: 'relative' }}>
+        <button
+          className="preset-brick bg-dark-blue"
+          style={{ width: '240px', position: 'relative' }}
+          onClick={() => {
+            setCurrentPlaylist('CUSTOM');
+            sendInstruction({ page: 'live_deck', action: 'select_playlist', payload: { playlist: 'CUSTOM' } });
+          }}
+        >
           <div className="rogue-piece" style={{
             position: 'absolute', top: '50%', left: '15px', transform: 'translateY(-50%)',
             width: '120px', height: '18px', backgroundColor: '#f4f4f4',

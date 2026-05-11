@@ -1,4 +1,3 @@
-import React from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 

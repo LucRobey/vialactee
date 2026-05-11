@@ -3,6 +3,7 @@ import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { AVAILABLE_MODES } from '../../constants/modes';
 import { initialTopology, MAP_OFFSET_C, MAP_OFFSET_R, INSPECTOR_OFFSET_C, INSPECTOR_OFFSET_R } from '../../constants/topologyData';
+import { sendInstruction } from '../../utils/controlBridge';
 
 export type EditorMode = 'LIVE' | 'MODIFY' | 'BUILD';
 
@@ -69,6 +70,12 @@ export const TopologyEditor = () => {
       let next = prev + dir;
       if (next >= apiPlaylists.length) next = 0;
       if (next < 0) next = apiPlaylists.length - 1;
+      const selectedPlaylist = apiPlaylists[next] || 'PLAYLIST_A';
+      sendInstruction({
+        page: 'topology',
+        action: 'select_playlist_slot',
+        payload: { playlist: selectedPlaylist, direction: dir === 1 ? 'next' : 'previous' }
+      });
       return next;
     });
   };
@@ -76,6 +83,11 @@ export const TopologyEditor = () => {
   const handleConfigSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedName = e.target.value;
     setConfigName(selectedName);
+    sendInstruction({
+      page: 'topology',
+      action: 'select_configuration',
+      payload: { playlist, configuration: selectedName }
+    });
     const configsForPlaylist = apiConfigurations[playlist] || [];
     const selectedConfig = configsForPlaylist.find((c: any) => c.name === selectedName);
     if (selectedConfig) {
@@ -130,6 +142,11 @@ export const TopologyEditor = () => {
       body: JSON.stringify(payload)
     }).then(() => {
       setApiConfigurations(updatedConfigs);
+      sendInstruction({
+        page: 'topology',
+        action: editorMode === 'BUILD' ? 'build_configuration' : 'modify_configuration',
+        payload: { playlist, configuration: configName }
+      });
       alert(`Configuration ${configName} saved successfully to ${playlist}!`);
     }).catch(err => console.error(err));
   };
@@ -137,12 +154,26 @@ export const TopologyEditor = () => {
   const selectedSeg = segments.find(s => s.id === selectedSegId)!;
 
   const handleModeSelect = (modeName: string) => {
+    sendInstruction({
+      page: 'topology',
+      action: 'select_segment_mode',
+      payload: { segmentId: selectedSegId, mode: modeName }
+    });
     setSegments(prev => prev.map(seg => seg.id === selectedSegId ? { ...seg, mode: modeName } : seg));
   };
 
   const handleDirectionToggle = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setSegments(prev => prev.map(seg => seg.id === id ? { ...seg, direction: (seg as any).direction === 'UP' ? 'DOWN' : 'UP' } : seg));
+    setSegments(prev => prev.map(seg => {
+      if (seg.id !== id) return seg;
+      const direction = (seg as any).direction === 'UP' ? 'DOWN' : 'UP';
+      sendInstruction({
+        page: 'topology',
+        action: 'toggle_segment_direction',
+        payload: { segmentId: id, direction }
+      });
+      return { ...seg, direction };
+    }));
   };
 
   const getModeClass = (modeName: string) => `anim-${modeName.toLowerCase().replace(/\s+/g, '-')}`;
@@ -231,7 +262,10 @@ export const TopologyEditor = () => {
         }}>
           {(['LIVE', 'MODIFY', 'BUILD'] as const).map(mode => (
             <div key={mode}
-              onClick={() => setEditorMode(mode)}
+              onClick={() => {
+                setEditorMode(mode);
+                sendInstruction({ page: 'topology', action: 'set_editor_mode', payload: { mode } });
+              }}
               style={{
                 width: '85%', textAlign: 'center', padding: '6px 0',
                 backgroundColor: editorMode === mode ? (mode === 'LIVE' ? '#28a745' : mode === 'BUILD' ? '#d22020' : '#fcd000') : '#111',
@@ -316,13 +350,15 @@ export const TopologyEditor = () => {
       {/* Segments Map */}
       {segments.map(seg => {
         const isSelected = selectedSegId === seg.id;
-        const screenWidth = seg.orientation === 'horizontal' ? LEGO_MATH.physicalSize(seg.w) - 20 : LEGO_MATH.physicalSize(seg.h) - 20;
 
         return (
           <GridSpot key={seg.id} col={seg.col} row={seg.row}>
             <div
               className={`rogue-piece interactive-segment ${isSelected ? 'segment-selected' : ''} ${getModeClass(seg.mode)}`}
-              onClick={() => setSelectedSegId(seg.id)}
+              onClick={() => {
+                setSelectedSegId(seg.id);
+                sendInstruction({ page: 'topology', action: 'select_segment', payload: { segmentId: seg.id } });
+              }}
               style={{
                 zIndex: isSelected ? 20 : 10,
                 width: `${LEGO_MATH.physicalSize(seg.w)}px`,
