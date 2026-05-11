@@ -5,12 +5,12 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 📡 1. Core Bridge & State Management
 *To establish a high-frequency data pipeline between the Python backend and the web client.*
 
-*   **Bi-Directional WebSockets:** Implement a Python WebSocket server (e.g., using `websockets` or `FastAPI`) that runs concurrently with the existing orchestration loop in `Main.py` to push state to the browser with zero latency.
-*   **JSON State Schema:** Define a strict JSON structure for the Pi to broadcast. This must include:
-    *   Currently active modes per segment.
-    *   Global brightness levels.
-    *   System variables (e.g., locked segments, active global multipliers).
-    *   Hardware telemetry.
+*   **Bi-Directional WebSockets:** Implemented through `connectors/Connector.py` using aiohttp `/ws` on port `8080`. The browser sends page/action instructions and receives backend state snapshots.
+*   **JSON State Schema:** Implemented as `mode_master_state`, built by `Mode_master.get_state_snapshot()`. It currently includes:
+    *   Active modes and directions per segment.
+    *   Global luminosity and sensibility.
+    *   Active playlist, active/queued configuration, selected transition, transition lock, and transition progress.
+    *   Segment blocked/transition status.
 *   **The "Pending" State Manager:** Implement backend logic to hold "Staged Transitions" (batch changes across multiple segments) in memory until the UI explicitly sends an `EXECUTE` command to flush them to the LEDs simultaneously.
 
 ---
@@ -40,7 +40,7 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 🤖 4. Show Automation & Presets
 *To reduce cognitive load for the operator during a live show.*
 
-*   **Snapshot Save/Load:** Build a system to dump the entire current state of the stage (colors, modes, multipliers, locks) into a physical JSON file on the Pi, and an endpoint to instantly recall it.
+*   **Snapshot Save/Load:** Implemented for playlist/configuration snapshots through `data/configurations.json` and `/api/configurations`. Vite serves the endpoint in development; `Connector.py` serves it in Python-backed operation and reloads `Mode_master` after writes.
 *   **Auto-Transition Engine & Timing:** Implement a backend toggle that automatically selects and executes a random, safe transition.
     *   Triggered every *X* minutes or *Y* song drops.
     *   Must allow the UI to configure both the interval between transitions *and* the duration/speed of the transition sweep itself.

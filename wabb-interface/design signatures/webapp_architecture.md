@@ -7,12 +7,12 @@ This document outlines the structural layout and user experience philosophy for 
 
 **Components:**
 *   **Stage Overview:** A simplified, non-interactive, read-only SVG map that purely mirrors what the physical LEDs are doing.
-*   **Global Configurations (Presets):** A grid of massive, thumb-friendly buttons (e.g., "Techno Peak", "Lounge") that instantly push a pre-saved state to the entire stage.
+*   **Playlist Presets:** A grid of massive, thumb-friendly buttons generated only from the playlists saved in `data/configurations.json`. The UI must not contain fallback or demo playlist names.
 *   **Macro Sliders:** Two large, high-contrast sliders:
     *   *Master Speed Multiplier* (0.1x to 3.0x)
     *   *Master Brightness* (0% to 100%)
 *   **Auto-DJ Toggle:** A simple ON/OFF switch to engage the automatic transition engine.
-*   **The DROP Button:** The focal point of the deck. A massive button that, when held, forces a hardcoded macro (like a white strobe), and triggers a massive global transition upon release.
+*   **The DROP Button:** The focal point of the deck. A massive button that executes the queued saved configuration with the selected transition.
 
 ---
 
@@ -26,7 +26,7 @@ This document outlines the structural layout and user experience philosophy for 
     *   **Lock Toggle:** A switch to lock the segment, making it immune to Auto-DJ and Global Transitions.
     *   **Segment Mute:** Instantly blacks out the selected segment.
 *   **Batch Execution:** A staged execution area where multiple segment changes sit in a "pending" state until an `EXECUTE STAGED BATCH` button is pressed.
-*   **Preset Saving:** A `SAVE AS GLOBAL PRESET` button to dump the current mix of locked/unlocked segments and modes into a new button for "The Live Deck".
+*   **Configuration Saving:** BUILD/MODIFY writes the current segment mode/direction map back into `data/configurations.json` through `/api/configurations`. Saved playlists and configurations become available to Live Deck after the backend reloads and broadcasts a fresh state snapshot.
 
 ---
 
@@ -59,3 +59,10 @@ This document outlines the structural layout and user experience philosophy for 
     *   Master Power Limit Slider (Capping RGB values).
     *   `RESTART PYTHON LOOP` button.
     *   `REBOOT RASPBERRY PI` button.
+
+## Data And State Rules
+
+* `data/configurations.json` is the single source of truth for playlists and saved configurations.
+* `src/utils/configurationStore.ts` is the React load/save boundary for that JSON file.
+* `/api/configurations` is implemented both by Vite during local development and by `connectors/Connector.py` when Python serves the backend.
+* `/ws` remains the live control channel. The browser sends page/action instructions and receives `mode_master_state` snapshots describing the active playlist, active/queued configuration, transition state, luminosity, sensibility, and current segment modes/directions.

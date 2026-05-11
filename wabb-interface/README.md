@@ -7,16 +7,26 @@ It serves as the official remote control for the chandelier. We pivoted to this 
 ## Structure and Workflow:
 
 - **React Framework**: Built using React, TypeScript, and Vite for lightning-fast HMR and compilation.
-- **Network Layer**: Communicates with the Raspberry Pi's backend over TCP/WebSockets (handled by `Connector.py` in the `connectors/` folder).
+- **Network Layer**: Communicates with the Raspberry Pi's backend over HTTP and WebSockets (handled by `Connector.py` in the `connectors/` folder).
+- **Configuration Source**: Playlists and configurations are loaded from `data/configurations.json` through `/api/configurations`. Do not hardcode playlist names or configuration names in React components.
 - **Interface Capabilities**: Provides sliders, toggle buttons, and visual feedback for the user to manipulate playlist rotation, override colors, force mode changes, and observe the system's real-time performance metrics.
 
-## Outgoing Control Instructions
+## Configuration JSON
 
-The app now emits control instructions from the UI to the backend bridge through a shared WebSocket sender in `src/utils/controlBridge.ts`.
+The shared helper `src/utils/configurationStore.ts` is the frontend boundary for reading and writing `data/configurations.json`.
 
-- Default WebSocket URL: `ws://<host>:8765/ws` (or `wss://` on HTTPS)
+- `GET /api/configurations` returns `{ "playlists": string[], "configurations": Record<string, Configuration[]> }`.
+- `POST /api/configurations` persists the same shape back to disk.
+- During Vite development, `vite.config.ts` serves this API.
+- During Python-backed operation, `connectors/Connector.py` serves the same API and asks `Mode_master` to reload the saved playlists/configurations.
+
+## WebSocket Control And State
+
+The app emits control instructions from the UI to the backend bridge through a shared WebSocket sender in `src/utils/controlBridge.ts`.
+
+- Default WebSocket URL: `ws://<host>:8080/ws` (or `wss://` on HTTPS)
 - Optional override via env var: `VITE_WABB_WS_URL`
-- Message shape sent by the frontend:
+- Instruction shape sent by the frontend:
 
 ```json
 {
@@ -27,7 +37,9 @@ The app now emits control instructions from the UI to the backend bridge through
 }
 ```
 
-The frontend currently sends only instructions (no receive handling yet), including:
+The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck and Topology with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, and each segment's active mode/direction.
+
+The frontend sends instructions including:
 
 - **Live Deck**: configuration selection, transition selection, next configuration trigger, lock current configuration, manual drop, playlist buttons, luminosity slider, sensibility slider.
 - **Topology**: segment selection, segment mode selection, segment direction toggle, editor mode switch (LIVE/MODIFY/BUILD), configuration selection, save/build actions, playlist previous/next cycle.

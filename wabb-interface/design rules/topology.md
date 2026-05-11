@@ -39,3 +39,23 @@ Instead of rendering digital text for the selected segment name and current mode
 The available modes are listed as a physical switchboard.
 * Each mode is a dark tile that "pops" to a bright yellow (`#fcd000`) when selected.
 * Beside each tile is a physical LED indicator. When active, it glows with the selected segment's color. When inactive, it has dark inner shadows to look like an unpowered diode.
+
+## 7. Playlist And Configuration Data
+
+Topology uses `data/configurations.json` as its persistence layer:
+
+* It loads playlists/configurations through `src/utils/configurationStore.ts` and `GET /api/configurations`.
+* It saves BUILD/MODIFY results through `POST /api/configurations`.
+* The saved JSON shape is `{ "playlists": string[], "configurations": Record<string, Configuration[]> }`.
+* Segment mode keys must stay in Python format (`Segment v4`, `Segment h32`, etc.) so `Mode_master` can apply them directly.
+* The UI must not seed fake playlist names. If the JSON file is empty, the controls should display an empty/no-playlist state.
+
+## 8. Live Backend Mirroring
+
+In `LIVE` editor mode, Topology mirrors `mode_master_state` from `/ws`:
+
+* Segment tiles update from the backend's current mode and direction.
+* The selected playlist follows `activePlaylist`.
+* The selected configuration label follows `activeConfiguration`.
+
+In `MODIFY` and `BUILD` modes, local edits remain under user control until saved.

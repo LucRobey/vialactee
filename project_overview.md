@@ -20,11 +20,12 @@ graph TD
 
     %% Network and Audio Ingestion
     subgraph Connectors [Connectors]
-        Conn["Connector (TCP/WS Server)"]
+        Conn["Connector (HTTP/WS Server)"]
         Mic["Local_Microphone (Raw PCM Push)"]
     end
 
-    Wabb -->|User Commands| Conn
+    Wabb -->|User Commands / Config JSON API| Conn
+    Conn -->|Mode Master State Snapshots| Wabb
     RoomAudio --> Mic
 
     %% Core Processing Engine
@@ -39,6 +40,7 @@ graph TD
 
     Mic -->|Raw PCM Push| ListenerFacade
     Conn -->|Overrides / Requests| ModeMaster
+    ModeMaster -->|Active playlist/config/segments| Conn
     ListenerFacade -->|Routes Audio| AudioIngest
     AudioIngest -->|Raw Values| AudioAnalyz
     AudioIngest -->|Raw FFT / Power| ListenerFacade
@@ -86,9 +88,9 @@ Here is a breakdown of the core directories in this project:
 - **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `AudioAnalyzer`, and the `Listener` facade), and the Transition Director.
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
 - **`/config`**: JSON files and managers detailing the hardware geometry and global settings.
-- **`/connectors`**: The external communication handlers. This includes the TCP/WebSocket server that talks to the web interface, as well as the microphone stream capture tool (`Local_Microphone.py`).
+- **`/connectors`**: The external communication handlers. This includes the HTTP/WebSocket server that talks to the web interface, serves `/api/configurations`, and broadcasts mode-master state, as well as the microphone stream capture tool (`Local_Microphone.py`).
 - **`/hardware`**: Hardware abstractions. Allows switching seamlessly between testing on a PC (with Pygame simulated LEDs or UDP Fake ESP32) and running on real hardware (Raspberry Pi GPIO or real ESP32s over network).
-- **`/wabb-interface`**: A React-based web application serving as the remote controller for the user to change playlists, transition modes, or tweak settings on the fly.
+- **`/wabb-interface`**: A React-based web application serving as the remote controller for the user to change playlists, transition modes, or tweak settings on the fly. Playlist and configuration names are loaded from `data/configurations.json` through `/api/configurations`; they must not be hardcoded in React.
 - **`/.agents`**: Core context, architectural rules, and technical specifications designed for AI agents working on the codebase.
 
 ---
@@ -112,6 +114,9 @@ Do not guess how the architecture works. Depending on the task you have been giv
 - **If you are touching the Main Orchestrator or Async loops:**
 
   - 👉 Read `.agents/AGENT.md` to understand our `asyncio` constraints and frame-independent math requirements.
+- **If you are modifying Web App playlists, configurations, Live Deck, or Topology state:**
+
+  - 👉 Read `wabb-interface/README.md`, `connectors/README.md`, and `core/precisions/mode_master.md`. Keep `data/configurations.json` as the source of truth and preserve the `/ws` state snapshot flow.
 
 ---
 

@@ -483,7 +483,11 @@ class Mode_master:
                 segment.change_way(direction)
                 return {"applied": True}
 
-            if action in {"set_editor_mode", "select_segment", "build_configuration", "modify_configuration"}:
+            if action in {"build_configuration", "modify_configuration"}:
+                self.load_configurations()
+                return {"applied": True}
+
+            if action in {"set_editor_mode", "select_segment"}:
                 return {"applied": True}
 
         if page == "auto_dj":

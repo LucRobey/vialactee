@@ -20,9 +20,10 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
       "orientation": "vertical",
     }
     ```
-* `connectors/`: The `Connector.py` TCP server (Port 12345) and `Local_Microphone.py`.
+* `connectors/`: The `Connector.py` aiohttp server (Port 8080) and `Local_Microphone.py`.
 * `hardware/`: Physical abstractions (currently houses `Fake_leds.py`).
-* `wabb-interface/`: The React-based web application source code. Acts as the user's remote control by firing direct TCP socket commands to `Connector.py`.
+* `wabb-interface/`: The React-based web application source code. Acts as the user's remote control through `Connector.py` WebSocket instructions and receives `mode_master_state` snapshots.
+* `data/configurations.json`: The source of truth for playlist names and saved configurations. The web app must load/save through `/api/configurations`; do not hardcode playlist or configuration names in React.
 
 **The Hardware:**
 
@@ -41,7 +42,7 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
 1. **Geometric Pygame Simulator**: Running `Main.py` natively on Windows bypasses physical GPIO and perfectly draws a scaled 1300x1000 physical simulation bounding all horizontal and vertical chandelier segments simultaneously.
 2. **Native Python Audio**: Fixed "divide by zero" mathematical crashes on silence. No more ESP32 networking bottleneck. Upgraded the audio processor to use a sliding window 4096-sample buffer tracking per-band variance for flawlessly smooth FFT bass extraction and beat detection.
 3. **Optimized Threading**: Shifted hardware `.show()` flushes off the main asyncio loop so it no longer blocks audio streaming/network ticks.
-4. **Local Testing Switch**: `startServer` was added to `Main.py`. Setting it to `False` disables port `12345` binding so developers can test the visualizer locally infinitely without socket collisions.
+4. **Local Testing Switch**: `startServer` was added to `Main.py`. Setting it to `False` disables the aiohttp connector on port `8080` so developers can test the visualizer locally without web server socket collisions.
 5. **Decluttered Root**: Consolidated scripts into `core`, `config`, and `hardware` for long-term scalability.
 6. **Vectorized DSP Engine**: Replaced traditional Python indexing inside `Listener.py` and `Local_Microphone.py` with compiled `numpy` matrices. Implemented Spectral Flux and ADSR envelopes natively. Added a **12-dimensional Chromagram** analysis engine for exact musical chords. Created a **Master Consensus Rhythmic Engine** linking a Continuous IOI (Inter-Onset Interval) Gaussian Histogram with local Binary tracking. The IOI engine actively 'octave-folds' rapid syncopation (16th/32nd notes) down to a true 60-180 BPM range using mathematical exponential time decay and power ponderation. The local binary tracker cross-validates its exact current tempo against the IOI's top peaks, triggering a Phase-Locked Loop (PLL) consensus that flawlessly predicts tempo arrays across missing beats or silent musical breakdowns!
 7. **Vectorized Render Engine**: Shifted `Segment.py`'s `rgb_list` initialization to a continuous 2D `numpy` matrix. Integrated C-level array math and multi-dimensional broadcasting inside `Rainbow_mode.py` and `Mode.py` to calculate colors and interpolations simultaneously over all LEDs without any Python loops.
@@ -52,3 +53,4 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
 12. **Dynamic Audio Latency Tracking**: Replaced hardcoded hardware latency configurations by actively computing real-world latency using `sounddevice`'s PortAudio `time_info.inputBufferAdcTime` timestamps to identify exactly when the chunk physically hit the mic. Combined with the mathematical algorithmic delay (the exact center point of the 4096-sample Hanning FFT window wrapper), the Phase-Locked Loop natively self-calibrates the forward phase shift.
 13. **Audio-Based Orchestration**: Introduced `Transition_Director.py` to decouple playlist management from `Mode_master.py`. It actively parses DSP state (Spectral Flux drops, smoothed total power) to intelligently delay transitions if a heavy bass drop is hitting or auto-force a "Standby/Chill" playlist if >= 10 seconds of complete silence is detected.
 14. **Dual Magnetic Lookahead Snapping & Delay Queues**: Integrated a Continuous 5-second Lookahead audio delay buffer that perfectly anchors main-beats to bass frequencies. Coupled with the new `Listener` spectral delay queue, visual outputs are perfectly synchronized with the delayed magnetic beat triggers without losing any performance. A `0.20` variance Gaussian Phase Inertia enforces strict tempo stability.
+15. **JSON-Backed Web App Playlists**: The Wabb interface now reads and writes playlists/configurations through `data/configurations.json` via `/api/configurations`. `Connector.py` also broadcasts `Mode_master.get_state_snapshot()` over `/ws`, so Live Deck and Topology mirror automatic playlist/configuration changes from Python instead of relying on embedded demo presets.

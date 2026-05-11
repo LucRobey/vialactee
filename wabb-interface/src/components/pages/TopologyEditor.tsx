@@ -4,6 +4,7 @@ import { GridSpot } from '../layout/GridSpot';
 import { AVAILABLE_MODES } from '../../constants/modes';
 import { initialTopology, MAP_OFFSET_C, MAP_OFFSET_R, INSPECTOR_OFFSET_C, INSPECTOR_OFFSET_R } from '../../constants/topologyData';
 import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from '../../utils/controlBridge';
+import { loadConfigurationStore, saveConfigurationStore, type SegmentConfiguration } from '../../utils/configurationStore';
 
 export type EditorMode = 'LIVE' | 'MODIFY' | 'BUILD';
 
@@ -44,12 +45,12 @@ export const TopologyEditor = () => {
   const [editorMode, setEditorMode] = useState<EditorMode>('LIVE');
   const [configName, setConfigName] = useState('');
   
-  // Real API state
-  const [apiPlaylists, setApiPlaylists] = useState<string[]>(['PLAYLIST_A']);
-  const [apiConfigurations, setApiConfigurations] = useState<Record<string, any[]>>({});
+  const [apiPlaylists, setApiPlaylists] = useState<string[]>([]);
+  const [apiConfigurations, setApiConfigurations] = useState<Record<string, SegmentConfiguration[]>>({});
   
   const [playlistIndex, setPlaylistIndex] = useState(0);
-  const playlist = apiPlaylists[playlistIndex] || 'PLAYLIST_A';
+  const playlist = apiPlaylists[playlistIndex] || '';
+  const playlistLightColor = playlist ? (playlistIndex % 2 === 0 ? '#00ffff' : '#ff00ff') : '#555';
 
   const applyModeMasterState = useCallback((state: ModeMasterState) => {
     if (state.playlists.length > 0) {
@@ -84,15 +85,10 @@ export const TopologyEditor = () => {
   }, [apiPlaylists, editorMode]);
 
   useEffect(() => {
-    fetch('/api/configurations')
-      .then(res => res.json())
-      .then(data => {
-        if(data.playlists && data.playlists.length > 0) {
-          setApiPlaylists(data.playlists);
-        }
-        if(data.configurations) {
-          setApiConfigurations(data.configurations);
-        }
+    loadConfigurationStore()
+      .then(store => {
+        setApiPlaylists(store.playlists);
+        setApiConfigurations(store.configurations);
       })
       .catch(err => console.error("Could not load configurations", err));
   }, []);
@@ -102,11 +98,15 @@ export const TopologyEditor = () => {
   }, [applyModeMasterState]);
 
   const handlePlaylistCycle = (dir: 1 | -1) => {
+    if (apiPlaylists.length === 0) {
+      return;
+    }
+
     setPlaylistIndex(prev => {
       let next = prev + dir;
       if (next >= apiPlaylists.length) next = 0;
       if (next < 0) next = apiPlaylists.length - 1;
-      const selectedPlaylist = apiPlaylists[next] || 'PLAYLIST_A';
+      const selectedPlaylist = apiPlaylists[next];
       sendInstruction({
         page: 'topology',
         action: 'select_playlist_slot',
@@ -117,6 +117,10 @@ export const TopologyEditor = () => {
   };
 
   const handleConfigSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!playlist) {
+      return;
+    }
+
     const selectedName = e.target.value;
     setConfigName(selectedName);
     sendInstruction({
@@ -125,7 +129,7 @@ export const TopologyEditor = () => {
       payload: { playlist, configuration: selectedName }
     });
     const configsForPlaylist = apiConfigurations[playlist] || [];
-    const selectedConfig = configsForPlaylist.find((c: any) => c.name === selectedName);
+    const selectedConfig = configsForPlaylist.find(config => config.name === selectedName);
     if (selectedConfig) {
       // Map it back to segments
       setSegments(prev => prev.map(seg => {
@@ -139,6 +143,7 @@ export const TopologyEditor = () => {
 
   const handleSave = () => {
     if (!configName) return alert("Please enter a configuration name.");
+    if (!playlist) return alert("Please select a playlist before saving.");
 
     const newModes: Record<string, string> = {};
     const newWay: Record<string, string> = {};
@@ -158,7 +163,7 @@ export const TopologyEditor = () => {
     if (!updatedConfigs[playlist]) updatedConfigs[playlist] = [];
 
     if (editorMode === 'MODIFY') {
-      const idx = updatedConfigs[playlist].findIndex((c:any) => c.name === configName);
+      const idx = updatedConfigs[playlist].findIndex(config => config.name === configName);
       if (idx !== -1) {
         updatedConfigs[playlist][idx] = newConfig;
       } else {
@@ -173,10 +178,7 @@ export const TopologyEditor = () => {
       configurations: updatedConfigs
     };
 
-    fetch('/api/configurations', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    }).then(() => {
+    saveConfigurationStore(payload).then(() => {
       setApiConfigurations(updatedConfigs);
       sendInstruction({
         page: 'topology',
@@ -595,7 +597,7 @@ export const TopologyEditor = () => {
                 }}
               >
                 <option value="" disabled style={{ background: '#0a0a0a' }}>[SELECT CONFIG]</option>
-                {(apiConfigurations[playlist] || []).map((cfg: any) => (
+                {(apiConfigurations[playlist] || []).map((cfg) => (
                   <option key={cfg.name} value={cfg.name} style={{ background: '#0a0a0a', color: '#fcd000' }}>
                     {cfg.name}
                   </option>
@@ -652,8 +654,8 @@ export const TopologyEditor = () => {
           <div style={{
             position: 'absolute', top: '12px', left: '15px',
             width: '14px', height: '14px', borderRadius: '50%',
-            backgroundColor: playlist === 'PLAYLIST_A' ? '#00ffff' : '#ff00ff',
-            boxShadow: `inset 2px 2px 4px rgba(255,255,255,0.8), inset -2px -2px 4px rgba(0,0,0,0.5), 0 0 10px ${playlist === 'PLAYLIST_A' ? '#00ffff' : '#ff00ff'}`,
+            backgroundColor: playlistLightColor,
+            boxShadow: `inset 2px 2px 4px rgba(255,255,255,0.8), inset -2px -2px 4px rgba(0,0,0,0.5), 0 0 10px ${playlistLightColor}`,
             border: '1px solid rgba(0,0,0,0.8)'
           }}></div>
 
@@ -667,7 +669,7 @@ export const TopologyEditor = () => {
               boxShadow: 'inset 0 0 8px #000, 0 0 10px rgba(0, 255, 255, 0.2)', border: '1px solid #222',
               textShadow: '0 0 5px #00ffff', borderRadius: '2px'
             }}>
-              {playlist}
+              {playlist || '[NO PLAYLIST]'}
             </div>
           </div>
 

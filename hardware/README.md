@@ -26,7 +26,7 @@ To achieve perfect synchronization and offload Bluetooth processing, the physica
    * Acts as the primary Bluetooth A2DP Sink to receive the audio stream directly from the user's phone.
    * Vialactée Python code processes the audio instantly for FFT and music analysis.
    * Queues the audio in a 5-second delay buffer and pushes the delayed audio out via a high-quality analog output (e.g., USB Sound Card) directly to the main Speakers.
-   * Runs the asynchronous TCP/WebSocket server for the Wabb-Interface to manage user settings.
+   * Runs the asynchronous HTTP/WebSocket server for the Wabb-Interface to manage user settings and configuration JSON.
    * Calculates the LED math and broadcasts the RGB frames via Wi-Fi UDP.
 2. **LED Controller (ESP32):**
 
@@ -58,7 +58,7 @@ graph TD
 
         Audio_Out["USB Sound Card (AUX)"]
 
-        Server["TCP/WebSocket Server"]
+        Server["HTTP/WebSocket Server"]
 
         Math["Mode Orchestrator"]
 
