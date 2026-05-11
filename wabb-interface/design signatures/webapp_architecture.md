@@ -26,16 +26,18 @@ This document outlines the structural layout and user experience philosophy for 
     *   **Lock Toggle:** A switch to lock the segment, making it immune to Auto-DJ and Global Transitions.
     *   **Segment Mute:** Instantly blacks out the selected segment.
 *   **Batch Execution:** A staged execution area where multiple segment changes sit in a "pending" state until an `EXECUTE STAGED BATCH` button is pressed.
-*   **Configuration Saving:** BUILD/MODIFY writes the current segment mode/direction map back into `data/configurations.json` through `/api/configurations`. Saved playlists and configurations become available to Live Deck after the backend reloads and broadcasts a fresh state snapshot.
+*   **Configuration Saving:** `MODIFY` and `BUILD` write the current segment mode/direction map into `data/configurations.json` through `/api/configurations`. In `LIVE`, the save control does not persist (live tweaks are runtime-only). Saved playlists and configurations become available to Live Deck after the backend reloads and broadcasts a fresh state snapshot.
 
 ---
 
-## 📐 Page 3: Topology Layout Editor (Stage Setup)
-*Philosophy: Defining the physical layout of the environment. Used during initial stage construction to ensure accurate visual representations.*
+## 📐 Page 3: Topology Editor (map + inspector)
+*Philosophy: See the chandelier layout, pick a segment, and either mirror the live show or edit saved presets.*
 
-**Components:**
-*   **Interactive Grid:** A canvas where the user can drag, scale, and rotate the physical SVG segments to match how the real-world stage was built that day.
-*   **Coordinate Sync:** Automatically saves the updated X/Y coordinates back to the Pi to ensure spatial transitions sweep correctly across the real space.
+**Components (implemented in `TopologyEditor.tsx`):**
+*   **Segment map:** Fixed stud grid with selectable segments (modes shown on tiles); junction boxes at intersections.
+*   **Dynamic inspector:** Mode tiles for the selected segment, configuration name area, playlist strip, three-way **LIVE / MODIFY / BUILD** switch.
+*   **`LIVE`:** Follows `mode_master_state` over `/ws`. Mode and direction changes go out as WebSocket instructions (`select_segment_mode`, `toggle_segment_direction`) and affect the running Python segments only, not the JSON file. The client keeps **pending** mode/direction per segment until the snapshot matches, avoiding flicker from ~30 Hz updates. Switching **LIVE → MODIFY** reapplies the selected saved configuration from the React store so edits target disk-backed presets.
+*   **`MODIFY` / `BUILD`:** Authoring modes; saving uses `POST /api/configurations` and notifies `Mode_master` to reload.
 
 ---
 
@@ -65,4 +67,4 @@ This document outlines the structural layout and user experience philosophy for 
 * `data/configurations.json` is the single source of truth for playlists and saved configurations.
 * `src/utils/configurationStore.ts` is the React load/save boundary for that JSON file.
 * `/api/configurations` is implemented both by Vite during local development and by `connectors/Connector.py` when Python serves the backend.
-* `/ws` remains the live control channel. The browser sends page/action instructions and receives `mode_master_state` snapshots describing the active playlist, active/queued configuration, transition state, luminosity, sensibility, and current segment modes/directions.
+* `/ws` remains the live control channel. The browser sends page/action instructions and receives `mode_master_state` snapshots describing the active playlist, active/queued configuration, transition state, luminosity, sensibility, and current segment modes/directions. Topology in `LIVE` treats those snapshots as authoritative once they agree with any pending user override for a segment.

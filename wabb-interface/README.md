@@ -39,10 +39,12 @@ The app emits control instructions from the UI to the backend bridge through a s
 
 The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck and Topology with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, and each segment's active mode/direction.
 
+**Topology `LIVE`:** segment mode/direction changes are sent as instructions only (no `POST /api/configurations`). The UI merges snapshots with short-lived pending values so rapid broadcasts do not undo a click before Python applies it. **Topology `MODIFY` / `BUILD`:** saving writes through `POST /api/configurations` and issues `modify_configuration` or `build_configuration`.
+
 The frontend sends instructions including:
 
 - **Live Deck**: configuration selection, transition selection, next configuration trigger, lock current configuration, manual drop, playlist buttons, luminosity slider, sensibility slider.
-- **Topology**: segment selection, segment mode selection, segment direction toggle, editor mode switch (LIVE/MODIFY/BUILD), configuration selection, save/build actions, playlist previous/next cycle.
+- **Topology**: segment selection, segment mode and direction changes (`select_segment_mode`, `toggle_segment_direction`), editor mode (`LIVE` / `MODIFY` / `BUILD`), configuration and playlist actions where enabled by mode, persisted saves only outside `LIVE`.
 - **Auto-DJ**: rainbow color intensity, pulsar tail length, trigger interval, sweep duration.
 - **System**: restart python loop, restart raspberry pi.
 

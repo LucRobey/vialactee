@@ -61,3 +61,5 @@ It also pushes live snapshots to every connected web client:
 ```
 
 After a successful save, `Connector` calls `Mode_master.load_configurations()` and broadcasts a fresh state snapshot. The React app should never hardcode playlist or configuration names.
+
+Topology **live** segment mode/direction changes are WebSocket instructions handled inside `Mode_master.process_instruction()`; they are not written by `POST /api/configurations`. Only explicit saves from the Topology editor’s `MODIFY` / `BUILD` flow update the JSON file.

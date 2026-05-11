@@ -185,6 +185,7 @@ export const TopologyEditor = () => {
       setApiConfigurations(configurations);
       setPlaylistIndex(Math.max(0, Math.min(selectedIndex, playlists.length - 1)));
       setConfigName(selectedConfigName);
+      setSelectedConfigName(selectedConfigName);
       sendInstruction({
         page: 'topology',
         action: 'modify_configuration',
@@ -214,6 +215,21 @@ export const TopologyEditor = () => {
     const nextConfigurations = { ...apiConfigurations, [newName]: apiConfigurations[playlist] || [] };
     delete nextConfigurations[playlist];
     persistPlaylistStore(nextPlaylists, nextConfigurations, playlistIndex);
+  };
+
+  const handleDeletePlaylist = () => {
+    if (!playlist) return alert('Please select a playlist to delete.');
+    if (!window.confirm(`Delete playlist "${playlist}" and all of its saved configurations?`)) return;
+
+    const nextPlaylists = apiPlaylists.filter(name => name !== playlist);
+    const nextConfigurations = { ...apiConfigurations };
+    delete nextConfigurations[playlist];
+
+    const nextIndex = nextPlaylists.length === 0 ? 0 : Math.min(playlistIndex, nextPlaylists.length - 1);
+    const nextPlaylist = nextPlaylists[nextIndex] || '';
+    const nextConfigName = nextPlaylist ? (nextConfigurations[nextPlaylist]?.[0]?.name ?? '') : '';
+
+    persistPlaylistStore(nextPlaylists, nextConfigurations, nextIndex, nextConfigName);
   };
 
   const handlePlaylistCycle = (dir: 1 | -1) => {
@@ -987,21 +1003,23 @@ export const TopologyEditor = () => {
                 textShadow: '0 0 6px rgba(252, 208, 0, 0.5)'
               }}
             />
-            <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+            <div style={{ display: 'flex', gap: '4px', width: '100%', flexWrap: 'wrap' }}>
               {[
-                { label: 'NEW', onClick: handleCreatePlaylist, color: '#28a745' },
-                { label: 'REN', onClick: handleRenamePlaylist, color: '#fcd000' },
+                { label: 'NEW', onClick: handleCreatePlaylist, color: '#28a745', fg: '#000' as const },
+                { label: 'REN', onClick: handleRenamePlaylist, color: '#fcd000', fg: '#000' as const },
+                { label: 'DEL', onClick: handleDeletePlaylist, color: '#d22020', fg: '#fff' as const },
               ].map(action => (
                 <button
                   key={action.label}
                   onClick={action.onClick}
                   style={{
-                    flex: 1,
+                    flex: '1 1 28%',
+                    minWidth: '0',
                     height: '22px',
                     border: '1px solid rgba(0,0,0,0.8)',
                     borderRadius: '2px',
                     backgroundColor: action.color,
-                    color: '#000',
+                    color: action.fg,
                     cursor: 'pointer',
                     fontSize: '0.55rem',
                     fontWeight: '900',

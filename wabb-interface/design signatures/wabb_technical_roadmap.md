@@ -27,7 +27,8 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 🗺️ 3. Segment Routing & Topology
 *To control how data flows to specific physical areas of the stage.*
 
-*   **Live Topology Editor:** Allow the UI to push updated X/Y coordinates for segments back to the Pi. This overwrites the spatial mapping used by the `transition_architecture` on the fly, allowing for physical stage layout changes.
+*   **Topology tab (implemented):** `TopologyEditor.tsx` mirrors `mode_master_state`, supports **LIVE / MODIFY / BUILD**, sends `select_segment_mode` and `toggle_segment_direction` for runtime changes (no `POST` in LIVE), persists presets only from MODIFY/BUILD, and uses client-side pending merges so ~30 Hz snapshots do not flicker overrides. `Mode_master` applies saved presets with shallow-copied `modes`/`way` on `activ_configuration` so live swaps stay isolated from the in-memory playlist store. See `wabb-interface/design rules/topology.md`.
+*   **Live Topology Editor (future):** Allow the UI to push updated X/Y coordinates for segments back to the Pi. This would overwrite the spatial mapping used by the `transition_architecture` on the fly, allowing for physical stage layout changes.
 *   **Segment Locking & Mode Configurations:** 
     *   Build logic to "Lock" specific segments to their currently assigned mode.
     *   Locked segments become immune to the Auto-DJ, Global Transitions, or randomized drops.

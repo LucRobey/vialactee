@@ -116,7 +116,7 @@ Do not guess how the architecture works. Depending on the task you have been giv
   - 👉 Read `.agents/AGENT.md` to understand our `asyncio` constraints and frame-independent math requirements.
 - **If you are modifying Web App playlists, configurations, Live Deck, or Topology state:**
 
-  - 👉 Read `wabb-interface/README.md`, `connectors/README.md`, and `core/precisions/mode_master.md`. Keep `data/configurations.json` as the source of truth and preserve the `/ws` state snapshot flow.
+  - 👉 Read `wabb-interface/README.md`, `wabb-interface/design rules/topology.md`, `connectors/README.md`, and `core/precisions/mode_master.md`. Keep `data/configurations.json` as the source of truth and preserve the `/ws` state snapshot flow. Topology **LIVE** uses instructions for runtime segment mode/direction only; persisting presets uses `POST /api/configurations` from **MODIFY** or **BUILD** only.
 
 ---
 

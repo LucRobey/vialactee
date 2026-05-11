@@ -134,7 +134,11 @@ Once a configuration is picked, `update_segments_modes()` passes the new targets
 ### 4. External Web App Instructions
 At any time, the Wabb web app can send JSON instructions through `Connector.py` and `/ws`. `process_instruction()` handles the supported page/action pairs for Live Deck, Topology, Auto-DJ, and System controls.
 
-The web app never owns playlist or configuration names. Both Python and React load them from `data/configurations.json`. Topology saves use `POST /api/configurations`, after which `Mode_master.load_configurations()` refreshes the in-memory playlist list and the connector broadcasts a fresh snapshot.
+The web app never owns playlist or configuration names. Both Python and React load them from `data/configurations.json`. Topology **persists** presets only through `POST /api/configurations` from `MODIFY` / `BUILD`; after a save, `Mode_master.load_configurations()` refreshes the in-memory playlist list and the connector broadcasts a fresh snapshot.
+
+**Topology runtime overrides:** `page: "topology"`, `action: "select_segment_mode"` / `"toggle_segment_direction"` call `Segment.execute_mode_swap()` / `change_way()` on the live instances. They do **not** mutate `data/configurations.json` or the in-memory playlist tables.
+
+**Active configuration isolation:** When a configuration is applied (`_apply_configuration`, initial pick, or `change_configuration`), `Mode_master` stores a shallow copy of that preset’s `modes` and `way` dicts on `activ_configuration`. Live segment swaps therefore cannot accidentally rewrite the shared configuration objects loaded from `data/configurations.json`.
 
 ### 5. State Snapshot Contract
 `get_state_snapshot()` returns a JSON-safe view of:
