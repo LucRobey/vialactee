@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { AVAILABLE_MODES } from '../../constants/modes';
@@ -7,6 +7,10 @@ import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from 
 import { loadConfigurationStore, saveConfigurationStore, type SegmentConfiguration } from '../../utils/configurationStore';
 
 export type EditorMode = 'LIVE' | 'MODIFY' | 'BUILD';
+
+type LiveSegmentPending = { mode?: string; direction?: 'UP' | 'DOWN' };
+
+const liveModeNamesMatch = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 // SVG Cable helper
 const Cable = ({ start, end, cp1, cp2 }: { start: number[], end: number[], cp1: number[], cp2: number[] }) => {
@@ -54,6 +58,15 @@ export const TopologyEditor = () => {
   const [playlistNameDraft, setPlaylistNameDraft] = useState('');
   const playlistLightColor = playlist ? (playlistIndex % 2 === 0 ? '#00ffff' : '#ff00ff') : '#555';
 
+  /** While LIVE, WS snapshots can arrive before the server applies our mode/direction instruction — hold optimistic values until the snapshot matches. */
+  const pendingLiveSegmentEditsRef = useRef<Map<string, LiveSegmentPending>>(new Map());
+
+  useEffect(() => {
+    if (editorMode !== 'LIVE') {
+      pendingLiveSegmentEditsRef.current.clear();
+    }
+  }, [editorMode]);
+
   const applyModeMasterState = useCallback((state: ModeMasterState) => {
     if (state.playlists.length > 0) {
       setApiPlaylists(state.playlists);
@@ -78,10 +91,45 @@ export const TopologyEditor = () => {
         if (!liveSegment) {
           return seg;
         }
+        const map = pendingLiveSegmentEditsRef.current;
+        let mode = liveSegment.mode;
+        let direction = liveSegment.direction;
+
+        const consumePending = (id: string, next: LiveSegmentPending | undefined) => {
+          if (!next || (next.mode === undefined && next.direction === undefined)) {
+            map.delete(id);
+          } else {
+            map.set(id, next);
+          }
+        };
+
+        let pend = map.get(seg.id);
+        if (pend?.mode !== undefined) {
+          if (liveModeNamesMatch(liveSegment.mode, pend.mode)) {
+            const { mode: _drop, ...rest } = pend;
+            pend = Object.keys(rest).length ? (rest as LiveSegmentPending) : undefined;
+            consumePending(seg.id, pend);
+          } else {
+            mode = pend.mode;
+          }
+        }
+
+        pend = map.get(seg.id);
+        if (pend?.direction !== undefined) {
+          if (liveSegment.direction === pend.direction) {
+            const { direction: _drop, ...rest } = pend;
+            pend = Object.keys(rest).length ? (rest as LiveSegmentPending) : undefined;
+            consumePending(seg.id, pend);
+            direction = liveSegment.direction;
+          } else {
+            direction = pend.direction;
+          }
+        }
+
         return {
           ...seg,
-          mode: liveSegment.mode,
-          direction: liveSegment.direction,
+          mode,
+          direction,
         };
       }));
     }
@@ -103,6 +151,27 @@ export const TopologyEditor = () => {
   useEffect(() => {
     setPlaylistNameDraft(playlist);
   }, [playlist]);
+
+  /** Restore segment modes/directions from the saved store only (does not hit the server). */
+  const applyStoredConfigurationToSegments = useCallback(
+    (playlistKey: string, configurationName: string) => {
+      if (!playlistKey || !configurationName) return;
+      const configsForPlaylist = apiConfigurations[playlistKey] || [];
+      const selectedConfig = configsForPlaylist.find(c => c.name === configurationName);
+      if (!selectedConfig) return;
+      setSegments(prev =>
+        prev.map(seg => {
+          const key = `Segment ${seg.id}`;
+          const mode = selectedConfig.modes[key] || seg.mode;
+          const direction = selectedConfig.way
+            ? selectedConfig.way[key] || (seg as { direction?: string }).direction || 'UP'
+            : (seg as { direction?: string }).direction || 'UP';
+          return { ...seg, mode, direction };
+        })
+      );
+    },
+    [apiConfigurations]
+  );
 
   const persistPlaylistStore = (
     playlists: string[],
@@ -179,20 +248,15 @@ export const TopologyEditor = () => {
       action: 'select_configuration',
       payload: { playlist, configuration: selectedName }
     });
-    const configsForPlaylist = apiConfigurations[playlist] || [];
-    const selectedConfig = configsForPlaylist.find(config => config.name === selectedName);
-    if (selectedConfig) {
-      // Map it back to segments
-      setSegments(prev => prev.map(seg => {
-        const key = `Segment ${seg.id}`;
-        const mode = selectedConfig.modes[key] || seg.mode;
-        const direction = selectedConfig.way ? (selectedConfig.way[key] || (seg as any).direction || 'UP') : ((seg as any).direction || 'UP');
-        return { ...seg, mode, direction };
-      }));
-    }
+    applyStoredConfigurationToSegments(playlist, selectedName);
   };
 
   const handleSave = () => {
+    if (editorMode === 'LIVE') {
+      return alert(
+        'Live mode only sends mode changes to the running show. They are not written to configurations.json. Switch to MODIFY or BUILD to save a preset.'
+      );
+    }
     if (!configName) return alert("Please enter a configuration name.");
     if (!playlist) return alert("Please select a playlist before saving.");
 
@@ -314,6 +378,10 @@ export const TopologyEditor = () => {
       action: 'select_segment_mode',
       payload: { segmentId: selectedSegId, mode: modeName }
     });
+    if (editorMode === 'LIVE') {
+      const prev = pendingLiveSegmentEditsRef.current.get(selectedSegId) ?? {};
+      pendingLiveSegmentEditsRef.current.set(selectedSegId, { ...prev, mode: modeName });
+    }
     setSegments(prev => prev.map(seg => seg.id === selectedSegId ? { ...seg, mode: modeName } : seg));
   };
 
@@ -327,6 +395,10 @@ export const TopologyEditor = () => {
         action: 'toggle_segment_direction',
         payload: { segmentId: id, direction }
       });
+      if (editorMode === 'LIVE') {
+        const prev = pendingLiveSegmentEditsRef.current.get(id) ?? {};
+        pendingLiveSegmentEditsRef.current.set(id, { ...prev, direction });
+      }
       return { ...seg, direction };
     }));
   };
@@ -418,8 +490,12 @@ export const TopologyEditor = () => {
           {(['LIVE', 'MODIFY', 'BUILD'] as const).map(mode => (
             <div key={mode}
               onClick={() => {
+                const prevMode = editorMode;
                 setEditorMode(mode);
                 sendInstruction({ page: 'topology', action: 'set_editor_mode', payload: { mode } });
+                if (prevMode === 'LIVE' && mode === 'MODIFY' && playlist && selectedConfigName) {
+                  applyStoredConfigurationToSegments(playlist, selectedConfigName);
+                }
               }}
               style={{
                 width: '85%', textAlign: 'center', padding: '6px 0',

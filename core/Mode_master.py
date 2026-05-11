@@ -265,7 +265,7 @@ class Mode_master:
         Initialize the starting configuration by picking a random one from available playlists.
         """
         #On initialise en prenant une conf au pif dans une playlist au pif
-        self.activ_configuration = self.pick_a_random_conf()
+        self.activ_configuration = self._detach_configuration_modes(self.pick_a_random_conf())
         self.update_segments_modes()
 
         
@@ -308,7 +308,7 @@ class Mode_master:
         last_configuration = self.activ_configuration
         loop_guard = 0
         while (last_configuration==self.activ_configuration and loop_guard < 10):
-            self.activ_configuration = self.pick_a_random_conf()
+            self.activ_configuration = self._detach_configuration_modes(self.pick_a_random_conf())
             loop_guard += 1
         #on l'applique à tous les segments
         self.update_segments_modes(transition_config)
@@ -408,8 +408,22 @@ class Mode_master:
                     }
         return None
 
+    def _detach_configuration_modes(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Shallow-copy modes/way so live segment swaps never mutate the in-memory playlist store.
+        """
+        if not isinstance(config, dict):
+            return {}
+        modes = config.get("modes")
+        way = config.get("way")
+        return {
+            **config,
+            "modes": dict(modes) if isinstance(modes, dict) else {},
+            "way": dict(way) if isinstance(way, dict) else {},
+        }
+
     def _apply_configuration(self, config: Dict[str, Any], transition_config: Optional[Dict[str, Any]]) -> None:
-        self.activ_configuration = config
+        self.activ_configuration = self._detach_configuration_modes(config)
         self.update_segments_modes(transition_config)
 
     def _persist_app_config_value(self, key: str, value: Any) -> None:
