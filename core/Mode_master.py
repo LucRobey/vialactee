@@ -4,9 +4,11 @@ import json
 import logging
 import os
 import random
+import sys
 import time
 from typing import Dict, Any, List, Optional
 
+import connectors.System_status as System_status
 import core.Segment as Segment
 import core.Listener as Listener
 import core.Transition_Director as Transition_Director
@@ -106,6 +108,8 @@ class Mode_master:
         self.selected_transition_config = {"type": "fade_in_out", "duration": 2.0}
         self.queued_configuration_name: Optional[str] = None
         self.mode_settings_catalog: Dict[str, Dict[str, Any]] = {}
+        self.pending_system_action: Optional[str] = None
+        self._last_update_monotonic: Optional[float] = None
 
         self.load_configurations()
 
@@ -113,6 +117,7 @@ class Mode_master:
         self.mode_settings_catalog = self._build_mode_settings_catalog()
         self.initiate_configuration()
         self.transition_director = Transition_Director.Transition_Director(self, self.listener, self.infos)
+        self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list)
 
     def set_connector(self, connector: Any) -> None:
         """
@@ -122,6 +127,60 @@ class Mode_master:
             connector: The connector instance.
         """
         self.appli_connector = connector
+
+    def _websocket_count(self) -> int:
+        if self.appli_connector is None:
+            return 0
+        return len(getattr(self.appli_connector, "active_websockets", []))
+
+    def _set_system_action_feedback(self, action: str, state: str, message: str) -> None:
+        self.system_status.set_last_action(action, state, message)
+
+    async def _restart_python_process_task(self) -> None:
+        try:
+            await asyncio.sleep(0.35)
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        except Exception as exc:
+            self.pending_system_action = None
+            self.logger.error("(MM) Could not restart python process: %s", exc)
+            self._set_system_action_feedback(
+                "restart_python_loop",
+                "error",
+                f"Python restart failed: {exc}",
+            )
+
+    async def _reboot_raspberry_task(self) -> None:
+        try:
+            await asyncio.sleep(0.35)
+            command = self.system_status.resolve_reboot_command()
+            if command is None:
+                raise RuntimeError("No reboot command found on this host.")
+
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await process.communicate()
+            self.pending_system_action = None
+
+            if process.returncode != 0:
+                error_text = (stderr or stdout or b"").decode("utf-8", errors="ignore").strip()
+                raise RuntimeError(error_text or f"Command exited with code {process.returncode}")
+
+            self._set_system_action_feedback(
+                "restart_raspberry_pi",
+                "success",
+                "Reboot command accepted. The Raspberry should relaunch the app after boot.",
+            )
+        except Exception as exc:
+            self.pending_system_action = None
+            self.logger.error("(MM) Could not reboot Raspberry host: %s", exc)
+            self._set_system_action_feedback(
+                "restart_raspberry_pi",
+                "error",
+                f"Reboot failed: {exc}",
+            )
 
     def _selected_transition_label(self) -> str:
         transition_type = self.selected_transition_config.get("type")
@@ -330,6 +389,7 @@ class Mode_master:
             "segments": segments,
             "modeSettingsCatalog": list(self.mode_settings_catalog.values()),
             "modeSettings": self._get_effective_mode_settings(),
+            "system": self.system_status.get_snapshot(self._websocket_count()),
         }
 
     async def update_forever(self) -> None:
@@ -347,6 +407,11 @@ class Mode_master:
         Updates the audio listener, flushes hardware LED buffers, updates all
         segments, and evaluates global transitions via the Transition_Director.
         """
+        frame_start = time.monotonic()
+        frame_dt = None if self._last_update_monotonic is None else frame_start - self._last_update_monotonic
+        self._last_update_monotonic = frame_start
+        self.system_status.note_loop_tick(frame_dt)
+
         # Profiler cleans up the time_time() boilerplate
         with self.profiler.measure("listener.update()"):
             self.listener.update()
@@ -762,9 +827,45 @@ class Mode_master:
             return {"applied": False, "reason": "unsupported_mode_settings_action"}
 
         if page == "system":
-            if action in {"restart_python_loop", "restart_raspberry_pi"}:
-                self.logger.warning("(MM) System action requested via web interface: %s", action)
-                return {"applied": False, "reason": "system_action_not_implemented"}
+            if action == "restart_python_loop":
+                if self.pending_system_action is not None:
+                    return {"applied": False, "reason": "system_action_already_pending"}
+
+                capability = self.system_status.get_restart_python_capability()
+                if not capability.get("available", False):
+                    message = capability.get("reason") or "Python restart is unavailable."
+                    self._set_system_action_feedback(action, "error", message)
+                    return {"applied": False, "reason": "restart_python_unavailable", "message": message}
+
+                self.pending_system_action = action
+                self._set_system_action_feedback(
+                    action,
+                    "pending",
+                    "Restarting the Python process...",
+                )
+                asyncio.create_task(self._restart_python_process_task())
+                return {"applied": True, "status": "pending"}
+
+            if action == "restart_raspberry_pi":
+                if self.pending_system_action is not None:
+                    return {"applied": False, "reason": "system_action_already_pending"}
+
+                capability = self.system_status.get_reboot_raspberry_capability()
+                if not capability.get("available", False):
+                    message = capability.get("reason") or "Raspberry reboot is unavailable."
+                    self._set_system_action_feedback(action, "error", message)
+                    return {"applied": False, "reason": "restart_raspberry_unavailable", "message": message}
+
+                self.pending_system_action = action
+                self._set_system_action_feedback(
+                    action,
+                    "pending",
+                    "Reboot command queued. The app should return automatically after boot.",
+                )
+                asyncio.create_task(self._reboot_raspberry_task())
+                return {"applied": True, "status": "pending"}
+
+            return {"applied": False, "reason": "unsupported_system_action"}
 
         return {"applied": False, "reason": "unsupported_instruction"}
 
