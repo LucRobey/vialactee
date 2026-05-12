@@ -15,6 +15,9 @@ import core.Mode_master as Mode_master
 import hardware.HardwareFactory as HardwareFactory
 
 
+RESTART_REQUESTED = "restart_requested"
+
+
 def resolve_npm_executable() -> Optional[str]:
     # On Windows, npm is usually exposed as npm.cmd.
     npm_exec = shutil.which("npm") or shutil.which("npm.cmd")
@@ -90,7 +93,7 @@ async def launch_webapp(infos: Dict[str, Any]) -> None:
         raise
 
 
-async def main() -> None:
+async def main() -> Optional[str]:
     logging.basicConfig(level=logging.INFO, format='%(levelname)s - [%(name)s] - %(message)s')
     
     config_path = "config/app_config.json"
@@ -125,8 +128,11 @@ async def main() -> None:
     connector = Connector.Connector(mode_master, infos)
     mode_master.set_connector(connector)
 
+    restart_task = asyncio.create_task(mode_master.wait_for_restart_request(), name="RestartRequest")
+
     # Python 3.10 compatible task cancellation (since you're not on 3.11+)
     tasks = [
+        restart_task,
         asyncio.create_task(mode_master.update_forever(), name="ModeMaster"),
         asyncio.create_task(local_microphone.listen_forever(), name="Microphone")
     ]
@@ -136,6 +142,11 @@ async def main() -> None:
 
     try:
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        should_restart = (
+            restart_task in done
+            and not restart_task.cancelled()
+            and restart_task.exception() is None
+        )
         
         # If any task completed or crashed, gracefully cancel the remaining ones
         for task in pending:
@@ -147,15 +158,34 @@ async def main() -> None:
             
         # Re-raise exceptions from the crashed task(s)
         for task in done:
+            if task is restart_task:
+                if task.cancelled():
+                    continue
+                if task.exception():
+                    raise task.exception()
+                continue
             if task.exception():
                 raise task.exception()
+        
+        return RESTART_REQUESTED if should_restart else None
                 
     except Exception as e:
         logging.error(f"Critical error in main task group: {e}")
+        return None
 
-# Run the event loop
+def run_forever() -> None:
+    while True:
+        try:
+            result = asyncio.run(main())
+        except KeyboardInterrupt:
+            break
+
+        if result != RESTART_REQUESTED:
+            break
+
+        # Keep the controller attached to the same terminal so Ctrl+C / stop still works after a web-triggered restart.
+        logging.info("Restart requested from the web app. Relaunching the controller...")
+
+
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    run_forever()

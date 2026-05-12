@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import random
-import sys
 import time
 from typing import Dict, Any, List, Optional
 
@@ -109,6 +108,7 @@ class Mode_master:
         self.queued_configuration_name: Optional[str] = None
         self.mode_settings_catalog: Dict[str, Dict[str, Any]] = {}
         self.pending_system_action: Optional[str] = None
+        self._restart_requested = asyncio.Event()
         self._last_update_monotonic: Optional[float] = None
 
         self.load_configurations()
@@ -139,7 +139,7 @@ class Mode_master:
     async def _restart_python_process_task(self) -> None:
         try:
             await asyncio.sleep(0.35)
-            os.execv(sys.executable, [sys.executable] + sys.argv)
+            self._restart_requested.set()
         except Exception as exc:
             self.pending_system_action = None
             self.logger.error("(MM) Could not restart python process: %s", exc)
@@ -148,6 +148,9 @@ class Mode_master:
                 "error",
                 f"Python restart failed: {exc}",
             )
+
+    async def wait_for_restart_request(self) -> None:
+        await self._restart_requested.wait()
 
     async def _reboot_raspberry_task(self) -> None:
         try:
