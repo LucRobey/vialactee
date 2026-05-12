@@ -3,23 +3,65 @@ import utils.rgb_hsv as RGB_HSV
 import modes.Mode as Mode
 
 class Chromatic_chaser_mode(Mode.Mode):
+    def get_settings_schema(self):
+        return [
+            {
+                "key": "speed",
+                "label": "Travel Speed",
+                "control": "slider",
+                "valueType": "number",
+                "min": 0.2,
+                "max": 8.0,
+                "step": 0.2,
+                "default": 2.0,
+                "attr": "speed",
+            },
+            {
+                "key": "fadeRatio",
+                "label": "Trail Fade",
+                "control": "slider",
+                "valueType": "number",
+                "min": 0.01,
+                "max": 0.5,
+                "step": 0.01,
+                "default": 0.05,
+                "attr": "fade_ratio",
+            },
+            {
+                "key": "bounceEnabled",
+                "label": "Bounce At Edges",
+                "control": "switch",
+                "valueType": "boolean",
+                "default": True,
+                "attr": "bounce_enabled",
+            },
+        ]
+
     def __init__(self, name, segment_name, listener, leds, indexes, rgb_list, infos):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
         self.position = 0.0
         self.speed = infos.get("chaser_speed", 2.0)
         self.direction = 1
         self.fade_ratio = infos.get("chaser_fade_ratio", 0.05)
+        self.bounce_enabled = bool(infos.get("chaser_bounce_enabled", True))
         
     def run(self):
         # 1. Update the position of the laser head
         self.position += self.speed * self.direction
         
-        # Bounce mechanism for the edges
-        if self.position >= self.nb_of_leds - 1:
-            self.position = self.nb_of_leds - 1
-            self.direction = -1
-        elif self.position <= 0:
-            self.position = 0
+        if self.bounce_enabled:
+            # Bounce mechanism for the edges
+            if self.position >= self.nb_of_leds - 1:
+                self.position = self.nb_of_leds - 1
+                self.direction = -1
+            elif self.position <= 0:
+                self.position = 0
+                self.direction = 1
+        else:
+            if self.position >= self.nb_of_leds:
+                self.position = 0.0
+            elif self.position < 0:
+                self.position = float(self.nb_of_leds - 1)
             self.direction = 1
             
         # 2. Derive the color dynamically dependent on the track's pitch gravity (Barycenter)

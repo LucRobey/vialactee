@@ -1,6 +1,12 @@
 import numpy as np
 import socket
+import json
 from hardware.HardwareInterface import HardwareInterface
+
+# Sideband UDP port used by Udp_Sender to ship segment metadata (current mode,
+# transition target) to the Fake_ESP32 simulator. Pixel data still flows on the
+# main ports (9001/9002) untouched.
+SEGMENT_METADATA_PORT = 9003
 
 class Udp_Sender(HardwareInterface):
     """
@@ -40,3 +46,25 @@ class Udp_Sender(HardwareInterface):
             self.sock.sendto(packet, (self.ip, self.port))
         except Exception as e:
             pass # Ignore network errors to avoid crashing the main loop
+
+    def set_segment_mode(self, segment_name, mode_name, target_mode_name=None):
+        """
+        Ship a small JSON UDP packet describing the active mode of a segment so
+        the Fake_ESP32 simulator can render it as a label. Sent on every frame
+        so the simulator self-recovers if it boots after the main process or
+        misses a packet. Real ESP32 hardware will simply receive packets on a
+        port it does not listen to, which is harmless.
+        """
+        payload = {
+            "type": "segment_mode",
+            "name": segment_name,
+            "mode": mode_name,
+            "target": target_mode_name,
+        }
+        try:
+            self.sock.sendto(
+                json.dumps(payload).encode("utf-8"),
+                (self.ip, SEGMENT_METADATA_PORT),
+            )
+        except Exception:
+            pass

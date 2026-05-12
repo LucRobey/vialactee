@@ -7,12 +7,12 @@ This document outlines the structural layout and user experience philosophy for 
 
 **Components:**
 *   **Stage Overview:** A simplified, non-interactive, read-only SVG map that purely mirrors what the physical LEDs are doing.
-*   **Global Configurations (Presets):** A grid of massive, thumb-friendly buttons (e.g., "Techno Peak", "Lounge") that instantly push a pre-saved state to the entire stage.
+*   **Playlist Presets:** A grid of massive, thumb-friendly buttons generated only from the playlists saved in `data/configurations.json`. The UI must not contain fallback or demo playlist names.
 *   **Macro Sliders:** Two large, high-contrast sliders:
     *   *Master Speed Multiplier* (0.1x to 3.0x)
     *   *Master Brightness* (0% to 100%)
 *   **Auto-DJ Toggle:** A simple ON/OFF switch to engage the automatic transition engine.
-*   **The DROP Button:** The focal point of the deck. A massive button that, when held, forces a hardcoded macro (like a white strobe), and triggers a massive global transition upon release.
+*   **The DROP Button:** The focal point of the deck. A massive button that executes the queued saved configuration with the selected transition.
 
 ---
 
@@ -26,27 +26,30 @@ This document outlines the structural layout and user experience philosophy for 
     *   **Lock Toggle:** A switch to lock the segment, making it immune to Auto-DJ and Global Transitions.
     *   **Segment Mute:** Instantly blacks out the selected segment.
 *   **Batch Execution:** A staged execution area where multiple segment changes sit in a "pending" state until an `EXECUTE STAGED BATCH` button is pressed.
-*   **Preset Saving:** A `SAVE AS GLOBAL PRESET` button to dump the current mix of locked/unlocked segments and modes into a new button for "The Live Deck".
+*   **Configuration Saving:** `MODIFY` and `BUILD` write the current segment mode/direction map into `data/configurations.json` through `/api/configurations`. In `LIVE`, the save control does not persist (live tweaks are runtime-only). Saved playlists and configurations become available to Live Deck after the backend reloads and broadcasts a fresh state snapshot.
 
 ---
 
-## 📐 Page 3: Topology Layout Editor (Stage Setup)
-*Philosophy: Defining the physical layout of the environment. Used during initial stage construction to ensure accurate visual representations.*
+## 📐 Page 3: Topology Editor (map + inspector)
+*Philosophy: See the chandelier layout, pick a segment, and either mirror the live show or edit saved presets.*
 
-**Components:**
-*   **Interactive Grid:** A canvas where the user can drag, scale, and rotate the physical SVG segments to match how the real-world stage was built that day.
-*   **Coordinate Sync:** Automatically saves the updated X/Y coordinates back to the Pi to ensure spatial transitions sweep correctly across the real space.
+**Components (implemented in `TopologyEditor.tsx`):**
+*   **Segment map:** Fixed stud grid with selectable segments (modes shown on tiles); junction boxes at intersections.
+*   **Dynamic inspector:** Mode tiles for the selected segment, configuration name area, playlist strip, three-way **LIVE / MODIFY / BUILD** switch.
+*   **`LIVE`:** Follows `mode_master_state` over `/ws`. Mode and direction changes go out as WebSocket instructions (`select_segment_mode`, `toggle_segment_direction`) and affect the running Python segments only, not the JSON file. The client keeps **pending** mode/direction per segment until the snapshot matches, avoiding flicker from ~30 Hz updates. Switching **LIVE → MODIFY** reapplies the selected saved configuration from the React store so edits target disk-backed presets.
+*   **`MODIFY` / `BUILD`:** Authoring modes; saving uses `POST /api/configurations` and notifies `Mode_master` to reload.
 
 ---
 
-## 🎛️ Page 4: Auto-DJ Tuning (Automation)
-*Philosophy: Designing the rules of the autonomous light jockey. Configured during soundcheck to dictate how the system behaves when left alone.*
+## 🎛️ Page 4: Mode Settings (Per-Mode Tuning)
+*Philosophy: Tuning the mathematical feel of each visual mode during soundcheck while keeping the active configuration as the persistence boundary.*
 
 **Components:**
-*   **Trigger Interval Slider:** Controls how often the system autonomously changes states (e.g., trigger every 5 minutes).
-*   **Transition Sweep Duration Slider:** Controls the speed of the visual wipe across the room (e.g., transition takes 3 seconds).
-*   **Mode Probabilities (Optional):** Weights defining which modes the Auto-DJ is more likely to select next.
-*   **Mode Configuration Frame:** A dedicated section where every mode appears as a card. Each card contains the **Deep Parameters** for that specific mode (e.g., `Ball Size`, `Tail Length`, `Color Density`), presented as dynamic sliders mapped directly to the mode's internal global variables.
+*   **Dynamic Mode Catalog:** Every loaded mode that exposes at least one setting appears automatically.
+*   **Per-Mode Cards:** Each card renders one or more controls that are inherent to that mode.
+*   **Supported Controls:** `switch`, `slider`, and `list`, all driven from backend-provided descriptors rather than hardcoded React JSX.
+*   **Live Runtime Apply:** Adjustments go out over `/ws`, are validated by `Mode_master`, and immediately affect every live segment instance currently using that mode.
+*   **Configuration Persistence:** The active configuration owns the `modeSettings` values, so saved presets carry their own tuning.
 
 ---
 
@@ -59,3 +62,10 @@ This document outlines the structural layout and user experience philosophy for 
     *   Master Power Limit Slider (Capping RGB values).
     *   `RESTART PYTHON LOOP` button.
     *   `REBOOT RASPBERRY PI` button.
+
+## Data And State Rules
+
+* `data/configurations.json` is the single source of truth for playlists and saved configurations.
+* `src/utils/configurationStore.ts` is the React load/save boundary for that JSON file.
+* `/api/configurations` is implemented both by Vite during local development and by `connectors/Connector.py` when Python serves the backend.
+* `/ws` remains the live control channel. The browser sends page/action instructions and receives `mode_master_state` snapshots describing the active playlist, active/queued configuration, transition state, luminosity, sensibility, current segment modes/directions, the mode-settings catalog, and the active configuration's effective `modeSettings`. Topology in `LIVE` treats those snapshots as authoritative once they agree with any pending user override for a segment.

@@ -3,6 +3,46 @@ import modes.Mode as Mode
 import utils.colors as colors
 
 class Hyper_strobe_mode(Mode.Mode):
+    def get_settings_schema(self):
+        band_options = [
+            {"label": f"Band {band_index + 1}", "value": band_index}
+            for band_index in range(self.listener.nb_of_fft_band)
+        ]
+        return [
+            {
+                "key": "fluxThreshold",
+                "label": "Trigger Threshold",
+                "control": "slider",
+                "valueType": "number",
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.05,
+                "default": 0.7,
+                "attr": "flux_threshold",
+            },
+            {
+                "key": "decayRatio",
+                "label": "Decay",
+                "control": "slider",
+                "valueType": "number",
+                "min": 0.01,
+                "max": 1.0,
+                "step": 0.05,
+                "default": 0.3,
+                "attr": "decay_ratio",
+            },
+            {
+                "key": "listenBand",
+                "label": "Trigger Band",
+                "control": "list",
+                "valueType": "number",
+                "integer": True,
+                "default": 1,
+                "options": band_options,
+                "attr": "listen_band",
+            },
+        ]
+
     def __init__(self, name, segment_name, listener, leds, indexes, rgb_list, infos):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
         

@@ -42,7 +42,7 @@ When updating the PyGame simulator (`hardware/Fake_leds.py`), the drawing loops 
 **IMPORTANT**: All physical vertical LED strips (`v1`, `v2`, `v3`, `v4`) are wired from bottom to top! Their geometric definitions in `Fake_leds.py` must use the `"vertical_up"` orientation, and their `start_y` corresponds geometrically to their **bottom-most coordinates**.
 
 ### 4. Port Collisions Avoidance
-When testing locally, `Main.py` leverages an `infos` dictionary config block. `startServer` is mapped to `False` to prevent the `connectors/Connector.py` TCP remote control server from continuously failing to bind to `0.0.0.0:12345` on successive `ctrl+c` / script restarts. If you are developing a connector feature, explicitly switch it to `True`.
+When testing locally, `Main.py` leverages an `infos` dictionary config block. `startServer` is mapped to `False` to prevent the `connectors/Connector.py` aiohttp remote control server from continuously failing to bind to `0.0.0.0:8080` on successive `ctrl+c` / script restarts. If you are developing a connector feature, explicitly switch it to `True`.
 
 ### 5. Code Style
 Always preserve the user's aliased import conventions exactly as they exist:

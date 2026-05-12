@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { AVAILABLE_MODES } from '../../constants/modes';
 import { initialTopology, MAP_OFFSET_C, MAP_OFFSET_R, INSPECTOR_OFFSET_C, INSPECTOR_OFFSET_R } from '../../constants/topologyData';
-import { sendInstruction } from '../../utils/controlBridge';
+import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from '../../utils/controlBridge';
+import { loadConfigurationStore, saveConfigurationStore, type ModeSettingsMap, type SegmentConfiguration } from '../../utils/configurationStore';
 
 export type EditorMode = 'LIVE' | 'MODIFY' | 'BUILD';
+
+type LiveSegmentPending = { mode?: string; direction?: 'UP' | 'DOWN' };
+
+const liveModeNamesMatch = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+const cloneModeSettings = (modeSettings: ModeSettingsMap = {}) =>
+  Object.fromEntries(
+    Object.entries(modeSettings).map(([modeName, settings]) => [modeName, { ...settings }])
+  ) as ModeSettingsMap;
 
 // SVG Cable helper
 const Cable = ({ start, end, cp1, cp2 }: { start: number[], end: number[], cp1: number[], cp2: number[] }) => {
@@ -43,34 +53,203 @@ export const TopologyEditor = () => {
   const [selectedSegId, setSelectedSegId] = useState(initialTopology[0].id);
   const [editorMode, setEditorMode] = useState<EditorMode>('LIVE');
   const [configName, setConfigName] = useState('');
+  const [selectedConfigName, setSelectedConfigName] = useState('');
   
-  // Real API state
-  const [apiPlaylists, setApiPlaylists] = useState<string[]>(['PLAYLIST_A']);
-  const [apiConfigurations, setApiConfigurations] = useState<Record<string, any[]>>({});
+  const [apiPlaylists, setApiPlaylists] = useState<string[]>([]);
+  const [apiConfigurations, setApiConfigurations] = useState<Record<string, SegmentConfiguration[]>>({});
+  const [activeModeSettings, setActiveModeSettings] = useState<ModeSettingsMap>({});
   
   const [playlistIndex, setPlaylistIndex] = useState(0);
-  const playlist = apiPlaylists[playlistIndex] || 'PLAYLIST_A';
+  const playlist = apiPlaylists[playlistIndex] || '';
+  const [playlistNameDraft, setPlaylistNameDraft] = useState('');
+  const playlistLightColor = playlist ? (playlistIndex % 2 === 0 ? '#00ffff' : '#ff00ff') : '#555';
+
+  /** While LIVE, WS snapshots can arrive before the server applies our mode/direction instruction — hold optimistic values until the snapshot matches. */
+  const pendingLiveSegmentEditsRef = useRef<Map<string, LiveSegmentPending>>(new Map());
 
   useEffect(() => {
-    fetch('/api/configurations')
-      .then(res => res.json())
-      .then(data => {
-        if(data.playlists && data.playlists.length > 0) {
-          setApiPlaylists(data.playlists);
+    if (editorMode !== 'LIVE') {
+      pendingLiveSegmentEditsRef.current.clear();
+    }
+  }, [editorMode]);
+
+  const applyModeMasterState = useCallback((state: ModeMasterState) => {
+    if (state.playlists.length > 0) {
+      setApiPlaylists(state.playlists);
+    }
+
+    setActiveModeSettings(cloneModeSettings(state.modeSettings));
+
+    if (editorMode === 'LIVE') {
+      if (state.activePlaylist) {
+        const playlists = state.playlists.length > 0 ? state.playlists : apiPlaylists;
+        const nextPlaylistIndex = playlists.findIndex(name => name === state.activePlaylist);
+        if (nextPlaylistIndex >= 0) {
+          setPlaylistIndex(nextPlaylistIndex);
         }
-        if(data.configurations) {
-          setApiConfigurations(data.configurations);
+      }
+
+      if (state.activeConfiguration) {
+        setConfigName(state.activeConfiguration);
+        setSelectedConfigName(state.activeConfiguration);
+      }
+
+      setSegments(prev => prev.map(seg => {
+        const liveSegment = state.segments.find(remote => remote.id === seg.id);
+        if (!liveSegment) {
+          return seg;
         }
+        const map = pendingLiveSegmentEditsRef.current;
+        let mode = liveSegment.mode;
+        let direction = liveSegment.direction;
+
+        const consumePending = (id: string, next: LiveSegmentPending | undefined) => {
+          if (!next || (next.mode === undefined && next.direction === undefined)) {
+            map.delete(id);
+          } else {
+            map.set(id, next);
+          }
+        };
+
+        let pend = map.get(seg.id);
+        if (pend?.mode !== undefined) {
+          if (liveModeNamesMatch(liveSegment.mode, pend.mode)) {
+            const { mode: _drop, ...rest } = pend;
+            pend = Object.keys(rest).length ? (rest as LiveSegmentPending) : undefined;
+            consumePending(seg.id, pend);
+          } else {
+            mode = pend.mode;
+          }
+        }
+
+        pend = map.get(seg.id);
+        if (pend?.direction !== undefined) {
+          if (liveSegment.direction === pend.direction) {
+            const { direction: _drop, ...rest } = pend;
+            pend = Object.keys(rest).length ? (rest as LiveSegmentPending) : undefined;
+            consumePending(seg.id, pend);
+            direction = liveSegment.direction;
+          } else {
+            direction = pend.direction;
+          }
+        }
+
+        return {
+          ...seg,
+          mode,
+          direction,
+        };
+      }));
+    }
+  }, [apiPlaylists, editorMode]);
+
+  useEffect(() => {
+    loadConfigurationStore()
+      .then(store => {
+        setApiPlaylists(store.playlists);
+        setApiConfigurations(store.configurations);
       })
       .catch(err => console.error("Could not load configurations", err));
   }, []);
 
+  useEffect(() => {
+    return subscribeModeMasterState(applyModeMasterState);
+  }, [applyModeMasterState]);
+
+  useEffect(() => {
+    setPlaylistNameDraft(playlist);
+  }, [playlist]);
+
+  /** Restore segment modes/directions from the saved store only (does not hit the server). */
+  const applyStoredConfigurationToSegments = useCallback(
+    (playlistKey: string, configurationName: string) => {
+      if (!playlistKey || !configurationName) return;
+      const configsForPlaylist = apiConfigurations[playlistKey] || [];
+      const selectedConfig = configsForPlaylist.find(c => c.name === configurationName);
+      if (!selectedConfig) return;
+      setSegments(prev =>
+        prev.map(seg => {
+          const key = `Segment ${seg.id}`;
+          const mode = selectedConfig.modes[key] || seg.mode;
+          const direction = selectedConfig.way
+            ? selectedConfig.way[key] || (seg as { direction?: string }).direction || 'UP'
+            : (seg as { direction?: string }).direction || 'UP';
+          return { ...seg, mode, direction };
+        })
+      );
+    },
+    [apiConfigurations]
+  );
+
+  const persistPlaylistStore = (
+    playlists: string[],
+    configurations: Record<string, SegmentConfiguration[]>,
+    selectedIndex: number,
+    selectedConfigName = configName
+  ) => {
+    const payload = { playlists, configurations };
+    saveConfigurationStore(payload).then(() => {
+      setApiPlaylists(playlists);
+      setApiConfigurations(configurations);
+      setPlaylistIndex(Math.max(0, Math.min(selectedIndex, playlists.length - 1)));
+      setConfigName(selectedConfigName);
+      setSelectedConfigName(selectedConfigName);
+      sendInstruction({
+        page: 'topology',
+        action: 'modify_configuration',
+        payload: { playlist: playlists[selectedIndex] || '', configuration: selectedConfigName }
+      });
+    }).catch(err => console.error(err));
+  };
+
+  const handleCreatePlaylist = () => {
+    const newName = playlistNameDraft.trim();
+    if (!newName) return alert("Please enter a playlist name.");
+    if (apiPlaylists.includes(newName)) return alert(`Playlist ${newName} already exists.`);
+
+    const nextPlaylists = [...apiPlaylists, newName];
+    const nextConfigurations = { ...apiConfigurations, [newName]: [] };
+    persistPlaylistStore(nextPlaylists, nextConfigurations, nextPlaylists.length - 1, '');
+  };
+
+  const handleRenamePlaylist = () => {
+    const newName = playlistNameDraft.trim();
+    if (!playlist) return alert("Please select a playlist to rename.");
+    if (!newName) return alert("Please enter a playlist name.");
+    if (newName === playlist) return;
+    if (apiPlaylists.includes(newName)) return alert(`Playlist ${newName} already exists.`);
+
+    const nextPlaylists = apiPlaylists.map(name => name === playlist ? newName : name);
+    const nextConfigurations = { ...apiConfigurations, [newName]: apiConfigurations[playlist] || [] };
+    delete nextConfigurations[playlist];
+    persistPlaylistStore(nextPlaylists, nextConfigurations, playlistIndex);
+  };
+
+  const handleDeletePlaylist = () => {
+    if (!playlist) return alert('Please select a playlist to delete.');
+    if (!window.confirm(`Delete playlist "${playlist}" and all of its saved configurations?`)) return;
+
+    const nextPlaylists = apiPlaylists.filter(name => name !== playlist);
+    const nextConfigurations = { ...apiConfigurations };
+    delete nextConfigurations[playlist];
+
+    const nextIndex = nextPlaylists.length === 0 ? 0 : Math.min(playlistIndex, nextPlaylists.length - 1);
+    const nextPlaylist = nextPlaylists[nextIndex] || '';
+    const nextConfigName = nextPlaylist ? (nextConfigurations[nextPlaylist]?.[0]?.name ?? '') : '';
+
+    persistPlaylistStore(nextPlaylists, nextConfigurations, nextIndex, nextConfigName);
+  };
+
   const handlePlaylistCycle = (dir: 1 | -1) => {
+    if (apiPlaylists.length === 0) {
+      return;
+    }
+
     setPlaylistIndex(prev => {
       let next = prev + dir;
       if (next >= apiPlaylists.length) next = 0;
       if (next < 0) next = apiPlaylists.length - 1;
-      const selectedPlaylist = apiPlaylists[next] || 'PLAYLIST_A';
+      const selectedPlaylist = apiPlaylists[next];
       sendInstruction({
         page: 'topology',
         action: 'select_playlist_slot',
@@ -81,28 +260,29 @@ export const TopologyEditor = () => {
   };
 
   const handleConfigSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!playlist) {
+      return;
+    }
+
     const selectedName = e.target.value;
     setConfigName(selectedName);
+    setSelectedConfigName(selectedName);
     sendInstruction({
       page: 'topology',
       action: 'select_configuration',
       payload: { playlist, configuration: selectedName }
     });
-    const configsForPlaylist = apiConfigurations[playlist] || [];
-    const selectedConfig = configsForPlaylist.find((c: any) => c.name === selectedName);
-    if (selectedConfig) {
-      // Map it back to segments
-      setSegments(prev => prev.map(seg => {
-        const key = `Segment ${seg.id}`;
-        const mode = selectedConfig.modes[key] || seg.mode;
-        const direction = selectedConfig.way ? (selectedConfig.way[key] || (seg as any).direction || 'UP') : ((seg as any).direction || 'UP');
-        return { ...seg, mode, direction };
-      }));
-    }
+    applyStoredConfigurationToSegments(playlist, selectedName);
   };
 
   const handleSave = () => {
+    if (editorMode === 'LIVE') {
+      return alert(
+        'Live mode only sends mode changes to the running show. They are not written to configurations.json. Switch to MODIFY or BUILD to save a preset.'
+      );
+    }
     if (!configName) return alert("Please enter a configuration name.");
+    if (!playlist) return alert("Please select a playlist before saving.");
 
     const newModes: Record<string, string> = {};
     const newWay: Record<string, string> = {};
@@ -112,17 +292,26 @@ export const TopologyEditor = () => {
       newWay[key] = (seg as any).direction || 'UP';
     });
 
+    const existingConfig =
+      (apiConfigurations[playlist] || []).find(config => config.name === (selectedConfigName || configName)) ?? null;
+    const nextModeSettings =
+      Object.keys(activeModeSettings).length > 0
+        ? cloneModeSettings(activeModeSettings)
+        : cloneModeSettings(existingConfig?.modeSettings || {});
+
     const newConfig = {
       name: configName,
       modes: newModes,
-      way: newWay
+      way: newWay,
+      modeSettings: nextModeSettings,
     };
 
     const updatedConfigs = { ...apiConfigurations };
     if (!updatedConfigs[playlist]) updatedConfigs[playlist] = [];
 
     if (editorMode === 'MODIFY') {
-      const idx = updatedConfigs[playlist].findIndex((c:any) => c.name === configName);
+      const configToUpdate = selectedConfigName || configName;
+      const idx = updatedConfigs[playlist].findIndex(config => config.name === configToUpdate);
       if (idx !== -1) {
         updatedConfigs[playlist][idx] = newConfig;
       } else {
@@ -137,17 +326,79 @@ export const TopologyEditor = () => {
       configurations: updatedConfigs
     };
 
-    fetch('/api/configurations', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    }).then(() => {
+    saveConfigurationStore(payload).then(() => {
       setApiConfigurations(updatedConfigs);
+      setSelectedConfigName(configName);
       sendInstruction({
         page: 'topology',
         action: editorMode === 'BUILD' ? 'build_configuration' : 'modify_configuration',
         payload: { playlist, configuration: configName }
       });
       alert(`Configuration ${configName} saved successfully to ${playlist}!`);
+    }).catch(err => console.error(err));
+  };
+
+  const handleRenameConfiguration = () => {
+    const newName = configName.trim();
+    if (!playlist) return alert("Please select a playlist first.");
+    if (!selectedConfigName) return alert("Please select a configuration to rename.");
+    if (!newName) return alert("Please enter a new configuration name.");
+    if (newName === selectedConfigName) return;
+
+    const configsForPlaylist = apiConfigurations[playlist] || [];
+    if (configsForPlaylist.some(config => config.name === newName)) {
+      return alert(`Configuration ${newName} already exists in ${playlist}.`);
+    }
+
+    const updatedConfigs = {
+      ...apiConfigurations,
+      [playlist]: configsForPlaylist.map(config =>
+        config.name === selectedConfigName ? { ...config, name: newName } : config
+      ),
+    };
+    const payload = {
+      playlists: apiPlaylists,
+      configurations: updatedConfigs,
+    };
+
+    saveConfigurationStore(payload).then(() => {
+      setApiConfigurations(updatedConfigs);
+      setSelectedConfigName(newName);
+      setConfigName(newName);
+      sendInstruction({
+        page: 'topology',
+        action: 'modify_configuration',
+        payload: { playlist, configuration: newName }
+      });
+    }).catch(err => console.error(err));
+  };
+
+  const handleDeleteConfiguration = () => {
+    if (!playlist) return alert("Please select a playlist first.");
+    if (!selectedConfigName) return alert("Please select a configuration to delete.");
+    if (!window.confirm(`Delete configuration ${selectedConfigName} from ${playlist}?`)) return;
+
+    const configsForPlaylist = apiConfigurations[playlist] || [];
+    const updatedPlaylistConfigs = configsForPlaylist.filter(config => config.name !== selectedConfigName);
+    const nextConfigName = updatedPlaylistConfigs[0]?.name || '';
+    const updatedConfigs = {
+      ...apiConfigurations,
+      [playlist]: updatedPlaylistConfigs,
+    };
+    const payload = {
+      playlists: apiPlaylists,
+      configurations: updatedConfigs,
+    };
+
+    saveConfigurationStore(payload).then(() => {
+      setApiConfigurations(updatedConfigs);
+      setSelectedConfigName(nextConfigName);
+      setConfigName(nextConfigName);
+      sendInstruction({
+        page: 'topology',
+        action: 'modify_configuration',
+        payload: { playlist, configuration: nextConfigName }
+      });
     }).catch(err => console.error(err));
   };
 
@@ -159,6 +410,10 @@ export const TopologyEditor = () => {
       action: 'select_segment_mode',
       payload: { segmentId: selectedSegId, mode: modeName }
     });
+    if (editorMode === 'LIVE') {
+      const prev = pendingLiveSegmentEditsRef.current.get(selectedSegId) ?? {};
+      pendingLiveSegmentEditsRef.current.set(selectedSegId, { ...prev, mode: modeName });
+    }
     setSegments(prev => prev.map(seg => seg.id === selectedSegId ? { ...seg, mode: modeName } : seg));
   };
 
@@ -172,6 +427,10 @@ export const TopologyEditor = () => {
         action: 'toggle_segment_direction',
         payload: { segmentId: id, direction }
       });
+      if (editorMode === 'LIVE') {
+        const prev = pendingLiveSegmentEditsRef.current.get(id) ?? {};
+        pendingLiveSegmentEditsRef.current.set(id, { ...prev, direction });
+      }
       return { ...seg, direction };
     }));
   };
@@ -263,8 +522,12 @@ export const TopologyEditor = () => {
           {(['LIVE', 'MODIFY', 'BUILD'] as const).map(mode => (
             <div key={mode}
               onClick={() => {
+                const prevMode = editorMode;
                 setEditorMode(mode);
                 sendInstruction({ page: 'topology', action: 'set_editor_mode', payload: { mode } });
+                if (prevMode === 'LIVE' && mode === 'MODIFY' && playlist && selectedConfigName) {
+                  applyStoredConfigurationToSegments(playlist, selectedConfigName);
+                }
               }}
               style={{
                 width: '85%', textAlign: 'center', padding: '6px 0',
@@ -520,10 +783,10 @@ export const TopologyEditor = () => {
       </GridSpot>
 
       {/* Configuration Name Input Inset */}
-      <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 13} style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}>
+      <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 12} style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}>
         <div style={{
           width: `${LEGO_MATH.physicalSize(18)}px`,
-          height: `${LEGO_MATH.physicalSize(2)}px`,
+          height: `${LEGO_MATH.physicalSize(5)}px`,
           backgroundColor: '#0a0a0a',
           border: 'calc(0.2 * var(--stud)) solid #a0a5a9',
           borderTopColor: '#dcdcdc',
@@ -533,68 +796,168 @@ export const TopologyEditor = () => {
           borderRadius: '4px',
           boxShadow: editorMode !== 'LIVE' ? 'inset 4px 4px 15px rgba(0,0,0,0.9), inset 0 0 15px rgba(252, 208, 0, 0.1), 0 0 20px rgba(252, 208, 0, 0.2), 4px 4px 10px rgba(0,0,0,0.6)' : 'inset 4px 4px 15px rgba(0,0,0,0.9), 4px 4px 10px rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 10px',
+          padding: '8px 10px',
           boxSizing: 'border-box',
           position: 'relative'
         }}>
-          <div className="lcd-screen-fx" style={{ width: '100%', position: 'relative', display: 'flex', justifyContent: 'center' }}>
+          <div className="lcd-screen-fx" style={{ width: '100%', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
             {editorMode === 'MODIFY' ? (
-              <select
-                value={configName}
-                onChange={handleConfigSelect}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fcd000',
-                  fontFamily: 'monospace',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  textShadow: '0 0 8px rgba(252, 208, 0, 0.6)',
-                  width: '100%',
-                  textAlign: 'center',
-                  outline: 'none',
-                  letterSpacing: '1px',
-                  appearance: 'none',
-                  cursor: 'pointer'
+              <>
+                <select
+                  value={selectedConfigName}
+                  onChange={handleConfigSelect}
+                  style={{
+                    background: '#050505',
+                    border: '1px solid #333',
+                    borderRadius: '2px',
+                    color: '#00ffff',
+                    fontFamily: 'monospace',
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    textShadow: '0 0 8px rgba(0, 255, 255, 0.6)',
+                    width: '100%',
+                    height: '24px',
+                    textAlign: 'center',
+                    outline: 'none',
+                    letterSpacing: '1px',
+                    appearance: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="" disabled style={{ background: '#0a0a0a' }}>[SELECT CONFIG]</option>
+                  {(apiConfigurations[playlist] || []).map((cfg) => (
+                    <option key={cfg.name} value={cfg.name} style={{ background: '#0a0a0a', color: '#fcd000' }}>
+                      {cfg.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  placeholder="[CONFIG NAME]"
+                  style={{
+                    background: '#050505',
+                    border: '1px solid #333',
+                    borderRadius: '2px',
+                    color: '#fcd000',
+                    fontFamily: 'monospace',
+                    fontSize: '0.8rem',
+                    fontWeight: 'bold',
+                    textShadow: '0 0 8px rgba(252, 208, 0, 0.6)',
+                    width: '100%',
+                    height: '24px',
+                    textAlign: 'center',
+                    outline: 'none',
+                    letterSpacing: '1px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                  {[
+                    { label: 'REN', onClick: handleRenameConfiguration, color: '#fcd000' },
+                    { label: 'DEL', onClick: handleDeleteConfiguration, color: '#d22020' },
+                  ].map(action => (
+                    <button
+                      key={action.label}
+                      onClick={action.onClick}
+                      style={{
+                        flex: 1,
+                        height: '22px',
+                        border: '1px solid rgba(0,0,0,0.8)',
+                        borderRadius: '2px',
+                        backgroundColor: action.color,
+                        color: action.label === 'DEL' ? '#fff' : '#000',
+                        cursor: 'pointer',
+                        fontSize: '0.55rem',
+                        fontWeight: '900',
+                        letterSpacing: '1px',
+                        boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), inset -2px -2px 3px rgba(0,0,0,0.35), 2px 2px 4px rgba(0,0,0,0.7)'
+                      }}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={handleSave} style={{
+                  alignSelf: 'center',
+                  position: 'relative',
+                  width: '45px', height: '45px', borderRadius: '50%', border: 'none', outline: 'none',
+                  backgroundColor: '#ffcd00',
+                  cursor: 'pointer',
+                  boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.4), 3px 3px 6px rgba(0,0,0,0.8), 0 0 15px rgba(255,205,0,0.8)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#000', fontWeight: '900', fontSize: '0.6rem', letterSpacing: '0px', transition: 'all 0.1s ease', zIndex: 10
                 }}
-              >
-                <option value="" disabled style={{ background: '#0a0a0a' }}>[SELECT CONFIG]</option>
-                {(apiConfigurations[playlist] || []).map((cfg: any) => (
-                  <option key={cfg.name} value={cfg.name} style={{ background: '#0a0a0a', color: '#fcd000' }}>
-                    {cfg.name}
-                  </option>
-                ))}
-              </select>
+                onMouseDown={(e) => e.currentTarget.style.transform = 'translateY(2px)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{
+                    position: 'absolute', width: '28px', height: '28px', borderRadius: '50%',
+                    backgroundColor: '#ffcd00',
+                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), inset -1px -1px 3px rgba(0,0,0,0.3), 1px 1px 3px rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <span style={{ position: 'relative', zIndex: 10, opacity: 0.8 }}>UPD</span>
+                  </div>
+                </button>
+              </>
             ) : (
-              <input
-                type="text"
-                value={configName}
-                onChange={(e) => setConfigName(e.target.value)}
-                placeholder="[CONFIG NAME]"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fcd000',
-                  fontFamily: 'monospace',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  textShadow: '0 0 8px rgba(252, 208, 0, 0.6)',
-                  width: '100%',
-                  textAlign: 'center',
-                  outline: 'none',
-                  letterSpacing: '1px'
+              <>
+                <input
+                  type="text"
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  placeholder="[CONFIG NAME]"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fcd000',
+                    fontFamily: 'monospace',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    textShadow: '0 0 8px rgba(252, 208, 0, 0.6)',
+                    width: '100%',
+                    textAlign: 'center',
+                    outline: 'none',
+                    letterSpacing: '1px'
+                  }}
+                />
+                <button onClick={handleSave} style={{
+                  alignSelf: 'center',
+                  position: 'relative',
+                  width: '45px', height: '45px', borderRadius: '50%', border: 'none', outline: 'none',
+                  backgroundColor: '#da291c',
+                  cursor: 'pointer',
+                  boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.4), 3px 3px 6px rgba(0,0,0,0.8), 0 0 15px rgba(218,41,28,0.8)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#000', fontWeight: '900', fontSize: '0.6rem', letterSpacing: '0px', transition: 'all 0.1s ease', zIndex: 10
                 }}
-              />
+                onMouseDown={(e) => e.currentTarget.style.transform = 'translateY(2px)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{
+                    position: 'absolute', width: '28px', height: '28px', borderRadius: '50%',
+                    backgroundColor: '#da291c',
+                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), inset -1px -1px 3px rgba(0,0,0,0.3), 1px 1px 3px rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <span style={{ position: 'relative', zIndex: 10, opacity: 0.8 }}>SAVE</span>
+                  </div>
+                </button>
+              </>
             )}
           </div>
           {editorMode === 'MODIFY' && (
-            <div style={{ position: 'absolute', right: '15px', color: '#fcd000', pointerEvents: 'none', fontSize: '0.6rem' }}>▼</div>
+            <div style={{ position: 'absolute', right: '15px', top: '18px', color: '#00ffff', pointerEvents: 'none', fontSize: '0.6rem' }}>▼</div>
           )}
         </div>
       </GridSpot>
 
       {/* Playlist Selection Inset */}
-      <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 16} style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}>
+      <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 17} style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}>
         <div style={{
           width: `${LEGO_MATH.physicalSize(18)}px`,
           height: `${LEGO_MATH.physicalSize(5)}px`,
@@ -616,54 +979,82 @@ export const TopologyEditor = () => {
           <div style={{
             position: 'absolute', top: '12px', left: '15px',
             width: '14px', height: '14px', borderRadius: '50%',
-            backgroundColor: playlist === 'PLAYLIST_A' ? '#00ffff' : '#ff00ff',
-            boxShadow: `inset 2px 2px 4px rgba(255,255,255,0.8), inset -2px -2px 4px rgba(0,0,0,0.5), 0 0 10px ${playlist === 'PLAYLIST_A' ? '#00ffff' : '#ff00ff'}`,
+            backgroundColor: playlistLightColor,
+            boxShadow: `inset 2px 2px 4px rgba(255,255,255,0.8), inset -2px -2px 4px rgba(0,0,0,0.5), 0 0 10px ${playlistLightColor}`,
             border: '1px solid rgba(0,0,0,0.8)'
           }}></div>
 
           {/* Playlist Info */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '50%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '58%', gap: '5px' }}>
             <div style={{ color: '#888', fontSize: '0.6rem', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '4px' }}>PLAYLIST</div>
             <div className="lcd-screen-fx" style={{
-              width: '100%', height: '24px', backgroundColor: '#050505',
+              width: '100%', height: '22px', backgroundColor: '#050505',
               color: '#00ffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: 'monospace', fontSize: '0.7rem', textAlign: 'center',
               boxShadow: 'inset 0 0 8px #000, 0 0 10px rgba(0, 255, 255, 0.2)', border: '1px solid #222',
               textShadow: '0 0 5px #00ffff', borderRadius: '2px'
             }}>
-              {playlist}
+              {playlist || '[NO PLAYLIST]'}
+            </div>
+            <input
+              type="text"
+              value={playlistNameDraft}
+              onChange={(e) => setPlaylistNameDraft(e.target.value)}
+              placeholder="[PLAYLIST NAME]"
+              style={{
+                width: '100%',
+                height: '22px',
+                backgroundColor: '#050505',
+                border: '1px solid #333',
+                borderRadius: '2px',
+                boxSizing: 'border-box',
+                color: '#fcd000',
+                fontFamily: 'monospace',
+                fontSize: '0.65rem',
+                fontWeight: 'bold',
+                letterSpacing: '0.5px',
+                outline: 'none',
+                padding: '0 7px',
+                textAlign: 'center',
+                textShadow: '0 0 6px rgba(252, 208, 0, 0.5)'
+              }}
+            />
+            <div style={{ display: 'flex', gap: '4px', width: '100%', flexWrap: 'wrap' }}>
+              {[
+                { label: 'NEW', onClick: handleCreatePlaylist, color: '#28a745', fg: '#000' as const },
+                { label: 'REN', onClick: handleRenamePlaylist, color: '#fcd000', fg: '#000' as const },
+                { label: 'DEL', onClick: handleDeletePlaylist, color: '#d22020', fg: '#fff' as const },
+              ].map(action => (
+                <button
+                  key={action.label}
+                  onClick={action.onClick}
+                  style={{
+                    flex: '1 1 28%',
+                    minWidth: '0',
+                    height: '22px',
+                    border: '1px solid rgba(0,0,0,0.8)',
+                    borderRadius: '2px',
+                    backgroundColor: action.color,
+                    color: action.fg,
+                    cursor: 'pointer',
+                    fontSize: '0.55rem',
+                    fontWeight: '900',
+                    letterSpacing: '1px',
+                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), inset -2px -2px 3px rgba(0,0,0,0.35), 2px 2px 4px rgba(0,0,0,0.7)'
+                  }}
+                >
+                  {action.label}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Cycle Buttons */}
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <button className="cheese-slope-btn left" onClick={() => handlePlaylistCycle(-1)}>{"<"}</button>
             <button className="cheese-slope-btn right" onClick={() => handlePlaylistCycle(1)}>{">"}</button>
           </div>
 
-          {/* Save Button (1x1 Round Plate) */}
-          <button onClick={handleSave} style={{
-            position: 'relative',
-            width: '45px', height: '45px', borderRadius: '50%', border: 'none', outline: 'none',
-            backgroundColor: editorMode === 'BUILD' ? '#da291c' : '#ffcd00', 
-            cursor: 'pointer',
-            boxShadow: `inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.4), 3px 3px 6px rgba(0,0,0,0.8), 0 0 15px ${editorMode === 'BUILD' ? 'rgba(218,41,28,0.8)' : 'rgba(255,205,0,0.8)'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#000', fontWeight: '900', fontSize: '0.6rem', letterSpacing: '0px', transition: 'all 0.1s ease', zIndex: 10
-          }}
-          onMouseDown={(e) => e.currentTarget.style.transform = 'translateY(2px)'}
-          onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            <div style={{
-              position: 'absolute', width: '28px', height: '28px', borderRadius: '50%',
-              backgroundColor: editorMode === 'BUILD' ? '#da291c' : '#ffcd00',
-              boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), inset -1px -1px 3px rgba(0,0,0,0.3), 1px 1px 3px rgba(0,0,0,0.5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <span style={{ position: 'relative', zIndex: 10, opacity: 0.8 }}>{editorMode === 'BUILD' ? 'SAVE' : 'UPD'}</span>
-            </div>
-          </button>
         </div>
       </GridSpot>
 

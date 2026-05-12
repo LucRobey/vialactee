@@ -29,8 +29,9 @@ The Live Deck is built on a 40-stud-wide absolute coordinate grid using the `<Gr
 
 ### C. Right Column: Preset Blocks
 *   **Coordinate Plane:** `col=30` to `col=38`
-*   **Purpose:** Rapid firing of predefined visual states.
+*   **Purpose:** Rapid firing of saved playlists.
 *   **Design:** High-relief, bright colored bricks (Blue, Orange, Green, Purple, etc.) stacked absolutely at precise 3-stud vertical intervals (`row=1`, `row=4`, `row=7`, etc.).
+*   **Data Rule:** Preset bricks are generated only from `data/configurations.json` via `loadConfigurationStore()` and `state.playlists` from the `mode_master_state` WebSocket snapshot. Do not hardcode playlist names or add special synthetic entries such as `CUSTOM`.
 
 ## 3. Interaction Logic (The "Baton Pass")
 
@@ -41,7 +42,18 @@ The Live Deck is built around a non-destructive "Queue and Drop" workflow, cruci
 4.  **Execute:** The user hits the giant "DROP" button. Only at this exact moment are the queued settings dispatched to the Python backend to update the DMX/visual hardware.
 5.  **Override:** At any time, regardless of the drop state, the user can ride the left-column sliders for instant master overrides (brightness, strobe speed, etc.).
 
-## 4. Visual Priorities
+## 4. Runtime State Contract
+
+The Live Deck hydrates from two sources:
+
+* `GET /api/configurations` for saved playlist/configuration names.
+* `mode_master_state` over `/ws` for the live active playlist, active configuration, queued configuration, selected transition, lock state, luminosity, and sensibility.
+
+Luminosity and sensibility slider changes are persisted by Python into `config/app_config.json`, so closing or restarting the web app/backend restores the previous values.
+
+The telemetry bar must show backend state, not local placeholder state. Dropdowns may start empty while the JSON file loads.
+
+## 5. Visual Priorities
 *   **Legibility:** Labels on flat tiles must use dark text (`#1a1a1a`) for contrast against light grey. Labels on dark backgrounds must glow or use `var(--text-dim)`.
 *   **Tactility:** Every button must have active state physics (`transform: translateY()`, adjusted shadows) to provide visual feedback that a physical piece was pressed.
 *   **Strict Mathematical Alignment:** Standard web layouts (`justify-content`, `margin: auto`) are forbidden on the baseplate. Every element must be wrapped in a coordinate-based `<GridSpot>` to ensure rigid, pixel-perfect 30px snapping to the physical illusion.

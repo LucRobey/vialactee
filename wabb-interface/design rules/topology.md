@@ -39,3 +39,28 @@ Instead of rendering digital text for the selected segment name and current mode
 The available modes are listed as a physical switchboard.
 * Each mode is a dark tile that "pops" to a bright yellow (`#fcd000`) when selected.
 * Beside each tile is a physical LED indicator. When active, it glows with the selected segment's color. When inactive, it has dark inner shadows to look like an unpowered diode.
+
+## 7. Playlist And Configuration Data
+
+Topology uses `data/configurations.json` as its persistence layer:
+
+* It loads playlists/configurations through `src/utils/configurationStore.ts` and `GET /api/configurations`.
+* It saves **only from `MODIFY` or `BUILD`** through `POST /api/configurations`. The red **SAVE** control in `LIVE` is blocked: live tweaks must not write the JSON file (use `MODIFY` or `BUILD` to persist a preset).
+* The saved JSON shape is `{ "playlists": string[], "configurations": Record<string, Configuration[]> }`.
+* Segment mode keys must stay in Python format (`Segment v4`, `Segment h32`, etc.) so `Mode_master` can apply them directly.
+* The UI must not seed fake playlist names. If the JSON file is empty, the controls should display an empty/no-playlist state.
+* Playlist management lives in the same inspector panel: `NEW` creates a saved playlist with the typed name, and `REN` renames the selected playlist while preserving all configurations attached to it.
+* Configuration management in `MODIFY` mode has a selector plus editable name field: `REN` renames the selected configuration and `DEL` removes it from the current playlist.
+
+## 8. Editor Modes: LIVE, MODIFY, and BUILD
+
+### `LIVE` (performance mirror)
+
+* Segment tiles and the inspector follow `mode_master_state` from `/ws` (`activePlaylist`, `activeConfiguration`, per-segment `mode` / `direction`).
+* Changing a segment **mode** or **direction** sends `select_segment_mode` / `toggle_segment_direction` on `/ws`. That updates the running `Segment` in Python only; it does **not** change rows in `data/configurations.json`. Re-applying the same saved configuration (from the deck or after reload) restores the modes stored in the file.
+* Snapshots arrive at ~30 Hz. A snapshot can briefly show the previous mode **before** the server applies the instruction. The UI keeps a short-lived **pending edit** per segment so local state does not flicker back until the snapshot matches the choice (case-insensitive mode name match).
+* Switching **LIVE → MODIFY** re-applies the currently selected playlist/configuration from the in-memory store (`apiConfigurations`) onto the segment list so the **UPDATE** action edits the saved preset, not a stale live override left in React state.
+
+### `MODIFY` and `BUILD` (authoring)
+
+* Local segment mode/direction edits stay in React until the user saves via `POST /api/configurations`, then `modify_configuration` / `build_configuration` instructions notify `Mode_master` to reload from disk.

@@ -5,12 +5,13 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 📡 1. Core Bridge & State Management
 *To establish a high-frequency data pipeline between the Python backend and the web client.*
 
-*   **Bi-Directional WebSockets:** Implement a Python WebSocket server (e.g., using `websockets` or `FastAPI`) that runs concurrently with the existing orchestration loop in `Main.py` to push state to the browser with zero latency.
-*   **JSON State Schema:** Define a strict JSON structure for the Pi to broadcast. This must include:
-    *   Currently active modes per segment.
-    *   Global brightness levels.
-    *   System variables (e.g., locked segments, active global multipliers).
-    *   Hardware telemetry.
+*   **Bi-Directional WebSockets:** Implemented through `connectors/Connector.py` using aiohttp `/ws` on port `8080`. The browser sends page/action instructions and receives backend state snapshots.
+*   **JSON State Schema:** Implemented as `mode_master_state`, built by `Mode_master.get_state_snapshot()`. It currently includes:
+    *   Active modes and directions per segment.
+    *   Global luminosity and sensibility.
+    *   Active playlist, active/queued configuration, selected transition, transition lock, and transition progress.
+    *   Segment blocked/transition status.
+    *   The mode-settings catalog plus the active configuration's effective `modeSettings`.
 *   **The "Pending" State Manager:** Implement backend logic to hold "Staged Transitions" (batch changes across multiple segments) in memory until the UI explicitly sends an `EXECUTE` command to flush them to the LEDs simultaneously.
 
 ---
@@ -18,7 +19,7 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 🎛️ 2. Deep Parameter Injection & Modifiers
 *To expose mathematical control over the running animations directly to the operator.*
 
-*   **Mode-Specific Parameter Introspection:** Modify the mode classes (e.g., `Rainbow_mode`, `Pulsar_mode`) to expose their internal global variables (like `ball_size`, `tail_length`, `color_density`). The UI will dynamically read these and generate sliders to tweak them live.
+*   **Mode-Specific Parameter Introspection:** Implemented through the `Mode` base class and per-mode schemas. The UI now reads backend-provided descriptors and renders `switch`, `slider`, or `list` controls dynamically for every loaded mode that declares settings.
 *   **Global Speed Multiplier:** Implement an override variable in `Mode_master.py` that scales `delta_time` or the internal logic timers of all modes (e.g., `0.5x`, `1x`, `2x`).
 *   **Global Modifiers (The Glitter Mask):** Implement a global overlay function. This applies effects (like random white twinkling) on top of the calculated frame *after* the base mode computes, but *before* the frame is pushed to hardware.
 
@@ -27,7 +28,8 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 🗺️ 3. Segment Routing & Topology
 *To control how data flows to specific physical areas of the stage.*
 
-*   **Live Topology Editor:** Allow the UI to push updated X/Y coordinates for segments back to the Pi. This overwrites the spatial mapping used by the `transition_architecture` on the fly, allowing for physical stage layout changes.
+*   **Topology tab (implemented):** `TopologyEditor.tsx` mirrors `mode_master_state`, supports **LIVE / MODIFY / BUILD**, sends `select_segment_mode` and `toggle_segment_direction` for runtime changes (no `POST` in LIVE), persists presets only from MODIFY/BUILD, and uses client-side pending merges so ~30 Hz snapshots do not flicker overrides. `Mode_master` applies saved presets with shallow-copied `modes`/`way` on `activ_configuration` so live swaps stay isolated from the in-memory playlist store. See `wabb-interface/design rules/topology.md`.
+*   **Live Topology Editor (future):** Allow the UI to push updated X/Y coordinates for segments back to the Pi. This would overwrite the spatial mapping used by the `transition_architecture` on the fly, allowing for physical stage layout changes.
 *   **Segment Locking & Mode Configurations:** 
     *   Build logic to "Lock" specific segments to their currently assigned mode.
     *   Locked segments become immune to the Auto-DJ, Global Transitions, or randomized drops.
@@ -40,7 +42,7 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 🤖 4. Show Automation & Presets
 *To reduce cognitive load for the operator during a live show.*
 
-*   **Snapshot Save/Load:** Build a system to dump the entire current state of the stage (colors, modes, multipliers, locks) into a physical JSON file on the Pi, and an endpoint to instantly recall it.
+*   **Snapshot Save/Load:** Implemented for playlist/configuration snapshots through `data/configurations.json` and `/api/configurations`. Vite serves the endpoint in development; `Connector.py` serves it in Python-backed operation and reloads `Mode_master` after writes. Configurations now also carry per-mode `modeSettings`.
 *   **Auto-Transition Engine & Timing:** Implement a backend toggle that automatically selects and executes a random, safe transition.
     *   Triggered every *X* minutes or *Y* song drops.
     *   Must allow the UI to configure both the interval between transitions *and* the duration/speed of the transition sweep itself.

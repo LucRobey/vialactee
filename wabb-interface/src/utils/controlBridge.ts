@@ -1,11 +1,66 @@
+export type ModeSettingValue = string | number | boolean;
+
+export type ModeSettingOption = {
+  label: string;
+  value: ModeSettingValue;
+};
+
+export type ModeSettingDescriptor = {
+  key: string;
+  label: string;
+  control: 'switch' | 'slider' | 'list';
+  valueType: 'boolean' | 'number' | 'string';
+  default: ModeSettingValue;
+  min?: number;
+  max?: number;
+  step?: number;
+  integer?: boolean;
+  unit?: string;
+  options?: ModeSettingOption[];
+};
+
+export type ModeSettingsCatalogEntry = {
+  mode: string;
+  label: string;
+  settings: ModeSettingDescriptor[];
+};
+
 export type WabbInstruction = {
-  page: 'live_deck' | 'topology' | 'auto_dj' | 'system';
+  page: 'live_deck' | 'topology' | 'mode_settings' | 'system';
   action: string;
   payload?: Record<string, unknown>;
   timestamp: number;
 };
 
+export type ModeMasterSegmentState = {
+  id: string;
+  name: string;
+  mode: string;
+  direction: 'UP' | 'DOWN';
+  blocked: boolean;
+  targetMode: string | null;
+  inTransition: boolean;
+};
+
+export type ModeMasterState = {
+  activePlaylist: string | null;
+  enabledPlaylists: string[];
+  activeConfiguration: string | null;
+  queuedConfiguration: string | null;
+  selectedTransition: string;
+  transitionLocked: boolean;
+  transitionState: string | null;
+  transitionProgress: number;
+  luminosity: number;
+  sensibility: number;
+  playlists: string[];
+  segments: ModeMasterSegmentState[];
+  modeSettingsCatalog: ModeSettingsCatalogEntry[];
+  modeSettings: Record<string, Record<string, ModeSettingValue>>;
+};
+
 type SocketStatus = 'idle' | 'connecting' | 'open' | 'closed';
+type StateListener = (state: ModeMasterState) => void;
 
 const buildBridgeUrl = () => {
   const envUrl = import.meta.env.VITE_WABB_WS_URL;
@@ -23,6 +78,8 @@ class ControlBridge {
   private reconnectTimer: number | null = null;
   private readonly queue: string[] = [];
   private readonly url = buildBridgeUrl();
+  private readonly stateListeners = new Set<StateListener>();
+  private latestState: ModeMasterState | null = null;
 
   private connect() {
     if (this.status === 'open' || this.status === 'connecting') {
@@ -41,8 +98,13 @@ class ControlBridge {
       }
     };
 
+    this.socket.onmessage = (event) => {
+      this.handleMessage(event.data);
+    };
+
     this.socket.onclose = () => {
       this.status = 'closed';
+      this.socket = null;
       this.scheduleReconnect();
     };
 
@@ -63,6 +125,25 @@ class ControlBridge {
     }, 1500);
   }
 
+  private handleMessage(rawMessage: unknown) {
+    if (typeof rawMessage !== 'string') {
+      return;
+    }
+
+    try {
+      const message = JSON.parse(rawMessage) as { type?: unknown; payload?: unknown };
+      if (message.type !== 'mode_master_state' || !message.payload) {
+        return;
+      }
+
+      const state = message.payload as ModeMasterState;
+      this.latestState = state;
+      this.stateListeners.forEach(listener => listener(state));
+    } catch (error) {
+      console.warn('Invalid websocket message from mode master', error);
+    }
+  }
+
   send(instruction: Omit<WabbInstruction, 'timestamp'>) {
     const event: WabbInstruction = { ...instruction, timestamp: Date.now() };
     const payload = JSON.stringify(event);
@@ -75,10 +156,26 @@ class ControlBridge {
 
     this.socket?.send(payload);
   }
+
+  subscribeState(listener: StateListener) {
+    this.stateListeners.add(listener);
+    if (this.latestState) {
+      listener(this.latestState);
+    }
+    this.connect();
+
+    return () => {
+      this.stateListeners.delete(listener);
+    };
+  }
 }
 
 const bridge = new ControlBridge();
 
 export const sendInstruction = (instruction: Omit<WabbInstruction, 'timestamp'>) => {
   bridge.send(instruction);
+};
+
+export const subscribeModeMasterState = (listener: StateListener) => {
+  return bridge.subscribeState(listener);
 };
