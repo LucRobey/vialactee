@@ -135,8 +135,15 @@ class SystemStatus:
 
         dynamic_audio_latency = getattr(self.listener, "dynamic_audio_latency", None)
         dynamic_audio_latency_ms = None
-        if isinstance(dynamic_audio_latency, (int, float)):
-            dynamic_audio_latency_ms = int(max(0.0, float(dynamic_audio_latency)) * 1000)
+        if (
+            audio_stream_state == "running"
+            and last_audio_sample_age_ms is not None
+            and last_audio_sample_age_ms < 3000
+            and isinstance(dynamic_audio_latency, (int, float))
+        ):
+            candidate_latency_ms = int(max(0.0, float(dynamic_audio_latency)) * 1000)
+            if candidate_latency_ms <= 5000:
+                dynamic_audio_latency_ms = candidate_latency_ms
 
         restart_python = self.get_restart_python_capability()
         reboot_raspberry = self.get_reboot_raspberry_capability()

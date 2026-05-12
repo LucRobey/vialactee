@@ -74,4 +74,4 @@ Topology **live** segment mode/direction changes are WebSocket instructions hand
 
 Mode Settings uses the same `/ws` channel with a generic `set_mode_setting` action. `Mode_master` validates the requested mode/key/value, applies it to every live instance of that mode across all segments, persists the active configuration's `modeSettings`, and broadcasts the updated `mode_master_state`.
 
-System actions also use `/ws`. `restart_python_loop` performs an in-process Python self-restart when the current runtime supports it, while `restart_raspberry_pi` is only exposed on Linux Raspberry hosts with a reboot command available. Their latest feedback is folded back into the `system` snapshot so the UI can explain why an action is pending, unavailable, or failed.
+System actions also use `/ws`. `restart_python_loop` now requests a controlled restart through `Main.py` so the controller relaunches inside the same terminal/session, while `restart_raspberry_pi` is only exposed on Linux Raspberry hosts with a reboot command available. Their latest feedback is folded back into the `system` snapshot so the UI can explain why an action is pending, unavailable, or failed.

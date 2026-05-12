@@ -3,7 +3,23 @@ export const MAP_OFFSET_R = 3;
 export const INSPECTOR_OFFSET_C = 2;
 export const INSPECTOR_OFFSET_R = 5;
 
-export const relativeTopology = [
+export type SegmentOrientation = 'horizontal' | 'vertical';
+export type SegmentDirection = 'UP' | 'DOWN';
+
+export type TopologySegment = {
+  id: string;
+  name: string;
+  col: number;
+  row: number;
+  w: number;
+  h: number;
+  color: string;
+  orientation: SegmentOrientation;
+  mode: string;
+  direction: SegmentDirection;
+};
+
+export const relativeTopology: TopologySegment[] = [
   // Strip 0
   { id: "v4", name: "segment_v4", col: 43, row: 1, w: 2, h: 18, color: '#3264ff', orientation: 'vertical', mode: 'Plasma Fire', direction: 'UP' },
   { id: "h32", name: "segment_h32", col: 38, row: -3, w: 6, h: 2, color: '#ff3232', orientation: 'horizontal', mode: 'Hyper Strobe', direction: 'UP' },

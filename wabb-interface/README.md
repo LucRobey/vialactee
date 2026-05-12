@@ -37,7 +37,7 @@ The app emits control instructions from the UI to the backend bridge through a s
 }
 ```
 
-The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck, Topology, Mode Settings, and System with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, each segment's active mode/direction, the mode-settings catalog, the current effective per-mode values for the active configuration, and the live `system` telemetry block.
+The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck, Topology, Mode Settings, and System with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, the backend-provided `availableModes` catalog, each segment's active mode/direction, the mode-settings catalog, the current effective per-mode values for the active configuration, and the live `system` telemetry block.
 
 **Topology `LIVE`:** segment mode/direction changes are sent as instructions only (no `POST /api/configurations`). The UI merges snapshots with short-lived pending values so rapid broadcasts do not undo a click before Python applies it. **Topology `MODIFY` / `BUILD`:** saving writes through `POST /api/configurations` and issues `modify_configuration` or `build_configuration`.
 

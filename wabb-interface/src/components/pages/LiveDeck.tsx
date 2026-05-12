@@ -2,10 +2,30 @@ import React, { useEffect, useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { wideDropStudPattern } from '../../constants/dropPatterns';
-import { sendInstruction, subscribeModeMasterState } from '../../utils/controlBridge';
+import { NoticeBanner } from '../common/NoticeBanner';
+import { sendInstruction, subscribeModeMasterState, type SystemStatus } from '../../utils/controlBridge';
 import { loadConfigurationStore } from '../../utils/configurationStore';
+import { useBridgeStatus } from '../../utils/useBridgeStatus';
 
 const EMPTY_CONFIGURATIONS: string[] = [];
+const EMPTY_SYSTEM: Pick<SystemStatus, 'cpuTempC' | 'dynamicAudioLatencyMs'> = {
+  cpuTempC: null,
+  dynamicAudioLatencyMs: null,
+};
+
+const formatTelemetryValue = (value: number | null, suffix: string, digits = 0) => {
+  if (value === null || Number.isNaN(value)) {
+    return '--';
+  }
+  return `${value.toFixed(digits)}${suffix}`;
+};
+
+const formatLatencyTelemetryValue = (value: number | null) => {
+  if (value === null || Number.isNaN(value) || value < 0 || value > 5000) {
+    return '--';
+  }
+  return `${value.toFixed(0)}ms`;
+};
 
 export const LiveDeck = () => {
   const [lumValue, setLumValue] = useState(60);
@@ -17,10 +37,16 @@ export const LiveDeck = () => {
   const [currentConfiguration, setCurrentConfiguration] = useState('');
   const [availablePlaylists, setAvailablePlaylists] = useState<string[]>([]);
   const [configurationsByPlaylist, setConfigurationsByPlaylist] = useState<Record<string, string[]>>({});
+  const [systemTelemetry, setSystemTelemetry] = useState(EMPTY_SYSTEM);
+  const [configurationError, setConfigurationError] = useState<string | null>(null);
+  const bridgeStatus = useBridgeStatus();
 
   const transitions = ['CUT', 'FADE IN/OUT', 'CROSSFADE'];
   const presetColors = ['bg-blue', 'bg-orange', 'bg-green', 'bg-purple', 'bg-yellow', 'bg-red', 'bg-cyan', 'bg-magenta'];
   const availableConfigurations = currentPlaylist ? configurationsByPlaylist[currentPlaylist] ?? EMPTY_CONFIGURATIONS : EMPTY_CONFIGURATIONS;
+  const effectiveSelectedConfiguration = availableConfigurations.includes(selectedConfiguration)
+    ? selectedConfiguration
+    : (availableConfigurations[0] ?? '');
 
   useEffect(() => {
     loadConfigurationStore()
@@ -33,8 +59,12 @@ export const LiveDeck = () => {
           ])
         ));
         setCurrentPlaylist(prev => prev || store.playlists[0] || '');
+        setConfigurationError(null);
       })
-      .catch(error => console.error('Could not load saved playlists/configurations', error));
+      .catch(error => {
+        console.error('Could not load saved playlists/configurations', error);
+        setConfigurationError(error instanceof Error ? error.message : 'Could not load saved playlists and configurations.');
+      });
   }, []);
 
   useEffect(() => {
@@ -58,21 +88,33 @@ export const LiveDeck = () => {
       if (state.playlists.length > 0) {
         setAvailablePlaylists(state.playlists);
       }
+      setSystemTelemetry({
+        cpuTempC: state.system?.cpuTempC ?? null,
+        dynamicAudioLatencyMs: state.system?.dynamicAudioLatencyMs ?? null,
+      });
     });
   }, []);
 
-  useEffect(() => {
-    if (availableConfigurations.length === 0) {
-      setSelectedConfiguration('');
-      return;
-    }
-    if (!availableConfigurations.includes(selectedConfiguration)) {
-      setSelectedConfiguration(availableConfigurations[0]);
-    }
-  }, [availableConfigurations, selectedConfiguration]);
-
   return (
     <div className="live-deck-grid">
+      {bridgeStatus !== 'open' || configurationError ? (
+        <div style={{ position: 'absolute', top: '100px', left: '240px', width: '560px', zIndex: 50 }}>
+          {bridgeStatus !== 'open' ? (
+            <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="LIVE DATA STATUS">
+              {bridgeStatus === 'connecting'
+                ? 'Reconnecting to the controller. Telemetry and playlist state may lag for a few seconds.'
+                : 'Controller offline. Controls may queue locally, but the show state cannot be confirmed right now.'}
+            </NoticeBanner>
+          ) : null}
+          {configurationError ? (
+            <div style={{ marginTop: bridgeStatus !== 'open' ? '10px' : 0 }}>
+              <NoticeBanner tone="error" title="CONFIGURATION STORE">
+                {configurationError}
+              </NoticeBanner>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* ======================= LEFT COLUMN ======================= */}
       <GridSpot col={0} row={0}>
@@ -218,20 +260,28 @@ export const LiveDeck = () => {
         }}>
           <div className="stage-status-bar" style={{ width: '100%', height: '100%', margin: 0, border: 'none', background: 'transparent', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', boxSizing: 'border-box' }}>
             <div className="status-item">
-              <span className="status-label" style={{ fontSize: '0.7rem' }}>CPU</span>
-              <span className="status-value digital-font" style={{ fontSize: '1.4rem', color: 'var(--lego-orange)', textShadow: '0 0 5px var(--lego-orange)' }}>42%</span>
+              <span className="status-label" style={{ fontSize: '0.7rem' }}>CPU TEMP</span>
+              <span className="status-value digital-font" style={{ fontSize: '1.4rem', color: 'var(--lego-orange)', textShadow: '0 0 5px var(--lego-orange)' }}>
+                {formatTelemetryValue(systemTelemetry.cpuTempC, 'C', 1)}
+              </span>
             </div>
             <div className="status-item" style={{ textAlign: 'center' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>PLAYLIST</span>
-              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-cyan)', fontWeight: 800, letterSpacing: '1px' }}>{currentPlaylist}</span>
+              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-cyan)', fontWeight: 800, letterSpacing: '1px' }}>
+                {currentPlaylist || '--'}
+              </span>
             </div>
             <div className="status-item" style={{ textAlign: 'center' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>CONFIG</span>
-              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-purple)', fontWeight: 800, letterSpacing: '1px' }}>{currentConfiguration}</span>
+              <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-purple)', fontWeight: 800, letterSpacing: '1px' }}>
+                {currentConfiguration || '--'}
+              </span>
             </div>
             <div className="status-item" style={{ textAlign: 'right' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>LATENCY</span>
-              <span className="status-value digital-font" style={{ fontSize: '1.4rem', color: 'var(--lego-green)', textShadow: '0 0 5px var(--lego-green)' }}>12ms</span>
+              <span className="status-value digital-font" style={{ fontSize: '1.4rem', color: 'var(--lego-green)', textShadow: '0 0 5px var(--lego-green)' }}>
+                {formatLatencyTelemetryValue(systemTelemetry.dynamicAudioLatencyMs)}
+              </span>
             </div>
           </div>
           {/* Trans-Black Glass overlay */}
@@ -287,7 +337,7 @@ export const LiveDeck = () => {
               padding: '0 15px', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: '900',
               appearance: 'none', position: 'relative', zIndex: 2
             }}
-            value={selectedConfiguration}
+            value={effectiveSelectedConfiguration}
             disabled={availableConfigurations.length === 0}
             onChange={(e) => {
               const configuration = e.target.value;
@@ -363,9 +413,9 @@ export const LiveDeck = () => {
           onClick={() => sendInstruction({
             page: 'live_deck',
             action: 'go_to_next_configuration',
-            payload: { configuration: selectedConfiguration, transition: selectedTransition }
+            payload: { configuration: effectiveSelectedConfiguration, transition: selectedTransition }
           })}
-          disabled={!selectedConfiguration}>
+          disabled={!effectiveSelectedConfiguration}>
             <div className="round-stud-grid" style={{ transform: 'scale(0.85)', margin: 0 }}>
               <div className="stud stud-blue"></div>
               <div className="stud stud-blue"></div>
