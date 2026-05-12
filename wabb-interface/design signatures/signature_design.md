@@ -1,5 +1,7 @@
 # Vialactée Signature Design System: "Tactile Dark Mode Lego"
 
+> **NOTE:** In this project, the term "Design Signatures" refers to the core technical blueprints and UX specifications that guide the web application's development.
+
 ## 1. Core Philosophy
 
 The signature design language of the Vialactée web application is a unique fusion of **modern, sleek dark mode UI** and **highly tactile, 3D-rendered Lego brick elements**. It bridges the gap between playful, physical hardware interaction and professional, high-tech software management.

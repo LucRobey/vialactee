@@ -36,7 +36,7 @@ graph TD
         F[update_forever]:::loop
         G[update]:::loop
         H["1. listener.update()"]:::loop
-        I["2. leds.show()"]:::loop
+        I["2. leds.show() <br/><i>(Flushes previous frame)</i>"]:::loop
         J["3. segments.update(transition_director)"]:::loop
         K["4. transition_director.update(current_time)"]:::loop
         BCAST["5. Broadcast state if changed"]:::loop
@@ -111,7 +111,7 @@ graph TD
 
 ### 1. Initialization (`__init__`)
 When `Mode_master` starts, it sets up the environment:
-*   **`load_configurations()`**: Reads `data/configurations.json` to load all available visual modes, per-configuration `modeSettings`, and playlists into memory.
+*   **`load_configurations()`**: Reads `data/configurations.json` to load all available visual modes, per-configuration `modeSettings`, and playlists into memory. (Global application settings are read from `config/app_config.json`).
 *   **`initiate_segments()`**: Reads `config/segments.json` and creates `Segment` objects for every defined physical hardware strip (h00, v4, etc.).
 *   **`initiate_configuration()`**: Seeds the system with an initial random configuration by drawing from the configuration shuffle bag.
 *   **`Transition_Director`**: Bootstraps the director responsible for deciding exactly *when* configurations should change based on audio analysis.

@@ -36,11 +36,12 @@ classDiagram
     %% Spatial & Transition Logic Filter
     class Transition_Director {
         -listener : Listener
+        -state : str
         -is_in_standby : bool
         -all_segments : list
         -verticals : list
         -horizontals : list
-        +evaluate_context(current_time, next_change_time) : tuple[str, dict]
+        +update(current_time) : None
     }
 
     %% Audio Facade & Analyzers
@@ -79,7 +80,7 @@ classDiagram
 
     %% Logic Flow
     Transition_Director ..> Listener : Polls audio state \n(Power, Drops, Events)
-    Mode_master ..> Transition_Director : Requests action via\nevaluate_context()
+    Transition_Director ..> Mode_master : Commands action via\nchange_configuration()
     Mode_master ..> Segment : Pushes global\ntransition states
 ```
 
@@ -88,8 +89,8 @@ classDiagram
 1. **Audio Ingestion & Calculation:**
    `Mode_master` fires `listener.update()` every frame. The `Listener` (acting as a facade) processes raw audio through `AudioIngestion` and runs the algorithmic detections in `AudioAnalyzer`.
 2. **Context Evaluation:**
-   `Mode_master` immediately asks the `Transition_Director` what to do by passing the time state: `transition_director.evaluate_context(current_time, next_change_time)`.
+   `Mode_master` asks the `Transition_Director` to update its state and progress transitions by passing the time state: `transition_director.update(current_time)`.
 3. **Probabilistic Decision:**
-   `Transition_Director` looks at the state of the `Listener` (checking variables like `smoothed_total_power`, `is_song_change`, `is_verse_chorus_change`). It determines whether to allow a transition to happen, force the system to go into standby (due to silence), or wait. It then packages its decision into an instruction tuple: `(action, transition_config)`.
+   `Transition_Director` looks at the state of the `Listener` (checking variables like incoming events and timers). It determines whether to allow a transition to happen. If a transition is needed, it directly commands the `Mode_master` (e.g., via `mode_master.change_configuration()`).
 4. **Execution:**
    `Mode_master` receives the `action` returned by the director. If the action is `"allow_change"`, the orchestrator executes `change_configuration()` passing along the spatial transition configuration matrix requested by the director to all the underlying physical `Segment` objects.

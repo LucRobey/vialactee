@@ -55,7 +55,7 @@ When a playlist jumps tracks, or a DJ hard-cuts into a brand new BPM, the rhythm
 - It simultaneously verifies that its mathematical correlation ("Trust") has collapsed below 60% of the song's established baseline.
 - **Action:** The system violently Flushes all rhythmic lookahead queues, resets its memory buffers, and surgically snaps its Phase alignment directly onto the new tempo to physically recover the groove within a fraction of a second.
 
-        # === D. The Acoustic Breakdown ===
+### D. The Acoustic Breakdown
 **Rule:** `bass_flux` flatlines AND `treble_flux` remains high.
 
 If the bass drum cuts out entirely but vocals or synths continue, the system flags an "Acoustic Breakdown."
@@ -73,7 +73,7 @@ When a structural event or song change is detected on the live audio, the system
 
 ---
 
-## 3. The Architecture Diagram
+## 4. The Architecture Diagram
 
 Here is exactly how the data flows from the audio signal directly into event triggers.
 

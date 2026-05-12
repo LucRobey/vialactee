@@ -13,6 +13,7 @@ This directory contains all periodic project reviews. Reviews are the primary to
 ├── template_code_review.md          ← template for code/architecture audits
 ├── template_docs_review.md          ← template for documentation audits
 ├── template_webapp_review.md        ← template for web app / UI audits
+├── template_review_resume.md        ← template for synthesizing all reviews
 ├── wapp_screenshots/                ← folder for UI review screenshots
 └── YYYY-MM-DD_[type]_review.md      ← dated review files
 ```
@@ -103,12 +104,30 @@ Cleanup (mandatory — run after saving the review):
    netstat -ano | findstr ':5173 :8080'
 ```
 
+### Review Resume (Synthesis)
+After generating the individual reviews, create a high-level summary to guide the team.
+
+**Step 1:** Copy the template:
+`cp .agents/reviews/template_review_resume.md .agents/reviews/$(date +%Y-%m-%d)_review_resume.md`
+
+**Step 2:** Open the new file and fill out the `## 🧑‍💻 Developer Intent` section manually.
+
+**Step 3:** Ask the agent to complete the synthesis using this prompt:
+```
+Read the most recent code_review, docs_review, and webapp_review in .agents/reviews/.
+Read CHANGELOG.md to see what was accomplished since the previous cycle.
+Open the partially filled YYYY-MM-DD_review_resume.md. Read my Developer Intent.
+Fill out the rest of the file: synthesize the project's health, aggregate critical risks, 
+and provide your brutally honest Agent Critique on my intent versus the codebase reality.
+```
+
 ---
 
 ## Review History
 
-| Date | Type | Overall Health | Key Findings |
-|---|---|---|---|
-| 2026-05-12 | Code | ⭐⭐⭐⭐ avg | `is_song_change` never reset, `update_leds` Python loop bottleneck, no `requirements.txt` |
-| 2026-05-12 | Docs | 6.2–7.1 / 10 | `PLAN.md` stale future-tense, duplicate hardware diagram, phantom modes in `modes_description.md` |
-| 2026-05-12 | Web App | ⭐⭐⭐⭐ avg | Stage Architect stub, hardcoded telemetry, segment map overflow, no WS disconnect indicator |
+| Date | Type | Status / Notes |
+|---|---|---|
+| 2026-05-12 | Code | Found 14 actionable items; 4 high priority |
+| 2026-05-12 | Docs | Scored ~6/10 overall; identified dangerous `PLAN.md` staleness |
+| 2026-05-12 | Web App | Identified missing WS connection feedback and telemetry hardcoding |
+| 2026-05-12 | Resume | Synthesized the 3 reviews into a master action plan |

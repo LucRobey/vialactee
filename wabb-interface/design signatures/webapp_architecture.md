@@ -1,5 +1,14 @@
 # Wabb-Interface: UI/UX Architecture
 
+> **IMPLEMENTATION STATUS:**
+> | Page | Status | Description |
+> |---|---|---|
+> | 📱 1. Live Deck | ✅ Implemented | Core performance UI (Playlists, Speed/Brightness, Transitions) |
+> | 🗺️ 2. Stage Architect | ❌ Planned | Complex staging and batch execution canvas |
+> | 📐 3. Topology Editor | ✅ Implemented | Visual map for live overrides and preset building |
+> | 🎛️ 4. Mode Settings | ✅ Implemented | Per-mode tuning with runtime application |
+> | ⚙️ 5. System & Setup | ❌ Planned | Telemetry and hardware danger-zone |
+
 This document outlines the structural layout and user experience philosophy for the new Vialactée Web Interface. To ensure safety during live performances and to prevent accidental configuration changes, the interface is split into **five distinct pages**, navigated via a persistent top or bottom tab bar.
 
 ## 📱 Page 1: The Live Deck (Performance Mode)

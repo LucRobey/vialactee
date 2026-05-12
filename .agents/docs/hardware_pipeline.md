@@ -1,6 +1,6 @@
-# Audio Lookahead & Hardware Pipeline Implementation Plan
+# Audio Lookahead & Hardware Pipeline
 
-This document outlines the architecture and software changes required to implement the 5-second Audio Lookahead system within the Vialactée project.
+> **STATUS:** IMPLEMENTED as of April 2026. This document explains the architecture of the 5-second Audio Lookahead system within the Vialactée project.
 
 ## 1. Hardware Pipeline Overview
 
@@ -107,33 +107,32 @@ graph TD
 ```
 
 
-## 2. Software Changes Needed in Vialactée
+## 2. Software Implementation
 
-To support this "Audio Lookahead" system, we need to modify the internal Python engine. The processing must happen instantly, but the audio output and LED visualization must be delayed to match.
+To support this "Audio Lookahead" system, we modified the internal Python engine. The processing happens instantly, but the audio output and LED visualization are delayed to match.
 
 ### Phase 1: Upgrading `Local_Microphone.py`
 
-Currently, `Local_Microphone.py` only listens. It must be upgraded to a duplex stream (listen and broadcast).
+`Local_Microphone.py` has been upgraded to a duplex stream (listen and broadcast).
 
-* **Implement a Ring Buffer:** Create a large NumPy array in `__init__` to hold exactly 5 seconds of audio. At a sample rate of 44,100 Hz, this buffer will be `220,500` samples long.
-* **Upgrade to Full Duplex `sd.Stream`:** Replace `sd.InputStream` with `sd.Stream` so the callback receives both `indata` and `outdata` arrays.
-* **Modify the `audio_callback`:**
-  1. Immediately forward the chunk in `indata` to the FFT and Beat Detection engine (the "future" logic).
-  2. Pull the oldest chunk from the 5-second ring buffer and write it to the `outdata` array (sending it instantly over Aux to the speakers).
-  3. Overwrite the pulled data in the ring buffer with the new `indata` chunk.
+* **Ring Buffer:** Uses a large NumPy array in `__init__` to hold exactly 5 seconds of audio. At a sample rate of 44,100 Hz, this buffer is `220,500` samples long.
+* **Full Duplex `sd.Stream`:** Replaced `sd.InputStream` with `sd.Stream` so the callback receives both `indata` and `outdata` arrays.
+* **The `audio_callback` logic:**
+  1. Immediately forwards the chunk in `indata` to the FFT and Beat Detection engine (the "future" logic).
+  2. Pulls the oldest chunk from the 5-second ring buffer and writes it to the `outdata` array (sending it instantly over Aux to the speakers).
+  3. Overwrites the pulled data in the ring buffer with the new `indata` chunk.
 
 ### Phase 2: Synchronizing the LEDs (`Listener.py` / `Mode_master.py`)
 
-If the audio is delayed by 5 seconds, the visual LED commands must also understand this delay, otherwise the LEDs will flash 5 seconds before the speakers play the sound.
+If the audio is delayed by 5 seconds, the visual LED commands must also be delayed, otherwise the LEDs will flash 5 seconds before the speakers play the sound.
 
-* **Calculate Total System Latency:**
+* **Total System Latency Calculation:**
   * Let $D_{buffer} = 5.0$ seconds.
   * Let $L_{AUX}$ = The physical latency of the Aux cable (0.0 seconds).
   * Let $L_{UDP}$ = The network latency to the ESP32 LED driver (e.g., ~0.02 seconds).
   * The LEDs must be delayed by exactly: $Delay_{visuals} = D_{buffer} - (L_{AUX} + L_{UDP})$ = e.g., 4.98 seconds.
-* **Implementing the Delay:**
-  * *Option A (Delay the visual trigger):* Instruct `Mode_master` to push calculated frames into a First-In-First-Out (FIFO) queue for ~4.78 seconds before sending them to `Connector.py`.
-  * *Option B (Delay the DSP output):* Have `Listener.py` queue its output metrics (`fft_band_values`, `chroma_values`, beat flags) for ~4.78 seconds before `Mode_master` reads them to render the frame.
+* **Delay Implementation:**
+  * `Listener.py` queues its output metrics (`fft_band_values`, `chroma_values`, beat flags) before `Mode_master` reads them to render the frame.
 
 ### Phase 3: Setup & Testing Requirements
 
