@@ -12,7 +12,7 @@ These modules run concurrently in async tasks. The `Local_Microphone` strictly a
 
 ```json
 {
-  "page": "live_deck | topology | auto_dj | system",
+  "page": "live_deck | topology | mode_settings | system",
   "action": "string_action_name",
   "payload": {},
   "timestamp": 1715430000000
@@ -33,6 +33,9 @@ It also pushes live snapshots to every connected web client:
     "activePlaylist": "Luc",
     "activeConfiguration": "luc1",
     "queuedConfiguration": "luc-3",
+    "modeSettings": {
+      "Rainbow": { "smoothRatio": 0.5 }
+    },
     "segments": [
       { "id": "v4", "name": "Segment v4", "mode": "Rainbow", "direction": "UP" }
     ]
@@ -53,7 +56,10 @@ It also pushes live snapshots to every connected web client:
       {
         "name": "luc1",
         "modes": { "Segment v4": "Rainbow" },
-        "way": { "Segment v4": "UP" }
+        "way": { "Segment v4": "UP" },
+        "modeSettings": {
+          "Rainbow": { "smoothRatio": 0.5 }
+        }
       }
     ]
   }
@@ -63,3 +69,5 @@ It also pushes live snapshots to every connected web client:
 After a successful save, `Connector` calls `Mode_master.load_configurations()` and broadcasts a fresh state snapshot. The React app should never hardcode playlist or configuration names.
 
 Topology **live** segment mode/direction changes are WebSocket instructions handled inside `Mode_master.process_instruction()`; they are not written by `POST /api/configurations`. Only explicit saves from the Topology editor’s `MODIFY` / `BUILD` flow update the JSON file.
+
+Mode Settings uses the same `/ws` channel with a generic `set_mode_setting` action. `Mode_master` validates the requested mode/key/value, applies it to every live instance of that mode across all segments, persists the active configuration's `modeSettings`, and broadcasts the updated `mode_master_state`.

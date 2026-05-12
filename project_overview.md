@@ -90,7 +90,7 @@ Here is a breakdown of the core directories in this project:
 - **`/config`**: JSON files and managers detailing the hardware geometry and global settings.
 - **`/connectors`**: The external communication handlers. This includes the HTTP/WebSocket server that talks to the web interface, serves `/api/configurations`, and broadcasts mode-master state, as well as the microphone stream capture tool (`Local_Microphone.py`).
 - **`/hardware`**: Hardware abstractions. Allows switching seamlessly between testing on a PC (with Pygame simulated LEDs or UDP Fake ESP32) and running on real hardware (Raspberry Pi GPIO or real ESP32s over network).
-- **`/wabb-interface`**: A React-based web application serving as the remote controller for the user to change playlists, transition modes, or tweak settings on the fly. Playlist and configuration names are loaded from `data/configurations.json` through `/api/configurations`; they must not be hardcoded in React.
+- **`/wabb-interface`**: A React-based web application serving as the remote controller for the user to change playlists, transition modes, or tweak per-mode settings on the fly. Playlist and configuration names are loaded from `data/configurations.json` through `/api/configurations`; they must not be hardcoded in React.
 - **`/.agents`**: Core context, architectural rules, and technical specifications designed for AI agents working on the codebase.
 
 ---
@@ -114,9 +114,9 @@ Do not guess how the architecture works. Depending on the task you have been giv
 - **If you are touching the Main Orchestrator or Async loops:**
 
   - 👉 Read `.agents/AGENT.md` to understand our `asyncio` constraints and frame-independent math requirements.
-- **If you are modifying Web App playlists, configurations, Live Deck, or Topology state:**
+- **If you are modifying Web App playlists, configurations, Mode Settings, Live Deck, or Topology state:**
 
-  - 👉 Read `wabb-interface/README.md`, `wabb-interface/design rules/topology.md`, `connectors/README.md`, and `core/precisions/mode_master.md`. Keep `data/configurations.json` as the source of truth and preserve the `/ws` state snapshot flow. Topology **LIVE** uses instructions for runtime segment mode/direction only; persisting presets uses `POST /api/configurations` from **MODIFY** or **BUILD** only.
+  - 👉 Read `wabb-interface/README.md`, `wabb-interface/design rules/topology.md`, `connectors/README.md`, and `core/precisions/mode_master.md`. Keep `data/configurations.json` as the source of truth and preserve the `/ws` state snapshot flow. Topology **LIVE** uses instructions for runtime segment mode/direction only; persisting presets uses `POST /api/configurations` from **MODIFY** or **BUILD** only. Per-mode tuning belongs to configuration-scoped `modeSettings` and flows through `Mode_master` over `/ws`.
 
 ---
 

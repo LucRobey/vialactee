@@ -1,5 +1,32 @@
+export type ModeSettingValue = string | number | boolean;
+
+export type ModeSettingOption = {
+  label: string;
+  value: ModeSettingValue;
+};
+
+export type ModeSettingDescriptor = {
+  key: string;
+  label: string;
+  control: 'switch' | 'slider' | 'list';
+  valueType: 'boolean' | 'number' | 'string';
+  default: ModeSettingValue;
+  min?: number;
+  max?: number;
+  step?: number;
+  integer?: boolean;
+  unit?: string;
+  options?: ModeSettingOption[];
+};
+
+export type ModeSettingsCatalogEntry = {
+  mode: string;
+  label: string;
+  settings: ModeSettingDescriptor[];
+};
+
 export type WabbInstruction = {
-  page: 'live_deck' | 'topology' | 'auto_dj' | 'system';
+  page: 'live_deck' | 'topology' | 'mode_settings' | 'system';
   action: string;
   payload?: Record<string, unknown>;
   timestamp: number;
@@ -28,6 +55,8 @@ export type ModeMasterState = {
   sensibility: number;
   playlists: string[];
   segments: ModeMasterSegmentState[];
+  modeSettingsCatalog: ModeSettingsCatalogEntry[];
+  modeSettings: Record<string, Record<string, ModeSettingValue>>;
 };
 
 type SocketStatus = 'idle' | 'connecting' | 'open' | 'closed';

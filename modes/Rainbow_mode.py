@@ -6,6 +6,43 @@ import numpy as np
 from typing import List, Dict, Any
 
 class Rainbow_mode(Mode.Mode):
+
+    def get_settings_schema(self):
+        return [
+            {
+                "key": "smoothRatio",
+                "label": "Smoothing",
+                "control": "slider",
+                "valueType": "number",
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.05,
+                "default": 0.5,
+                "attr": "smooth_ratio",
+            },
+            {
+                "key": "intensityBase",
+                "label": "Base Intensity",
+                "control": "slider",
+                "valueType": "number",
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.05,
+                "default": 0.1,
+                "attr": "intensity_base",
+            },
+            {
+                "key": "intensityMultiplier",
+                "label": "Intensity Boost",
+                "control": "slider",
+                "valueType": "number",
+                "min": 0.0,
+                "max": 2.0,
+                "step": 0.05,
+                "default": 0.9,
+                "attr": "intensity_mult",
+            },
+        ]
     
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)

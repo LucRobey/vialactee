@@ -310,6 +310,32 @@ class Segment:
             str: The name of the active mode.
         """
         return self.activ_mode
+
+    def get_mode_settings_catalog(self) -> List[Dict[str, Any]]:
+        catalogs: List[Dict[str, Any]] = []
+        for mode in self.modes.values():
+            if not hasattr(mode, "get_settings_catalog"):
+                continue
+            catalog = mode.get_settings_catalog()
+            if isinstance(catalog, dict) and isinstance(catalog.get("settings"), list) and len(catalog["settings"]) > 0:
+                catalogs.append(catalog)
+        return catalogs
+
+    def export_mode_settings(self, mode_name: str) -> Dict[str, Any]:
+        normalized_name = self._normalize_mode_name(mode_name)
+        mode = self.modes.get(normalized_name)
+        if mode is None or not hasattr(mode, "export_settings"):
+            return {}
+        exported = mode.export_settings()
+        return exported if isinstance(exported, dict) else {}
+
+    def apply_mode_settings(self, mode_name: str, settings: Dict[str, Any]) -> Dict[str, Any]:
+        normalized_name = self._normalize_mode_name(mode_name)
+        mode = self.modes.get(normalized_name)
+        if mode is None or not hasattr(mode, "apply_settings"):
+            return {}
+        applied = mode.apply_settings(settings)
+        return applied if isinstance(applied, dict) else {}
          
     def block(self) -> None:
         """

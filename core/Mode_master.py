@@ -1,6 +1,8 @@
 import numpy as np
 import asyncio
+import json
 import logging
+import os
 import random
 import time
 from typing import Dict, Any, List, Optional
@@ -103,10 +105,12 @@ class Mode_master:
         self.transition_locked = False
         self.selected_transition_config = {"type": "fade_in_out", "duration": 2.0}
         self.queued_configuration_name: Optional[str] = None
+        self.mode_settings_catalog: Dict[str, Dict[str, Any]] = {}
 
         self.load_configurations()
 
         self.initiate_segments()
+        self.mode_settings_catalog = self._build_mode_settings_catalog()
         self.initiate_configuration()
         self.transition_director = Transition_Director.Transition_Director(self, self.listener, self.infos)
 
@@ -128,6 +132,165 @@ class Mode_master:
         if transition_type == "fade_in_out":
             return "FADE IN/OUT"
         return str(transition_type or "FADE IN/OUT")
+
+    def _copy_mode_settings_map(self, mode_settings: Any) -> Dict[str, Dict[str, Any]]:
+        if not isinstance(mode_settings, dict):
+            return {}
+
+        copied: Dict[str, Dict[str, Any]] = {}
+        for mode_name, settings in mode_settings.items():
+            if isinstance(mode_name, str) and isinstance(settings, dict):
+                copied[mode_name] = dict(settings)
+        return copied
+
+    def _build_mode_settings_catalog(self) -> Dict[str, Dict[str, Any]]:
+        catalog: Dict[str, Dict[str, Any]] = {}
+        for segment in self.segments_list:
+            for entry in segment.get_mode_settings_catalog():
+                mode_name = entry.get("mode")
+                settings = entry.get("settings")
+                if (
+                    isinstance(mode_name, str)
+                    and isinstance(settings, list)
+                    and len(settings) > 0
+                    and mode_name not in catalog
+                ):
+                    catalog[mode_name] = {
+                        "mode": mode_name,
+                        "label": entry.get("label", mode_name),
+                        "settings": settings,
+                    }
+        return catalog
+
+    def _mode_settings_defaults_for_mode(self, mode_name: str) -> Dict[str, Any]:
+        entry = self.mode_settings_catalog.get(mode_name, {})
+        defaults: Dict[str, Any] = {}
+        for descriptor in entry.get("settings", []):
+            key = descriptor.get("key")
+            if not isinstance(key, str) or "default" not in descriptor:
+                continue
+            normalized_value, ok = self._normalize_mode_setting_value(descriptor, descriptor.get("default"))
+            if ok:
+                defaults[key] = normalized_value
+        return defaults
+
+    def _get_mode_setting_descriptor(self, mode_name: str, setting_key: str) -> Optional[Dict[str, Any]]:
+        entry = self.mode_settings_catalog.get(mode_name, {})
+        for descriptor in entry.get("settings", []):
+            if descriptor.get("key") == setting_key:
+                return descriptor
+        return None
+
+    def _normalize_mode_setting_value(self, descriptor: Dict[str, Any], value: Any) -> Any:
+        value_type = descriptor.get("valueType")
+
+        if value_type == "boolean":
+            if not isinstance(value, bool):
+                return None, False
+            normalized_value = value
+        elif value_type == "number":
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return None, False
+            normalized_value = float(value)
+            min_value = descriptor.get("min")
+            max_value = descriptor.get("max")
+            if isinstance(min_value, (int, float)):
+                normalized_value = max(float(min_value), normalized_value)
+            if isinstance(max_value, (int, float)):
+                normalized_value = min(float(max_value), normalized_value)
+            if descriptor.get("integer", False):
+                normalized_value = int(round(normalized_value))
+        else:
+            if not isinstance(value, str):
+                return None, False
+            normalized_value = value
+
+        options = descriptor.get("options")
+        if isinstance(options, list) and len(options) > 0:
+            allowed_values = [
+                option.get("value")
+                for option in options
+                if isinstance(option, dict) and "value" in option
+            ]
+            if len(allowed_values) > 0 and normalized_value not in allowed_values:
+                return None, False
+
+        return normalized_value, True
+
+    def _get_effective_mode_settings(self, configuration: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[str, Any]]:
+        config = configuration if isinstance(configuration, dict) else self.activ_configuration
+        effective: Dict[str, Dict[str, Any]] = {
+            mode_name: self._mode_settings_defaults_for_mode(mode_name)
+            for mode_name in self.mode_settings_catalog
+        }
+
+        overrides = config.get("modeSettings", {})
+        if not isinstance(overrides, dict):
+            return effective
+
+        for mode_name, settings in overrides.items():
+            if mode_name not in self.mode_settings_catalog or not isinstance(settings, dict):
+                continue
+
+            merged = dict(effective.get(mode_name, {}))
+            for descriptor in self.mode_settings_catalog[mode_name].get("settings", []):
+                key = descriptor.get("key")
+                if not isinstance(key, str) or key not in settings:
+                    continue
+                normalized_value, ok = self._normalize_mode_setting_value(descriptor, settings.get(key))
+                if ok:
+                    merged[key] = normalized_value
+            effective[mode_name] = merged
+
+        return effective
+
+    def _apply_mode_settings_to_segments(self, mode_settings: Dict[str, Dict[str, Any]]) -> None:
+        if not isinstance(mode_settings, dict):
+            return
+
+        for segment in self.segments_list:
+            for mode_name, settings in mode_settings.items():
+                if isinstance(mode_name, str) and isinstance(settings, dict):
+                    segment.apply_mode_settings(mode_name, settings)
+
+    def _apply_active_mode_settings(self) -> None:
+        self._apply_mode_settings_to_segments(self._get_effective_mode_settings())
+
+    def _persist_configurations_store(self) -> bool:
+        file_path = os.path.join(os.path.dirname(__file__), "..", "data", "configurations.json")
+        payload = {
+            "playlists": list(self.playlists),
+            "configurations": self.configurations,
+        }
+
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+                f.write("\n")
+            return True
+        except Exception as e:
+            self.logger.error(f"(MM) Failed to persist configurations.json: {e}")
+            return False
+
+    def _persist_active_configuration_mode_settings(self) -> bool:
+        playlist_name = self.activ_configuration.get("playlist")
+        configuration_name = self.activ_configuration.get("name")
+        if not isinstance(playlist_name, str) or not isinstance(configuration_name, str):
+            return False
+
+        playlist_configs = self.configurations.get(playlist_name)
+        if not isinstance(playlist_configs, list):
+            return False
+
+        for config in playlist_configs:
+            if not isinstance(config, dict):
+                continue
+            if str(config.get("name", "")).strip().lower() != configuration_name.strip().lower():
+                continue
+            config["modeSettings"] = self._copy_mode_settings_map(self.activ_configuration.get("modeSettings", {}))
+            return self._persist_configurations_store()
+
+        return False
 
     def get_state_snapshot(self) -> Dict[str, Any]:
         """
@@ -165,6 +328,8 @@ class Mode_master:
             "sensibility": int(round(max(0.0, float(getattr(self.listener, "sensi", 0.0))) * 100)),
             "playlists": list(self.playlists),
             "segments": segments,
+            "modeSettingsCatalog": list(self.mode_settings_catalog.values()),
+            "modeSettings": self._get_effective_mode_settings(),
         }
 
     async def update_forever(self) -> None:
@@ -218,8 +383,6 @@ class Mode_master:
         """
         Load modes and playlists from the configurations.json file.
         """
-        import json
-        import os
         file_path = os.path.join(os.path.dirname(__file__), "..", "data", "configurations.json")
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -245,7 +408,9 @@ class Mode_master:
         """
         if transition_config is not None:
             self.transition_director.start_transition(transition_config)
-            
+
+        self._apply_active_mode_settings()
+
         active_modes = self.activ_configuration.get("modes", {})
         active_way = self.activ_configuration.get("way", {})
         for segment in self.segments_list:
@@ -383,6 +548,7 @@ class Mode_master:
             "name": conf.get("name"),
             "modes": conf.get("modes", {}),
             "way": conf.get("way", {}),
+            "modeSettings": conf.get("modeSettings", {}),
         }
 
     def _find_configuration(self, configuration_name: Any, playlist_name: Optional[Any] = None) -> Optional[Dict[str, Any]]:
@@ -397,14 +563,15 @@ class Mode_master:
             candidate_playlists = list(self.playlists)
 
         for playlist in candidate_playlists:
-            for conf in self.configurations.get(playlist, []):
+            for conf_index, conf in enumerate(self.configurations.get(playlist, [])):
                 if conf.get("name", "").strip().lower() == wanted_name:
                     return {
                         "playlist": playlist,
-                        "index": -1,
+                        "index": conf_index,
                         "name": conf.get("name"),
                         "modes": conf.get("modes", {}),
                         "way": conf.get("way", {}),
+                        "modeSettings": conf.get("modeSettings", {}),
                     }
         return None
 
@@ -416,10 +583,12 @@ class Mode_master:
             return {}
         modes = config.get("modes")
         way = config.get("way")
+        mode_settings = config.get("modeSettings")
         return {
             **config,
             "modes": dict(modes) if isinstance(modes, dict) else {},
             "way": dict(way) if isinstance(way, dict) else {},
+            "modeSettings": self._copy_mode_settings_map(mode_settings),
         }
 
     def _apply_configuration(self, config: Dict[str, Any], transition_config: Optional[Dict[str, Any]]) -> None:
@@ -559,22 +728,38 @@ class Mode_master:
             if action in {"set_editor_mode", "select_segment"}:
                 return {"applied": True}
 
-        if page == "auto_dj":
-            value = payload.get("value")
-            if isinstance(value, (int, float)):
-                if action == "set_rainbow_color_intensity":
-                    self.infos["rainbow_color_intensity"] = float(value)
-                    return {"applied": True}
-                if action == "set_pulsar_tail_length":
-                    self.infos["pulsar_tail_length"] = float(value)
-                    return {"applied": True}
-                if action == "set_trigger_interval":
-                    self.infos["trigger_interval"] = float(value)
-                    return {"applied": True}
-                if action == "set_sweep_duration":
-                    self.infos["sweep_duration"] = float(value)
-                    return {"applied": True}
-            return {"applied": False, "reason": "invalid_value"}
+        if page == "mode_settings":
+            if action == "set_mode_setting":
+                mode_name = payload.get("mode")
+                setting_key = payload.get("key")
+                if not isinstance(mode_name, str) or not isinstance(setting_key, str):
+                    return {"applied": False, "reason": "invalid_mode_setting"}
+
+                descriptor = self._get_mode_setting_descriptor(mode_name, setting_key)
+                if descriptor is None:
+                    return {"applied": False, "reason": "unknown_mode_setting"}
+
+                normalized_value, ok = self._normalize_mode_setting_value(descriptor, payload.get("value"))
+                if not ok:
+                    return {"applied": False, "reason": "invalid_setting_value"}
+
+                current_mode_settings = self._copy_mode_settings_map(self.activ_configuration.get("modeSettings", {}))
+                current_mode_settings.setdefault(mode_name, {})
+                current_mode_settings[mode_name][setting_key] = normalized_value
+                self.activ_configuration["modeSettings"] = current_mode_settings
+
+                self._apply_active_mode_settings()
+                persisted = self._persist_active_configuration_mode_settings()
+
+                return {
+                    "applied": True,
+                    "mode": mode_name,
+                    "key": setting_key,
+                    "value": normalized_value,
+                    "persisted": persisted,
+                }
+
+            return {"applied": False, "reason": "unsupported_mode_settings_action"}
 
         if page == "system":
             if action in {"restart_python_loop", "restart_raspberry_pi"}:
@@ -602,7 +787,8 @@ class Mode_master:
                             "index": conf_index,
                             "name": self.configurations[playlist_name][conf_index]["name"],
                             "modes": self.configurations[playlist_name][conf_index]["modes"],
-                            "way": self.configurations[playlist_name][conf_index]["way"]
+                            "way": self.configurations[playlist_name][conf_index]["way"],
+                            "modeSettings": self.configurations[playlist_name][conf_index].get("modeSettings", {}),
                         })
             # Shuffle the bag like a deck of cards
             random.shuffle(self.shuffle_bag)

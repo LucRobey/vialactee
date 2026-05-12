@@ -1,6 +1,6 @@
 # Mode_master Internal Architecture
 
-The `Mode_master` acts as the central conductor for the entire installation. It manages global state, configurations, playlists, segments, and external commands. 
+The `Mode_master` acts as the central conductor for the entire installation. It manages global state, configurations, playlists, segments, configuration-scoped mode settings, and external commands. 
 
 Here is a visual breakdown of how it operates internally, followed by a detailed explanation of its core mechanisms.
 
@@ -111,7 +111,7 @@ graph TD
 
 ### 1. Initialization (`__init__`)
 When `Mode_master` starts, it sets up the environment:
-*   **`load_configurations()`**: Reads `data/configurations.json` to load all available visual modes, settings, and playlists into memory.
+*   **`load_configurations()`**: Reads `data/configurations.json` to load all available visual modes, per-configuration `modeSettings`, and playlists into memory.
 *   **`initiate_segments()`**: Reads `config/segments.json` and creates `Segment` objects for every defined physical hardware strip (h00, v4, etc.).
 *   **`initiate_configuration()`**: Seeds the system with an initial random configuration by drawing from the configuration shuffle bag.
 *   **`Transition_Director`**: Bootstraps the director responsible for deciding exactly *when* configurations should change based on audio analysis.
@@ -129,16 +129,18 @@ To ensure that all configurations in the allowed playlists are seen before repea
 *   It dumps all available configurations into a list and randomizes it.
 *   It pops one configuration at a time.
 *   When the bag is empty, it refills and reshuffles it.
-Once a configuration is picked, `update_segments_modes()` passes the new targets to the segments, skipping any segments that are currently marked as `isBlocked`.
+Once a configuration is picked, `update_segments_modes()` first reapplies the active configuration's effective `modeSettings` to every live mode instance across the segments, then passes the new mode/direction targets to the segments, skipping any segments that are currently marked as `isBlocked`.
 
 ### 4. External Web App Instructions
-At any time, the Wabb web app can send JSON instructions through `Connector.py` and `/ws`. `process_instruction()` handles the supported page/action pairs for Live Deck, Topology, Auto-DJ, and System controls.
+At any time, the Wabb web app can send JSON instructions through `Connector.py` and `/ws`. `process_instruction()` handles the supported page/action pairs for Live Deck, Topology, Mode Settings, and System controls.
 
 The web app never owns playlist or configuration names. Both Python and React load them from `data/configurations.json`. Topology **persists** presets only through `POST /api/configurations` from `MODIFY` / `BUILD`; after a save, `Mode_master.load_configurations()` refreshes the in-memory playlist list and the connector broadcasts a fresh snapshot.
 
 **Topology runtime overrides:** `page: "topology"`, `action: "select_segment_mode"` / `"toggle_segment_direction"` call `Segment.execute_mode_swap()` / `change_way()` on the live instances. They do **not** mutate `data/configurations.json` or the in-memory playlist tables.
 
-**Active configuration isolation:** When a configuration is applied (`_apply_configuration`, initial pick, or `change_configuration`), `Mode_master` stores a shallow copy of that preset’s `modes` and `way` dicts on `activ_configuration`. Live segment swaps therefore cannot accidentally rewrite the shared configuration objects loaded from `data/configurations.json`.
+**Active configuration isolation:** When a configuration is applied (`_apply_configuration`, initial pick, or `change_configuration`), `Mode_master` stores a shallow copy of that preset’s `modes`, `way`, and `modeSettings` dicts on `activ_configuration`. Live segment swaps and live mode-setting edits therefore cannot accidentally rewrite the shared configuration objects loaded from `data/configurations.json`.
+
+**Mode Settings runtime fan-out:** `Mode_master` builds a settings catalog by introspecting the loaded `Mode` instances held inside each `Segment`. When the web app sends `page: "mode_settings", action: "set_mode_setting"`, `Mode_master` validates the request against that catalog, updates the active configuration's `modeSettings`, reapplies the effective values to every segment instance for that mode, persists the active configuration back into `data/configurations.json`, and then rebroadcasts state.
 
 ### 5. State Snapshot Contract
 `get_state_snapshot()` returns a JSON-safe view of:
@@ -148,5 +150,7 @@ The web app never owns playlist or configuration names. Both Python and React lo
 * Selected transition label and transition lock/progress.
 * Luminosity and sensibility values.
 * Every segment's id, name, active mode, direction, blocked flag, target mode, and transition status.
+* The `modeSettingsCatalog` for every loaded mode that exposes settings.
+* The active configuration's effective `modeSettings` values.
 
-This snapshot is sent as a `mode_master_state` WebSocket message and is the authoritative source for what the Live Deck telemetry and Topology map display.
+This snapshot is sent as a `mode_master_state` WebSocket message and is the authoritative source for what the Live Deck telemetry, Topology map, and Mode Settings page display.

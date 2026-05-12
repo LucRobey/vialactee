@@ -41,14 +41,15 @@ This document outlines the structural layout and user experience philosophy for 
 
 ---
 
-## 🎛️ Page 4: Auto-DJ Tuning (Automation)
-*Philosophy: Designing the rules of the autonomous light jockey. Configured during soundcheck to dictate how the system behaves when left alone.*
+## 🎛️ Page 4: Mode Settings (Per-Mode Tuning)
+*Philosophy: Tuning the mathematical feel of each visual mode during soundcheck while keeping the active configuration as the persistence boundary.*
 
 **Components:**
-*   **Trigger Interval Slider:** Controls how often the system autonomously changes states (e.g., trigger every 5 minutes).
-*   **Transition Sweep Duration Slider:** Controls the speed of the visual wipe across the room (e.g., transition takes 3 seconds).
-*   **Mode Probabilities (Optional):** Weights defining which modes the Auto-DJ is more likely to select next.
-*   **Mode Configuration Frame:** A dedicated section where every mode appears as a card. Each card contains the **Deep Parameters** for that specific mode (e.g., `Ball Size`, `Tail Length`, `Color Density`), presented as dynamic sliders mapped directly to the mode's internal global variables.
+*   **Dynamic Mode Catalog:** Every loaded mode that exposes at least one setting appears automatically.
+*   **Per-Mode Cards:** Each card renders one or more controls that are inherent to that mode.
+*   **Supported Controls:** `switch`, `slider`, and `list`, all driven from backend-provided descriptors rather than hardcoded React JSX.
+*   **Live Runtime Apply:** Adjustments go out over `/ws`, are validated by `Mode_master`, and immediately affect every live segment instance currently using that mode.
+*   **Configuration Persistence:** The active configuration owns the `modeSettings` values, so saved presets carry their own tuning.
 
 ---
 
@@ -67,4 +68,4 @@ This document outlines the structural layout and user experience philosophy for 
 * `data/configurations.json` is the single source of truth for playlists and saved configurations.
 * `src/utils/configurationStore.ts` is the React load/save boundary for that JSON file.
 * `/api/configurations` is implemented both by Vite during local development and by `connectors/Connector.py` when Python serves the backend.
-* `/ws` remains the live control channel. The browser sends page/action instructions and receives `mode_master_state` snapshots describing the active playlist, active/queued configuration, transition state, luminosity, sensibility, and current segment modes/directions. Topology in `LIVE` treats those snapshots as authoritative once they agree with any pending user override for a segment.
+* `/ws` remains the live control channel. The browser sends page/action instructions and receives `mode_master_state` snapshots describing the active playlist, active/queued configuration, transition state, luminosity, sensibility, current segment modes/directions, the mode-settings catalog, and the active configuration's effective `modeSettings`. Topology in `LIVE` treats those snapshots as authoritative once they agree with any pending user override for a segment.

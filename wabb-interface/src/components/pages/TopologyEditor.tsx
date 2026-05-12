@@ -4,13 +4,18 @@ import { GridSpot } from '../layout/GridSpot';
 import { AVAILABLE_MODES } from '../../constants/modes';
 import { initialTopology, MAP_OFFSET_C, MAP_OFFSET_R, INSPECTOR_OFFSET_C, INSPECTOR_OFFSET_R } from '../../constants/topologyData';
 import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from '../../utils/controlBridge';
-import { loadConfigurationStore, saveConfigurationStore, type SegmentConfiguration } from '../../utils/configurationStore';
+import { loadConfigurationStore, saveConfigurationStore, type ModeSettingsMap, type SegmentConfiguration } from '../../utils/configurationStore';
 
 export type EditorMode = 'LIVE' | 'MODIFY' | 'BUILD';
 
 type LiveSegmentPending = { mode?: string; direction?: 'UP' | 'DOWN' };
 
 const liveModeNamesMatch = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+const cloneModeSettings = (modeSettings: ModeSettingsMap = {}) =>
+  Object.fromEntries(
+    Object.entries(modeSettings).map(([modeName, settings]) => [modeName, { ...settings }])
+  ) as ModeSettingsMap;
 
 // SVG Cable helper
 const Cable = ({ start, end, cp1, cp2 }: { start: number[], end: number[], cp1: number[], cp2: number[] }) => {
@@ -52,6 +57,7 @@ export const TopologyEditor = () => {
   
   const [apiPlaylists, setApiPlaylists] = useState<string[]>([]);
   const [apiConfigurations, setApiConfigurations] = useState<Record<string, SegmentConfiguration[]>>({});
+  const [activeModeSettings, setActiveModeSettings] = useState<ModeSettingsMap>({});
   
   const [playlistIndex, setPlaylistIndex] = useState(0);
   const playlist = apiPlaylists[playlistIndex] || '';
@@ -71,6 +77,8 @@ export const TopologyEditor = () => {
     if (state.playlists.length > 0) {
       setApiPlaylists(state.playlists);
     }
+
+    setActiveModeSettings(cloneModeSettings(state.modeSettings));
 
     if (editorMode === 'LIVE') {
       if (state.activePlaylist) {
@@ -284,10 +292,18 @@ export const TopologyEditor = () => {
       newWay[key] = (seg as any).direction || 'UP';
     });
 
+    const existingConfig =
+      (apiConfigurations[playlist] || []).find(config => config.name === (selectedConfigName || configName)) ?? null;
+    const nextModeSettings =
+      Object.keys(activeModeSettings).length > 0
+        ? cloneModeSettings(activeModeSettings)
+        : cloneModeSettings(existingConfig?.modeSettings || {});
+
     const newConfig = {
       name: configName,
       modes: newModes,
-      way: newWay
+      way: newWay,
+      modeSettings: nextModeSettings,
     };
 
     const updatedConfigs = { ...apiConfigurations };

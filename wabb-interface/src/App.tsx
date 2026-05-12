@@ -5,7 +5,7 @@ import { LEGO_MATH } from './utils/legoMath'
 import { LiveDeck } from './components/pages/LiveDeck'
 import { StageArchitect } from './components/pages/StageArchitect'
 import { TopologyEditor } from './components/pages/TopologyEditor'
-import { AutoDJTuning } from './components/pages/AutoDJTuning'
+import { ModeSettings } from './components/pages/ModeSettings'
 import { SystemSetup } from './components/pages/SystemSetup'
 
 function App() {
@@ -15,7 +15,7 @@ function App() {
     { name: "Live Deck", component: <LiveDeck /> },
     { name: "Stage Architect", component: <StageArchitect /> },
     { name: "Topology", component: <TopologyEditor /> },
-    { name: "Auto-DJ", component: <AutoDJTuning /> },
+    { name: "Mode Settings", component: <ModeSettings /> },
     { name: "System", component: <SystemSetup /> }
   ]
   const roguePieces = [

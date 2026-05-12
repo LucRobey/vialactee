@@ -9,7 +9,7 @@ It serves as the official remote control for the chandelier. We pivoted to this 
 - **React Framework**: Built using React, TypeScript, and Vite for lightning-fast HMR and compilation.
 - **Network Layer**: Communicates with the Raspberry Pi's backend over HTTP and WebSockets (handled by `Connector.py` in the `connectors/` folder).
 - **Configuration Source**: Playlists and configurations are loaded from `data/configurations.json` through `/api/configurations`. Do not hardcode playlist names or configuration names in React components.
-- **Interface Capabilities**: Provides sliders, toggle buttons, and visual feedback for the user to manipulate playlist rotation, override colors, force mode changes, and observe the system's real-time performance metrics.
+- **Interface Capabilities**: Provides sliders, toggles, lists, and visual feedback so the user can manipulate playlist rotation, force mode changes, tune per-mode settings, and observe the system's real-time performance metrics.
 
 ## Configuration JSON
 
@@ -30,14 +30,14 @@ The app emits control instructions from the UI to the backend bridge through a s
 
 ```json
 {
-  "page": "live_deck | topology | auto_dj | system",
+  "page": "live_deck | topology | mode_settings | system",
   "action": "string_action_name",
   "payload": {},
   "timestamp": 1715430000000
 }
 ```
 
-The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck and Topology with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, and each segment's active mode/direction.
+The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck, Topology, and Mode Settings with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, each segment's active mode/direction, the mode-settings catalog, and the current effective per-mode values for the active configuration.
 
 **Topology `LIVE`:** segment mode/direction changes are sent as instructions only (no `POST /api/configurations`). The UI merges snapshots with short-lived pending values so rapid broadcasts do not undo a click before Python applies it. **Topology `MODIFY` / `BUILD`:** saving writes through `POST /api/configurations` and issues `modify_configuration` or `build_configuration`.
 
@@ -45,7 +45,7 @@ The frontend sends instructions including:
 
 - **Live Deck**: configuration selection, transition selection, next configuration trigger, lock current configuration, manual drop, playlist buttons, luminosity slider, sensibility slider.
 - **Topology**: segment selection, segment mode and direction changes (`select_segment_mode`, `toggle_segment_direction`), editor mode (`LIVE` / `MODIFY` / `BUILD`), configuration and playlist actions where enabled by mode, persisted saves only outside `LIVE`.
-- **Auto-DJ**: rainbow color intensity, pulsar tail length, trigger interval, sweep duration.
+- **Mode Settings**: generic `set_mode_setting` messages that update the active configuration's per-mode `modeSettings` and immediately apply them to every live segment instance using that mode.
 - **System**: restart python loop, restart raspberry pi.
 
 ## Development:

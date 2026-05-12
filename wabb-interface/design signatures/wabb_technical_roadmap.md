@@ -11,6 +11,7 @@ This document outlines the technical changes, backend modifications, and new cap
     *   Global luminosity and sensibility.
     *   Active playlist, active/queued configuration, selected transition, transition lock, and transition progress.
     *   Segment blocked/transition status.
+    *   The mode-settings catalog plus the active configuration's effective `modeSettings`.
 *   **The "Pending" State Manager:** Implement backend logic to hold "Staged Transitions" (batch changes across multiple segments) in memory until the UI explicitly sends an `EXECUTE` command to flush them to the LEDs simultaneously.
 
 ---
@@ -18,7 +19,7 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 🎛️ 2. Deep Parameter Injection & Modifiers
 *To expose mathematical control over the running animations directly to the operator.*
 
-*   **Mode-Specific Parameter Introspection:** Modify the mode classes (e.g., `Rainbow_mode`, `Pulsar_mode`) to expose their internal global variables (like `ball_size`, `tail_length`, `color_density`). The UI will dynamically read these and generate sliders to tweak them live.
+*   **Mode-Specific Parameter Introspection:** Implemented through the `Mode` base class and per-mode schemas. The UI now reads backend-provided descriptors and renders `switch`, `slider`, or `list` controls dynamically for every loaded mode that declares settings.
 *   **Global Speed Multiplier:** Implement an override variable in `Mode_master.py` that scales `delta_time` or the internal logic timers of all modes (e.g., `0.5x`, `1x`, `2x`).
 *   **Global Modifiers (The Glitter Mask):** Implement a global overlay function. This applies effects (like random white twinkling) on top of the calculated frame *after* the base mode computes, but *before* the frame is pushed to hardware.
 
@@ -41,7 +42,7 @@ This document outlines the technical changes, backend modifications, and new cap
 ## 🤖 4. Show Automation & Presets
 *To reduce cognitive load for the operator during a live show.*
 
-*   **Snapshot Save/Load:** Implemented for playlist/configuration snapshots through `data/configurations.json` and `/api/configurations`. Vite serves the endpoint in development; `Connector.py` serves it in Python-backed operation and reloads `Mode_master` after writes.
+*   **Snapshot Save/Load:** Implemented for playlist/configuration snapshots through `data/configurations.json` and `/api/configurations`. Vite serves the endpoint in development; `Connector.py` serves it in Python-backed operation and reloads `Mode_master` after writes. Configurations now also carry per-mode `modeSettings`.
 *   **Auto-Transition Engine & Timing:** Implement a backend toggle that automatically selects and executes a random, safe transition.
     *   Triggered every *X* minutes or *Y* song drops.
     *   Must allow the UI to configure both the interval between transitions *and* the duration/speed of the transition sweep itself.
