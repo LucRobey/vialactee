@@ -1,4 +1,4 @@
-import { useMemo, type MouseEvent } from 'react';
+import { type MouseEvent } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { MAP_OFFSET_C, MAP_OFFSET_R, type TopologySegment } from '../../constants/topologyData';
@@ -27,33 +27,6 @@ const Cable = ({ start, end, cp1, cp2 }: { start: number[]; end: number[]; cp1: 
   );
 };
 
-const getJunctions = (segments: TopologySegment[]) => {
-  const junctions: { col: number; row: number }[] = [];
-  for (let i = 0; i < segments.length; i += 1) {
-    for (let j = i + 1; j < segments.length; j += 1) {
-      const s1 = segments[i];
-      const s2 = segments[j];
-      const r1 = {
-        left: s1.col,
-        right: s1.col + (s1.orientation === 'horizontal' ? s1.w : 2),
-        top: s1.row,
-        bottom: s1.row + (s1.orientation === 'vertical' ? s1.h : 2),
-      };
-      const r2 = {
-        left: s2.col,
-        right: s2.col + (s2.orientation === 'horizontal' ? s2.w : 2),
-        top: s2.row,
-        bottom: s2.row + (s2.orientation === 'vertical' ? s2.h : 2),
-      };
-
-      if (r1.left < r2.right && r1.right > r2.left && r1.top < r2.bottom && r1.bottom > r2.top) {
-        junctions.push({ col: Math.max(r1.left, r2.left), row: Math.max(r1.top, r2.top) });
-      }
-    }
-  }
-  return junctions;
-};
-
 export const TopologyMap = ({
   segments,
   selectedSegId,
@@ -65,7 +38,6 @@ export const TopologyMap = ({
   onSelectSegment: (segmentId: string) => void;
   onToggleDirection: (event: MouseEvent, segmentId: string) => void;
 }) => {
-  const junctions = useMemo(() => getJunctions(segments), [segments]);
   const getModeClass = (modeName: string) => `anim-${modeName.toLowerCase().replace(/\s+/g, '-')}`;
 
   return (
@@ -86,24 +58,6 @@ export const TopologyMap = ({
         <Cable start={[23.5, 20]} end={[21.5, 19.5]} cp1={[22, 20]} cp2={[22, 19.5]} />
         <Cable start={[24, 2.5]} end={[16.5, 5.5]} cp1={[24, -0.5]} cp2={[16.5, -0.5]} />
       </svg>
-
-      {junctions.map((junction, index) => (
-        <GridSpot key={`junction-${index}`} col={junction.col} row={junction.row} style={{ zIndex: 14 }}>
-          <div className="rogue-piece" style={{
-            width: 'calc(2 * var(--stud))',
-            height: 'calc(2 * var(--stud))',
-            backgroundColor: '#2a2d32',
-            backgroundImage: 'var(--highlight), var(--shadow)',
-            backgroundSize: 'var(--stud) var(--stud)',
-            boxShadow: '3px 3px 10px rgba(0,0,0,0.8)',
-            borderTop: '2px solid rgba(255,255,255,0.2)',
-            borderLeft: '2px solid rgba(255,255,255,0.1)',
-            borderBottom: '2px solid rgba(0,0,0,0.8)',
-            borderRight: '2px solid rgba(0,0,0,0.6)',
-            borderRadius: '2px'
-          }} />
-        </GridSpot>
-      ))}
 
       {segments.map(seg => {
         const isSelected = selectedSegId === seg.id;
