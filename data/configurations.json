@@ -61,6 +61,14 @@
           "Segment h11": "UP",
           "Segment h10": "UP",
           "Segment v1": "UP"
+        },
+        "modeSettings": {
+          "Chromatic Chaser": {
+            "bounceEnabled": true
+          },
+          "Metronome": {
+            "accentColor": "purple"
+          }
         }
       },
       {
@@ -124,7 +132,7 @@
     ],
     "Camille": [
       {
-        "name": "parmi toutes les étoiles du cielleeeuh",
+        "name": "parmi toutes les \u00e9toiles du cielleeeuh",
         "modes": {
           "Segment v4": "Shining Stars",
           "Segment h32": "Shining Stars",
@@ -150,6 +158,11 @@
           "Segment h11": "UP",
           "Segment h10": "UP",
           "Segment v1": "UP"
+        },
+        "modeSettings": {
+          "Metronome": {
+            "alternateSubBeats": true
+          }
         }
       },
       {
@@ -179,6 +192,11 @@
           "Segment h11": "UP",
           "Segment h10": "DOWN",
           "Segment v1": "DOWN"
+        },
+        "modeSettings": {
+          "Metronome": {
+            "alternateSubBeats": true
+          }
         }
       }
     ]
