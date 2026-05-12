@@ -3,7 +3,7 @@
     "useMicrophone": true,
     "HARDWARE_MODE": "auto",
     "printTimeOfCalculation": false,
-    "printModesDetails": true,
+    "printModesDetails": false,
     "printMicrophoneDetails": false,
     "printAppDetails": false,
     "printAsservmentDetails": false,

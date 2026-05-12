@@ -322,6 +322,9 @@ class AudioAnalyzer:
             best_tau_idx = int(np.argmax(weighted_peaks))
             global_max_val = weighted_peaks[best_tau_idx]
             
+            # Store the absolute global maximum BPM before applying local stubbornness
+            self.global_target_bpm = 60.0 * self.btrack_fps / max(1.0, self.tau_min + best_tau_idx)
+            
             # --- Check if there are peaks that agree with current BPM ---
             expected_idx = int(round(current_tau - self.tau_min))
             
