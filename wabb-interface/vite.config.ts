@@ -23,7 +23,7 @@ const configurationApiPlugin = () => ({
           const data = fs.readFileSync(configPath, 'utf-8');
           res.setHeader('Content-Type', 'application/json');
           res.end(data);
-        } catch (e) {
+        } catch {
           res.statusCode = 500;
           res.end(JSON.stringify({ error: "Could not read configurations.json" }));
         }
@@ -53,7 +53,7 @@ const configurationApiPlugin = () => ({
             fs.writeFileSync(configPath, `${JSON.stringify(data, null, 2)}\n`, 'utf-8');
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ success: true }));
-          } catch (e) {
+          } catch {
             res.statusCode = 400;
             res.end(JSON.stringify({ error: "Invalid JSON provided" }));
           }

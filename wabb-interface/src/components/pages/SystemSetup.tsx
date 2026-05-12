@@ -1,32 +1,34 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
+import { NoticeBanner } from '../common/NoticeBanner';
 import { sendInstruction, subscribeModeMasterState, type SystemStatus } from '../../utils/controlBridge';
+import { useBridgeStatus } from '../../utils/useBridgeStatus';
 
 const OLED_STYLE: CSSProperties = {
-  width: 'calc(13 * var(--stud))',
-  height: 'calc(6 * var(--stud))',
+  width: 'calc(11.5 * var(--stud))',
+  height: 'calc(5 * var(--stud))',
   position: 'relative',
   top: 0,
   left: 0,
   transform: 'none',
   display: 'flex',
   flexDirection: 'column',
-  padding: '10px',
+  padding: '8px 10px',
 };
 
 const PANEL_INSET_STYLE: CSSProperties = {
   width: '100%',
   height: '100%',
   background: 'linear-gradient(180deg, rgba(24,28,34,0.96) 0%, rgba(10,12,16,0.98) 100%)',
-  borderRadius: '10px',
+  borderRadius: '8px',
   border: '2px solid rgba(255,255,255,0.05)',
   boxShadow: 'inset 0 0 18px rgba(0,0,0,0.85), 0 10px 25px rgba(0,0,0,0.55)',
-  padding: '14px 16px',
+  padding: '10px 12px',
   boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
-  gap: '12px',
+  gap: '8px',
 };
 
 const EMPTY_SYSTEM_STATUS: SystemStatus = {
@@ -206,8 +208,8 @@ const statusRowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  gap: '12px',
-  padding: '10px 12px',
+  gap: '10px',
+  padding: '8px 10px',
   borderRadius: '8px',
   background: 'rgba(255,255,255,0.04)',
   border: '1px solid rgba(255,255,255,0.05)',
@@ -229,45 +231,105 @@ const StatusRow = ({ label, descriptor }: { label: string; descriptor: StatusDes
 
 const ActionButton = ({
   label,
-  colorClass,
+  variant,
   disabled,
   helper,
   onClick,
 }: {
   label: string;
-  colorClass: string;
+  variant: 'warning' | 'danger';
   disabled: boolean;
   helper: string;
   onClick: () => void;
-}) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+}) => {
+  const palette = variant === 'danger'
+    ? {
+        background: 'linear-gradient(180deg, #6f1111 0%, #451010 100%)',
+        accent: '#ff9b2f',
+        border: '#ff7a59',
+        text: '#fff4f1',
+        glow: 'rgba(255, 122, 89, 0.35)',
+        stripe: 'repeating-linear-gradient(135deg, rgba(255,155,47,0.95), rgba(255,155,47,0.95) 7px, rgba(58,16,10,0.95) 7px, rgba(58,16,10,0.95) 14px)',
+      }
+    : {
+        background: 'linear-gradient(180deg, #8f6b12 0%, #6e5107 100%)',
+        accent: '#ffe082',
+        border: '#f6d365',
+        text: '#fffef5',
+        glow: 'rgba(246, 211, 101, 0.28)',
+        stripe: 'linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0))',
+      };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
     <button
-      className={`rogue-piece ${colorClass}`}
       onClick={onClick}
       disabled={disabled}
       style={{
-        width: 'calc(21 * var(--stud))',
-        height: 'calc(3.2 * var(--stud))',
-        fontSize: '1.02rem',
-        fontWeight: 900,
+        width: 'calc(11.2 * var(--stud))',
+        minHeight: 'calc(2.35 * var(--stud))',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        textAlign: 'center',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: 'var(--shadow)',
+        justifyContent: 'space-between',
+        gap: '6px',
+        padding: '7px 9px',
+        borderRadius: '8px',
+        border: `2px solid ${palette.border}`,
+        background: palette.background,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.14), 0 10px 18px rgba(0,0,0,0.45), 0 0 18px ${palette.glow}`,
         opacity: disabled ? 0.45 : 1,
         letterSpacing: '0.04em',
+        position: 'relative',
+        overflow: 'hidden',
+        textAlign: 'left',
       }}
     >
-      {label}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: palette.stripe,
+          opacity: variant === 'danger' ? 0.18 : 0.32,
+          pointerEvents: 'none',
+        }}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', zIndex: 1 }}>
+        <div
+          style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: variant === 'danger' ? '8px' : '50%',
+            background: `linear-gradient(180deg, ${palette.accent} 0%, rgba(255,255,255,0.18) 100%)`,
+            color: variant === 'danger' ? '#4b100a' : '#362905',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 900,
+            fontSize: '1rem',
+            boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.55), inset 0 -2px 4px rgba(0,0,0,0.35)',
+          }}
+        >
+          {variant === 'danger' ? '!' : 'R'}
+        </div>
+        <span style={{ color: palette.text, fontSize: '0.68rem', fontWeight: 900, textShadow: '0 1px 3px rgba(0,0,0,0.45)', letterSpacing: '0.02em' }}>
+          {label}
+        </span>
+      </div>
+      {variant === 'danger' ? (
+        <span style={{ position: 'relative', zIndex: 1, color: '#ffd7c7', fontSize: '0.5rem', fontWeight: 900, letterSpacing: '0.08em' }}>
+          DANGER
+        </span>
+      ) : null}
     </button>
-    <span style={{ color: '#d7dde6', fontSize: '0.78rem', lineHeight: 1.35, minHeight: '2.2em' }}>{helper}</span>
+    <span style={{ color: '#d7dde6', fontSize: '0.7rem', lineHeight: 1.28, minHeight: '1.8em' }}>{helper}</span>
   </div>
-);
+  );
+};
 
 export const SystemSetup = () => {
   const [system, setSystem] = useState<SystemStatus>(EMPTY_SYSTEM_STATUS);
+  const bridgeStatus = useBridgeStatus();
 
   useEffect(() => {
     return subscribeModeMasterState((state) => {
@@ -291,65 +353,91 @@ export const SystemSetup = () => {
       : lastAction?.state === 'error'
         ? 'var(--lego-red)'
         : 'var(--lego-orange)';
+  const canSendSystemAction = bridgeStatus === 'open';
+
+  const confirmAndSend = (action: 'restart_python_loop' | 'restart_raspberry_pi') => {
+    if (!canSendSystemAction) {
+      return;
+    }
+
+    const confirmed = action === 'restart_python_loop'
+      ? window.confirm('Restart the live Python loop now? The controller will briefly disconnect while it relaunches.')
+      : window.confirm('Reboot the Raspberry Pi now? The show controller will disconnect and only return after the host finishes rebooting.');
+
+    if (!confirmed) {
+      return;
+    }
+
+    sendInstruction({ page: 'system', action });
+  };
 
   return (
     <div style={{ position: 'relative', width: '100%', height: 'calc(35 * var(--stud))' }}>
+      {bridgeStatus !== 'open' ? (
+        <div style={{ position: 'absolute', top: '60px', left: '108px', width: '420px', zIndex: 40 }}>
+          <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="SYSTEM CONTROL STATUS">
+            {bridgeStatus === 'connecting'
+              ? 'System controls will be available again once the bridge finishes reconnecting.'
+              : 'System controls are disabled while the controller is offline.'}
+          </NoticeBanner>
+        </div>
+      ) : null}
       <GridSpot col={6} row={0}>
         <div className="lego-label" style={{ width: 'calc(15 * var(--stud))' }}>SYSTEM & SETUP</div>
       </GridSpot>
 
       <GridSpot col={2} row={3}>
-        <div className="rogue-piece dark-grey" style={{ width: `${LEGO_MATH.physicalSize(39)}px`, height: `${LEGO_MATH.physicalSize(29)}px` }}></div>
+        <div className="rogue-piece dark-grey" style={{ width: `${LEGO_MATH.physicalSize(36)}px`, height: `${LEGO_MATH.physicalSize(23)}px` }}></div>
       </GridSpot>
 
       <GridSpot col={3} row={4}>
-        <div className="lego-label" style={{ width: 'calc(22 * var(--stud))', color: 'white', borderLeft: '5px solid var(--lego-green)' }}>LIVE TELEMETRY</div>
+        <div className="lego-label" style={{ width: 'calc(18 * var(--stud))', color: 'white', borderLeft: '5px solid var(--lego-green)' }}>LIVE TELEMETRY</div>
       </GridSpot>
 
       <GridSpot col={4} row={7}>
         <div className="embedded-oled" style={OLED_STYLE}>
           <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold' }}>CPU TEMP</span>
-          <span className="digital-font" style={{ color: system.cpuTempC !== null ? 'var(--lego-orange)' : 'var(--text-dim)', fontSize: '2.2rem', textShadow: `0 0 10px ${system.cpuTempC !== null ? 'var(--lego-orange)' : 'rgba(255,255,255,0.15)'}`, marginTop: 'auto' }}>
+          <span className="digital-font" style={{ color: system.cpuTempC !== null ? 'var(--lego-orange)' : 'var(--text-dim)', fontSize: '1.9rem', textShadow: `0 0 10px ${system.cpuTempC !== null ? 'var(--lego-orange)' : 'rgba(255,255,255,0.15)'}`, marginTop: 'auto' }}>
             {formatOptional(system.cpuTempC, ' C', 1)}
           </span>
-          <span style={{ color: '#9aa5b1', fontSize: '0.72rem', marginTop: '6px' }}>{system.hostname}</span>
+          <span style={{ color: '#9aa5b1', fontSize: '0.68rem', marginTop: '4px' }}>{system.hostname}</span>
         </div>
       </GridSpot>
 
-      <GridSpot col={19} row={7}>
+      <GridSpot col={17} row={7}>
         <div className="embedded-oled" style={OLED_STYLE}>
           <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold' }}>PYTHON LOOP</span>
-          <span className="digital-font" style={{ color: loopColor, fontSize: '2.05rem', textShadow: `0 0 10px ${loopColor}`, marginTop: 'auto' }}>
+          <span className="digital-font" style={{ color: loopColor, fontSize: '1.85rem', textShadow: `0 0 10px ${loopColor}`, marginTop: 'auto' }}>
             {system.pythonLoopFps !== null ? `${system.pythonLoopFps.toFixed(1)} FPS` : 'WAITING'}
           </span>
-          <span style={{ color: '#9aa5b1', fontSize: '0.72rem', marginTop: '6px' }}>{loopSubtitle}</span>
+          <span style={{ color: '#9aa5b1', fontSize: '0.68rem', marginTop: '4px' }}>{loopSubtitle}</span>
         </div>
       </GridSpot>
 
-      <GridSpot col={4} row={15}>
+      <GridSpot col={4} row={13}>
         <div className="embedded-oled" style={OLED_STYLE}>
           <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold' }}>RAM / DISK</span>
-          <span className="digital-font" style={{ color: '#90cdf4', fontSize: '1.95rem', textShadow: '0 0 10px #90cdf4', marginTop: 'auto' }}>
+          <span className="digital-font" style={{ color: '#90cdf4', fontSize: '1.75rem', textShadow: '0 0 10px #90cdf4', marginTop: 'auto' }}>
             {system.ramUsagePercent !== null ? `${system.ramUsagePercent.toFixed(1)}%` : '--'}
           </span>
-          <span style={{ color: '#9aa5b1', fontSize: '0.72rem', marginTop: '6px' }}>
+          <span style={{ color: '#9aa5b1', fontSize: '0.68rem', marginTop: '4px' }}>
             {system.diskUsagePercent !== null ? `Disk ${system.diskUsagePercent.toFixed(1)}% used` : 'Disk usage unavailable'}
           </span>
         </div>
       </GridSpot>
 
-      <GridSpot col={19} row={15}>
+      <GridSpot col={17} row={13}>
         <div className="embedded-oled" style={OLED_STYLE}>
           <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 'bold' }}>UPTIME / AUDIO</span>
-          <span className="digital-font" style={{ color: '#f6e05e', fontSize: '1.95rem', textShadow: '0 0 10px #f6e05e', marginTop: 'auto' }}>
+          <span className="digital-font" style={{ color: '#f6e05e', fontSize: '1.75rem', textShadow: '0 0 10px #f6e05e', marginTop: 'auto' }}>
             {formatDuration(system.uptimeSeconds)}
           </span>
-          <span style={{ color: '#9aa5b1', fontSize: '0.72rem', marginTop: '6px' }}>{latencySubtitle}</span>
+          <span style={{ color: '#9aa5b1', fontSize: '0.68rem', marginTop: '4px' }}>{latencySubtitle}</span>
         </div>
       </GridSpot>
 
-      <GridSpot col={4} row={22}>
-        <div style={{ ...PANEL_INSET_STYLE, width: `${LEGO_MATH.physicalSize(35)}px`, minHeight: `${LEGO_MATH.physicalSize(9)}px` }}>
+      <GridSpot col={4} row={19}>
+        <div style={{ ...PANEL_INSET_STYLE, width: `${LEGO_MATH.physicalSize(28)}px`, minHeight: `${LEGO_MATH.physicalSize(7)}px` }}>
           <StatusRow label="MODE" descriptor={describeSimulation(system)} />
           <StatusRow label="ESP32 OUTPUT" descriptor={describeEsp32(system)} />
           <StatusRow label="PHONE TO PI" descriptor={describePhone(system)} />
@@ -357,62 +445,74 @@ export const SystemSetup = () => {
         </div>
       </GridSpot>
 
-      <GridSpot col={43} row={3}>
-        <div className="rogue-piece dark-grey" style={{ width: `${LEGO_MATH.physicalSize(22)}px`, height: `${LEGO_MATH.physicalSize(29)}px` }}></div>
+      <GridSpot col={39} row={4}>
+        <div className="rogue-piece dark-grey" style={{ width: `${LEGO_MATH.physicalSize(13)}px`, height: `${LEGO_MATH.physicalSize(18)}px` }}></div>
       </GridSpot>
 
-      <GridSpot col={44} row={4}>
-        <div className="lego-label" style={{ width: 'calc(20 * var(--stud))', color: 'white', borderLeft: '5px solid var(--lego-red)' }}>CONTROL ROOM</div>
+      <GridSpot col={40} row={5}>
+        <div className="lego-label" style={{ width: 'calc(9.5 * var(--stud))', color: 'white', borderLeft: '5px solid var(--lego-red)' }}>CONTROL ROOM</div>
       </GridSpot>
 
-      <GridSpot col={44} row={7}>
-        <div style={{ ...PANEL_INSET_STYLE, width: `${LEGO_MATH.physicalSize(20)}px`, minHeight: `${LEGO_MATH.physicalSize(8)}px`, gap: '10px' }}>
+      <GridSpot col={40} row={8}>
+        <div style={{ ...PANEL_INSET_STYLE, width: `${LEGO_MATH.physicalSize(11)}px`, minHeight: `${LEGO_MATH.physicalSize(4.8)}px`, gap: '5px', padding: '7px 8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 800 }}>WEB CLIENTS</span>
-            <span className="digital-font" style={{ color: '#63b3ed', fontSize: '1.6rem', textShadow: '0 0 10px #63b3ed' }}>{system.webClientCount}</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: '0.68rem', fontWeight: 800 }}>WEB CLIENTS</span>
+            <span className="digital-font" style={{ color: '#63b3ed', fontSize: '0.95rem', textShadow: '0 0 10px #63b3ed' }}>{system.webClientCount}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 800 }}>HOST</span>
-            <span style={{ color: '#e2e8f0', fontSize: '0.78rem', fontWeight: 700, maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--text-dim)', fontSize: '0.68rem', fontWeight: 800 }}>HOST</span>
+            <span style={{ color: '#e2e8f0', fontSize: '0.66rem', fontWeight: 700, maxWidth: '72px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {system.hostname}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 800 }}>PLATFORM</span>
-            <span style={{ color: '#e2e8f0', fontSize: '0.78rem', fontWeight: 700, maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--text-dim)', fontSize: '0.68rem', fontWeight: 800 }}>PLATFORM</span>
+            <span style={{ color: '#e2e8f0', fontSize: '0.66rem', fontWeight: 700, maxWidth: '72px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {system.platform}
             </span>
           </div>
         </div>
       </GridSpot>
 
-      <GridSpot col={44} row={17}>
-        <div style={{ ...PANEL_INSET_STYLE, width: `${LEGO_MATH.physicalSize(20)}px`, minHeight: `${LEGO_MATH.physicalSize(6)}px`, gap: '8px' }}>
-          <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', fontWeight: 800 }}>LAST ACTION</span>
-          <span className="digital-font" style={{ color: lastAction ? lastActionColor : 'var(--text-dim)', fontSize: '1rem', textShadow: lastAction ? `0 0 8px ${lastActionColor}` : 'none' }}>
+      <GridSpot col={40} row={13.5}>
+        <div style={{ ...PANEL_INSET_STYLE, width: `${LEGO_MATH.physicalSize(11)}px`, minHeight: `${LEGO_MATH.physicalSize(4)}px`, gap: '4px', padding: '7px 8px' }}>
+          <span style={{ color: 'var(--text-dim)', fontSize: '0.68rem', fontWeight: 800 }}>LAST ACTION</span>
+          <span className="digital-font" style={{ color: lastAction ? lastActionColor : 'var(--text-dim)', fontSize: '0.92rem', textShadow: lastAction ? `0 0 8px ${lastActionColor}` : 'none' }}>
             {lastAction ? lastAction.state.toUpperCase() : 'IDLE'}
           </span>
-          <span style={{ color: '#e2e8f0', fontSize: '0.78rem', lineHeight: 1.4 }}>
+          <span style={{ color: '#e2e8f0', fontSize: '0.62rem', lineHeight: 1.18 }}>
             {lastAction ? lastAction.message : 'No system action requested yet.'}
           </span>
         </div>
       </GridSpot>
 
-      <GridSpot col={44} row={24}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <GridSpot col={40} row={18}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <ActionButton
             label="RESTART PYTHON LOOP"
-            colorClass="yellow"
-            disabled={!system.actions.restartPython.available}
-            helper={system.actions.restartPython.available ? 'Self-restarts the running Python process.' : (system.actions.restartPython.reason || 'Restart is unavailable.')}
-            onClick={() => sendInstruction({ page: 'system', action: 'restart_python_loop' })}
+            variant="warning"
+            disabled={!system.actions.restartPython.available || !canSendSystemAction}
+            helper={
+              !canSendSystemAction
+                ? 'Requires a live controller connection.'
+                : system.actions.restartPython.available
+                  ? 'Self-restarts the running Python process after confirmation.'
+                  : (system.actions.restartPython.reason || 'Restart is unavailable.')
+            }
+            onClick={() => confirmAndSend('restart_python_loop')}
           />
           <ActionButton
             label="REBOOT RASPBERRY PI"
-            colorClass="orange"
-            disabled={!system.actions.rebootRaspberry.available}
-            helper={system.actions.rebootRaspberry.available ? 'Reboots the Raspberry. The app should come back after boot.' : (system.actions.rebootRaspberry.reason || 'Reboot is unavailable.')}
-            onClick={() => sendInstruction({ page: 'system', action: 'restart_raspberry_pi' })}
+            variant="danger"
+            disabled={!system.actions.rebootRaspberry.available || !canSendSystemAction}
+            helper={
+              !canSendSystemAction
+                ? 'Requires a live controller connection.'
+                : system.actions.rebootRaspberry.available
+                  ? 'Reboots the Raspberry after confirmation. The app should return after boot.'
+                  : (system.actions.rebootRaspberry.reason || 'Reboot is unavailable.')
+            }
+            onClick={() => confirmAndSend('restart_raspberry_pi')}
           />
         </div>
       </GridSpot>

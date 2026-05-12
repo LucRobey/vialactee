@@ -9,6 +9,7 @@ import {
   type ModeSettingValue,
   type ModeSettingsCatalogEntry,
 } from '../../utils/controlBridge';
+import { useBridgeStatus } from '../../utils/useBridgeStatus';
 
 type PendingModeSettings = Record<string, Record<string, ModeSettingValue>>;
 
@@ -51,6 +52,7 @@ export const ModeSettings = () => {
   const [catalog, setCatalog] = useState<ModeSettingsCatalogEntry[]>([]);
   const [modeSettings, setModeSettings] = useState<Record<string, Record<string, ModeSettingValue>>>({});
   const pendingEditsRef = useRef<PendingModeSettings>({});
+  const bridgeStatus = useBridgeStatus();
 
   useEffect(() => {
     return subscribeModeMasterState((state: ModeMasterState) => {
@@ -253,7 +255,7 @@ export const ModeSettings = () => {
               fontWeight: 'bold',
               letterSpacing: '1px'
             }}>
-              [NO MODES WITH SETTINGS]
+              {bridgeStatus === 'open' ? '[NO MODES WITH SETTINGS]' : '[WAITING FOR LIVE CONTROLLER DATA]'}
             </div>
           ) : (
             visibleModes.map((entry) => (

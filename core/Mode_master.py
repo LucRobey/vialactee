@@ -374,6 +374,12 @@ class Mode_master:
                 "inTransition": segment.is_in_transition,
             })
 
+        available_modes = sorted({
+            mode_name
+            for segment in self.segments_list
+            for mode_name in getattr(segment, "modes", {}).keys()
+        })
+
         return {
             "activePlaylist": active_playlist,
             "enabledPlaylists": enabled_playlists,
@@ -386,6 +392,7 @@ class Mode_master:
             "luminosity": int(round(max(0.0, min(1.0, float(getattr(self.listener, "luminosite", 0.0)))) * 100)),
             "sensibility": int(round(max(0.0, float(getattr(self.listener, "sensi", 0.0))) * 100)),
             "playlists": list(self.playlists),
+            "availableModes": available_modes,
             "segments": segments,
             "modeSettingsCatalog": list(self.mode_settings_catalog.values()),
             "modeSettings": self._get_effective_mode_settings(),
