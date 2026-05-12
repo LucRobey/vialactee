@@ -37,7 +37,7 @@ The app emits control instructions from the UI to the backend bridge through a s
 }
 ```
 
-The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck, Topology, and Mode Settings with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, each segment's active mode/direction, the mode-settings catalog, and the current effective per-mode values for the active configuration.
+The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck, Topology, Mode Settings, and System with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, each segment's active mode/direction, the mode-settings catalog, the current effective per-mode values for the active configuration, and the live `system` telemetry block.
 
 **Topology `LIVE`:** segment mode/direction changes are sent as instructions only (no `POST /api/configurations`). The UI merges snapshots with short-lived pending values so rapid broadcasts do not undo a click before Python applies it. **Topology `MODIFY` / `BUILD`:** saving writes through `POST /api/configurations` and issues `modify_configuration` or `build_configuration`.
 
@@ -46,7 +46,7 @@ The frontend sends instructions including:
 - **Live Deck**: configuration selection, transition selection, next configuration trigger, lock current configuration, manual drop, playlist buttons, luminosity slider, sensibility slider.
 - **Topology**: segment selection, segment mode and direction changes (`select_segment_mode`, `toggle_segment_direction`), editor mode (`LIVE` / `MODIFY` / `BUILD`), configuration and playlist actions where enabled by mode, persisted saves only outside `LIVE`.
 - **Mode Settings**: generic `set_mode_setting` messages that update the active configuration's per-mode `modeSettings` and immediately apply them to every live segment instance using that mode.
-- **System**: restart python loop, restart raspberry pi.
+- **System**: live host telemetry plus restart python loop / restart raspberry pi controls. The `system` snapshot now includes hardware mode, CPU temp, RAM and disk usage, loop FPS/health, ESP32 reachability, Bluetooth phone status when detectable, audio stream health, uptime, connected web-client count, and action capability / feedback fields for the dangerous controls.
 
 ## Development:
 The interface now auto-launches when you run `Main.py` (if `startWebApp` is `true` in `config/app_config.json`).

@@ -25,6 +25,10 @@ class Local_Microphone:
         self.buffer_size = 4096 # Size of the sliding FFT window
         self.audio_data = np.zeros(self.buffer_size)
         self.stream = None
+
+        self.listener.audio_stream_state = "disabled" if (not self.useMicrophone or sd is None) else "starting"
+        self.listener.audio_stream_error = None
+        self.listener.last_audio_callback_time = None
         
         # Audio delay buffer for fake X seconds delay
         if self.simulate_delay > 0:
@@ -42,6 +46,8 @@ class Local_Microphone:
 
         if status and self.showMicrophoneDetails:
             logger.debug(f"(Local_mic) status: {status}")
+
+        self.listener.last_audio_callback_time = time.time()
             
         # 0. Simulate Delay Playback
         if outdata is not None and hasattr(self, 'delay_buffer'):
@@ -97,11 +103,13 @@ class Local_Microphone:
 
     async def listen_forever(self):
         if not self.useMicrophone or sd is None:
+            self.listener.audio_stream_state = "disabled"
             logger.warning("(Local_mic) Microphone disabled or sounddevice not installed.")
             while True:
                 await asyncio.sleep(1)
                 
         try:
+            self.listener.audio_stream_state = "starting"
             if self.simulate_delay > 0:
                 self.stream = sd.Stream(
                     device=(self.input_device_id, None),
@@ -118,6 +126,8 @@ class Local_Microphone:
                     callback=self.audio_callback,
                     blocksize=self.chunk_size
                 )
+            self.listener.audio_stream_state = "running"
+            self.listener.audio_stream_error = None
             logger.info("(Local_mic) Microphone started correctly.")
             with self.stream:
                 while True:
@@ -125,6 +135,8 @@ class Local_Microphone:
                     # Limit the update loop slightly to match a smooth 60fps
                     await asyncio.sleep(1/60)
         except Exception as e:
+            self.listener.audio_stream_state = "error"
+            self.listener.audio_stream_error = str(e)
             logger.error(f"(Local_mic) Stream Error: {e}")
             while True:
                 await asyncio.sleep(1)

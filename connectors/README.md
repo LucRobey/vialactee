@@ -43,6 +43,8 @@ It also pushes live snapshots to every connected web client:
 }
 ```
 
+The `mode_master_state` payload now also includes a nested `system` block for the System page. It carries host/runtime telemetry such as resolved hardware mode, simulation state, CPU temperature when available, RAM and disk usage, loop FPS/health, microphone state, best-effort ESP32 reachability, Bluetooth phone status when detectable, connected web-client count, and the capability / last-feedback fields for the dangerous system actions.
+
 ## Configuration API
 
 `GET /api/configurations` reads `data/configurations.json`.
@@ -71,3 +73,5 @@ After a successful save, `Connector` calls `Mode_master.load_configurations()` a
 Topology **live** segment mode/direction changes are WebSocket instructions handled inside `Mode_master.process_instruction()`; they are not written by `POST /api/configurations`. Only explicit saves from the Topology editor’s `MODIFY` / `BUILD` flow update the JSON file.
 
 Mode Settings uses the same `/ws` channel with a generic `set_mode_setting` action. `Mode_master` validates the requested mode/key/value, applies it to every live instance of that mode across all segments, persists the active configuration's `modeSettings`, and broadcasts the updated `mode_master_state`.
+
+System actions also use `/ws`. `restart_python_loop` performs an in-process Python self-restart when the current runtime supports it, while `restart_raspberry_pi` is only exposed on Linux Raspberry hosts with a reboot command available. Their latest feedback is folded back into the `system` snapshot so the UI can explain why an action is pending, unavailable, or failed.

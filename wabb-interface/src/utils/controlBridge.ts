@@ -42,6 +42,48 @@ export type ModeMasterSegmentState = {
   inTransition: boolean;
 };
 
+export type SystemActionCapability = {
+  available: boolean;
+  reason: string | null;
+};
+
+export type SystemActionFeedback = {
+  action: string;
+  state: 'pending' | 'success' | 'error';
+  message: string;
+  timestampMs: number;
+};
+
+export type SystemStatus = {
+  cpuTempC: number | null;
+  ramUsagePercent: number | null;
+  diskUsagePercent: number | null;
+  pythonLoopFps: number | null;
+  pythonLoopHealthy: boolean;
+  pythonLoopLastTickMs: number | null;
+  simulationMode: boolean;
+  hardwareModeConfigured: string;
+  hardwareModeResolved: string;
+  esp32Status: 'simulation' | 'reachable' | 'unreachable' | 'direct_gpio' | 'unknown';
+  esp32Target: string | null;
+  phoneBluetoothStatus: 'connected' | 'disconnected' | 'unknown';
+  phoneBluetoothDeviceName: string | null;
+  webClientCount: number;
+  useMicrophone: boolean;
+  audioStreamHealthy: boolean;
+  audioStreamState: string;
+  lastAudioSampleAgeMs: number | null;
+  dynamicAudioLatencyMs: number | null;
+  uptimeSeconds: number;
+  hostname: string;
+  platform: string;
+  actions: {
+    restartPython: SystemActionCapability;
+    rebootRaspberry: SystemActionCapability;
+    lastAction: SystemActionFeedback | null;
+  };
+};
+
 export type ModeMasterState = {
   activePlaylist: string | null;
   enabledPlaylists: string[];
@@ -57,6 +99,7 @@ export type ModeMasterState = {
   segments: ModeMasterSegmentState[];
   modeSettingsCatalog: ModeSettingsCatalogEntry[];
   modeSettings: Record<string, Record<string, ModeSettingValue>>;
+  system: SystemStatus;
 };
 
 type SocketStatus = 'idle' | 'connecting' | 'open' | 'closed';
