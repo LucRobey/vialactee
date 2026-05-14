@@ -1,60 +1,57 @@
 # Wabb-Interface: Technical Roadmap & Backend Changes
 
-This document outlines the technical changes, backend modifications, and new capabilities required to build the upcoming Web Interface (Wabb-Interface). It focuses purely on functional and system-level features, deferring visual UI/UX design until implementation.
+This document tracks the backend and system-level capabilities the Web Interface (Wabb-Interface) relies on. Items below are flagged as **implemented**, **partial**, or **future** based on the current React + Python state.
 
 ## 📡 1. Core Bridge & State Management
 *To establish a high-frequency data pipeline between the Python backend and the web client.*
 
-*   **Bi-Directional WebSockets:** Implemented through `connectors/Connector.py` using aiohttp `/ws` on port `8080`. The browser sends page/action instructions and receives backend state snapshots.
-*   **JSON State Schema:** Implemented as `mode_master_state`, built by `Mode_master.get_state_snapshot()`. It currently includes:
-    *   Active modes and directions per segment.
-    *   Global luminosity and sensibility.
+*   **Bi-Directional WebSockets (implemented):** `connectors/Connector.py` exposes aiohttp `/ws` on port `8080`. The browser sends page/action instructions and receives backend state snapshots.
+*   **JSON State Schema (implemented):** `Mode_master.get_state_snapshot()` builds the `mode_master_state` payload. Highlights:
+    *   Active modes and directions per segment, plus blocked / target-mode / in-transition flags.
+    *   Global luminosity, sensibility, and **auto-transition time** (`autoTransitionTime`, in seconds).
     *   Active playlist, active/queued configuration, selected transition, transition lock, and transition progress.
-    *   Segment blocked/transition status.
-    *   The mode-settings catalog plus the active configuration's effective `modeSettings`.
-*   **The "Pending" State Manager:** Implement backend logic to hold "Staged Transitions" (batch changes across multiple segments) in memory until the UI explicitly sends an `EXECUTE` command to flush them to the LEDs simultaneously.
+    *   `availableModes` catalog plus per-mode descriptors (`modeSettingsCatalog`) and the effective `modeSettings` for the active configuration.
+    *   Nested `system` block (telemetry + action capabilities, see §5).
+*   **Pending State Manager (future):** Backend-side "Staged Transitions" that batch changes across many segments until the UI flushes them with an `EXECUTE` command. The frontend already keeps per-segment pending edits client-side; the multi-segment staging API is not yet implemented.
 
 ---
 
 ## 🎛️ 2. Deep Parameter Injection & Modifiers
 *To expose mathematical control over the running animations directly to the operator.*
 
-*   **Mode-Specific Parameter Introspection:** Implemented through the `Mode` base class and per-mode schemas. The UI now reads backend-provided descriptors and renders `switch`, `slider`, or `list` controls dynamically for every loaded mode that declares settings.
-*   **Global Speed Multiplier:** Implement an override variable in `Mode_master.py` that scales `delta_time` or the internal logic timers of all modes (e.g., `0.5x`, `1x`, `2x`).
-*   **Global Modifiers (The Glitter Mask):** Implement a global overlay function. This applies effects (like random white twinkling) on top of the calculated frame *after* the base mode computes, but *before* the frame is pushed to hardware.
+*   **Mode-Specific Parameter Introspection (implemented):** Each `Mode` subclass declares its settings; `Mode_master` ships the descriptors through `modeSettingsCatalog`. The UI renders `switch`, `slider`, and `list` controls dynamically for every loaded mode that declares settings.
+*   **Auto-Transition Engine (partial):** `mode_master_state` exposes `autoTransitionTime` and the Live Deck slider sends `set_auto_transition_time` so Mode_master can rotate the active configuration on its own schedule. Per-transition style randomization and music-aware safe windows still depend on `Transition_Director.py` behavior.
+*   **Global Speed Multiplier (future):** A single override variable in `Mode_master.py` that scales `delta_time` for every mode (e.g., `0.5x`, `1x`, `2x`) is not yet wired up.
+*   **Global Modifiers / Glitter Mask (future):** A global overlay function applied on top of the calculated frame before hardware push is still planned.
 
 ---
 
 ## 🗺️ 3. Segment Routing & Topology
 *To control how data flows to specific physical areas of the stage.*
 
-*   **Topology tab (implemented):** `TopologyEditor.tsx` mirrors `mode_master_state`, supports **LIVE / MODIFY / BUILD**, sends `select_segment_mode` and `toggle_segment_direction` for runtime changes (no `POST` in LIVE), persists presets only from MODIFY/BUILD, and uses client-side pending merges so ~30 Hz snapshots do not flicker overrides. `Mode_master` applies saved presets with shallow-copied `modes`/`way` on `activ_configuration` so live swaps stay isolated from the in-memory playlist store. See `wabb-interface/design rules/topology.md`.
-*   **Live Topology Editor (future):** Allow the UI to push updated X/Y coordinates for segments back to the Pi. This would overwrite the spatial mapping used by the `transition_architecture` on the fly, allowing for physical stage layout changes.
-*   **Segment Locking & Mode Configurations:** 
-    *   Build logic to "Lock" specific segments to their currently assigned mode.
-    *   Locked segments become immune to the Auto-DJ, Global Transitions, or randomized drops.
-    *   Allow the UI to save this specific combination of locked/unlocked segments and their running modes as a "Global Mode Configuration" preset.
-*   **Segment Masking/Muting:** Build mathematical logic to selectively intercept and blackout specific segments, effectively muting them without changing their underlying mode state.
-*   **Virtual Grouping:** Create a system to define arbitrary groups of segments (e.g., "Left Wing") via the UI so commands can be targeted to clusters.
+*   **Topology tab (implemented):** `components/pages/TopologyEditor.tsx` is rendered from `App.tsx` with `allowedModes={['LIVE']}`. It mirrors `mode_master_state`, sends `select_segment_mode` and `toggle_segment_direction` for runtime changes (no `POST` in LIVE), and uses client-side pending merges so ~30 Hz snapshots do not flicker overrides. `Mode_master` applies saved presets with shallow-copied `modes` / `way` on `activ_configuration` so live swaps stay isolated from the in-memory playlist store. See `wabb-interface/design rules/topology.md`.
+*   **Configurator tab (implemented):** Same `TopologyEditor` component rendered with `allowedModes={['MODIFY', 'BUILD']}` and `syncPlaylistsFromModeMaster=false`. Persists presets only from MODIFY/BUILD via `POST /api/configurations`, then notifies `Mode_master` with `modify_configuration` or `build_configuration`.
+*   **Live Topology Editor (future):** Allow the UI to push updated X/Y coordinates for segments back to the Pi, overwriting the spatial mapping used by the transition architecture on the fly.
+*   **Segment Locking & Mode Configurations (future):** Lock specific segments to their current mode, immune to Auto-DJ / Global Transitions / random drops. Save the locked/unlocked combination as a "Global Mode Configuration" preset.
+*   **Segment Masking/Muting (future):** Mathematical logic to selectively black out segments without changing their underlying mode state.
+*   **Virtual Grouping (future):** Arbitrary clusters defined via the UI so commands can target groups (e.g., "Left Wing").
 
 ---
 
 ## 🤖 4. Show Automation & Presets
 *To reduce cognitive load for the operator during a live show.*
 
-*   **Snapshot Save/Load:** Implemented for playlist/configuration snapshots through `data/configurations.json` and `/api/configurations`. Vite serves the endpoint in development; `Connector.py` serves it in Python-backed operation and reloads `Mode_master` after writes. Configurations now also carry per-mode `modeSettings`.
-*   **Auto-Transition Engine & Timing:** Implement a backend toggle that automatically selects and executes a random, safe transition.
-    *   Triggered every *X* minutes or *Y* song drops.
-    *   Must allow the UI to configure both the interval between transitions *and* the duration/speed of the transition sweep itself.
-*   **The Director's Override (Drop Action):** Wire a specific command that temporarily suspends the current state, forces a hardcoded macro (like max-brightness white strobe), and triggers a massive global transition exactly when the button is released.
-*   **Dynamic Palette Injection:** Implement an endpoint to receive a new primary/secondary color pair and seamlessly blend it into the running generative modes.
+*   **Snapshot Save/Load (implemented):** Playlist/configuration snapshots flow through `data/configurations.json` and `/api/configurations`. Vite serves the endpoint in development; `Connector.py` serves it in Python-backed operation and reloads `Mode_master` after writes. Configurations carry per-mode `modeSettings`.
+*   **Auto-Transition Engine (partial):** See §2 — the Live Deck slider drives the interval in seconds. Per-style randomization, music-drop awareness, and a UI knob for the sweep duration are still planned.
+*   **The Director's Override / Drop Action (implemented):** The Live Deck DROP button emits a `manual_drop` instruction handled by `Mode_master` to force a music-drop style override.
+*   **Dynamic Palette Injection (future):** An endpoint to receive a new primary/secondary color pair and blend it into running generative modes.
 
 ---
 
 ## ⚙️ 5. Telemetry, Hardware & External Integrations
 *For system stability, safety, and physical control.*
 
-*   **Live Telemetry Stream:** Extract Raspberry Pi CPU temperature, RAM usage, and main loop FPS. Broadcast this continuously over the WebSocket for the UI to monitor thermal throttling.
-*   **Remote Process Management:** Create secure endpoints to remotely restart the main Python script or reboot the Raspberry Pi hardware directly from the web interface.
-*   **Master Power Limiter:** Implement a mathematical ceiling on RGB values just before hardware output (in `HardwareFactory` or `Mode_master`) to prevent overdrawing the power supply.
-*   **Web MIDI Support:** Expose WebSocket hooks specifically designed to map to the browser's Web MIDI API, allowing physical MIDI controllers (like a Launchpad) to trigger UI events and macros natively.
+*   **Live Telemetry Stream (implemented):** `mode_master_state.system` carries Pi CPU temperature, RAM and disk usage, Python loop FPS / health, simulation vs hardware mode, ESP32 reachability, Bluetooth phone status, microphone state, audio stream state / health, last sample age, dynamic latency, uptime, hostname / platform, and the connected web-client count. The System tab and Live Deck telemetry strip subscribe to this stream.
+*   **Remote Process Management (implemented):** `restart_python_loop` and `restart_raspberry_pi` instructions are dispatched from the System tab and gated by the `system.actions` capability flags supplied by Python. The UI also surfaces the most recent action feedback.
+*   **Master Power Limiter (future):** Mathematical ceiling on RGB values applied just before hardware output (in `HardwareFactory` or `Mode_master`) to protect the power supply.
+*   **Web MIDI Support (future):** WebSocket hooks designed to map to the browser's Web MIDI API for physical controllers (e.g., a Launchpad) to trigger UI events and macros.

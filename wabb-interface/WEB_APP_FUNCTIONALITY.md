@@ -27,17 +27,17 @@ The web app is the **official remote control** for the chandelier: it replaces a
 |--------|----------------|
 | **HTTP** `GET/POST /api/configurations` | Load and persist the shared store: playlists + per-playlist configuration presets (`SegmentConfiguration`: segment modes, directions, optional `modeSettings`). |
 | **WebSocket** `/ws` (default `ws://<host>:8080/ws`, override with `VITE_WABB_WS_URL`) | Bidirectional: UI sends **instructions** (JSON); server pushes **`mode_master_state`** snapshots. |
-| **`src/utils/configurationStore.ts`** | Typed boundary for the configurations API; normalizes malformed entries defensively. |
+| **`src/utils/configurationStore.ts`** | Typed boundary for the configurations API; normalizes malformed entries defensively. Exposes `loadConfigurationStore()` (HTTP) and `loadConfigurationFileStore()` (bundled raw JSON for the Configurator). |
 | **`src/utils/controlBridge.ts`** | Singleton WebSocket client: subscribe to state, subscribe to connection status, queue outbound messages when offline, validate inbound `mode_master_state`. |
 | **`src/utils/useBridgeStatus.ts`** | Maps socket lifecycle to UI (`open` / `connecting` / `closed`). |
 
-**Dev vs production:** Vite’s `vite.config.ts` implements the same `/api/configurations` routes against `../data/configurations.json`. When the stack is run via `Main.py`, `connectors/Connector.py` serves the API and reloads playlists after saves.
+**Dev vs production:** Vite's `vite.config.ts` implements the same `/api/configurations` routes against `../data/configurations.json`. When the stack is run via `Main.py`, `connectors/Connector.py` serves the API and reloads playlists after saves.
 
 ---
 
 ## 3. Global shell (`App.tsx`)
 
-- **Tab navigation:** Live Deck, Topology, Configurator, Mode Settings, System.
+- **Tab navigation:** Live Deck, Topology, Configurator, Mode Settings, System (five tabs).
 - **Branding:** Vialactée / Luminos header assets.
 - **Connection pill:** LIVE / CONNECTING / OFFLINE from WebSocket status.
 - **Notice when offline:** warns that live values may be stale and queued commands may not apply until reconnect.
@@ -51,7 +51,7 @@ The web app is the **official remote control** for the chandelier: it replaces a
 ### Data sources
 
 - **Configurations:** initial list from `loadConfigurationStore()`; playlist list can be refreshed from WebSocket `state.playlists`.
-- **Live state:** `subscribeModeMasterState` — luminosity, sensibility, transition lock, selected transition, active playlist/configuration, queued next configuration, playlists array, plus a subset of telemetry (CPU temp, dynamic audio latency).
+- **Live state:** `subscribeModeMasterState` — luminosity, sensibility, **auto-transition time** (`autoTransitionTime`, in seconds), transition lock, selected transition, active playlist/configuration, queued next configuration, playlists array, plus a subset of telemetry (CPU temp, dynamic audio latency).
 
 ### User actions (WebSocket `page: "live_deck"`)
 
@@ -59,18 +59,20 @@ The web app is the **official remote control** for the chandelier: it replaces a
 |--------|-------------------|--------|
 | `set_luminosity` | `{ value: number }` | Global brightness control (1–100 in UI). |
 | `set_sensibility` | `{ value: number }` | Global audio sensitivity control (1–100 in UI). |
-| `select_configuration` | `{ configuration: string }` | Chooses which saved preset is queued / targeted as “next” (dropdown options come from JSON for the active playlist). |
+| `set_auto_transition_time` | `{ value: number }` | Auto-rotation cadence in seconds (5–300 in UI). |
+| `select_configuration` | `{ configuration: string }` | Chooses which saved preset is queued / targeted as "next" (dropdown options come from JSON for the active playlist). |
 | `select_transition` | `{ transition: string }` | One of `CUT`, `FADE IN/OUT`, `CROSSFADE`. |
-| `go_to_next_configuration` | `{ configuration, transition }` | Applies transition to advance to the selected configuration. |
-| `lock_current_configuration` | `{ locked: boolean }` | HOLD vs LIVE: locks or unlocks automatic progression. |
-| `manual_drop` | (none) | Triggers a manual music-drop style event on the backend. |
-| `select_playlist` | `{ playlist: string }` | Switches active playlist (preset brick buttons; max eight visible bricks, slice of available playlists). |
+| `go_to_next_configuration` | `{ configuration, transition }` | Applies transition to advance to the selected configuration (round blue baton-pass button). |
+| `lock_current_configuration` | `{ locked: boolean }` | HOLD vs LIVE: locks or unlocks automatic progression and toggles the orange baseplate's perimeter glow. |
+| `manual_drop` | (none) | Triggers a manual music-drop style event on the backend (giant DROP button). |
+| `select_playlist` | `{ playlist: string }` | Switches active playlist (preset brick buttons; up to eight visible bricks). |
 
 ### UI highlights
 
-- Lego-themed **vertical sliders** for luminosity and sensibility.
+- Three Lego-themed **vertical sliders** stacked in the left column: Luminosité, Sensibilité, Auto Trans (S).
 - **Telemetry strip:** CPU temp, current playlist name, active configuration name, measured dynamic audio latency.
-- **Preset bricks:** one button per playlist (up to eight) with color cycling.
+- **Preset bricks:** one button per playlist (up to eight), color-cycled through Blue, Orange, Green, Purple, Yellow, Red, Cyan, and Magenta.
+- **Notice banners:** the deck surfaces `LIVE DATA STATUS` and `CONFIGURATION STORE` banners whenever the WebSocket bridge is not `open` or the configuration file fails to load.
 
 ---
 
@@ -86,11 +88,11 @@ The `TopologyEditor` component is shared between this tab and the Configurator a
 
 ### Visual / interaction model
 
-- Segment layout and styling follow [`design rules/topology.md`](./design%20rules/topology.md): stud grid (`LEGO_MATH`, `GridSpot`), SVG “cables,” junction boxes at intersections, tile typography, mode switchboard.
+- Segment layout and styling follow [`design rules/topology.md`](./design%20rules/topology.md): stud grid (`LEGO_MATH`, `GridSpot`), SVG "cables," junction boxes at intersections, tile typography, mode switchboard.
 - **TopologyMap:** clickable segments; per-segment direction toggle.
 - **TopologySegmentInspector:** mode list from backend `availableModes` (fallback from initial topology-derived list before first snapshot).
 
-**LIVE pending edits:** because snapshots can arrive ~30 Hz and briefly show stale modes, the editor keeps a **short-lived pending map** per segment so UI does not flicker backward after a click until the server snapshot matches.
+**LIVE pending edits:** because snapshots can arrive ~30 Hz and briefly show stale modes, the editor keeps a **short-lived pending map** per segment so the UI does not flicker backward after a click until the server snapshot matches.
 
 ---
 
@@ -102,32 +104,32 @@ The `TopologyEditor` component is shared between this tab and the Configurator a
 - **TopologyConfigurationPanel:** configuration name field, selector, rename/delete/save (save rules depend on editor mode).
 - **TopologyPlaylistPanel:** playlist name draft, create/rename/delete playlist, cycle playlist with `select_playlist_slot`.
 
-Because the Configurator never enters LIVE, `mode_master_state` snapshots do not overwrite the local segment map (the underlying `TopologyEditor` only mirrors snapshots when `editorMode === 'LIVE'`). Selecting a configuration in the dropdown re-applies stored modes/directions to the canvas.
+Because the Configurator never enters LIVE, `mode_master_state` snapshots do not overwrite the local segment map (the underlying `TopologyEditor` only mirrors snapshots when `editorMode === 'LIVE'`). Selecting a configuration in the dropdown re-applies stored modes/directions to the canvas. The Configurator also bypasses HTTP for the initial load by using `loadConfigurationFileStore` (Vite raw import of `data/configurations.json`), so live snapshots cannot race the authoring view.
 
 ### Editor modes (contract)
 
 | Mode | Segment display | Persistence |
 |------|-----------------|-------------|
 | **MODIFY** | Edits the selected saved configuration; selecting a config in the dropdown re-applies its stored preset to segments. | `POST /api/configurations` on save/rename/delete playlist or configuration; then `modify_configuration` so Mode_master reloads from disk. |
-| **BUILD** | Same as MODIFY for local segment edits; save can add or overwrite configurations in the playlist. | Same HTTP + `build_configuration` or `modify_configuration` after save. |
+| **BUILD** | Same as MODIFY for local segment edits; save can add a new configuration or, with confirm-overwrite, replace an existing one in the playlist. | Same HTTP + `build_configuration` after save. |
 
 ### Configuration file mapping
 
 - Python expects segment keys like **`Segment v4`**, **`Segment h32`** (see `TopologyEditor` save path: `` `Segment ${seg.id}` ``).
-- `SegmentConfiguration` in TS: `name`, `modes`, optional `way` (direction per segment key), optional `modeSettings` (cloned on save from live `activeModeSettings` when present).
+- `SegmentConfiguration` in TS: `name`, `modes`, optional `way` (direction per segment key), optional `modeSettings` (cloned on save from live `activeModeSettings` when present, falling back to the existing preset's `modeSettings`).
 
 ### User actions (WebSocket `page: "topology"`)
 
 | Action | Purpose |
 |--------|---------|
 | `select_segment` | Focus a segment in the inspector. |
-| `select_segment_mode` | Set segment’s visual mode (live or local preview). |
-| `toggle_segment_direction` | Flip `UP`/`DOWN` for a segment. |
+| `select_segment_mode` | Set the segment's visual mode (live or local preview). |
+| `toggle_segment_direction` | Flip `UP` / `DOWN` for a segment. |
 | `set_editor_mode` | Notify backend of LIVE / MODIFY / BUILD. |
 | `select_playlist_slot` | Cycle playlist with direction `next` / `previous`. |
 | `select_configuration` | Load a configuration from the current playlist (updates local segment map from store). |
 | `modify_configuration` | After disk save or rename: tell Mode_master to reload the named configuration in the playlist. |
-| `build_configuration` | After BUILD save: notify backend of new/updated preset. |
+| `build_configuration` | After BUILD save: notify backend of a new/updated preset. |
 
 > Both the Topology and Configurator tabs send instructions on the `topology` page; the backend distinguishes intent via the `set_editor_mode` action and the persistence-related actions.
 
@@ -180,7 +182,7 @@ The TypeScript shape in `controlBridge.ts` is the contract the UI validates on e
 
 - Playlist/configuration: `activePlaylist`, `activeConfiguration`, `queuedConfiguration`, `playlists`, `enabledPlaylists`.
 - Transitions: `selectedTransition`, `transitionLocked`, `transitionState`, `transitionProgress`.
-- Global sliders: `luminosity`, `sensibility`.
+- Global sliders: `luminosity`, `sensibility`, `autoTransitionTime`.
 - Catalogs: `availableModes`, `segments` (per-segment id, name, mode, direction, blocked, targetMode, inTransition).
 - Mode tuning: `modeSettingsCatalog`, `modeSettings`.
 - Nested `system`: telemetry and `actions` capabilities/feedback.
@@ -208,7 +210,7 @@ The bridge adds `timestamp` at send time.
 
 1. **Never hardcode playlist or configuration names** in React — use `GET /api/configurations` and websocket-driven `playlists` / active names.
 2. **Topology (LIVE)** never writes `configurations.json`; only **Configurator** (MODIFY / BUILD) saves use `POST /api/configurations`.
-3. After persisting JSON, the UI must send **`modify_configuration`** or **`build_configuration`** so `Mode_master` reloads (see `TopologyEditor` save flows in the Configurator).
+3. After persisting JSON, the UI must send **`modify_configuration`** or **`build_configuration`** so `Mode_master` reloads (see `TopologyEditor` save flows used by the Configurator).
 4. **Per-mode tuning** belongs in configuration-scoped `modeSettings` and flows through Mode_master; the Mode Settings tab only edits via `set_mode_setting`.
 5. For deeper backend behavior (transitions, orchestration), read **`core/precisions/mode_master.md`** and connector docs before changing instruction handlers.
 
@@ -224,4 +226,4 @@ When you add or change UI behavior:
 
 ---
 
-*Last aligned with repository context: Live Deck, Topology (LIVE), Configurator (MODIFY/BUILD), Mode Settings, System, `configurationStore.ts`, `controlBridge.ts`, and [`project_overview.md`](../project_overview.md) §2–§3.*
+*Last aligned with repository context: Live Deck (3 sliders + auto-transition), Topology (LIVE), Configurator (MODIFY/BUILD), Mode Settings, System, `configurationStore.ts`, `controlBridge.ts`, and [`project_overview.md`](../project_overview.md) §2–§3.*
