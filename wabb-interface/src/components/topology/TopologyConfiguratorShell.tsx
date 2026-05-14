@@ -24,6 +24,58 @@ export const TopologyConfiguratorShell = () => (
       }} />
     </GridSpot>
 
+    <GridSpot col={CONFIGURATOR_OFFSET_C + 5} row={CONFIGURATOR_OFFSET_R + 0.3} style={{ zIndex: 10 }}>
+      <div className="rogue-piece" style={{
+        width: 'calc(10 * var(--stud))',
+        height: 'calc(1 * var(--stud))',
+        backgroundColor: '#fcd000',
+        backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(0,0,0,0.1) 100%)',
+        borderTop: '2px solid rgba(255,255,255,0.6)',
+        borderLeft: '2px solid rgba(255,255,255,0.3)',
+        borderBottom: '2px solid rgba(0,0,0,0.4)',
+        borderRight: '2px solid rgba(0,0,0,0.2)',
+        borderRadius: '2px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '2px 2px 5px rgba(0,0,0,0.5)',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '25px', backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 4px, transparent 4px, transparent 8px)', opacity: 0.6 }} />
+        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '25px', backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 4px, transparent 4px, transparent 8px)', opacity: 0.6 }} />
+        <span style={{ color: '#000', fontWeight: '900', fontFamily: 'Arial, sans-serif', letterSpacing: '1px', fontSize: '0.75rem', zIndex: 2 }}>
+          CONFIGURATIONS
+        </span>
+      </div>
+    </GridSpot>
+
+    <GridSpot col={CONFIGURATOR_OFFSET_C + 5} row={CONFIGURATOR_OFFSET_R + 13.3} style={{ zIndex: 10 }}>
+      <div className="rogue-piece" style={{
+        width: 'calc(10 * var(--stud))',
+        height: 'calc(1 * var(--stud))',
+        backgroundColor: '#fcd000',
+        backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(0,0,0,0.1) 100%)',
+        borderTop: '2px solid rgba(255,255,255,0.6)',
+        borderLeft: '2px solid rgba(255,255,255,0.3)',
+        borderBottom: '2px solid rgba(0,0,0,0.4)',
+        borderRight: '2px solid rgba(0,0,0,0.2)',
+        borderRadius: '2px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '2px 2px 5px rgba(0,0,0,0.5)',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '25px', backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 4px, transparent 4px, transparent 8px)', opacity: 0.6 }} />
+        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '25px', backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 4px, transparent 4px, transparent 8px)', opacity: 0.6 }} />
+        <span style={{ color: '#000', fontWeight: '900', fontFamily: 'Arial, sans-serif', letterSpacing: '1px', fontSize: '0.75rem', zIndex: 2 }}>
+          PLAYLISTS
+        </span>
+      </div>
+    </GridSpot>
+
     {[{ c: 0, r: 0 }, { c: 19, r: 0 }, { c: 0, r: 21 }, { c: 19, r: 21 }].map((pos, i) => (
       <GridSpot key={`pin-${i}`} col={CONFIGURATOR_OFFSET_C + pos.c} row={CONFIGURATOR_OFFSET_R + pos.r} style={{ zIndex: 2 }}>
         <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
