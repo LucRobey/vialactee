@@ -21,8 +21,9 @@
 ## 📊 Results / Observations
 
 - **Massive Success on Class Tracking:** The bottom plot proved the math is perfect. The `Long Term Class` line stayed flawlessly smooth during polyrhythmic jumps.
-- **Two-Tier Acoustic Failure:** Splitting the Bass (Kick) and High (Snare) destroyed the 128 BPM 4/4 groove. Each buffer only saw a 64 BPM sub-rhythm, causing the tracker to collapse entirely.
-- **The Unified ODF Recovery:** Recombining the frequencies restored the 128 BPM pulse. The method got better, but it's not enough—the tracker still struggles to confidently choose 128 BPM over the mathematically equivalent 64 BPM sub-harmonic.
+- **Onset-Driven Performance:** By moving to an event-based architecture (triggering sweeps only on strong onsets) and bypassing the legacy `BTrack` analyzer, execution time dropped to 10-20x faster than real-time. Safe for Raspberry Pi.
+- **The Stayin' Alive Bug Fix:** Discovered a flaw where `harmonic_alignment` was sabotaging the Heavy Judge by mapping correct BPMs back to wrong harmonic aliases. Fixing this allowed the Flywheel to perfectly lock onto the target class.
+- **Robustness against Dropouts:** The Flywheel effectively ignored massive rhythmic breakdowns in tracks like *Another One Bites The Dust* and *Roxanne*, coasting until the beat returned.
 
 ## 🐛 Meaningless Observations
 
@@ -30,16 +31,19 @@
 
 ## 💭 Thoughts & Strategy
 
-- **The Human Perception Prior (Gaussian Technique):** Since a 64 BPM template can score identically to 128 BPM in Pearson correlation, we are implementing a Gaussian weighting curve centered around 120-130 BPM (the typical human dance zone). We went with Option A for the core math because it is faster and more reliable, but we apply this Gaussian prior as a mathematical tie-breaker. It penalizes extreme tempos (60 BPM or 230 BPM) so the algorithm must be "really sure of itself" to pick them.
-- **The Bass + High Filter (Dropping the Mids):** To further clean the signal, we will refine the ODF by strictly combining the Bass and High bands while completely ignoring the middle frequencies. This drops the muddy vocal/synth noise that confuses the rhythm engine, giving us a pristine Kick + Snare/Hi-hat signal.
+- **The Human Perception Prior (Gaussian Technique):** Since a 64 BPM template can score identically to 128 BPM in Pearson correlation, we use a Gaussian weighting curve centered around 125 BPM. It penalizes extreme tempos so the algorithm must be "really sure of itself" to pick them.
+- **The Bass + High Filter (Dropping the Mids):** We strictly combine the Bass and High bands while completely ignoring the middle frequencies. This drops the muddy vocal/synth noise giving us a pristine Kick + Snare/Hi-hat signal.
+- **Global Quality Verification:** To evaluate future algorithmic tweaks, we rely on the newly built 8-track profiling suite. Any theoretical improvement (like Confidence Coasting) must prove itself by lowering the Median Class Error and flattening Judge spikes without hurting the 10x real-time Processing Ratio.
 
 ## ⏭️ Next Steps (What is left to be done)
 
 - [x] Create `ContinuousHybridTracker_HarmonicMath.ipynb` and duplicate listening infrastructure.
 - [x] Refactor tracking variables to $O(1)$ logarithmic circle math (`long_term_class`).
 - [x] Fix Candidate Scoring: Discard Options B and C, adopt Option A (True Pearson Correlation).
-- [ ] **Implement Bass + High Filter:** Modify the simulation to drop the middle frequencies before calculating the Unified ODF.
-- [ ] **Flywheel Integration:** Connect the chosen BPM and Phase to the continuous `standalone_phase` system to predict actual beats on the long run.
+- [x] **Implement Bass + High Filter:** Modify the simulation to drop the middle frequencies before calculating the Unified ODF.
+- [x] **Solve Performance Bottleneck:** Implement `FakeListener` and onset-driven event architecture.
+- [ ] **Test Refinement Methods:** Implement and evaluate Confidence-Gated Coasting, Dynamic Flywheel Inertia, Smart Strong Sweeps, and Adaptive Human Prior.
+- [ ] **Flywheel Integration (Production Porting):** Connect the chosen BPM and Phase to the continuous `standalone_phase` system in `Listener.py` to predict actual beats on the long run.
 
 ---
 *Note: Ensure that any major findings or shifts in the overarching goal are also updated in `RESEARCH_BOARD.md`!*

@@ -46,11 +46,22 @@ Because 64 BPM templates can mathematically score identical to 128 BPM templates
 - We implemented a **Gaussian prior** centered around 120 BPM (`100` to `150` BPM zone).
 - This acts as a mathematical tie-breaker. It gently penalizes extreme BPMs (like 60 or 230), meaning the algorithm must be "really sure of itself" (overwhelmingly higher acoustic energy) to pick them over a valid 120 BPM candidate.
 
-## The Final Polish: Bass+High Filter & Gaussian Prior Success
-The implementation of the **Bass + High Custom ODF** (filtering out the mid-frequencies) alongside the **Fast Scout + Heavy Judge** architecture yielded profound results:
+## The Final Polish: Bass+High Filter, Gaussian Prior & Onset-Driven Architecture Success
+The implementation of the **Bass + High Custom ODF** (filtering out the mid-frequencies) alongside the **Fast Scout + Heavy Judge** architecture yielded profound results. We also replaced the continuous 60fps loop with an **Onset-Driven Event Model** (using a `FakeListener` to isolate the Math from legacy analyzer logic).
 1. **The 64 BPM Trap is Dead:** By ignoring mid-frequencies and focusing on the Kick and Hi-Hats, the tracker completely ignored the 64 BPM sub-harmonic in *Pumped Up Kicks* and perfectly tracked 128 BPM.
 2. **The Flywheel is Flawless:** Despite the Fast Scout finding a 155 BPM polyrhythm in *Palladium*, the Heavy Judge and Logarithmic Base Tempo (LBT) Flywheel effortlessly anchored the true tempo class to 117 BPM. 
-3. **The 234 BPM Anomaly:** The only remaining artifact is the Heavy Judge occasionally spiking to 234 BPM during *Palladium*. Because 234 is exactly $117 \times 2$, and the High frequency bands contain dense 16th-note hi-hats, the Pearson score for 234 BPM was massively inflated. The Gaussian Prior floor of `0.5` was too generous to suppress it.
+3. **The Harmonic Alignment Bug (Stayin' Alive):** We discovered that using `harmonic_alignment` when updating the Flywheel from the Heavy Judge forced the tracker to map a correct BPM (104) back to a wrong perfect-fifth alias (Class 0.2). **The Fix:** Bypassing harmonic alignment when accepting the Judge's confident answer caused the Flywheel to lock perfectly onto the true target class.
+4. **Performance Victory:** The Onset-Driven architecture runs at a Processing Ratio of **0.05 to 0.11** (10x to 20x faster than real-time), far below the 0.5 threshold required for the Raspberry Pi.
 
-### Next Steps
-To finalize the math engine, we must lower the Gaussian Prior floor (e.g., `0.1 + 0.9 * exp(...)`) or hard-cap the tracking bounds to `190 BPM` to prevent sub-divisions from hijacking the candidate evaluation.
+### Next Steps & Advanced Refinements
+To further refine edge cases (like drum dropouts in *Roxanne* and *Another One Bites The Dust*), we will test and challenge the following 4 methods:
+1. **Confidence-Gated Coasting:** Skip Heavy Judge updates if ODF flux or Pearson score is below a minimum threshold, coasting smoothly over silence/breakdowns.
+2. **Dynamic Flywheel Inertia:** Scale the Flywheel update weight dynamically based on the Heavy Judge's confidence score (strong pulls for high confidence, weak pulls for syncopation/noise).
+3. **Smart "Strong Sweeps":** Replace the blind 8-second Strong Sweep with a conditional trigger that only activates if Local Sweep confidence drops below a threshold for a sustained period.
+4. **Adaptive Human Prior:** Slowly drift the center of the Gaussian prior toward the `long_term_class` to naturally adapt to the current genre (e.g., Hip-Hop vs. Techno).
+
+**How to verify global quality improvement?**
+We will use our 8-track Multi-Song Profiling suite as the definitive baseline. Any new method must:
+1. Lower or maintain the **Median BPM Error %** across all 8 tracks.
+2. Visually flatten the Heavy Judge spikes during the known dropouts in *Roxanne* and *Another One Bites The Dust*.
+3. Keep the **Processing Ratio** well below 0.5.
