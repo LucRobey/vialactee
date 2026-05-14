@@ -1,0 +1,286 @@
+{
+  "01-Plastic-People": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Another One Bites The Dust - Remastered 2011": {
+    "bpm": 110.0,
+    "source": "verified"
+  },
+  "Bohemian Rhapsody - Remastered 2011": {
+    "bpm": 143.6,
+    "source": "librosa_estimate"
+  },
+  "Bonnie And Clyde": {
+    "bpm": 129.2,
+    "source": "librosa_estimate"
+  },
+  "Boogie Wonderland": {
+    "bpm": 132.0,
+    "source": "verified"
+  },
+  "Chan Chan": {
+    "bpm": 161.5,
+    "source": "librosa_estimate"
+  },
+  "Chanson pour l'auvergnat": {
+    "bpm": 103.4,
+    "source": "librosa_estimate"
+  },
+  "Come Together - Remastered": {
+    "bpm": 161.5,
+    "source": "librosa_estimate"
+  },
+  "Django": {
+    "bpm": 95.7,
+    "source": "librosa_estimate"
+  },
+  "Djon maya maï (feat. Victor Démé)": {
+    "bpm": 103.4,
+    "source": "librosa_estimate"
+  },
+  "Don't You Know - Radio Edit": {
+    "bpm": 117.5,
+    "source": "librosa_estimate"
+  },
+  "Elle a les yeux revolver": {
+    "bpm": 161.5,
+    "source": "librosa_estimate"
+  },
+  "Feeling Good": {
+    "bpm": 112.3,
+    "source": "librosa_estimate"
+  },
+  "Five Years - 2012 Remaster": {
+    "bpm": 152.0,
+    "source": "librosa_estimate"
+  },
+  "Flashback": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Foule sentimentale": {
+    "bpm": 112.3,
+    "source": "librosa_estimate"
+  },
+  "Genesis": {
+    "bpm": 117.5,
+    "source": "librosa_estimate"
+  },
+  "Girl, You'll Be a Woman Soon": {
+    "bpm": 112.3,
+    "source": "librosa_estimate"
+  },
+  "Good Vibrations - Remastered 2001": {
+    "bpm": 152.0,
+    "source": "librosa_estimate"
+  },
+  "Help! - Remastered 2015": {
+    "bpm": 95.7,
+    "source": "librosa_estimate"
+  },
+  "Here Comes The Sun - Remastered": {
+    "bpm": 129.2,
+    "source": "librosa_estimate"
+  },
+  "Heroes - 2017 Remaster": {
+    "bpm": 112.3,
+    "source": "librosa_estimate"
+  },
+  "Hooked On A Feeling": {
+    "bpm": 117.5,
+    "source": "librosa_estimate"
+  },
+  "Hotel California - 2013 Remaster": {
+    "bpm": 143.6,
+    "source": "librosa_estimate"
+  },
+  "I've got that tune": {
+    "bpm": 172.3,
+    "source": "librosa_estimate"
+  },
+  "Il jouait du piano debout - Remasterisé en 2004": {
+    "bpm": 103.4,
+    "source": "librosa_estimate"
+  },
+  "J'ai dix ans": {
+    "bpm": 92.3,
+    "source": "librosa_estimate"
+  },
+  "J'aime les filles": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Je l'aime à mourir - Remastered": {
+    "bpm": 152.0,
+    "source": "librosa_estimate"
+  },
+  "L'envie": {
+    "bpm": 80.7,
+    "source": "librosa_estimate"
+  },
+  "La groupie du pianiste": {
+    "bpm": 99.4,
+    "source": "librosa_estimate"
+  },
+  "Le chanteur": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Les copains d'abord": {
+    "bpm": 161.5,
+    "source": "librosa_estimate"
+  },
+  "Life on Mars_ - 2015 Remaster": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Louise (Feat Edgar)": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Me Gustas Tu": {
+    "bpm": 172.3,
+    "source": "librosa_estimate"
+  },
+  "Message In A Bottle - Remastered 2003": {
+    "bpm": 152.0,
+    "source": "librosa_estimate"
+  },
+  "Minor Swing": {
+    "bpm": 99.4,
+    "source": "librosa_estimate"
+  },
+  "Mon fils ma bataille": {
+    "bpm": 112.3,
+    "source": "librosa_estimate"
+  },
+  "Money For Nothing": {
+    "bpm": 136.0,
+    "source": "librosa_estimate"
+  },
+  "Money For Nothing_1": {
+    "bpm": 136.0,
+    "source": "librosa_estimate"
+  },
+  "Mr Bobby": {
+    "bpm": 152.0,
+    "source": "librosa_estimate"
+  },
+  "Nightcall": {
+    "bpm": 92.3,
+    "source": "librosa_estimate"
+  },
+  "Nobody Rules the Streets": {
+    "bpm": 128.0,
+    "source": "verified"
+  },
+  "Palladium": {
+    "bpm": 172.2,
+    "source": "verified"
+  },
+  "Piece of My Heart - Live at The Grande Ballroom, Detroit, MI - March 1968": {
+    "bpm": 161.5,
+    "source": "librosa_estimate"
+  },
+  "Power": {
+    "bpm": 136.0,
+    "source": "librosa_estimate"
+  },
+  "Pumped Up Kicks": {
+    "bpm": 128.0,
+    "source": "verified"
+  },
+  "Rebel Rebel - 2016 Remaster": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Roadgame": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Rockollection": {
+    "bpm": 129.2,
+    "source": "librosa_estimate"
+  },
+  "Romeo And Juliet": {
+    "bpm": 172.3,
+    "source": "librosa_estimate"
+  },
+  "Roxanne - Remastered 2003": {
+    "bpm": 134.0,
+    "source": "verified"
+  },
+  "Résiste - Remasterisé en 2004": {
+    "bpm": 117.5,
+    "source": "librosa_estimate"
+  },
+  "September": {
+    "bpm": 125.0,
+    "source": "verified"
+  },
+  "Starman - 2012 Remaster": {
+    "bpm": 95.7,
+    "source": "librosa_estimate"
+  },
+  "Stayin' Alive - From _Saturday Night Fever_ Soundtrack": {
+    "bpm": 104.0,
+    "source": "verified"
+  },
+  "Sucker for Pain (with Wiz Khalifa, Imagine Dragons, Logic & Ty Dolla $ign feat. X Ambassadors)": {
+    "bpm": 83.4,
+    "source": "librosa_estimate"
+  },
+  "Sugar (feat. Francesco Yates)": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Sultans Of Swing": {
+    "bpm": 152.0,
+    "source": "librosa_estimate"
+  },
+  "Sweet Child O' Mine": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Tears Dry On Their Own": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Ticket To Ride - Remastered 2015": {
+    "bpm": 123.0,
+    "source": "librosa_estimate"
+  },
+  "Time - 2013 Remaster": {
+    "bpm": 143.6,
+    "source": "librosa_estimate"
+  },
+  "Tous les cris les S.O.S_": {
+    "bpm": 172.3,
+    "source": "librosa_estimate"
+  },
+  "Under Pressure - Remastered 2011": {
+    "bpm": 112.3,
+    "source": "librosa_estimate"
+  },
+  "Walk Of Life": {
+    "bpm": 172.3,
+    "source": "librosa_estimate"
+  },
+  "Walking On The Moon": {
+    "bpm": 143.6,
+    "source": "librosa_estimate"
+  },
+  "What's Up_": {
+    "bpm": 136.0,
+    "source": "librosa_estimate"
+  },
+  "Where Is My Mind_": {
+    "bpm": 161.5,
+    "source": "librosa_estimate"
+  },
+  "You Know I'm No Good": {
+    "bpm": 103.4,
+    "source": "librosa_estimate"
+  }
+}
