@@ -1,7 +1,7 @@
 import type { ChangeEvent } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
-import { INSPECTOR_OFFSET_C, INSPECTOR_OFFSET_R } from '../../constants/topologyData';
+import { CONFIGURATOR_OFFSET_C, CONFIGURATOR_OFFSET_R } from '../../constants/topologyData';
 import type { SegmentConfiguration } from '../../utils/configurationStore';
 import type { EditorMode } from './types';
 
@@ -36,8 +36,8 @@ export const TopologyConfigurationPanel = ({
     : (playlistConfigs[0]?.name ?? '');
   return (
   <GridSpot
-    col={INSPECTOR_OFFSET_C + 1}
-    row={INSPECTOR_OFFSET_R + 12}
+    col={CONFIGURATOR_OFFSET_C + 1}
+    row={CONFIGURATOR_OFFSET_R + 1}
     style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}
   >
     <div style={{

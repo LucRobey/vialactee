@@ -120,7 +120,7 @@ export const TopologySegmentInspector = ({
     <GridSpot col={INSPECTOR_OFFSET_C + 1} row={INSPECTOR_OFFSET_R + 4} style={{ zIndex: 5 }}>
       <div className="custom-scrollbar" style={{
         width: `${LEGO_MATH.physicalSize(18)}px`,
-        height: `${LEGO_MATH.physicalSize(8)}px`,
+        height: `${LEGO_MATH.physicalSize(16)}px`,
         backgroundColor: '#0a0a0a',
         border: 'calc(0.4 * var(--stud)) solid #2a2d32',
         borderTopColor: '#3a3f44',
@@ -152,7 +152,7 @@ export const TopologySegmentInspector = ({
               }} />
               <div className="rogue-piece" style={{
                 position: 'relative',
-                width: 'calc(6.8 * var(--stud))',
+                width: 'calc(7.5 * var(--stud))',
                 height: 'calc(1 * var(--stud))',
                 backgroundColor: isCurrent ? '#fcd000' : '#1b2a3a',
                 backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.2) 100%)',

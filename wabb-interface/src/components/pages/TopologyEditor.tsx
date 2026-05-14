@@ -6,6 +6,7 @@ import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from 
 import { loadConfigurationStore, saveConfigurationStore, type ConfigurationStore, type ModeSettingsMap, type SegmentConfiguration } from '../../utils/configurationStore';
 import { useBridgeStatus } from '../../utils/useBridgeStatus';
 import { TopologyConfigurationPanel } from '../topology/TopologyConfigurationPanel';
+import { TopologyConfiguratorShell } from '../topology/TopologyConfiguratorShell';
 import { TopologyEditorModeSwitch } from '../topology/TopologyEditorModeSwitch';
 import { TopologyInspectorShell } from '../topology/TopologyInspectorShell';
 import { TopologyMap } from '../topology/TopologyMap';
@@ -593,7 +594,7 @@ export const TopologyEditor = ({
 
   return (
     <div style={{ width: '100%', height: 'calc(35 * var(--stud))', overflowX: 'auto', overflowY: 'auto' }}>
-      <div style={{ position: 'relative', width: `${LEGO_MATH.physicalSize(68)}px`, minWidth: '100%', height: `${LEGO_MATH.physicalSize(38)}px` }}>
+      <div style={{ position: 'relative', width: `${LEGO_MATH.physicalSize(71)}px`, minWidth: '100%', height: `${LEGO_MATH.physicalSize(38)}px` }}>
         {bridgeStatus !== 'open' ? (
           <div style={{ position: 'absolute', top: '12px', left: '770px', width: '470px', zIndex: 40 }}>
             <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="TOPOLOGY LINK">
@@ -635,6 +636,7 @@ export const TopologyEditor = ({
 
         {showEditPanels ? (
           <>
+            <TopologyConfiguratorShell />
             <TopologyConfigurationPanel
               editorMode={editorMode}
               playlist={playlist}

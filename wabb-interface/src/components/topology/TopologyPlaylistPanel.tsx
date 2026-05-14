@@ -1,6 +1,6 @@
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
-import { INSPECTOR_OFFSET_C, INSPECTOR_OFFSET_R } from '../../constants/topologyData';
+import { CONFIGURATOR_OFFSET_C, CONFIGURATOR_OFFSET_R } from '../../constants/topologyData';
 import type { EditorMode } from './types';
 
 export const TopologyPlaylistPanel = ({
@@ -27,8 +27,8 @@ export const TopologyPlaylistPanel = ({
   onPlaylistCycle: (direction: 1 | -1) => void;
 }) => (
   <GridSpot
-    col={INSPECTOR_OFFSET_C + 1}
-    row={INSPECTOR_OFFSET_R + 22}
+    col={CONFIGURATOR_OFFSET_C + 1}
+    row={CONFIGURATOR_OFFSET_R + 12}
     style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}
   >
     <div style={{

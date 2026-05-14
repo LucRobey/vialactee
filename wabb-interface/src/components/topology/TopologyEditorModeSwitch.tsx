@@ -21,10 +21,10 @@ export const TopologyEditorModeSwitch = ({
       <div className="rogue-piece" style={{
         width: `${LEGO_MATH.physicalSize(7)}px`,
         height: `${LEGO_MATH.physicalSize(6)}px`,
-        backgroundColor: '#1b4a22',
+        backgroundColor: '#fcd000',
         backgroundImage: `
           var(--highlight),
-          radial-gradient(circle at 15px 15px, #205527 0%, #205527 7px, rgba(0, 0, 0, 0.5) 9px, transparent 10px),
+          radial-gradient(circle at 15px 15px, #ffcd00 0%, #ffcd00 7px, rgba(0, 0, 0, 0.5) 9px, transparent 10px),
           var(--shadow)
         `,
         backgroundSize: 'var(--stud) var(--stud)',
