@@ -37,7 +37,7 @@ The web app is the **official remote control** for the chandelier: it replaces a
 
 ## 3. Global shell (`App.tsx`)
 
-- **Tab navigation:** Live Deck, Stage Architect (WIP), Topology, Configurator, Mode Settings, System.
+- **Tab navigation:** Live Deck, Topology, Configurator, Mode Settings, System.
 - **Branding:** Vialactée / Luminos header assets.
 - **Connection pill:** LIVE / CONNECTING / OFFLINE from WebSocket status.
 - **Notice when offline:** warns that live values may be stale and queued commands may not apply until reconnect.
@@ -172,15 +172,7 @@ If the bridge is offline, actions are disabled and a banner explains why.
 
 ---
 
-## 8. Tab: Stage Architect (`StageArchitect.tsx`) — **WIP / planned**
-
-**Current state:** placeholder page with a warning banner; not wired to WebSocket or configuration APIs.
-
-**Intended end goal:** an **interactive stage mapper** (SVG or similar) complementary to Topology — likely for higher-level stage layout, zone grouping, or future spatial cues. Until implemented, operators should use **Topology**, **Configurator**, **Mode Settings**, and **System** for live control and authoring (as stated in-app).
-
----
-
-## 9. Mode master snapshot (`ModeMasterState`) — what the UI expects
+## 8. Mode master snapshot (`ModeMasterState`) — what the UI expects
 
 The TypeScript shape in `controlBridge.ts` is the contract the UI validates on every `mode_master_state` message. Agents changing the backend must keep this in sync or update both sides.
 
@@ -195,7 +187,7 @@ The TypeScript shape in `controlBridge.ts` is the contract the UI validates on e
 
 ---
 
-## 10. Instruction envelope (all pages)
+## 9. Instruction envelope (all pages)
 
 Every outbound message is a `WabbInstruction`:
 
@@ -212,7 +204,7 @@ The bridge adds `timestamp` at send time.
 
 ---
 
-## 11. Rules for developers and agents
+## 10. Rules for developers and agents
 
 1. **Never hardcode playlist or configuration names** in React — use `GET /api/configurations` and websocket-driven `playlists` / active names.
 2. **Topology (LIVE)** never writes `configurations.json`; only **Configurator** (MODIFY / BUILD) saves use `POST /api/configurations`.
@@ -222,7 +214,7 @@ The bridge adds `timestamp` at send time.
 
 ---
 
-## 12. Development checklist (keeping this file useful)
+## 11. Development checklist (keeping this file useful)
 
 When you add or change UI behavior:
 
@@ -232,4 +224,4 @@ When you add or change UI behavior:
 
 ---
 
-*Last aligned with repository context: Live Deck, Topology (LIVE), Configurator (MODIFY/BUILD), Mode Settings, System, Stage Architect placeholder, `configurationStore.ts`, `controlBridge.ts`, and [`project_overview.md`](../project_overview.md) §2–§3.*
+*Last aligned with repository context: Live Deck, Topology (LIVE), Configurator (MODIFY/BUILD), Mode Settings, System, `configurationStore.ts`, `controlBridge.ts`, and [`project_overview.md`](../project_overview.md) §2–§3.*

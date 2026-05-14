@@ -4,12 +4,11 @@
 > | Page | Status | Description |
 > |---|---|---|
 > | 📱 1. Live Deck | ✅ Implemented | Core performance UI (Playlists, Speed/Brightness, Transitions) |
-> | 🗺️ 2. Stage Architect | ❌ Planned | Complex staging and batch execution canvas |
-> | 📐 3. Topology Editor | ✅ Implemented | Visual map for live overrides and preset building |
-> | 🎛️ 4. Mode Settings | ✅ Implemented | Per-mode tuning with runtime application |
-> | ⚙️ 5. System & Setup | ❌ Planned | Telemetry and hardware danger-zone |
+> | 📐 2. Topology Editor | ✅ Implemented | Visual map for live overrides and preset building |
+> | 🎛️ 3. Mode Settings | ✅ Implemented | Per-mode tuning with runtime application |
+> | ⚙️ 4. System & Setup | ❌ Planned | Telemetry and hardware danger-zone |
 
-This document outlines the structural layout and user experience philosophy for the new Vialactée Web Interface. To ensure safety during live performances and to prevent accidental configuration changes, the interface is split into **five distinct pages**, navigated via a persistent top or bottom tab bar.
+This document outlines the structural layout and user experience philosophy for the new Vialactée Web Interface. To ensure safety during live performances and to prevent accidental configuration changes, the interface is split into **four distinct pages**, navigated via a persistent top or bottom tab bar.
 
 ## 📱 Page 1: The Live Deck (Performance Mode)
 *Philosophy: High-stress live operation. Massive touch targets, read-only monitoring, and macro controls only.*
@@ -25,21 +24,7 @@ This document outlines the structural layout and user experience philosophy for 
 
 ---
 
-## 🗺️ Page 2: The Stage Architect (Deep Control)
-*Philosophy: Dialing in specific looks, tweaking mathematical parameters, and staging complex batches. Used primarily during soundcheck or low-stress moments.*
-
-**Components:**
-*   **The Interactive Stage Mapper (Center):** The fully interactive SVG canvas. Tapping segments highlights them for editing; dragging allows multi-selection.
-*   **The Dynamic Inspector (Sidebar):** Appears when a segment is selected on the canvas. Contains:
-    *   **Segment Mode Dropdown:** Assigning a base mode (e.g., Pulsar, Rainbow).
-    *   **Lock Toggle:** A switch to lock the segment, making it immune to Auto-DJ and Global Transitions.
-    *   **Segment Mute:** Instantly blacks out the selected segment.
-*   **Batch Execution:** A staged execution area where multiple segment changes sit in a "pending" state until an `EXECUTE STAGED BATCH` button is pressed.
-*   **Configuration Saving:** `MODIFY` and `BUILD` write the current segment mode/direction map into `data/configurations.json` through `/api/configurations`. In `LIVE`, the save control does not persist (live tweaks are runtime-only). Saved playlists and configurations become available to Live Deck after the backend reloads and broadcasts a fresh state snapshot.
-
----
-
-## 📐 Page 3: Topology Editor (map + inspector)
+## 📐 Page 2: Topology Editor (map + inspector)
 *Philosophy: See the chandelier layout, pick a segment, and either mirror the live show or edit saved presets.*
 
 **Components (implemented in `TopologyEditor.tsx`):**
@@ -50,7 +35,7 @@ This document outlines the structural layout and user experience philosophy for 
 
 ---
 
-## 🎛️ Page 4: Mode Settings (Per-Mode Tuning)
+## 🎛️ Page 3: Mode Settings (Per-Mode Tuning)
 *Philosophy: Tuning the mathematical feel of each visual mode during soundcheck while keeping the active configuration as the persistence boundary.*
 
 **Components:**
@@ -62,7 +47,7 @@ This document outlines the structural layout and user experience philosophy for 
 
 ---
 
-## ⚙️ Page 5: System & Setup (Admin Mode)
+## ⚙️ Page 4: System & Setup (Admin Mode)
 *Philosophy: Hardware health monitoring and ultimate control. Rarely visited during an active show, purely diagnostic and dangerous.*
 
 **Components:**
