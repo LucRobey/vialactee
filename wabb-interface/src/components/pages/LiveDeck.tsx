@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
+import { FitBoard } from '../layout/FitBoard';
 import { GridSpot } from '../layout/GridSpot';
 import { wideDropStudPattern } from '../../constants/dropPatterns';
 import { NoticeBanner } from '../common/NoticeBanner';
@@ -12,6 +13,8 @@ const EMPTY_SYSTEM: Pick<SystemStatus, 'cpuTempC' | 'dynamicAudioLatencyMs'> = {
   cpuTempC: null,
   dynamicAudioLatencyMs: null,
 };
+const BOARD_WIDTH = LEGO_MATH.grid(43);
+const BOARD_HEIGHT = LEGO_MATH.physicalSize(37);
 
 const formatTelemetryValue = (value: number | null, suffix: string, digits = 0) => {
   if (value === null || Number.isNaN(value)) {
@@ -98,7 +101,8 @@ export const LiveDeck = () => {
   }, []);
 
   return (
-    <div className="live-deck-grid">
+    <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+      <div className="live-deck-grid" style={{ width: `${BOARD_WIDTH}px`, height: `${BOARD_HEIGHT}px` }}>
       {bridgeStatus !== 'open' || configurationError ? (
         <div style={{ position: 'absolute', top: '100px', left: '240px', width: '560px', zIndex: 50 }}>
           {bridgeStatus !== 'open' ? (
@@ -614,6 +618,7 @@ export const LiveDeck = () => {
         </GridSpot>
       ))}
 
-    </div>
+      </div>
+    </FitBoard>
   );
 };

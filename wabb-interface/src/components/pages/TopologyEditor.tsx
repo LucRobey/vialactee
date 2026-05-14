@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
+import { FitBoard } from '../layout/FitBoard';
 import { NoticeBanner } from '../common/NoticeBanner';
 import { initialTopology, type TopologySegment } from '../../constants/topologyData';
 import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from '../../utils/controlBridge';
@@ -25,6 +26,9 @@ const cloneModeSettings = (modeSettings: ModeSettingsMap = {}) =>
   ) as ModeSettingsMap;
 
 const initialAvailableModes = Array.from(new Set(initialTopology.map(segment => segment.mode))).sort((a, b) => a.localeCompare(b));
+
+const BOARD_WIDTH = LEGO_MATH.physicalSize(71);
+const BOARD_HEIGHT = LEGO_MATH.physicalSize(38);
 
 const DEFAULT_ALLOWED_MODES: readonly EditorMode[] = ['LIVE', 'MODIFY', 'BUILD'];
 
@@ -593,8 +597,8 @@ export const TopologyEditor = ({
   };
 
   return (
-    <div style={{ width: '100%', height: 'calc(35 * var(--stud))', overflowX: 'auto', overflowY: 'auto' }}>
-      <div style={{ position: 'relative', width: `${LEGO_MATH.physicalSize(71)}px`, minWidth: '100%', height: `${LEGO_MATH.physicalSize(38)}px` }}>
+    <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+      <div style={{ position: 'relative', width: `${BOARD_WIDTH}px`, height: `${BOARD_HEIGHT}px` }}>
         {bridgeStatus !== 'open' ? (
           <div style={{ position: 'absolute', top: '12px', left: '770px', width: '470px', zIndex: 40 }}>
             <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="TOPOLOGY LINK">
@@ -666,6 +670,6 @@ export const TopologyEditor = ({
           </>
         ) : null}
       </div>
-    </div>
+    </FitBoard>
   );
 };

@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
+import { FitBoard } from '../layout/FitBoard';
 import { GridSpot } from '../layout/GridSpot';
 import { NoticeBanner } from '../common/NoticeBanner';
 import { sendInstruction, subscribeModeMasterState, type SystemStatus } from '../../utils/controlBridge';
@@ -30,6 +31,9 @@ const PANEL_INSET_STYLE: CSSProperties = {
   flexDirection: 'column',
   gap: '8px',
 };
+
+const BOARD_WIDTH = LEGO_MATH.physicalSize(53);
+const BOARD_HEIGHT = LEGO_MATH.grid(35);
 
 const EMPTY_SYSTEM_STATUS: SystemStatus = {
   cpuTempC: null,
@@ -372,7 +376,8 @@ export const SystemSetup = () => {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: 'calc(35 * var(--stud))' }}>
+    <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+      <div style={{ position: 'relative', width: `${BOARD_WIDTH}px`, height: `${BOARD_HEIGHT}px` }}>
       {bridgeStatus !== 'open' ? (
         <div style={{ position: 'absolute', top: '60px', left: '108px', width: '420px', zIndex: 40 }}>
           <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="SYSTEM CONTROL STATUS">
@@ -516,6 +521,7 @@ export const SystemSetup = () => {
           />
         </div>
       </GridSpot>
-    </div>
+      </div>
+    </FitBoard>
   );
 };

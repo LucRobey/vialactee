@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
+import { FitBoard } from '../layout/FitBoard';
 import { GridSpot } from '../layout/GridSpot';
 import {
   sendInstruction,
@@ -16,6 +17,8 @@ type PendingModeSettings = Record<string, Record<string, ModeSettingValue>>;
 const PANEL_COL = 4;
 const PANEL_ROW = 2;
 const SCREEN_WIDTH = 44;
+const BOARD_WIDTH = LEGO_MATH.physicalSize(52);
+const BOARD_HEIGHT = LEGO_MATH.grid(35);
 
 const valuesMatch = (a: ModeSettingValue | undefined, b: ModeSettingValue | undefined) => {
   if (typeof a === 'number' && typeof b === 'number') {
@@ -115,7 +118,8 @@ export const ModeSettings = () => {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: 'calc(35 * var(--stud))' }}>
+    <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+      <div style={{ position: 'relative', width: `${BOARD_WIDTH}px`, height: `${BOARD_HEIGHT}px` }}>
       <GridSpot col={PANEL_COL - 4} row={PANEL_ROW + 2}>
         <div className="rogue-piece dark-grey" style={{
           width: `${LEGO_MATH.physicalSize(8)}px`,
@@ -402,6 +406,7 @@ export const ModeSettings = () => {
           )}
         </div>
       </GridSpot>
-    </div>
+      </div>
+    </FitBoard>
   );
 };
