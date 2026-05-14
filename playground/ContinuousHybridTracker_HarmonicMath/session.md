@@ -14,16 +14,15 @@
 ## 🧪 What was tried?
 
 - Generated `ContinuousHybridTracker_HarmonicMath.ipynb` to isolate and test the "Tempo Class" math.
-- Replaced the linear `long_term_bpm` tracking with $O(1)$ logarithmic circle math (`long_term_class`).
-- Ran a raw continuous sweep to track the changing music, mapped it to a class, and smoothed it to prove it can handle massive octave jumps seamlessly.
-- Used the smoothed class to generate exactly 5 explicit harmonic candidates (e.g., 50, 75, 100, 150, 200).
-- Used a tau-normalized scoring function to evaluate *only* those 5 candidates to pick the final locked BPM.
+- Evaluated Option A (Pearson), Option B (Peak/Valley), and Option C (Density). Option A proved mathematically superior. Options B and C were discarded.
+- Attempted a "Two-Tier Architecture" (splitting Bass and High frequencies) to force the tracker to ignore polyrhythms.
+- Reverted to a Fast Scout (Raw Sweep) and Heavy Judge (Option A) architecture to fix O(N^2) performance issues.
 
 ## 📊 Results / Observations
 
-- **Massive Success on Class Tracking:** The bottom plot proved the math is perfect. The `Long Term Class` line stayed flawlessly smooth during polyrhythmic jumps. When the song transitioned from 145 BPM to 128 BPM, the class glided elegantly and wrapped around the circle to lock exactly onto ~0.09 (the true class of 128 BPM). No ping-ponging, no linear corruption!
-- **Flawed Candidate Evaluator:** The top plot showed violent oscillation between sub-harmonics (96 and 48) instead of tracking the true 128 BPM. 
-- **The "Self-Fulfilling Prophecy" Bug:** Initially, the notebook only searched exact candidates based on the first frame's guess, locking the class in place permanently. We fixed this by running a raw continuous sweep to drive the class, but limiting the final output to the candidates.
+- **Massive Success on Class Tracking:** The bottom plot proved the math is perfect. The `Long Term Class` line stayed flawlessly smooth during polyrhythmic jumps.
+- **Two-Tier Acoustic Failure:** Splitting the Bass (Kick) and High (Snare) destroyed the 128 BPM 4/4 groove. Each buffer only saw a 64 BPM sub-rhythm, causing the tracker to collapse entirely.
+- **The Unified ODF Recovery:** Recombining the frequencies restored the 128 BPM pulse. The method got better, but it's not enough—the tracker still struggles to confidently choose 128 BPM over the mathematically equivalent 64 BPM sub-harmonic.
 
 ## 🐛 Meaningless Observations
 
@@ -31,37 +30,15 @@
 
 ## 💭 Thoughts & Strategy
 
-- **The Tau-Normalization Bias:** By dividing the total score by the `expected_beats` (tau), the formula mathematically punishes high BPMs. Slower tempos (like 48 BPM) have fewer beats, meaning fewer chances to hit negative penalties in the audio buffer. This makes them "safer" bets. Our 5% asymmetric penalty was too weak. We need to rework the scoring function to reward high-density positive hits instead of just avoiding negative ones.
-- **The Flywheel Integration:** Finding the BPM is only half the battle. The ultimate goal is to find the *beats* (phase). The new architecture gives us a solid foundation: 
-  1. The `Long Term Class` gives us the fundamental frequency.
-  2. The `Candidate Evaluator` gives us the exact Octave.
-  3. We must now map the winning candidate's phase into the `standalone_phase` (the flywheel) to keep the rhythm engine turning consistently over time.
-
-### 🎯 Candidate Scoring Options to Test
-We have formulated 3 mathematical strategies to replace the flawed Candidate Evaluator and eliminate the sub-harmonic bias:
-
-**Option A: Pearson Correlation (The Mathematical Standard)**
-- **How it works:** We remove the `/ expected_beats` division entirely. Instead, we mathematically normalize the score by the geometric energy of the template itself (`sqrt(sum(template^2))`).
-- **Why it's universal:** This turns the score into a pure statistical correlation coefficient [-1.0 to 1.0]. High BPM templates naturally have more peaks (higher geometric energy), so this scales them perfectly fairly against low BPM templates without any arbitrary bias.
-
-**Option B: Peak vs. Valley Ratio (The Sub-Harmonic Killer)**
-- **The Secret Bug:** Right now, our template actually rewards off-beats (+0.6). This means a 64 BPM template gets massive positive points when its "off-beat" lands on an actual 128 BPM beat!
-- **How it works:** We stop rewarding off-beats. We sum the audio energy exactly on the predicted beats, and divide it by the audio energy exactly in the valleys (the off-beats). `Score = Beat_Energy / (Valley_Energy + epsilon)`.
-- **Why it's universal:** If we test 64 BPM on a 128 BPM song, the 64 BPM template's "valleys" will align perfectly with the actual 128 BPM beats! The `Valley_Energy` explodes, instantly tanking the 64 BPM score.
-
-**Option C: Pure Hit Density (The Simplest Approach)**
-- **How it works:** We make the template strictly positive at the beats (+1.0) and 0.0 everywhere else. We do not divide or normalize by anything.
-- **Why it's universal:** A 128 BPM track naturally has twice as many beats as a 64 BPM track. If we just sum the raw energy, the 128 BPM track will effortlessly accumulate twice as much energy simply by virtue of having more valid hits in the buffer.
+- **The Human Perception Prior (Gaussian Technique):** Since a 64 BPM template can score identically to 128 BPM in Pearson correlation, we are implementing a Gaussian weighting curve centered around 120-130 BPM (the typical human dance zone). We went with Option A for the core math because it is faster and more reliable, but we apply this Gaussian prior as a mathematical tie-breaker. It penalizes extreme tempos (60 BPM or 230 BPM) so the algorithm must be "really sure of itself" to pick them.
+- **The Bass + High Filter (Dropping the Mids):** To further clean the signal, we will refine the ODF by strictly combining the Bass and High bands while completely ignoring the middle frequencies. This drops the muddy vocal/synth noise that confuses the rhythm engine, giving us a pristine Kick + Snare/Hi-hat signal.
 
 ## ⏭️ Next Steps (What is left to be done)
 
-- [x] Create `ContinuousHybridTracker_HarmonicMath.ipynb`.
-- [x] Duplicate the standard listening infrastructure (FFT, 5-second delay queue, Listener.py).
-- [x] Implement `f(BPM) = log2(BPM/60) % 1.0` mapping.
-- [x] Implement circular distance `min(|f1 - f2|, 1 - |f1 - f2|)`.
-- [x] Refactor tracking variables (`long_term_bpm` to `long_term_class`).
-- [x] Test evaluating only the 4 harmonic candidate multipliers against the audio buffer to pick the precise BPM.
-- [ ] **Fix Candidate Scoring:** Design a new scoring formula that removes the sub-harmonic bias.
+- [x] Create `ContinuousHybridTracker_HarmonicMath.ipynb` and duplicate listening infrastructure.
+- [x] Refactor tracking variables to $O(1)$ logarithmic circle math (`long_term_class`).
+- [x] Fix Candidate Scoring: Discard Options B and C, adopt Option A (True Pearson Correlation).
+- [ ] **Implement Bass + High Filter:** Modify the simulation to drop the middle frequencies before calculating the Unified ODF.
 - [ ] **Flywheel Integration:** Connect the chosen BPM and Phase to the continuous `standalone_phase` system to predict actual beats on the long run.
 
 ---
