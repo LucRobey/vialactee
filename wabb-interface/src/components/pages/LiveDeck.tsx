@@ -30,6 +30,7 @@ const formatLatencyTelemetryValue = (value: number | null) => {
 export const LiveDeck = () => {
   const [lumValue, setLumValue] = useState(60);
   const [sensValue, setSensValue] = useState(70);
+  const [autoTimeValue, setAutoTimeValue] = useState(20);
   const [isHold, setIsHold] = useState(false);
   const [selectedConfiguration, setSelectedConfiguration] = useState('');
   const [selectedTransition, setSelectedTransition] = useState('CUT');
@@ -71,6 +72,7 @@ export const LiveDeck = () => {
     return subscribeModeMasterState((state) => {
       setLumValue(state.luminosity);
       setSensValue(state.sensibility);
+      setAutoTimeValue(state.autoTransitionTime);
       setIsHold(state.transitionLocked);
       setSelectedTransition(state.selectedTransition);
 
@@ -120,7 +122,7 @@ export const LiveDeck = () => {
       <GridSpot col={0} row={0}>
         <div style={{
           width: `${LEGO_MATH.physicalSize(6)}px`,
-          height: `${LEGO_MATH.physicalSize(26)}px`,
+          height: `${LEGO_MATH.physicalSize(37)}px`,
           backgroundColor: '#1a1f24',
           borderTop: '8px solid #2a2d32',
           borderLeft: '8px solid #20252a',
@@ -235,6 +237,54 @@ export const LiveDeck = () => {
                 </div>
               </div>
             </div>
+
+            {/* AUTO TRANSITION BLOCK */}
+            <div style={{ position: 'absolute', top: '740px', left: '2px', right: '0', height: '310px' }}>
+              {/* Centered Label */}
+              <div className="rogue-piece" style={{
+                position: 'absolute', top: '0', left: '50%', transform: 'translateX(-50%)',
+                width: '120px', height: '30px', backgroundColor: '#f4f4f4',
+                borderTop: '2px solid #fff', borderLeft: '2px solid #ddd', borderBottom: '2px solid #999', borderRight: '2px solid #ccc',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 5px 10px rgba(0,0,0,0.7)', borderRadius: '2px', zIndex: 5
+              }}>
+                <span style={{ color: '#000', fontWeight: '900', fontSize: '0.65rem', letterSpacing: '1px' }}>AUTO TRANS (S)</span>
+              </div>
+              {/* Slider Mechanism */}
+              <div className="slider-container-group" style={{ position: 'absolute', top: '40px', right: '10px', width: '90px', '--slider-val': (autoTimeValue / 300) * 100 } as React.CSSProperties}>
+                <div className="absurd-slider-mechanism">
+                  <div className="technic-beam beam-1"></div>
+                  <div className="technic-beam beam-2"></div>
+                  <div className="guide-rail rail-1"></div>
+                  <div className="guide-rail rail-3"></div>
+                  <div className="rail-mount mount-1"></div>
+                  <div className="rail-mount mount-2"></div>
+                  <div className="rail-mount mount-3"></div>
+                  <div className="absurd-weight weight-drop-1" style={{ backgroundColor: '#0055bf' }}></div>
+                  <div className="absurd-gear gear-spin-1"></div>
+                  <div className="absurd-gear gear-spin-2"></div>
+                </div>
+                <div className="lego-slider">
+                  <div className="slider-track-wrap">
+                    <div className="slider-scale">{[5, 30, 60, 90, 120, 150, 180, 210, 240, 300].map(n => <span key={n} style={{ fontSize: '0.4rem' }}>{n}</span>)}</div>
+                    <div className="slider-track-groove">
+                      <input
+                        type="range"
+                        className="vertical-slider"
+                        min="5"
+                        max="300"
+                        value={autoTimeValue}
+                        onChange={e => {
+                          const value = Number(e.target.value);
+                          setAutoTimeValue(value);
+                          sendInstruction({ page: 'live_deck', action: 'set_auto_transition_time', payload: { value } });
+                        }}
+                      />
+                    </div>
+                    <div className="slider-scale">{[5, 30, 60, 90, 120, 150, 180, 210, 240, 300].map(n => <span key={n} style={{ fontSize: '0.4rem' }}>{n}</span>)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Thick Technic Cables connecting to the Config Board */}
@@ -242,6 +292,9 @@ export const LiveDeck = () => {
             <div style={{ width: '12px', height: '100%', backgroundColor: '#ffcd00', marginLeft: '15px' }}></div>
           </div>
           <div style={{ position: 'absolute', top: '500px', right: '-40px', width: '60px', height: '16px', backgroundColor: '#111', borderTop: '4px solid #333', borderBottom: '4px solid #000', borderRadius: '8px', boxShadow: '0 8px 10px rgba(0,0,0,0.8)', zIndex: -1, display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: '12px', height: '100%', backgroundColor: '#ffcd00', marginLeft: '15px' }}></div>
+          </div>
+          <div style={{ position: 'absolute', top: '840px', right: '-40px', width: '60px', height: '16px', backgroundColor: '#111', borderTop: '4px solid #333', borderBottom: '4px solid #000', borderRadius: '8px', boxShadow: '0 8px 10px rgba(0,0,0,0.8)', zIndex: -1, display: 'flex', alignItems: 'center' }}>
             <div style={{ width: '12px', height: '100%', backgroundColor: '#ffcd00', marginLeft: '15px' }}></div>
           </div>
         </div>

@@ -11,6 +11,7 @@
     "printConfigChanges": false,
     "luminosity": 46,
     "sensibility": 45,
+    "auto_transition_time": 20,
     "modesToPrintDetails": [
         "PSG"
     ]

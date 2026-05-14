@@ -95,6 +95,7 @@ export type ModeMasterState = {
   transitionProgress: number;
   luminosity: number;
   sensibility: number;
+  autoTransitionTime: number;
   playlists: string[];
   availableModes: string[];
   segments: ModeMasterSegmentState[];
@@ -183,6 +184,7 @@ const isModeMasterState = (value: unknown): value is ModeMasterState => (
   && typeof value.transitionProgress === 'number'
   && typeof value.luminosity === 'number'
   && typeof value.sensibility === 'number'
+  && typeof value.autoTransitionTime === 'number'
   && Array.isArray(value.playlists)
   && value.playlists.every(item => typeof item === 'string')
   && Array.isArray(value.availableModes)
