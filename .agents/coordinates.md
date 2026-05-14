@@ -16,13 +16,13 @@ The LED matrix is defined on a theoretical grid of **432 columns (X)** by **246 
 | **0** | `segment_h32` | Horizontal | 48 | 383 to 430 | 85 |
 | **0** | `segment_h31` | Horizontal | 48 | 383 to 430 | 171 |
 | **0** | `segment_h30` | Horizontal | 47 | 383 to 429 | 1 |
-| **0** | `segment_v3` | Vertical | 173 | 292 | 73 to 245 |
+| **0** | `segment_v3` | Vertical | 173 | 383 | 73 to 245 |
 | **0** | `segment_h20` | Horizontal | 91 | 292 to 382 | 16 |
 | **0** | `segment_h00` | Horizontal | 205 | 0 to 204 | 16 |
-| **1** | `segment_v2` | Vertical | 173 | 205 | 16 to 188 |
+| **1** | `segment_v2` | Vertical | 173 | 292 | 73 to 245 |
 | **1** | `segment_h11` | Horizontal | 87 | 205 to 291 | 73 |
 | **1** | `segment_h10` | Horizontal | 86 | 205 to 290 | 189 |
-| **1** | `segment_v1` | Vertical | 173 | 383 | 16 to 188 * |
+| **1** | `segment_v1` | Vertical | 173 | 205 | 16 to 188 * |
 
 > **\*Note on V1:** The global matrix data tracks logical structural `1`s from row 1 to 188, but the actual wired physical hardware segment consists of 173 LEDs effectively spanning row 16 to 188 (to align symmetrically with `segment_v2` and horizontal connections).
 
