@@ -42,15 +42,14 @@ const configurationApiPlugin = () => ({
             const data = JSON.parse(body);
             if (
               !data ||
-              !Array.isArray(data.playlists) ||
-              !data.playlists.every((name: unknown) => typeof name === 'string') ||
               !data.configurations ||
               typeof data.configurations !== 'object' ||
               Array.isArray(data.configurations)
             ) {
               throw new Error('Invalid configurations schema');
             }
-            fs.writeFileSync(configPath, `${JSON.stringify(data, null, 2)}\n`, 'utf-8');
+            const sanitized = { configurations: data.configurations };
+            fs.writeFileSync(configPath, `${JSON.stringify(sanitized, null, 2)}\n`, 'utf-8');
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ success: true }));
           } catch {

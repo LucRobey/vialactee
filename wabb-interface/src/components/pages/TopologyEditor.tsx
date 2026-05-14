@@ -3,7 +3,7 @@ import { LEGO_MATH } from '../../utils/legoMath';
 import { NoticeBanner } from '../common/NoticeBanner';
 import { initialTopology, type TopologySegment } from '../../constants/topologyData';
 import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from '../../utils/controlBridge';
-import { loadConfigurationStore, saveConfigurationStore, type ModeSettingsMap, type SegmentConfiguration } from '../../utils/configurationStore';
+import { loadConfigurationStore, saveConfigurationStore, type ConfigurationStore, type ModeSettingsMap, type SegmentConfiguration } from '../../utils/configurationStore';
 import { useBridgeStatus } from '../../utils/useBridgeStatus';
 import { TopologyConfigurationPanel } from '../topology/TopologyConfigurationPanel';
 import { TopologyEditorModeSwitch } from '../topology/TopologyEditorModeSwitch';
@@ -25,10 +25,23 @@ const cloneModeSettings = (modeSettings: ModeSettingsMap = {}) =>
 
 const initialAvailableModes = Array.from(new Set(initialTopology.map(segment => segment.mode))).sort((a, b) => a.localeCompare(b));
 
-export const TopologyEditor = () => {
+const DEFAULT_ALLOWED_MODES: readonly EditorMode[] = ['LIVE', 'MODIFY', 'BUILD'];
+
+type TopologyEditorProps = {
+  allowedModes?: readonly EditorMode[];
+  configurationStoreLoader?: () => Promise<ConfigurationStore>;
+  syncPlaylistsFromModeMaster?: boolean;
+};
+
+export const TopologyEditor = ({
+  allowedModes = DEFAULT_ALLOWED_MODES,
+  configurationStoreLoader = loadConfigurationStore,
+  syncPlaylistsFromModeMaster = true,
+}: TopologyEditorProps = {}) => {
+  const showEditPanels = allowedModes.some(mode => mode !== 'LIVE');
   const [segments, setSegments] = useState<TopologySegment[]>(initialTopology);
   const [selectedSegId, setSelectedSegId] = useState(initialTopology[0].id);
-  const [editorMode, setEditorMode] = useState<EditorMode>('LIVE');
+  const [editorMode, setEditorMode] = useState<EditorMode>(allowedModes[0] ?? 'LIVE');
   const [configName, setConfigName] = useState('');
   const [selectedConfigName, setSelectedConfigName] = useState('');
   const [apiPlaylists, setApiPlaylists] = useState<string[]>([]);
@@ -58,6 +71,7 @@ export const TopologyEditor = () => {
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       if (noticeTimerRef.current !== null) {
@@ -94,7 +108,7 @@ export const TopologyEditor = () => {
   }, [apiConfigurations]);
 
   const applyModeMasterState = useCallback((state: ModeMasterState) => {
-    if (state.playlists.length > 0) {
+    if (syncPlaylistsFromModeMaster && state.playlists.length > 0) {
       setApiPlaylists(state.playlists);
     }
     if (state.availableModes.length > 0) {
@@ -108,7 +122,7 @@ export const TopologyEditor = () => {
     }
 
     if (state.activePlaylist) {
-      const playlists = state.playlists.length > 0 ? state.playlists : apiPlaylists;
+      const playlists = syncPlaylistsFromModeMaster && state.playlists.length > 0 ? state.playlists : apiPlaylists;
       const nextPlaylistIndex = playlists.findIndex(name => sameName(name, state.activePlaylist ?? ''));
       if (nextPlaylistIndex >= 0) {
         setPlaylistIndex(nextPlaylistIndex);
@@ -166,10 +180,20 @@ export const TopologyEditor = () => {
 
       return { ...seg, mode, direction };
     }));
-  }, [apiPlaylists, editorMode]);
+  }, [apiPlaylists, editorMode, syncPlaylistsFromModeMaster]);
+
+  const lastAppliedConfigRef = useRef<string>('');
 
   useEffect(() => {
-    loadConfigurationStore()
+    if (editorMode === 'LIVE' || !playlist || !selectedConfigName) return;
+    const key = `${playlist}::${selectedConfigName}`;
+    if (lastAppliedConfigRef.current === key) return;
+    lastAppliedConfigRef.current = key;
+    applyStoredConfigurationToSegments(playlist, selectedConfigName);
+  }, [editorMode, playlist, selectedConfigName, apiConfigurations, applyStoredConfigurationToSegments]);
+
+  useEffect(() => {
+    configurationStoreLoader()
       .then(store => {
         if (!isMountedRef.current) {
           return;
@@ -177,12 +201,15 @@ export const TopologyEditor = () => {
         setApiPlaylists(store.playlists);
         setApiConfigurations(store.configurations);
         setPlaylistNameDraft(store.playlists[0] || '');
+        const firstConfig = store.configurations[store.playlists[0] || '']?.[0]?.name ?? '';
+        setSelectedConfigName(prev => prev || firstConfig);
+        setConfigName(prev => prev || firstConfig);
       })
       .catch(error => {
-        console.error('Could not load configurations', error);
+        console.error('TopologyEditor: Could not load configurations', error);
         showNotice('error', 'CONFIGURATION STORE', error instanceof Error ? error.message : 'Could not load configurations.');
       });
-  }, [showNotice]);
+  }, [configurationStoreLoader, showNotice]);
 
   useEffect(() => subscribeModeMasterState(applyModeMasterState), [applyModeMasterState]);
 
@@ -313,6 +340,9 @@ export const TopologyEditor = () => {
 
       const selectedPlaylist = apiPlaylists[next];
       setPlaylistNameDraft(selectedPlaylist);
+      const firstConfig = apiConfigurations[selectedPlaylist]?.[0]?.name ?? '';
+      setSelectedConfigName(firstConfig);
+      setConfigName(firstConfig);
       sendInstruction({
         page: 'topology',
         action: 'select_playlist_slot',
@@ -592,6 +622,7 @@ export const TopologyEditor = () => {
         <TopologyEditorModeSwitch
           editorMode={editorMode}
           onModeChange={handleEditorModeChange}
+          availableModes={allowedModes}
         />
 
         <TopologyInspectorShell />
@@ -602,32 +633,36 @@ export const TopologyEditor = () => {
           onModeSelect={handleModeSelect}
         />
 
-        <TopologyConfigurationPanel
-          editorMode={editorMode}
-          playlist={playlist}
-          apiConfigurations={apiConfigurations}
-          selectedConfigName={selectedConfigName}
-          configName={configName}
-          isSaving={isSavingStore}
-          onConfigSelect={handleConfigSelect}
-          onConfigNameChange={setConfigName}
-          onRenameConfiguration={handleRenameConfiguration}
-          onDeleteConfiguration={handleDeleteConfiguration}
-          onSave={handleSave}
-        />
+        {showEditPanels ? (
+          <>
+            <TopologyConfigurationPanel
+              editorMode={editorMode}
+              playlist={playlist}
+              apiConfigurations={apiConfigurations}
+              selectedConfigName={selectedConfigName}
+              configName={configName}
+              isSaving={isSavingStore}
+              onConfigSelect={handleConfigSelect}
+              onConfigNameChange={setConfigName}
+              onRenameConfiguration={handleRenameConfiguration}
+              onDeleteConfiguration={handleDeleteConfiguration}
+              onSave={handleSave}
+            />
 
-        <TopologyPlaylistPanel
-          editorMode={editorMode}
-          playlist={playlist}
-          playlistNameDraft={playlistNameDraft}
-          playlistLightColor={playlistLightColor}
-          isSaving={isSavingStore}
-          onPlaylistNameChange={setPlaylistNameDraft}
-          onCreatePlaylist={handleCreatePlaylist}
-          onRenamePlaylist={handleRenamePlaylist}
-          onDeletePlaylist={handleDeletePlaylist}
-          onPlaylistCycle={handlePlaylistCycle}
-        />
+            <TopologyPlaylistPanel
+              editorMode={editorMode}
+              playlist={playlist}
+              playlistNameDraft={playlistNameDraft}
+              playlistLightColor={playlistLightColor}
+              isSaving={isSavingStore}
+              onPlaylistNameChange={setPlaylistNameDraft}
+              onCreatePlaylist={handleCreatePlaylist}
+              onRenamePlaylist={handleRenamePlaylist}
+              onDeletePlaylist={handleDeletePlaylist}
+              onPlaylistCycle={handlePlaylistCycle}
+            />
+          </>
+        ) : null}
       </div>
     </div>
   );

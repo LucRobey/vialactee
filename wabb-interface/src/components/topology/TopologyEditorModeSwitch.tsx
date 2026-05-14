@@ -6,10 +6,16 @@ import type { EditorMode } from './types';
 export const TopologyEditorModeSwitch = ({
   editorMode,
   onModeChange,
+  availableModes = ['LIVE', 'MODIFY', 'BUILD'],
 }: {
   editorMode: EditorMode;
   onModeChange: (mode: EditorMode) => void;
-}) => (
+  availableModes?: readonly EditorMode[];
+}) => {
+  if (availableModes.length <= 1) {
+    return null;
+  }
+  return (
   <>
     <GridSpot col={INSPECTOR_OFFSET_C + 31} row={INSPECTOR_OFFSET_R + 5} style={{ zIndex: 10 }}>
       <div className="rogue-piece" style={{
@@ -72,7 +78,7 @@ export const TopologyEditorModeSwitch = ({
         justifyContent: 'space-evenly',
         padding: '5px 0'
       }}>
-        {(['LIVE', 'MODIFY', 'BUILD'] as const).map(mode => (
+        {availableModes.map(mode => (
           <div
             key={mode}
             onClick={() => onModeChange(mode)}
@@ -97,4 +103,5 @@ export const TopologyEditorModeSwitch = ({
       </div>
     </GridSpot>
   </>
-);
+  );
+};

@@ -72,16 +72,15 @@ class Connector:
 
         if (
             not isinstance(data, dict)
-            or not isinstance(data.get("playlists"), list)
-            or not all(isinstance(name, str) for name in data.get("playlists", []))
             or not isinstance(data.get("configurations"), dict)
         ):
             return web.json_response({"error": "invalid_configurations_schema"}, status=400)
 
+        sanitized = {"configurations": data["configurations"]}
         file_path = self.configurations_file_path()
         try:
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+                json.dump(sanitized, f, indent=2)
             self.mode_master.load_configurations()
             await self.broadcast_state_if_changed(self.mode_master.get_state_snapshot(), force=True)
         except Exception as exc:

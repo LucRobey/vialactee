@@ -28,7 +28,7 @@ export const TopologyPlaylistPanel = ({
 }) => (
   <GridSpot
     col={INSPECTOR_OFFSET_C + 1}
-    row={INSPECTOR_OFFSET_R + 17}
+    row={INSPECTOR_OFFSET_R + 22}
     style={{ zIndex: 7, transition: 'filter 0.3s ease', pointerEvents: editorMode === 'LIVE' ? 'none' : 'auto', filter: editorMode === 'LIVE' ? 'brightness(0.5)' : 'none' }}
   >
     <div style={{

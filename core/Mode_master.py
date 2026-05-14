@@ -463,7 +463,7 @@ class Mode_master:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             self.configurations = data.get('configurations', {})
-            self.playlists = data.get('playlists', [])
+            self.playlists = list(self.configurations.keys())
             if self.printConfigChanges:
                 self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists from {file_path}")
         except Exception as e:
