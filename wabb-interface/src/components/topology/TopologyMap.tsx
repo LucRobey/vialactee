@@ -32,11 +32,13 @@ export const TopologyMap = ({
   selectedSegId,
   onSelectSegment,
   onToggleDirection,
+  segmentShiftCols = 0,
 }: {
   segments: TopologySegment[];
   selectedSegId: string;
   onSelectSegment: (segmentId: string) => void;
   onToggleDirection: (event: MouseEvent, segmentId: string) => void;
+  segmentShiftCols?: number;
 }) => {
   const getModeClass = (modeName: string) => `anim-${modeName.toLowerCase().replace(/\s+/g, '-')}`;
 
@@ -63,7 +65,7 @@ export const TopologyMap = ({
         const isSelected = selectedSegId === seg.id;
 
         return (
-          <GridSpot key={seg.id} col={seg.col} row={seg.row}>
+          <GridSpot key={seg.id} col={seg.col + segmentShiftCols} row={seg.row}>
             <div
               className={`rogue-piece interactive-segment ${isSelected ? 'segment-selected' : ''} ${getModeClass(seg.mode)}`}
               onClick={() => onSelectSegment(seg.id)}

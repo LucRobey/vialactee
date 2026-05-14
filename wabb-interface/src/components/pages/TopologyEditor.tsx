@@ -27,8 +27,11 @@ const cloneModeSettings = (modeSettings: ModeSettingsMap = {}) =>
 
 const initialAvailableModes = Array.from(new Set(initialTopology.map(segment => segment.mode))).sort((a, b) => a.localeCompare(b));
 
-const BOARD_WIDTH = LEGO_MATH.physicalSize(71);
-const BOARD_HEIGHT = LEGO_MATH.physicalSize(38);
+const TOPOLOGY_VISUAL_SCALE = 1.2;
+const BASE_BOARD_WIDTH = LEGO_MATH.physicalSize(71);
+const BASE_BOARD_HEIGHT = LEGO_MATH.physicalSize(38);
+const BOARD_WIDTH = BASE_BOARD_WIDTH * TOPOLOGY_VISUAL_SCALE;
+const BOARD_HEIGHT = BASE_BOARD_HEIGHT * TOPOLOGY_VISUAL_SCALE;
 
 const DEFAULT_ALLOWED_MODES: readonly EditorMode[] = ['LIVE', 'MODIFY', 'BUILD'];
 
@@ -596,9 +599,18 @@ export const TopologyEditor = ({
     }
   };
 
+  const fittedBoardWidth = BOARD_WIDTH * 0.8;
+  const fittedBoardHeight = BOARD_HEIGHT * 0.8;
+
   return (
-    <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
-      <div style={{ position: 'relative', width: `${BOARD_WIDTH}px`, height: `${BOARD_HEIGHT}px` }}>
+    <FitBoard width={fittedBoardWidth} height={fittedBoardHeight}>
+      <div style={{
+        position: 'relative',
+        width: `${BASE_BOARD_WIDTH}px`,
+        height: `${BASE_BOARD_HEIGHT}px`,
+        transform: `scale(${TOPOLOGY_VISUAL_SCALE})`,
+        transformOrigin: 'top left',
+      }}>
         {bridgeStatus !== 'open' ? (
           <div style={{ position: 'absolute', top: '12px', left: '770px', width: '470px', zIndex: 40 }}>
             <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="TOPOLOGY LINK">
@@ -622,6 +634,7 @@ export const TopologyEditor = ({
           selectedSegId={selectedSegId}
           onSelectSegment={handleSegmentSelect}
           onToggleDirection={handleDirectionToggle}
+          segmentShiftCols={showEditPanels ? 0 : 2}
         />
 
         <TopologyEditorModeSwitch

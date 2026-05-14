@@ -16,8 +16,9 @@ type PendingModeSettings = Record<string, Record<string, ModeSettingValue>>;
 
 const PANEL_COL = 4;
 const PANEL_ROW = 2;
-const SCREEN_WIDTH = 44;
-const BOARD_WIDTH = LEGO_MATH.physicalSize(52);
+const SCREEN_WIDTH = 56;
+const PANEL_WIDTH = 60;
+const BOARD_WIDTH = LEGO_MATH.physicalSize(68);
 const BOARD_HEIGHT = LEGO_MATH.grid(35);
 
 const valuesMatch = (a: ModeSettingValue | undefined, b: ModeSettingValue | undefined) => {
@@ -130,7 +131,7 @@ export const ModeSettings = () => {
 
       <GridSpot col={PANEL_COL} row={PANEL_ROW}>
         <div className="rogue-piece" style={{
-          width: `${LEGO_MATH.physicalSize(48)}px`,
+          width: `${LEGO_MATH.physicalSize(PANEL_WIDTH)}px`,
           height: `${LEGO_MATH.physicalSize(28)}px`,
           backgroundColor: '#d22020',
           backgroundImage: `
@@ -148,7 +149,7 @@ export const ModeSettings = () => {
         }}></div>
       </GridSpot>
 
-      {[{ c: 0, r: 0 }, { c: 47, r: 0 }, { c: 0, r: 27 }, { c: 47, r: 27 }].map((pos, i) => (
+      {[{ c: 0, r: 0 }, { c: PANEL_WIDTH - 1, r: 0 }, { c: 0, r: 27 }, { c: PANEL_WIDTH - 1, r: 27 }].map((pos, i) => (
         <GridSpot key={`mode-settings-pin-${i}`} col={PANEL_COL + pos.c} row={PANEL_ROW + pos.r} style={{ zIndex: 2 }}>
           <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{
@@ -166,7 +167,7 @@ export const ModeSettings = () => {
         </GridSpot>
       ))}
 
-      <GridSpot col={PANEL_COL + 15} row={PANEL_ROW + 2} style={{ zIndex: 10 }}>
+      <GridSpot col={PANEL_COL + 22} row={PANEL_ROW + 2} style={{ zIndex: 10 }}>
         <div className="rogue-piece" style={{
           width: 'calc(16 * var(--stud))',
           height: 'calc(1 * var(--stud))',
@@ -247,7 +248,7 @@ export const ModeSettings = () => {
           boxSizing: 'border-box',
           padding: '12px',
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
           alignContent: 'flex-start',
           gap: '10px 8px',
           overflowY: 'auto'

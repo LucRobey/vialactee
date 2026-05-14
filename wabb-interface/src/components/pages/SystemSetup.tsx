@@ -32,7 +32,7 @@ const PANEL_INSET_STYLE: CSSProperties = {
   gap: '8px',
 };
 
-const BOARD_WIDTH = LEGO_MATH.physicalSize(53);
+const BOARD_WIDTH = LEGO_MATH.physicalSize(76);
 const BOARD_HEIGHT = LEGO_MATH.grid(35);
 
 const EMPTY_SYSTEM_STATUS: SystemStatus = {
@@ -441,8 +441,14 @@ export const SystemSetup = () => {
         </div>
       </GridSpot>
 
-      <GridSpot col={4} row={19}>
-        <div style={{ ...PANEL_INSET_STYLE, width: `${LEGO_MATH.physicalSize(28)}px`, minHeight: `${LEGO_MATH.physicalSize(7)}px` }}>
+      <GridSpot col={3} row={22}>
+        <div style={{
+          ...PANEL_INSET_STYLE,
+          width: `${LEGO_MATH.physicalSize(28)}px`,
+          minHeight: `${LEGO_MATH.physicalSize(7)}px`,
+          transform: 'scale(1.2)',
+          transformOrigin: 'top left',
+        }}>
           <StatusRow label="MODE" descriptor={describeSimulation(system)} />
           <StatusRow label="ESP32 OUTPUT" descriptor={describeEsp32(system)} />
           <StatusRow label="PHONE TO PI" descriptor={describePhone(system)} />
@@ -491,7 +497,7 @@ export const SystemSetup = () => {
         </div>
       </GridSpot>
 
-      <GridSpot col={40} row={18}>
+      <GridSpot col={53} row={8}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <ActionButton
             label="RESTART PYTHON LOOP"
