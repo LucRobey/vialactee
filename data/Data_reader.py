@@ -25,7 +25,7 @@ class Data_reader:
                 data = json.load(f)
                 
             configurations = data.get('configurations', {})
-            playlists = data.get('playlists', [])
+            playlists = list(configurations.keys())
             
             if self.printConfigurationLoads:
                 logger.debug(f"(DR) Loaded {len(playlists)} playlists from {self.file_path}")

@@ -32,7 +32,8 @@
           "Segment h11": "UP",
           "Segment h10": "UP",
           "Segment v1": "UP"
-        }
+        },
+        "modeSettings": {}
       },
       {
         "name": "test",
@@ -98,7 +99,8 @@
           "Segment h11": "UP",
           "Segment h10": "UP",
           "Segment v1": "UP"
-        }
+        },
+        "modeSettings": {}
       },
       {
         "name": "emily <3 me",
@@ -127,7 +129,8 @@
           "Segment h11": "UP",
           "Segment h10": "UP",
           "Segment v1": "UP"
-        }
+        },
+        "modeSettings": {}
       }
     ],
     "Camille": [
@@ -162,6 +165,9 @@
         "modeSettings": {
           "Metronome": {
             "alternateSubBeats": true
+          },
+          "Rainbow": {
+            "smoothRatio": 0.45
           }
         }
       },
@@ -174,11 +180,11 @@
           "Segment h30": "Metronome",
           "Segment v3": "Plasma Fire",
           "Segment h20": "Power Bar",
-          "Segment h00": "Metronome",
+          "Segment h00": "Bary Rainbow",
           "Segment v2": "PSG",
-          "Segment h11": "Magnetic Ball",
+          "Segment h11": "Chromatic Chaser",
           "Segment h10": "Metronome",
-          "Segment v1": "Flying Ball"
+          "Segment v1": "Chromatic Chaser"
         },
         "way": {
           "Segment v4": "UP",
@@ -194,8 +200,25 @@
           "Segment v1": "DOWN"
         },
         "modeSettings": {
+          "Rainbow": {
+            "smoothRatio": 0.5,
+            "intensityBase": 0.1,
+            "intensityMultiplier": 0.9
+          },
+          "Hyper Strobe": {
+            "fluxThreshold": 0.7,
+            "decayRatio": 0.3,
+            "listenBand": 1
+          },
+          "Chromatic Chaser": {
+            "speed": 2,
+            "fadeRatio": 0.05,
+            "bounceEnabled": true
+          },
           "Metronome": {
-            "alternateSubBeats": true
+            "brightnessMultiplier": 1,
+            "alternateSubBeats": true,
+            "accentColor": "blue"
           }
         }
       }

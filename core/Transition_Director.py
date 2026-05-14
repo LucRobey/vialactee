@@ -32,7 +32,7 @@ class Transition_Director:
         self.silence_start_time = None
         self.is_in_standby = False
 
-        self.configuration_duration = 20.0
+        self.configuration_duration = float(infos.get("auto_transition_time", 20.0))
         self.next_change_time = time.time() + self.configuration_duration
 
         self.state = "PASSATION"

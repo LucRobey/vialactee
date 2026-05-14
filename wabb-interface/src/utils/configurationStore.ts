@@ -1,4 +1,5 @@
 import type { ModeSettingValue } from './controlBridge';
+import configurationsJsonRaw from '../../../data/configurations.json?raw';
 
 export type ModeSettingsMap = Record<string, Record<string, ModeSettingValue>>;
 
@@ -19,13 +20,7 @@ export const emptyConfigurationStore: ConfigurationStore = {
   configurations: {},
 };
 
-export const loadConfigurationStore = async (): Promise<ConfigurationStore> => {
-  const response = await fetch('/api/configurations');
-  if (!response.ok) {
-    throw new Error(`Could not load configurations.json (${response.status})`);
-  }
-
-  const data = await response.json() as Partial<ConfigurationStore>;
+const normalizeConfigurationStore = (data: Partial<ConfigurationStore>): ConfigurationStore => {
   const rawConfigurations = data.configurations && typeof data.configurations === 'object' ? data.configurations : {};
   const normalizedConfigurations: Record<string, SegmentConfiguration[]> = {};
 
@@ -45,10 +40,26 @@ export const loadConfigurationStore = async (): Promise<ConfigurationStore> => {
   });
 
   return {
-    playlists: Array.isArray(data.playlists) ? data.playlists.filter((name): name is string => typeof name === 'string') : [],
+    playlists: Object.keys(normalizedConfigurations),
     configurations: normalizedConfigurations,
   };
 };
+
+const loadConfigurationStoreFrom = async (sourceUrl: string): Promise<ConfigurationStore> => {
+  const response = await fetch(sourceUrl);
+  if (!response.ok) {
+    throw new Error(`Could not load configurations.json (${response.status})`);
+  }
+
+  const data = await response.json() as Partial<ConfigurationStore>;
+  return normalizeConfigurationStore(data);
+};
+
+export const loadConfigurationStore = async (): Promise<ConfigurationStore> =>
+  loadConfigurationStoreFrom('/api/configurations');
+
+export const loadConfigurationFileStore = async (): Promise<ConfigurationStore> =>
+  Promise.resolve(normalizeConfigurationStore(JSON.parse(configurationsJsonRaw) as Partial<ConfigurationStore>));
 
 export const saveConfigurationStore = async (store: ConfigurationStore): Promise<void> => {
   const response = await fetch('/api/configurations', {
@@ -56,7 +67,7 @@ export const saveConfigurationStore = async (store: ConfigurationStore): Promise
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(store, null, 2),
+    body: JSON.stringify({ configurations: store.configurations }, null, 2),
   });
 
   if (!response.ok) {

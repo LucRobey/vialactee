@@ -394,6 +394,7 @@ class Mode_master:
             "transitionProgress": getattr(self.transition_director, "transition_progress", 0.0),
             "luminosity": int(round(max(0.0, min(1.0, float(getattr(self.listener, "luminosite", 0.0)))) * 100)),
             "sensibility": int(round(max(0.0, float(getattr(self.listener, "sensi", 0.0))) * 100)),
+            "autoTransitionTime": int(round(float(getattr(self.transition_director, "configuration_duration", 20.0)))),
             "playlists": list(self.playlists),
             "availableModes": available_modes,
             "segments": segments,
@@ -463,7 +464,7 @@ class Mode_master:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             self.configurations = data.get('configurations', {})
-            self.playlists = data.get('playlists', [])
+            self.playlists = list(self.configurations.keys())
             if self.printConfigChanges:
                 self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists from {file_path}")
         except Exception as e:
@@ -712,6 +713,15 @@ class Mode_master:
                     persisted_value = int(round(max(0.0, min(100.0, float(value)))))
                     self.listener.sensi = persisted_value / 100.0
                     self._persist_app_config_value("sensibility", persisted_value)
+                    return {"applied": True}
+                return {"applied": False, "reason": "invalid_value"}
+
+            if action == "set_auto_transition_time":
+                value = payload.get("value")
+                if isinstance(value, (int, float)):
+                    persisted_value = int(round(max(1.0, float(value))))
+                    self.transition_director.configuration_duration = float(persisted_value)
+                    self._persist_app_config_value("auto_transition_time", persisted_value)
                     return {"applied": True}
                 return {"applied": False, "reason": "invalid_value"}
 

@@ -2,6 +2,8 @@ export const MAP_OFFSET_C = 2;
 export const MAP_OFFSET_R = 3;
 export const INSPECTOR_OFFSET_C = 2;
 export const INSPECTOR_OFFSET_R = 5;
+export const CONFIGURATOR_OFFSET_C = 49;
+export const CONFIGURATOR_OFFSET_R = 5;
 
 export type SegmentOrientation = 'horizontal' | 'vertical';
 export type SegmentDirection = 'UP' | 'DOWN';
