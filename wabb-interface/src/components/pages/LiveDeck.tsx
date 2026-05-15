@@ -2,11 +2,33 @@ import React, { useEffect, useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { FitBoard } from '../layout/FitBoard';
 import { GridSpot } from '../layout/GridSpot';
-import { wideDropStudPattern } from '../../constants/dropPatterns';
 import { NoticeBanner } from '../common/NoticeBanner';
 import { sendInstruction, subscribeModeMasterState, type SystemStatus } from '../../utils/controlBridge';
 import { loadConfigurationStore } from '../../utils/configurationStore';
 import { useBridgeStatus } from '../../utils/useBridgeStatus';
+import {
+  buildDropWordPlacements,
+  DROP_WORD_HEIGHT_STUDS,
+  DROP_WORD_WIDTH_STUDS,
+} from '../../constants/dropLetterTiles';
+
+const DROP_TILE_PLACEMENTS = buildDropWordPlacements();
+
+/** Matches `.giant-drop-button::before` inset and container width. */
+const DROP_BUTTON_INSET_PX = 9;
+const DROP_BUTTON_WIDTH_PX = 900;
+/** 8 studs tall (+1 stud row vs prior 7-stud brick). */
+const DROP_BUTTON_HEIGHT_PX = LEGO_MATH.grid(8);
+/** Half-stud clip on bottom/right so cut studs show at the edge. */
+const DROP_BUTTON_CROP_PX = LEGO_MATH.STUD / 2;
+const DROP_STUD_COLS = Math.floor(
+  (DROP_BUTTON_WIDTH_PX - DROP_BUTTON_INSET_PX * 2) / LEGO_MATH.STUD,
+);
+const DROP_STUD_ROWS = Math.floor(
+  (DROP_BUTTON_HEIGHT_PX - DROP_BUTTON_INSET_PX * 2) / LEGO_MATH.STUD,
+);
+const DROP_LETTER_START_COL = Math.floor((DROP_STUD_COLS - DROP_WORD_WIDTH_STUDS) / 2);
+const DROP_LETTER_START_ROW = Math.floor((DROP_STUD_ROWS - DROP_WORD_HEIGHT_STUDS) / 2);
 
 const EMPTY_CONFIGURATIONS: string[] = [];
 const EMPTY_SYSTEM: Pick<SystemStatus, 'cpuTempC' | 'dynamicAudioLatencyMs'> = {
@@ -570,42 +592,44 @@ export const LiveDeck = () => {
       </GridSpot>
 
       {/* Drop Button */}
-      <GridSpot col={17} row={18}>
-        <div className="drop-button-container" style={{ width: '900px' }}>
+      <GridSpot col={17} row={21}>
+        <div
+          className="drop-button-container"
+          style={{
+            width: `${DROP_BUTTON_WIDTH_PX - DROP_BUTTON_CROP_PX}px`,
+            height: `${DROP_BUTTON_HEIGHT_PX - DROP_BUTTON_CROP_PX}px`,
+            marginTop: 'calc(0.35 * var(--stud))',
+          }}
+        >
           <button
+            type="button"
             className="giant-drop-button"
-            style={{ width: '100%', height: '210px' }}
+            aria-label="Manual drop"
+            style={{
+              width: `${DROP_BUTTON_WIDTH_PX}px`,
+              height: `${DROP_BUTTON_HEIGHT_PX}px`,
+            }}
             onClick={() => sendInstruction({ page: 'live_deck', action: 'manual_drop' })}
           >
-            <div className="drop-stud-grid">
-              {(() => {
-                let whiteIndex = 0;
-                return wideDropStudPattern.flat().map((isWhite, i) => {
-                  if (!isWhite) return <div key={i} className="stud stud-red"></div>;
-
-                  const currentIndex = whiteIndex++;
-                  // Generate a pseudo-random rotation and shape
-                  const rotation = ((i * 17) % 15) - 7;
-                  const isSquare = (i * 13) % 2 === 0;
-
-                  // Assign colors to specific indices (2 yellow, 1 grey, 5 clears)
-                  const isYellow = currentIndex === 8 || currentIndex === 24;
-                  const isGrey = currentIndex === 16;
-                  const isClear = [4, 11, 18, 27, 34].includes(currentIndex);
-
-                  let colorClass = '';
-                  if (isYellow) colorClass = 'piece-yellow';
-                  else if (isGrey) colorClass = 'piece-grey';
-
-                  return (
-                    <div
-                      key={i}
-                      className={`stud-piece ${isSquare ? 'piece-square' : 'piece-circle'} ${colorClass} ${isClear ? 'piece-clear' : ''}`}
-                      style={{ transform: `rotate(${rotation}deg)` }}
-                    ></div>
-                  );
-                });
-              })()}
+            <div
+              className="drop-button-letterfield"
+              style={{
+                gridTemplateColumns: `repeat(${DROP_STUD_COLS}, var(--stud))`,
+                gridTemplateRows: `repeat(${DROP_STUD_ROWS}, var(--stud))`,
+              }}
+              aria-hidden
+            >
+              {DROP_TILE_PLACEMENTS.map((tile, index) => (
+                <div
+                  key={index}
+                  className={`flat-1x1-tile flat-1x1-tile--${tile.variant}`}
+                  style={{
+                    gridColumn: tile.col + DROP_LETTER_START_COL + 1,
+                    gridRow: tile.row + DROP_LETTER_START_ROW + 1,
+                    transform: `rotate(${tile.rotationDeg}deg)`,
+                  }}
+                />
+              ))}
             </div>
           </button>
         </div>

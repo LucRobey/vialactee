@@ -1074,12 +1074,13 @@ body {
 
 /* DROP BUTTON */
 .drop-button-container {
-  /* Margin removed to let grid gap handle spacing perfectly */
+  overflow: hidden;
+  position: relative;
 }
 
 .giant-drop-button {
   width: 100%;
-  height: calc(5 * var(--stud) - var(--tolerance));
+  height: calc(8 * var(--stud));
   background-color: var(--lego-red);
   border: 2px solid rgba(0, 0, 0, 0.8);
   border-radius: 6px;
@@ -1091,26 +1092,68 @@ body {
     inset 6px 0 0 rgba(255, 255, 255, 0.2),
     inset -6px 0 0 rgba(0, 0, 0, 0.2),
     0 10px 20px rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transition: all 0.1s ease;
   overflow: hidden;
 }
 
-.drop-stud-grid {
+/* Same stud tiling as preset bricks (.preset-brick::before) */
+.giant-drop-button::before {
+  content: "";
   position: absolute;
-  top: 18px;
-  bottom: 18px;
-  left: 34px;
-  right: 34px;
-  overflow: hidden;
-  display: grid;
-  grid-template-rows: repeat(4, 1fr);
-  grid-template-columns: repeat(59, var(--stud));
-  justify-content: center;
-  place-items: center;
+  top: 9px;
+  bottom: 9px;
+  left: 9px;
+  right: 9px;
+  background-image:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.12) 0 calc(var(--stud-radius) - 2px), transparent calc(var(--stud-radius) - 1px)),
+    radial-gradient(circle at center, transparent 0 calc(var(--stud-radius) - 1px), rgba(0, 0, 0, 0.45) var(--stud-radius), transparent calc(var(--stud-radius) + 1px));
+  background-size: var(--stud) var(--stud);
+  background-repeat: repeat;
+  background-position: 0 0;
   pointer-events: none;
+}
+
+/* 1×1 flat tiles on the same stud grid as ::before */
+.drop-button-letterfield {
+  --flat-tile-size: 22px;
+  position: absolute;
+  inset: 9px;
+  display: grid;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.flat-1x1-tile {
+  width: var(--flat-tile-size);
+  height: var(--flat-tile-size);
+  justify-self: center;
+  align-self: center;
+  border-radius: 3px;
+  box-shadow:
+    inset 1px 1px 2px rgba(255, 255, 255, 0.85),
+    inset -1px -2px 3px rgba(0, 0, 0, 0.25),
+    2px 4px 6px rgba(0, 0, 0, 0.55);
+}
+
+.flat-1x1-tile--white {
+  background-color: #f4f4f4;
+}
+
+.flat-1x1-tile--yellow {
+  background-color: var(--lego-yellow);
+}
+
+.flat-1x1-tile--grey {
+  background-color: var(--lego-light-grey);
+}
+
+/* Smooth tile (no raised stud) */
+.flat-1x1-tile--clear {
+  background-color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.9),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.15),
+    1px 2px 4px rgba(0, 0, 0, 0.35);
 }
 
 .stud {
@@ -1122,62 +1165,6 @@ body {
     radial-gradient(circle at center, rgba(255, 255, 255, 0.12) 0 calc(var(--stud-radius) - 2px), transparent calc(var(--stud-radius) - 1px)),
     radial-gradient(circle at center, transparent 0 calc(var(--stud-radius) - 1px), rgba(0, 0, 0, 0.45) var(--stud-radius), transparent calc(var(--stud-radius) + 1px));
   transition: all 0.3s ease;
-}
-
-.stud-piece {
-  position: relative;
-  width: var(--stud-diameter);
-  height: var(--stud-diameter);
-  background-color: #f4f4f4;
-  box-shadow:
-    inset 1px 1px 1px rgba(255, 255, 255, 0.9),
-    inset -1px -2px 3px rgba(0, 0, 0, 0.2),
-    2px 4px 6px rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease;
-}
-
-.stud-piece.piece-square {
-  border-radius: 3px;
-}
-
-.stud-piece.piece-circle {
-  border-radius: 50%;
-}
-
-.stud-piece::after {
-  content: "";
-  width: var(--stud-diameter);
-  height: var(--stud-diameter);
-  border-radius: 50%;
-  background-color: #f4f4f4;
-  background-image:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.12) 0 calc(var(--stud-radius) - 2px), transparent calc(var(--stud-radius) - 1px));
-  box-shadow: none;
-}
-
-/* Color overrides for pieces */
-.stud-piece.piece-yellow {
-  background-color: var(--lego-yellow);
-}
-
-.stud-piece.piece-yellow::after {
-  background-color: var(--lego-yellow);
-}
-
-.stud-piece.piece-grey {
-  background-color: var(--lego-light-grey);
-}
-
-.stud-piece.piece-grey::after {
-  background-color: var(--lego-light-grey);
-}
-
-/* Clear piece (flat tile, no fixing circle) */
-.stud-piece.piece-clear::after {
-  display: none;
 }
 
 .giant-drop-button:active {
