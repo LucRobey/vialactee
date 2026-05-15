@@ -459,13 +459,18 @@ export const LiveDeck = () => {
               ))}
             </select>
           </div>
-          {/* Round 2x2 Plate Button */}
-          <button className="rogue-piece" style={{
+          {/* Square 2x2 Plate Button */}
+          <button className="rogue-piece rect-action-button" style={{
             position: 'relative',
-            width: '64px', height: '64px', margin: 0, padding: 0, borderRadius: '50%', border: 'none',
+            width: '80px', height: '80px', margin: 0, padding: 0, borderRadius: '6px', border: 'none',
             backgroundColor: '#0055bf', cursor: 'pointer',
-            boxShadow: 'inset 2px 2px 5px rgba(255,255,255,0.4), inset -3px -3px 8px rgba(0,0,0,0.6), 4px 4px 10px rgba(0,0,0,0.7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            boxShadow: effectiveSelectedConfiguration 
+              ? 'inset 2px 2px 6px rgba(255,255,255,0.5), inset -4px -4px 10px rgba(0,0,0,0.6), 5px 5px 15px rgba(0,0,0,0.8), 0 0 25px rgba(0, 85, 191, 0.7)'
+              : 'inset 2px 2px 6px rgba(255,255,255,0.2), inset -4px -4px 10px rgba(0,0,0,0.4), 5px 5px 12px rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            opacity: effectiveSelectedConfiguration ? 1 : 0.5,
+            overflow: 'visible'
           }}
           onClick={() => sendInstruction({
             page: 'live_deck',
@@ -473,11 +478,49 @@ export const LiveDeck = () => {
             payload: { configuration: effectiveSelectedConfiguration, transition: selectedTransition }
           })}
           disabled={!effectiveSelectedConfiguration}>
-            <div className="round-stud-grid" style={{ transform: 'scale(0.85)', margin: 0 }}>
-              <div className="stud stud-blue"></div>
-              <div className="stud stud-blue"></div>
-              <div className="stud stud-blue"></div>
-              <div className="stud stud-blue"></div>
+            {/* Square Glowing Ring */}
+            <div style={{
+              position: 'absolute',
+              inset: '-8px',
+              borderRadius: '10px',
+              border: '2px solid rgba(0, 181, 226, 0.4)',
+              boxShadow: effectiveSelectedConfiguration ? '0 0 20px rgba(0, 181, 226, 0.5), inset 0 0 10px rgba(0, 181, 226, 0.3)' : 'none',
+              pointerEvents: 'none',
+              animation: effectiveSelectedConfiguration ? 'pulse-ring 2s infinite' : 'none'
+            }} />
+            
+            <div style={{
+              width: '100%',
+              height: '100%',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gridTemplateRows: '1fr 1fr',
+              placeItems: 'center',
+              position: 'relative',
+              zIndex: 2,
+              padding: '10px',
+              boxSizing: 'border-box'
+            }}>
+              {/* 4 Studs in a square pattern */}
+              <div className="stud stud-blue" style={{ width: '20px', height: '20px', backgroundColor: '#00b5e2', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.8), 0 0 8px rgba(0,181,226,0.6)' }}></div>
+              <div className="stud stud-blue" style={{ width: '20px', height: '20px', backgroundColor: '#00b5e2', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.8), 0 0 8px rgba(0,181,226,0.6)' }}></div>
+              <div className="stud stud-blue" style={{ width: '20px', height: '20px', backgroundColor: '#00b5e2', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.8), 0 0 8px rgba(0,181,226,0.6)' }}></div>
+              <div className="stud stud-blue" style={{ width: '20px', height: '20px', backgroundColor: '#00b5e2', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.8), 0 0 8px rgba(0,181,226,0.6)' }}></div>
+              
+              {/* Centered GO text overlay */}
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                color: 'white',
+                fontWeight: '900',
+                fontSize: '1.2rem',
+                textShadow: '0 0 10px rgba(0, 255, 255, 0.8), 0 2px 4px rgba(0,0,0,0.9)',
+                letterSpacing: '2px',
+                pointerEvents: 'none',
+                zIndex: 3
+              }}>GO</div>
             </div>
           </button>
         </div>
