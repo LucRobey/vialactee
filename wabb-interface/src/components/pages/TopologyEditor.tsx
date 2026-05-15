@@ -368,11 +368,6 @@ export const TopologyEditor = ({
     const selectedName = event.target.value;
     setConfigName(selectedName);
     setSelectedConfigName(selectedName);
-    sendInstruction({
-      page: 'topology',
-      action: 'select_configuration',
-      payload: { playlist, configuration: selectedName }
-    });
     applyStoredConfigurationToSegments(playlist, selectedName);
   };
 
@@ -552,13 +547,20 @@ export const TopologyEditor = ({
     [segments, selectedSegId]
   );
 
-  const handleModeSelect = (modeName: string) => {
-    sendInstruction({
-      page: 'topology',
-      action: 'select_segment_mode',
-      payload: { segmentId: selectedSegId, mode: modeName }
+  const handleShow = () => {
+    segments.forEach(seg => {
+      sendInstruction({ page: 'topology', action: 'select_segment_mode', payload: { segmentId: seg.id, mode: seg.mode } });
+      sendInstruction({ page: 'topology', action: 'toggle_segment_direction', payload: { segmentId: seg.id, direction: seg.direction } });
     });
+  };
+
+  const handleModeSelect = (modeName: string) => {
     if (editorMode === 'LIVE') {
+      sendInstruction({
+        page: 'topology',
+        action: 'select_segment_mode',
+        payload: { segmentId: selectedSegId, mode: modeName }
+      });
       const prev = pendingLiveSegmentEditsRef.current.get(selectedSegId) ?? {};
       pendingLiveSegmentEditsRef.current.set(selectedSegId, { ...prev, mode: modeName });
     }
@@ -572,12 +574,12 @@ export const TopologyEditor = ({
         return seg;
       }
       const direction: TopologySegment['direction'] = seg.direction === 'UP' ? 'DOWN' : 'UP';
-      sendInstruction({
-        page: 'topology',
-        action: 'toggle_segment_direction',
-        payload: { segmentId: id, direction }
-      });
       if (editorMode === 'LIVE') {
+        sendInstruction({
+          page: 'topology',
+          action: 'toggle_segment_direction',
+          payload: { segmentId: id, direction }
+        });
         const prevPending = pendingLiveSegmentEditsRef.current.get(id) ?? {};
         pendingLiveSegmentEditsRef.current.set(id, { ...prevPending, direction });
       }
@@ -665,6 +667,7 @@ export const TopologyEditor = ({
               onConfigNameChange={setConfigName}
               onRenameConfiguration={handleRenameConfiguration}
               onDeleteConfiguration={handleDeleteConfiguration}
+              onShow={handleShow}
               onSave={handleSave}
             />
 
