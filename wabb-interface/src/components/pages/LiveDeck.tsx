@@ -651,7 +651,7 @@ export const LiveDeck = () => {
             {/* Round 1x1 Stud Indicator */}
             <div className="rogue-piece" style={{
               position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)',
-              width: '30px', height: '30px', borderRadius: '50%', backgroundColor: '#fcd000',
+              width: 'var(--stud-diameter)', height: 'var(--stud-diameter)', borderRadius: '50%', backgroundColor: '#fcd000',
               boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.8), inset -1px -1px 2px rgba(0,0,0,0.3), 2px 2px 4px rgba(0,0,0,0.6)',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>

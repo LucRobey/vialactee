@@ -6,6 +6,10 @@
   /* ============================================================================ */
   --stud: 30px;
   --tolerance: 4px;
+  --stud-diameter: 18px;
+  --stud-radius: calc(var(--stud-diameter) / 2);
+  --stud-center: calc(var(--stud) / 2);
+  --stud-edge-width: 1px;
 
   /* Layout Dimensions (in studs) */
   --col-left-studs: 3;
@@ -67,12 +71,8 @@ body {
 
   /* High-Fidelity Infinite Lego Baseplate */
   background-image:
-    /* Top-left light highlight on the stud */
-    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.12) 0%, transparent 6px),
-    /* The stud itself: flat top, rolling off into a dark edge bevel */
-    radial-gradient(circle at 15px 15px, #22272e 0%, #22272e 7px, rgba(0, 0, 0, 0.7) 9.5px, transparent 10px),
-    /* The drop shadow cast by the stud onto the baseplate below */
-    radial-gradient(circle at 16.5px 16.5px, rgba(0, 0, 0, 0.6) 0%, transparent 13px);
+    /* Flat top-down studs, centered on the shared Lego pitch */
+    radial-gradient(circle at var(--stud-center) var(--stud-center), #22272e 0 var(--stud-radius), rgba(0, 0, 0, 0.42) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
 
   background-size: var(--stud) var(--stud);
 
@@ -115,22 +115,12 @@ body {
 
 .large-orange-baseplate.glow-green::before {
   background-image:
-    /* Glow highlight */
-    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.4) 0%, transparent 4px),
-    /* Green stud body */
-    radial-gradient(circle at 15px 15px, #48bb78 0%, #38a169 7px, #1a641a 8px, transparent 9px),
-    /* Drop shadow with slight green glow bleed */
-    radial-gradient(circle at 16px 18px, rgba(0, 50, 0, 0.6) 0%, transparent 11px);
+    radial-gradient(circle at var(--stud-center) var(--stud-center), #48bb78 0 var(--stud-radius), #1a641a calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
 }
 
 .large-orange-baseplate.glow-red::before {
   background-image:
-    /* Glow highlight */
-    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.5) 0%, transparent 4px),
-    /* Red stud body */
-    radial-gradient(circle at 15px 15px, #f56565 0%, #e53e3e 7px, #742a2a 8px, transparent 9px),
-    /* Drop shadow with slight red glow bleed */
-    radial-gradient(circle at 16px 18px, rgba(50, 0, 0, 0.6) 0%, transparent 11px);
+    radial-gradient(circle at var(--stud-center) var(--stud-center), #f56565 0 var(--stud-radius), #742a2a calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
 }
 
 /* Inner region covering the glowing studs with normal orange studs */
@@ -143,12 +133,7 @@ body {
   right: var(--stud);
   background-color: #e67300;
   background-image:
-    /* Stud top highlight */
-    radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.2) 0%, transparent 4px),
-    /* Stud main body */
-    radial-gradient(circle at 15px 15px, #e67300 0%, #e67300 7px, #b35900 8px, transparent 9px),
-    /* Stud drop shadow */
-    radial-gradient(circle at 16px 18px, rgba(0, 0, 0, 0.4) 0%, transparent 11px);
+    radial-gradient(circle at var(--stud-center) var(--stud-center), #e67300 0 var(--stud-radius), #b35900 calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
   background-size: var(--stud) var(--stud);
 }
 
@@ -170,7 +155,7 @@ body {
 .rogue-piece {
   position: absolute;
   box-sizing: border-box;
-  background-size: 30px 30px;
+  background-size: var(--stud) var(--stud);
   background-position: -2px -2px;
   /* Shifts internal studs to perfectly match the global grid! */
   border-radius: 2px;
@@ -180,48 +165,55 @@ body {
     -2px -2px 0 2px rgba(0, 0, 0, 0.8),
     2px 2px 0 2px rgba(255, 255, 255, 0.1);
 
-  /* Base stud geometries to combine with colors */
-  --highlight: radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.12) 0%, transparent 6px);
-  --shadow: radial-gradient(circle at 16.5px 16.5px, rgba(0, 0, 0, 0.6) 0%, transparent 13px);
+  /* Base stud geometry: one centered, flat stud on every 30px pitch. */
+  --stud-face: #333;
+  --stud-edge: rgba(0, 0, 0, 0.65);
+  --highlight: radial-gradient(circle at var(--stud-center) var(--stud-center), rgba(255, 255, 255, 0.06) 0 calc(var(--stud-radius) - 2px), transparent calc(var(--stud-radius) - 1px));
+  --shadow: radial-gradient(circle at var(--stud-center) var(--stud-center), var(--stud-face) 0 var(--stud-radius), var(--stud-edge) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
 }
 
 .rogue-piece.dark-blue {
   background-color: #0d1b2e;
+  --stud-face: #12233b;
+  --stud-edge: rgba(0, 0, 0, 0.78);
   background-image:
     var(--highlight),
-    radial-gradient(circle at 15px 15px, #12233b 0%, #12233b 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
     var(--shadow);
 }
 
 .rogue-piece.dark-red {
   background-color: #2e0d0d;
+  --stud-face: #3b1212;
+  --stud-edge: rgba(0, 0, 0, 0.78);
   background-image:
     var(--highlight),
-    radial-gradient(circle at 15px 15px, #3b1212 0%, #3b1212 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
     var(--shadow);
 }
 
 .rogue-piece.green {
   background-color: #0b2e13;
+  --stud-face: #103b1a;
+  --stud-edge: rgba(0, 0, 0, 0.78);
   background-image:
     var(--highlight),
-    radial-gradient(circle at 15px 15px, #103b1a 0%, #103b1a 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
     var(--shadow);
 }
 
 .rogue-piece.yellow {
   background-color: #382d09;
+  --stud-face: #4d3e0b;
+  --stud-edge: rgba(0, 0, 0, 0.78);
   background-image:
     var(--highlight),
-    radial-gradient(circle at 15px 15px, #4d3e0b 0%, #4d3e0b 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
     var(--shadow);
 }
 
 .rogue-piece.grey {
   background-color: #2a2a2a;
+  --stud-face: #333;
+  --stud-edge: rgba(0, 0, 0, 0.78);
   background-image:
     var(--highlight),
-    radial-gradient(circle at 15px 15px, #333 0%, #333 7px, rgba(0, 0, 0, 0.8) 9.5px, transparent 10px),
     var(--shadow);
 }
 
@@ -300,14 +292,13 @@ body {
 .tab::before {
   content: "";
   position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 8px;
-  right: 8px;
+  top: calc((var(--stud) - var(--stud-diameter)) / 2);
+  bottom: calc((var(--stud) - var(--stud-diameter)) / 2);
+  left: calc((var(--stud) - var(--stud-diameter)) / 2);
+  right: calc((var(--stud) - var(--stud-diameter)) / 2);
   background-image:
-    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.1) 0%, transparent 2px),
-    radial-gradient(circle at 50% 50%, transparent 4px, rgba(0, 0, 0, 0.3) 6px, transparent 7px);
-  background-size: 16px 16px;
+    radial-gradient(circle at center, #2b2f37 0 var(--stud-radius), rgba(0, 0, 0, 0.35) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
+  background-size: var(--stud) var(--stud);
   background-repeat: space;
   background-position: center;
   pointer-events: none;
@@ -329,8 +320,7 @@ body {
 
 .tab.active::before {
   background-image:
-    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.3) 0%, transparent 2px),
-    radial-gradient(circle at 50% 50%, transparent 4px, rgba(0, 0, 0, 0.4) 6px, transparent 7px);
+    radial-gradient(circle at center, #0064da 0 var(--stud-radius), rgba(0, 0, 0, 0.38) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
 }
 
 .page-container {
@@ -1137,28 +1127,27 @@ body {
   overflow: hidden;
   display: grid;
   grid-template-rows: repeat(4, 1fr);
-  grid-template-columns: repeat(59, 30px);
+  grid-template-columns: repeat(59, var(--stud));
   justify-content: center;
   place-items: center;
   pointer-events: none;
 }
 
 .stud {
-  width: 100%;
-  max-width: 23px;
-  max-height: 23px;
+  width: var(--stud-diameter);
+  height: var(--stud-diameter);
   aspect-ratio: 1/1;
   border-radius: 50%;
   background-image:
-    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4) 0%, transparent 30%),
-    radial-gradient(circle at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.5) 70%, transparent 80%);
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.12) 0 calc(var(--stud-radius) - 2px), transparent calc(var(--stud-radius) - 1px)),
+    radial-gradient(circle at center, transparent 0 calc(var(--stud-radius) - 1px), rgba(0, 0, 0, 0.45) var(--stud-radius), transparent calc(var(--stud-radius) + 1px));
   transition: all 0.3s ease;
 }
 
 .stud-piece {
   position: relative;
-  width: 26px;
-  height: 26px;
+  width: var(--stud-diameter);
+  height: var(--stud-diameter);
   background-color: #f4f4f4;
   box-shadow:
     inset 1px 1px 1px rgba(255, 255, 255, 0.9),
@@ -1180,14 +1169,13 @@ body {
 
 .stud-piece::after {
   content: "";
-  width: 16px;
-  height: 16px;
+  width: var(--stud-diameter);
+  height: var(--stud-diameter);
   border-radius: 50%;
   background-color: #f4f4f4;
   background-image:
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9) 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.2) 70%, transparent 80%);
-  box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.3);
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.12) 0 calc(var(--stud-radius) - 2px), transparent calc(var(--stud-radius) - 1px));
+  box-shadow: none;
 }
 
 /* Color overrides for pieces */
@@ -1317,8 +1305,8 @@ body {
   left: 9px;
   right: 9px;
   background-image:
-    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4) 0%, transparent 3px),
-    radial-gradient(circle at 50% 50%, transparent 5px, rgba(0, 0, 0, 0.5) 7px, transparent 8px);
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.12) 0 calc(var(--stud-radius) - 2px), transparent calc(var(--stud-radius) - 1px)),
+    radial-gradient(circle at center, transparent 0 calc(var(--stud-radius) - 1px), rgba(0, 0, 0, 0.45) var(--stud-radius), transparent calc(var(--stud-radius) + 1px));
   background-size: var(--stud) var(--stud);
   background-repeat: space;
   background-position: center;

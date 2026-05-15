@@ -16,21 +16,37 @@ const OLED_STYLE: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   padding: '8px 10px',
+  border: 'calc(0.4 * var(--stud)) solid #2a2d32',
+  borderTopColor: '#3a3f44',
+  borderBottomColor: '#1a1f24',
+  borderLeftColor: '#30353a',
+  borderRightColor: '#20252a',
+  borderRadius: '4px',
+  boxShadow: 'inset 4px 4px 15px rgba(0,0,0,0.9), 2px 2px 5px rgba(0,0,0,0.5)',
 };
 
 const PANEL_INSET_STYLE: CSSProperties = {
   width: '100%',
   height: '100%',
   background: 'linear-gradient(180deg, rgba(24,28,34,0.96) 0%, rgba(10,12,16,0.98) 100%)',
-  borderRadius: '8px',
-  border: '2px solid rgba(255,255,255,0.05)',
-  boxShadow: 'inset 0 0 18px rgba(0,0,0,0.85), 0 10px 25px rgba(0,0,0,0.55)',
+  border: 'calc(0.4 * var(--stud)) solid #2a2d32',
+  borderTopColor: '#3a3f44',
+  borderBottomColor: '#1a1f24',
+  borderLeftColor: '#30353a',
+  borderRightColor: '#20252a',
+  borderRadius: '4px',
+  boxShadow: 'inset 4px 4px 15px rgba(0,0,0,0.9), 2px 2px 5px rgba(0,0,0,0.5)',
   padding: '10px 12px',
   boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
 };
+
+const PANEL_PALETTE = {
+  green: { base: '#0d6b35', stud: '#128a45', edge: '#04451f', glow: 'rgba(0,132,61,0.28)' },
+  red: { base: '#d22020', stud: '#e02b1f', edge: '#75100c', glow: 'rgba(218,41,28,0.26)' },
+} as const;
 
 const BOARD_WIDTH = LEGO_MATH.physicalSize(76);
 const BOARD_HEIGHT = LEGO_MATH.grid(35);
@@ -219,6 +235,107 @@ const statusRowStyle: CSSProperties = {
   border: '1px solid rgba(255,255,255,0.05)',
 };
 
+const PanelPin = () => (
+  <div style={{ width: 'var(--stud)', height: 'var(--stud)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div
+      style={{
+        width: 'var(--stud-diameter)',
+        height: 'var(--stud-diameter)',
+        borderRadius: '50%',
+        backgroundColor: '#1a1a1a',
+        boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.3), inset -2px -2px 4px rgba(0,0,0,0.8), 2px 2px 3px rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <div style={{ position: 'relative', width: '10px', height: '10px' }}>
+        <div style={{ position: 'absolute', top: '3.5px', left: 0, width: '10px', height: '3px', backgroundColor: '#050505', boxShadow: 'inset 1px 1px 1px rgba(0,0,0,1)' }} />
+        <div style={{ position: 'absolute', top: 0, left: '3.5px', width: '3px', height: '10px', backgroundColor: '#050505', boxShadow: 'inset 1px 1px 1px rgba(0,0,0,1)' }} />
+      </div>
+    </div>
+  </div>
+);
+
+const LegoPanelShell = ({
+  id,
+  col,
+  row,
+  width,
+  height,
+  tone,
+}: {
+  id: string;
+  col: number;
+  row: number;
+  width: number;
+  height: number;
+  tone: keyof typeof PANEL_PALETTE;
+}) => {
+  const palette = PANEL_PALETTE[tone];
+
+  return (
+    <>
+      <GridSpot col={col} row={row} style={{ zIndex: 0 }}>
+        <div
+          className="rogue-piece"
+          style={{
+            width: `${LEGO_MATH.physicalSize(width)}px`,
+            height: `${LEGO_MATH.physicalSize(height)}px`,
+            backgroundColor: palette.base,
+            backgroundImage: `
+              var(--highlight),
+              radial-gradient(circle at var(--stud-center) var(--stud-center), ${palette.stud} 0 var(--stud-radius), rgba(0, 0, 0, 0.5) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px))
+            `,
+            backgroundSize: 'var(--stud) var(--stud)',
+            borderTop: '2px solid rgba(255,255,255,0.42)',
+            borderLeft: '2px solid rgba(255,255,255,0.22)',
+            borderBottom: `2px solid ${palette.edge}`,
+            borderRight: `2px solid ${palette.edge}`,
+            borderRadius: '4px',
+            boxShadow: `10px 10px 30px rgba(0,0,0,0.78), 0 0 28px ${palette.glow}`,
+          }}
+        />
+      </GridSpot>
+
+      {[{ c: 0, r: 0 }, { c: width - 1, r: 0 }, { c: 0, r: height - 1 }, { c: width - 1, r: height - 1 }].map((pos, index) => (
+        <GridSpot key={`${id}-pin-${index}`} col={col + pos.c} row={row + pos.r} style={{ zIndex: 2 }}>
+          <PanelPin />
+        </GridSpot>
+      ))}
+    </>
+  );
+};
+
+const LegoHazardHeader = ({ label, width }: { label: string; width: string }) => (
+  <div
+    className="rogue-piece"
+    style={{
+      width,
+      height: 'calc(1 * var(--stud))',
+      backgroundColor: '#fcd000',
+      backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(0,0,0,0.1) 100%)',
+      borderTop: '2px solid rgba(255,255,255,0.6)',
+      borderLeft: '2px solid rgba(255,255,255,0.3)',
+      borderBottom: '2px solid rgba(0,0,0,0.4)',
+      borderRight: '2px solid rgba(0,0,0,0.2)',
+      borderRadius: '2px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '2px 2px 5px rgba(0,0,0,0.5)',
+      overflow: 'hidden',
+      position: 'relative',
+    }}
+  >
+    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '25px', backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 4px, transparent 4px, transparent 8px)', opacity: 0.6 }} />
+    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '25px', backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 4px, transparent 4px, transparent 8px)', opacity: 0.6 }} />
+    <span style={{ color: '#000', fontWeight: 900, fontFamily: 'Arial, sans-serif', letterSpacing: '1px', fontSize: '0.8rem', zIndex: 2 }}>
+      {label}
+    </span>
+  </div>
+);
+
 const StatusRow = ({ label, descriptor }: { label: string; descriptor: StatusDescriptor }) => (
   <div style={statusRowStyle}>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
@@ -265,19 +382,19 @@ const ActionButton = ({
       };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        width: 'calc(11.2 * var(--stud))',
-        minHeight: 'calc(2.35 * var(--stud))',
+        width: '100%',
+        minHeight: 'calc(2.15 * var(--stud))',
         cursor: disabled ? 'not-allowed' : 'pointer',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '6px',
-        padding: '7px 9px',
+        padding: '7px 8px',
         borderRadius: '8px',
         border: `2px solid ${palette.border}`,
         background: palette.background,
@@ -326,7 +443,7 @@ const ActionButton = ({
         </span>
       ) : null}
     </button>
-    <span style={{ color: '#d7dde6', fontSize: '0.7rem', lineHeight: 1.28, minHeight: '1.8em' }}>{helper}</span>
+    <span style={{ color: '#d7dde6', fontSize: '0.62rem', lineHeight: 1.18, minHeight: '2.3em' }}>{helper}</span>
   </div>
   );
 };
@@ -391,12 +508,10 @@ export const SystemSetup = () => {
         <div className="lego-label" style={{ width: 'calc(15 * var(--stud))' }}>SYSTEM & SETUP</div>
       </GridSpot>
 
-      <GridSpot col={2} row={3}>
-        <div className="rogue-piece dark-grey" style={{ width: `${LEGO_MATH.physicalSize(36)}px`, height: `${LEGO_MATH.physicalSize(23)}px` }}></div>
-      </GridSpot>
+      <LegoPanelShell id="telemetry-panel" col={2} row={3} width={36} height={29} tone="green" />
 
-      <GridSpot col={3} row={4}>
-        <div className="lego-label" style={{ width: 'calc(18 * var(--stud))', color: 'white', borderLeft: '5px solid var(--lego-green)' }}>LIVE TELEMETRY</div>
+      <GridSpot col={12} row={4} style={{ zIndex: 10 }}>
+        <LegoHazardHeader label="LIVE TELEMETRY" width="calc(14 * var(--stud))" />
       </GridSpot>
 
       <GridSpot col={4} row={7}>
@@ -441,7 +556,7 @@ export const SystemSetup = () => {
         </div>
       </GridSpot>
 
-      <GridSpot col={3} row={22}>
+      <GridSpot col={3} row={20}>
         <div style={{
           ...PANEL_INSET_STYLE,
           width: `${LEGO_MATH.physicalSize(28)}px`,
@@ -456,12 +571,10 @@ export const SystemSetup = () => {
         </div>
       </GridSpot>
 
-      <GridSpot col={39} row={4}>
-        <div className="rogue-piece dark-grey" style={{ width: `${LEGO_MATH.physicalSize(13)}px`, height: `${LEGO_MATH.physicalSize(18)}px` }}></div>
-      </GridSpot>
+      <LegoPanelShell id="control-panel" col={39} row={4} width={30} height={22} tone="red" />
 
-      <GridSpot col={40} row={5}>
-        <div className="lego-label" style={{ width: 'calc(9.5 * var(--stud))', color: 'white', borderLeft: '5px solid var(--lego-red)' }}>CONTROL ROOM</div>
+      <GridSpot col={48} row={5} style={{ zIndex: 10 }}>
+        <LegoHazardHeader label="CONTROL ROOM" width="calc(12 * var(--stud))" />
       </GridSpot>
 
       <GridSpot col={40} row={8}>
@@ -497,8 +610,8 @@ export const SystemSetup = () => {
         </div>
       </GridSpot>
 
-      <GridSpot col={53} row={8}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <GridSpot col={52} row={7}>
+        <div style={{ ...PANEL_INSET_STYLE, width: `${LEGO_MATH.physicalSize(14.2)}px`, minHeight: `${LEGO_MATH.physicalSize(12)}px`, gap: '9px', padding: '12px 13px' }}>
           <ActionButton
             label="RESTART PYTHON LOOP"
             variant="warning"
