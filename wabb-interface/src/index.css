@@ -289,21 +289,6 @@ body {
     0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.tab::before {
-  content: "";
-  position: absolute;
-  top: calc((var(--stud) - var(--stud-diameter)) / 2);
-  bottom: calc((var(--stud) - var(--stud-diameter)) / 2);
-  left: calc((var(--stud) - var(--stud-diameter)) / 2);
-  right: calc((var(--stud) - var(--stud-diameter)) / 2);
-  background-image:
-    radial-gradient(circle at center, #2b2f37 0 var(--stud-radius), rgba(0, 0, 0, 0.35) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
-  background-size: var(--stud) var(--stud);
-  background-repeat: space;
-  background-position: center;
-  pointer-events: none;
-}
-
 .tab:hover {
   background-color: #333;
   color: var(--text-main);
@@ -316,11 +301,6 @@ body {
     inset 0 3px 0 rgba(255, 255, 255, 0.3),
     inset 0 -3px 0 rgba(0, 0, 0, 0.4),
     0 4px 6px rgba(0, 0, 0, 0.5);
-}
-
-.tab.active::before {
-  background-image:
-    radial-gradient(circle at center, #0064da 0 var(--stud-radius), rgba(0, 0, 0, 0.38) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px));
 }
 
 .page-container {
