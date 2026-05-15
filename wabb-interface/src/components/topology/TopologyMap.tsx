@@ -79,7 +79,7 @@ export const TopologyMap = ({
                 boxShadow: isSelected ? `0 0 20px ${seg.color}` : 'none'
               }}
             >
-              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: `var(--highlight), radial-gradient(circle at var(--stud-center) var(--stud-center), ${seg.color} 0 var(--stud-radius), rgba(0, 0, 0, 0.5) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px))`, backgroundSize: 'var(--stud) var(--stud)', zIndex: 5 }} />
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: `var(--highlight), radial-gradient(circle at var(--stud-center) var(--stud-center), transparent 0 var(--stud-radius), rgba(0, 0, 0, 0.5) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px))`, backgroundSize: 'var(--stud) var(--stud)', zIndex: 5 }} />
               <div style={{
                 position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 6,
                 backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 25%, rgba(0,0,0,0) 75%, rgba(0,0,0,0.5) 100%)',
