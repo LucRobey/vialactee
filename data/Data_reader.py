@@ -11,8 +11,6 @@ class Data_reader:
     file_path = os.path.join(os.path.dirname(__file__), "configurations.json")
 
     def __init__(self, infos):
-        self.printConfigurationLoads = infos.get("printConfigurationLoads", False)
-
         self.configurations, self.playlists = self.read_json()
 
     def read_json(self):
@@ -26,11 +24,9 @@ class Data_reader:
                 
             configurations = data.get('configurations', {})
             playlists = list(configurations.keys())
-            
-            if self.printConfigurationLoads:
-                logger.debug(f"(DR) Loaded {len(playlists)} playlists from {self.file_path}")
-                for playlist in playlists:
-                    logger.debug(f"(DR)  Playlist: {playlist} -> {len(configurations.get(playlist, []))} modes")
+            logger.debug(f"(DR) Loaded {len(playlists)} playlists from {self.file_path}")
+            for playlist in playlists:
+                logger.debug(f"(DR)  Playlist: {playlist} -> {len(configurations.get(playlist, []))} modes")
                     
             return configurations, playlists
             

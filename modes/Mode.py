@@ -16,13 +16,7 @@ class Mode:
         self.segment_name = segment_name
         self.infos = infos
 
-        self.printTimeOfCalculation = infos["printTimeOfCalculation"]
 
-        self.printThisModeDetail = False
-        if(infos["printModesDetails"]):
-            if (self.name in infos["modesToPrintDetails"]):
-                self.printThisModeDetail = True
-                
         self.logger = logging.getLogger(f"Mode.{self.name}")
 
         if(self.listener==None):
@@ -206,21 +200,14 @@ class Mode:
 
     def terminate(self):
         self.isActiv = False
-        self.logger.info("  on désactive le "+self.name+" du "+self.segment_name)
+        self.logger.debug("  on désactive le "+self.name+" du "+self.segment_name)
 
     def start(self):
         self.isActiv = True
-        self.logger.info("  on active le "+self.name+" du "+self.segment_name)
+        self.logger.debug("  on active le "+self.name+" du "+self.segment_name)
 
     def update(self):
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            time_me = time.time()
-        
         self.run()
-
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            duration = time.time() - time_me
-            self.logger.debug(f"      (CM) temps pour {self.name} : {duration}")
 
     def run(self):
         pass

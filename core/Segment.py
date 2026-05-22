@@ -179,12 +179,15 @@ class Segment:
         """
         Flush the local segment RGB buffer to the global LED array.
         """
-        luminosite = self.listener.luminosite
-        for led_index in range(self.nb_of_leds):
-            if self.way == "UP":
-                self.leds[self.indexes[led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
-            else:
-                self.leds[self.indexes[self.nb_of_leds-1-led_index]] = [int(luminosite * x) for x in self.rgb_list[led_index]]
+        # Vectorize the luminosity multiplication and convert to native python lists
+        scaled_colors = (self.rgb_list * self.listener.luminosite).astype(np.int32).tolist()
+        
+        if self.way == "UP":
+            for i, led_index in enumerate(self.indexes):
+                self.leds[led_index] = scaled_colors[i]
+        else:
+            for i, led_index in enumerate(reversed(self.indexes)):
+                self.leds[led_index] = scaled_colors[i]
 
     def change_way(self, new_way: str) -> None:
         """

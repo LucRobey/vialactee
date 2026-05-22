@@ -47,6 +47,5 @@ class Opposite_sides_mode(Mode.Mode):
         self.smooth_segment_vectorized(0.5,self.middle_end_index+1,self.middle_end_index+1+self.higher_height,self.high_color)
         self.fade_to_black_segment_vectorized(0.5,self.middle_end_index+1+self.higher_height+1,self.nb_of_leds-1)
 
-        if(self.printThisModeDetail):
-            self.logger.debug(f"(PSG)     lower_height = {self.lower_height}")
-            self.logger.debug(f"(PSG)     higher_height = {self.higher_height}")
+        self.logger.debug(f"(PSG)     lower_height = {self.lower_height}")
+        self.logger.debug(f"(PSG)     higher_height = {self.higher_height}")

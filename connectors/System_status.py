@@ -9,10 +9,11 @@ from typing import Any, Dict, List, Optional
 
 
 class SystemStatus:
-    def __init__(self, infos: Dict[str, Any], listener: Any, leds_list: Any) -> None:
+    def __init__(self, infos: Dict[str, Any], listener: Any, leds_list: Any, profiler: Any = None) -> None:
         self.infos = infos
         self.listener = listener
         self.leds_list = leds_list
+        self.profiler = profiler
         self.started_monotonic = time.monotonic()
         self.last_loop_tick_monotonic: Optional[float] = None
         self.loop_fps: Optional[float] = None
@@ -148,11 +149,14 @@ class SystemStatus:
         restart_python = self.get_restart_python_capability()
         reboot_raspberry = self.get_reboot_raspberry_capability()
 
+        profiler_metrics = self.profiler.get_metrics() if self.profiler else {}
+
         return {
             "cpuTempC": self._cached_host_probe.get("cpuTempC"),
             "ramUsagePercent": self._cached_host_probe.get("ramUsagePercent"),
             "diskUsagePercent": self._cached_host_probe.get("diskUsagePercent"),
-            "pythonLoopFps": None if self.loop_fps is None else round(float(self.loop_fps), 1),
+            "pythonLoopFps": profiler_metrics.get("fps", None if self.loop_fps is None else round(float(self.loop_fps), 1)),
+            "profilerMetrics": profiler_metrics,
             "pythonLoopHealthy": python_loop_healthy,
             "pythonLoopLastTickMs": last_loop_tick_ms,
             "simulationMode": self._is_simulation_mode(),

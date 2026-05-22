@@ -1,6 +1,7 @@
 import numpy as np
 import socket
 import json
+import struct
 from hardware.HardwareInterface import HardwareInterface
 
 # Sideband UDP port used by Udp_Sender to ship segment metadata (current mode,
@@ -17,7 +18,7 @@ class Udp_Sender(HardwareInterface):
         self.ip = ip
         self.port = port
         self.nb_of_leds = nb_of_leds
-        self.data = np.zeros((nb_of_leds, 3), dtype=np.int32)
+        self.data = np.zeros((nb_of_leds, 3), dtype=np.uint8)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def __getitem__(self, index):
@@ -37,15 +38,16 @@ class Udp_Sender(HardwareInterface):
         self.show()
 
     def show(self):
-        # Convert to bytes and send via UDP
-        # Depending on network MTU, 785 * 3 * 4 bytes = ~9.4KB.
-        # This is larger than the standard 1500 MTU but works over local loopback.
-        # For real Wi-Fi, it will be fragmented by IP automatically.
-        packet = self.data.tobytes()
-        try:
-            self.sock.sendto(packet, (self.ip, self.port))
-        except Exception as e:
-            pass # Ignore network errors to avoid crashing the main loop
+        chunk_size = 400  # 400 LEDs = 1200 bytes, fits safely under 1472 MTU
+        for i in range(0, self.nb_of_leds, chunk_size):
+            end = min(i + chunk_size, self.nb_of_leds)
+            chunk_data = self.data[i:end].tobytes()
+            header = struct.pack('<H', i)
+            packet = header + chunk_data
+            try:
+                self.sock.sendto(packet, (self.ip, self.port))
+            except Exception as e:
+                print(f"UDP Error to {self.ip}:{self.port} -> {e}")
 
     def set_segment_mode(self, segment_name, mode_name, target_mode_name=None):
         """

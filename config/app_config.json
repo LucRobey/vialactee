@@ -1,18 +1,11 @@
 {
-    "startServer": true,
+    "startServer": false,
     "useMicrophone": true,
+    "printCpuFpsInfo": true,
     "HARDWARE_MODE": "auto",
-    "printTimeOfCalculation": false,
-    "printModesDetails": false,
-    "printMicrophoneDetails": false,
-    "printAppDetails": false,
-    "printAsservmentDetails": false,
-    "printConfigurationLoads": false,
-    "printConfigChanges": false,
+    "esp32_ip": "192.168.0.26",
+    "log_level": "INFO",
     "luminosity": 46,
     "sensibility": 45,
-    "auto_transition_time": 20,
-    "modesToPrintDetails": [
-        "PSG"
-    ]
+    "auto_transition_time": 80
 }

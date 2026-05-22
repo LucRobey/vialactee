@@ -13,8 +13,6 @@ except ImportError:
 class Local_Microphone:
     def __init__(self, listener, infos):
         self.listener = listener
-        self.showMicrophoneDetails  = infos.get("printMicrophoneDetails", False)
-        self.printTimeOfCalculation = infos.get("printTimeOfCalculation", False)
         self.useMicrophone          = infos.get("useMicrophone", True)
         self.simulate_delay         = infos.get("fakeDelay", 5.0)
         self.input_device_id        = infos.get("input_device_id", None)
@@ -44,7 +42,7 @@ class Local_Microphone:
         else:
             indata, outdata, frames, time_info, status = args
 
-        if status and self.showMicrophoneDetails:
+        if status:
             logger.debug(f"(Local_mic) status: {status}")
 
         self.listener.last_audio_callback_time = time.time()
@@ -142,9 +140,6 @@ class Local_Microphone:
                 await asyncio.sleep(1)
 
     async def listen(self):
-        if self.printTimeOfCalculation:
-            time_mem = time.time()
-            
         if hasattr(self, '_newest_sample_time'):
             # The center of the Hanning window is delayed by exactly half the buffer size
             algorithmic_delay = (self.buffer_size / 2.0) / self.sample_rate
@@ -154,9 +149,4 @@ class Local_Microphone:
             
         self.listener.process_raw_audio(self.audio_data)
                 
-        if self.showMicrophoneDetails:
-            logger.debug(f"(Local_mic) Bands: {list(self.listener.fft_band_values)}")
-            
-        if self.printTimeOfCalculation:
-            duration = time.time() - time_mem
-            logger.debug(f"(Local_mic) temps de calcul = {duration}")
+        logger.debug(f"(Local_mic) Bands: {list(self.listener.fft_band_values)}")

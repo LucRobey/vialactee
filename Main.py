@@ -94,7 +94,6 @@ async def launch_webapp(infos: Dict[str, Any]) -> None:
 
 
 async def main() -> Optional[str]:
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s - [%(name)s] - %(message)s')
     
     config_path = "config/app_config.json"
     if not os.path.exists(config_path):
@@ -102,22 +101,19 @@ async def main() -> Optional[str]:
         default_config = {
             "startServer"     : False,
             "useMicrophone"   : True,
+            "printCpuFpsInfo" : False,
             "HARDWARE_MODE"   : "auto", # 'auto', 'rpi', or 'simulation'
-            "printTimeOfCalculation" : False,
-            "printModesDetails"      : True,
-            "printMicrophoneDetails" : False,
-            "printAppDetails"        : False,
-            "printAsservmentDetails" : False,
-            "printConfigurationLoads": False,
-            "printConfigChanges"     : False,
-            
-            "modesToPrintDetails"    : ["PSG"]
+            "log_level"       : "INFO"
         }
         with open(config_path, 'w') as f:
             json.dump(default_config, f, indent=4)
 
     with open(config_path, 'r') as f:
         infos = json.load(f)
+        
+    log_level_str = infos.get("log_level", "INFO").upper()
+    log_level = getattr(logging, log_level_str, logging.INFO)
+    logging.basicConfig(level=log_level, format='%(levelname)s - [%(name)s] - %(message)s', force=True)
     
     listener = Listener.Listener(infos)
     

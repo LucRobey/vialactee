@@ -14,7 +14,6 @@ class Connector:
 
     def __init__(self, mode_master, infos):
         self.mode_master = mode_master
-        self.printAppDetails = infos.get("printAppDetails", False)
         self.active_websockets = set()
         self.webapp_instruction_logger = WebappInstructionLogger()
         self.last_instruction = None
@@ -94,8 +93,7 @@ class Connector:
         await ws.prepare(request)
 
         self.active_websockets.add(ws)
-        if self.printAppDetails:
-            logger.debug("(C) New WebSocket connection")
+        logger.debug("(C) New WebSocket connection")
         await self.send_state(ws, self.mode_master.get_state_snapshot())
 
         try:
@@ -116,12 +114,11 @@ class Connector:
                     continue
 
                 self.last_instruction = instruction
-                if self.printAppDetails:
-                    logger.info(
-                        "(C) instruction received page=%s action=%s",
-                        instruction["page"],
-                        instruction["action"],
-                    )
+                logger.debug(
+                    "(C) instruction received page=%s action=%s",
+                    instruction["page"],
+                    instruction["action"],
+                )
 
                 apply_result = await self.mode_master.process_instruction(instruction)
                 await ws.send_json({
@@ -132,8 +129,7 @@ class Connector:
                 await self.broadcast_state_if_changed(self.mode_master.get_state_snapshot(), force=True)
         finally:
             self.active_websockets.discard(ws)
-            if self.printAppDetails:
-                logger.debug("(C) WebSocket disconnected")
+            logger.debug("(C) WebSocket disconnected")
 
         return ws
 

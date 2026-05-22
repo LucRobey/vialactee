@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 class AudioIngestion:
     def __init__(self, infos: Dict[str, Any]) -> None:
-        self.printAsservmentDetails = infos.get("printAsservmentDetails", False)
         self.useMicrophone          = infos.get("useMicrophone", True)
         self.momentum_multiplier = infos.get("momentum_mult", 0.05)
         self.base_pull = infos.get("base_pull", 0.01)

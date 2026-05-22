@@ -41,6 +41,18 @@ def create_hardware(infos):
         leds2 = Udp_Sender.Udp_Sender("127.0.0.1", 9002, 519)
         return leds1, leds2
         
+    elif mode == "esp32":
+        _set_runtime_flags(infos, configured_mode, mode)
+        import hardware.Udp_Sender as Udp_Sender
+        
+        esp32_ip = infos.get("esp32_ip", "192.168.1.X")
+        print(f"=== INITIALIZING ESP32 HARDWARE MODE ON IP: {esp32_ip} ===")
+        
+        # Send UDP packets to the real ESP32 IP
+        leds1 = Udp_Sender.Udp_Sender(esp32_ip, 9001, 785)
+        leds2 = Udp_Sender.Udp_Sender(esp32_ip, 9002, 519)
+        return leds1, leds2
+        
     elif mode == "rpi":
         _set_runtime_flags(infos, configured_mode, mode)
         import hardware.Rpi_NeoPixels as Rpi_NeoPixels

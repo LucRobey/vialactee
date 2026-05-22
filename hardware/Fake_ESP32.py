@@ -4,6 +4,7 @@ import time
 import json
 import sys
 import os
+import struct
 
 # Add the project root (parent directory) to sys.path so we can import 'hardware.xxx'
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -46,17 +47,20 @@ def main():
         # Check Strip 1
         try:
             data, _ = sock1.recvfrom(65535)
-            # Ensure we parse it using the same dtype as Udp_Sender
-            arr = np.frombuffer(data, dtype=np.int32).reshape(-1, 3)
-            visualizer.update_strip(strip1_id, arr)
+            if len(data) >= 2:
+                start_index = struct.unpack('<H', data[:2])[0]
+                arr = np.frombuffer(data[2:], dtype=np.uint8).reshape(-1, 3)
+                visualizer.strips[strip1_id][start_index:start_index+len(arr)] = arr
         except BlockingIOError:
             pass
 
         # Check Strip 2
         try:
             data, _ = sock2.recvfrom(65535)
-            arr = np.frombuffer(data, dtype=np.int32).reshape(-1, 3)
-            visualizer.update_strip(strip2_id, arr)
+            if len(data) >= 2:
+                start_index = struct.unpack('<H', data[:2])[0]
+                arr = np.frombuffer(data[2:], dtype=np.uint8).reshape(-1, 3)
+                visualizer.strips[strip2_id][start_index:start_index+len(arr)] = arr
         except BlockingIOError:
             pass
 

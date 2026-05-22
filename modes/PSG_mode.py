@@ -16,9 +16,7 @@ class PSG_mode(Mode.Mode):
         
         
         
-    def update(self):
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            time_me = time.time() 
+    def run(self):
         #====================================================================================
         
 
@@ -40,15 +38,11 @@ class PSG_mode(Mode.Mode):
         if(self.white_dot_pos < 0):
             self.white_dot_pos = 0
         
-        if(self.printThisModeDetail):
-            self.logger.debug(f"(PSG)     lower_height = {self.lower_height}")
-            self.logger.debug(f"(PSG)     higher_height = {self.higher_height}")
-            self.logger.debug(f"(PSG)     coef = {coef}")
+        self.logger.debug(f"(PSG)     lower_height = {self.lower_height}")
+        self.logger.debug(f"(PSG)     higher_height = {self.higher_height}")
+        self.logger.debug(f"(PSG)     coef = {coef}")
         self.rgb_list[self.white_dot_pos] = colors.white
 
         
 
         #====================================================================================
-        if(self.printTimeOfCalculation and self.printThisModeDetail):
-            duration = time.time() - time_me
-            self.logger.debug(f"      (CM) temps pour {self.name} : {duration}")

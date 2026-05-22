@@ -11,59 +11,13 @@ import connectors.System_status as System_status
 import core.Segment as Segment
 import core.Listener as Listener
 import core.Transition_Director as Transition_Director
+import utils.Profiler as Profiler
 
 
 
 from contextlib import contextmanager
 
-class Profiler:
-    """
-    A simple context-manager based profiler to measure execution time of code blocks.
-    """
-    def __init__(self, active: bool, logger: logging.Logger) -> None:
-        """
-        Initialize the Profiler.
 
-        Args:
-            active (bool): Whether the profiler is active and should record times.
-            logger (logging.Logger): The logger instance to use for output.
-        """
-        self.active = active
-        self.logger = logger
-        self.durations = []
-        self.names = []
-        self.start_times = {}
-
-    @contextmanager
-    def measure(self, name: str) -> Any:
-        """
-        Context manager to measure the execution time of a block of code.
-
-        Args:
-            name (str): The name/label for this measurement block.
-        """
-        if self.active:
-            start = time.time()
-            yield
-            self.durations.append(time.time() - start)
-            self.names.append(name)
-        else:
-            yield
-
-    def print_results(self) -> None:
-        """
-        Print the accumulated profiling results to the logger.
-        """
-        if self.active and self.durations:
-            self.logger.debug("=======================================================================")
-            total = np.sum(self.durations)
-            self.logger.debug(f"   |(MM) total = {total:.5f} secondes")
-            if total > 0:
-                nb_of_it_per_sec = 1 / total
-                self.logger.debug(f"   |(MM) soit {nb_of_it_per_sec:.2f} itérations par seconde")
-                for k in range(len(self.durations)):
-                    percentage = 100 * float(self.durations[k]) / total
-                    self.logger.debug(f"   |(MM) {self.names[k]}  :  {percentage:.2f}%")
 
 
 class Mode_master:
@@ -85,15 +39,10 @@ class Mode_master:
         """
         self.infos = infos
         self.listener = listener
-        self.onRaspberry            = infos.get("onRaspberry", False)
-        self.printTimeOfCalculation = infos.get("printTimeOfCalculation", False)
-        self.printModesDetails      = infos.get("printModesDetails", False)
-        self.printAppDetails        = infos.get("printAppDetails", False)
-        self.printConfigChanges     = infos.get("printConfigChanges", False)
-
+        self.onRaspberry = infos.get("onRaspberry", False)
         self.leds_list = leds
         self.logger = logging.getLogger("Mode_master")
-        self.profiler = Profiler(self.printTimeOfCalculation, self.logger)
+        self.profiler = Profiler.Profiler(infos.get("printCpuFpsInfo", False), self.logger)
         self.current_time = time.time()
         self.appli_connector = None
         self.segments_list: List[Segment.Segment] = []
@@ -117,7 +66,7 @@ class Mode_master:
         self.mode_settings_catalog = self._build_mode_settings_catalog()
         self.initiate_configuration()
         self.transition_director = Transition_Director.Transition_Director(self, self.listener, self.infos)
-        self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list)
+        self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
 
     def set_connector(self, connector: Any) -> None:
         """
@@ -423,12 +372,12 @@ class Mode_master:
         self._last_update_monotonic = frame_start
         self.system_status.note_loop_tick(frame_dt)
 
-        # Profiler cleans up the time_time() boilerplate
-        with self.profiler.measure("listener.update()"):
+        with self.profiler.measure("listener"):
             self.listener.update()
 
-        with self.profiler.measure("leds.show()"):
-            is_rpi_hardware = len(self.leds_list) > 0 and "Rpi_NeoPixels" in str(type(self.leds_list[0]))
+        is_rpi_hardware = len(self.leds_list) > 0 and "Rpi_NeoPixels" in str(type(self.leds_list[0]))
+        
+        with self.profiler.measure("app"):
             if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or is_rpi_hardware:
                 loop = asyncio.get_running_loop()
                 for led_strip in self.leds_list:
@@ -437,7 +386,7 @@ class Mode_master:
                 for led_strip in self.leds_list:
                     led_strip.show()
 
-        with self.profiler.measure("segments.update()"):
+        with self.profiler.measure("mode_master"):
             for seg_index in range(len(self.segments_list)):
                 self.segments_list[seg_index].update(self.transition_director)
 
@@ -446,13 +395,11 @@ class Mode_master:
         
         await self.transition_director.update(self.current_time)
 
-        if self.appli_connector is not None:
-            await self.appli_connector.broadcast_state_if_changed(self.get_state_snapshot())
-
-        self.profiler.print_results()
-        # Clean profiler values for next frame
-        self.profiler.durations.clear()
-        self.profiler.names.clear()
+        with self.profiler.measure("connector"):
+            if self.appli_connector is not None:
+                await self.appli_connector.broadcast_state_if_changed(self.get_state_snapshot())
+                
+        self.profiler.tick()
 
 
     def load_configurations(self) -> None:
@@ -465,8 +412,7 @@ class Mode_master:
                 data = json.load(f)
             self.configurations = data.get('configurations', {})
             self.playlists = list(self.configurations.keys())
-            if self.printConfigChanges:
-                self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists from {file_path}")
+            self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists from {file_path}")
         except Exception as e:
             self.logger.error(f"Error reading JSON configuration file: {e}")
             self.configurations = {}

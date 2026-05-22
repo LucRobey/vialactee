@@ -11,9 +11,12 @@ Read `playground/RESEARCH_BOARD.md` to understand the overarching research objec
 ## Step 3: Understand the Historical Context
 Read `playground/[folder]/history.md` to learn what we have already tried, what failed, and what is currently working. This ensures you do not repeat past mistakes.
 
-## Step 4: Understand the Current Session
-Read `playground/[folder]/session.md` to understand the active scratchpad, the specific problem we are tackling right now, and what the final objective for this session is.
-*(Note: If `session.md` or `history.md` do not exist in the folder, read `playground/template_research_session.md` and `playground/template_history.md` and use them to initialize the files.)*
+## Step 4: Understand the Global Objective
+Read `playground/[folder]/session.md` to understand the overarching global objective of this specific research notebook and the final vision.
 
-## Step 5: Acknowledge
-Once you have read all the files above, reply to the user confirming that you have the full context (mentioning the specific goal of the session) and state that you are ready to begin research in the notebook.
+## Step 5: Understand the Current Progress & Immediate Tasks
+Read `playground/[folder]/current_objectives.md` to understand the active scratchpad, what the previous agent was doing, and what the immediate next steps are.
+*(Note: If `session.md`, `history.md`, or `current_objectives.md` do not exist in the folder, read the corresponding `template_*.md` files in `playground/` and use them to initialize the files.)*
+
+## Step 6: Acknowledge
+Once you have read all the files above, reply to the user confirming that you have the full context (mentioning the specific global goal and the immediate tasks) and state that you are ready to begin research in the notebook.
