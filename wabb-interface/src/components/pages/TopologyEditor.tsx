@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
+import { FitBoard } from '../layout/FitBoard';
 import { NoticeBanner } from '../common/NoticeBanner';
 import { initialTopology, type TopologySegment } from '../../constants/topologyData';
 import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from '../../utils/controlBridge';
@@ -25,6 +26,12 @@ const cloneModeSettings = (modeSettings: ModeSettingsMap = {}) =>
   ) as ModeSettingsMap;
 
 const initialAvailableModes = Array.from(new Set(initialTopology.map(segment => segment.mode))).sort((a, b) => a.localeCompare(b));
+
+const TOPOLOGY_VISUAL_SCALE = 1.2;
+const BASE_BOARD_WIDTH = LEGO_MATH.physicalSize(71);
+const BASE_BOARD_HEIGHT = LEGO_MATH.physicalSize(38);
+const BOARD_WIDTH = BASE_BOARD_WIDTH * TOPOLOGY_VISUAL_SCALE;
+const BOARD_HEIGHT = BASE_BOARD_HEIGHT * TOPOLOGY_VISUAL_SCALE;
 
 const DEFAULT_ALLOWED_MODES: readonly EditorMode[] = ['LIVE', 'MODIFY', 'BUILD'];
 
@@ -361,11 +368,6 @@ export const TopologyEditor = ({
     const selectedName = event.target.value;
     setConfigName(selectedName);
     setSelectedConfigName(selectedName);
-    sendInstruction({
-      page: 'topology',
-      action: 'select_configuration',
-      payload: { playlist, configuration: selectedName }
-    });
     applyStoredConfigurationToSegments(playlist, selectedName);
   };
 
@@ -545,13 +547,20 @@ export const TopologyEditor = ({
     [segments, selectedSegId]
   );
 
-  const handleModeSelect = (modeName: string) => {
-    sendInstruction({
-      page: 'topology',
-      action: 'select_segment_mode',
-      payload: { segmentId: selectedSegId, mode: modeName }
+  const handleShow = () => {
+    segments.forEach(seg => {
+      sendInstruction({ page: 'topology', action: 'select_segment_mode', payload: { segmentId: seg.id, mode: seg.mode } });
+      sendInstruction({ page: 'topology', action: 'toggle_segment_direction', payload: { segmentId: seg.id, direction: seg.direction } });
     });
+  };
+
+  const handleModeSelect = (modeName: string) => {
     if (editorMode === 'LIVE') {
+      sendInstruction({
+        page: 'topology',
+        action: 'select_segment_mode',
+        payload: { segmentId: selectedSegId, mode: modeName }
+      });
       const prev = pendingLiveSegmentEditsRef.current.get(selectedSegId) ?? {};
       pendingLiveSegmentEditsRef.current.set(selectedSegId, { ...prev, mode: modeName });
     }
@@ -565,12 +574,12 @@ export const TopologyEditor = ({
         return seg;
       }
       const direction: TopologySegment['direction'] = seg.direction === 'UP' ? 'DOWN' : 'UP';
-      sendInstruction({
-        page: 'topology',
-        action: 'toggle_segment_direction',
-        payload: { segmentId: id, direction }
-      });
       if (editorMode === 'LIVE') {
+        sendInstruction({
+          page: 'topology',
+          action: 'toggle_segment_direction',
+          payload: { segmentId: id, direction }
+        });
         const prevPending = pendingLiveSegmentEditsRef.current.get(id) ?? {};
         pendingLiveSegmentEditsRef.current.set(id, { ...prevPending, direction });
       }
@@ -592,9 +601,18 @@ export const TopologyEditor = ({
     }
   };
 
+  const fittedBoardWidth = BOARD_WIDTH * 0.8;
+  const fittedBoardHeight = BOARD_HEIGHT * 0.8;
+
   return (
-    <div style={{ width: '100%', height: 'calc(35 * var(--stud))', overflowX: 'auto', overflowY: 'auto' }}>
-      <div style={{ position: 'relative', width: `${LEGO_MATH.physicalSize(71)}px`, minWidth: '100%', height: `${LEGO_MATH.physicalSize(38)}px` }}>
+    <FitBoard width={fittedBoardWidth} height={fittedBoardHeight}>
+      <div style={{
+        position: 'relative',
+        width: `${BASE_BOARD_WIDTH}px`,
+        height: `${BASE_BOARD_HEIGHT}px`,
+        transform: `scale(${TOPOLOGY_VISUAL_SCALE})`,
+        transformOrigin: 'top left',
+      }}>
         {bridgeStatus !== 'open' ? (
           <div style={{ position: 'absolute', top: '12px', left: '770px', width: '470px', zIndex: 40 }}>
             <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="TOPOLOGY LINK">
@@ -618,6 +636,7 @@ export const TopologyEditor = ({
           selectedSegId={selectedSegId}
           onSelectSegment={handleSegmentSelect}
           onToggleDirection={handleDirectionToggle}
+          segmentShiftCols={showEditPanels ? 0 : 2}
         />
 
         <TopologyEditorModeSwitch
@@ -648,6 +667,7 @@ export const TopologyEditor = ({
               onConfigNameChange={setConfigName}
               onRenameConfiguration={handleRenameConfiguration}
               onDeleteConfiguration={handleDeleteConfiguration}
+              onShow={handleShow}
               onSave={handleSave}
             />
 
@@ -666,6 +686,6 @@ export const TopologyEditor = ({
           </>
         ) : null}
       </div>
-    </div>
+    </FitBoard>
   );
 };

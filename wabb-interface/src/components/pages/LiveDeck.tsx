@@ -1,17 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
+import { FitBoard } from '../layout/FitBoard';
 import { GridSpot } from '../layout/GridSpot';
-import { wideDropStudPattern } from '../../constants/dropPatterns';
 import { NoticeBanner } from '../common/NoticeBanner';
 import { sendInstruction, subscribeModeMasterState, type SystemStatus } from '../../utils/controlBridge';
 import { loadConfigurationStore } from '../../utils/configurationStore';
 import { useBridgeStatus } from '../../utils/useBridgeStatus';
+import {
+  buildDropWordPlacements,
+  DROP_WORD_HEIGHT_STUDS,
+  DROP_WORD_WIDTH_STUDS,
+} from '../../constants/dropLetterTiles';
+
+const DROP_TILE_PLACEMENTS = buildDropWordPlacements();
+
+/** Matches `.giant-drop-button::before` inset and container width. */
+const DROP_BUTTON_INSET_PX = 9;
+const DROP_BUTTON_WIDTH_PX = 900;
+/** 8 studs tall (+1 stud row vs prior 7-stud brick). */
+const DROP_BUTTON_HEIGHT_PX = LEGO_MATH.grid(8);
+/** Half-stud clip on bottom/right so cut studs show at the edge. */
+const DROP_BUTTON_CROP_PX = LEGO_MATH.STUD / 2;
+const DROP_STUD_COLS = Math.floor(
+  (DROP_BUTTON_WIDTH_PX - DROP_BUTTON_INSET_PX * 2) / LEGO_MATH.STUD,
+);
+const DROP_STUD_ROWS = Math.floor(
+  (DROP_BUTTON_HEIGHT_PX - DROP_BUTTON_INSET_PX * 2) / LEGO_MATH.STUD,
+);
+const DROP_LETTER_START_COL = Math.floor((DROP_STUD_COLS - DROP_WORD_WIDTH_STUDS) / 2);
+const DROP_LETTER_START_ROW = Math.floor((DROP_STUD_ROWS - DROP_WORD_HEIGHT_STUDS) / 2);
 
 const EMPTY_CONFIGURATIONS: string[] = [];
 const EMPTY_SYSTEM: Pick<SystemStatus, 'cpuTempC' | 'dynamicAudioLatencyMs'> = {
   cpuTempC: null,
   dynamicAudioLatencyMs: null,
 };
+const BOARD_WIDTH = LEGO_MATH.grid(74);
+const BOARD_HEIGHT = LEGO_MATH.physicalSize(37);
 
 const formatTelemetryValue = (value: number | null, suffix: string, digits = 0) => {
   if (value === null || Number.isNaN(value)) {
@@ -98,7 +123,8 @@ export const LiveDeck = () => {
   }, []);
 
   return (
-    <div className="live-deck-grid">
+    <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+      <div className="live-deck-grid" style={{ width: `${BOARD_WIDTH}px`, height: `${BOARD_HEIGHT}px` }}>
       {bridgeStatus !== 'open' || configurationError ? (
         <div style={{ position: 'absolute', top: '100px', left: '240px', width: '560px', zIndex: 50 }}>
           {bridgeStatus !== 'open' ? (
@@ -118,11 +144,11 @@ export const LiveDeck = () => {
         </div>
       ) : null}
 
-      {/* ======================= LEFT COLUMN ======================= */}
-      <GridSpot col={0} row={0}>
+      {/* ======================= RIGHT SLIDER RACK ======================= */}
+      <GridSpot col={55} row={0}>
         <div style={{
-          width: `${LEGO_MATH.physicalSize(6)}px`,
-          height: `${LEGO_MATH.physicalSize(37)}px`,
+          width: `${LEGO_MATH.physicalSize(18)}px`,
+          height: `${LEGO_MATH.physicalSize(14)}px`,
           backgroundColor: '#1a1f24',
           borderTop: '8px solid #2a2d32',
           borderLeft: '8px solid #20252a',
@@ -134,7 +160,7 @@ export const LiveDeck = () => {
           zIndex: 10,
           boxSizing: 'border-box'
         }}>
-          {/* Deep dark pit spanning the height of the sliders */}
+          {/* Deep dark pit spanning the slider trio */}
           <div style={{
             position: 'absolute',
             top: '15px', bottom: '15px', left: '15px', right: '15px',
@@ -143,7 +169,7 @@ export const LiveDeck = () => {
             boxShadow: 'inset 10px 10px 20px rgba(0,0,0,0.95), inset -5px -5px 15px rgba(0,0,0,0.8), 0 2px 2px rgba(255,255,255,0.1)'
           }}>
             {/* LUMINOSITÉ BLOCK */}
-            <div style={{ position: 'absolute', top: '10px', left: '2px', right: '0', height: '310px' }}>
+            <div style={{ position: 'absolute', top: '10px', left: '18px', width: '130px', height: '310px' }}>
               {/* Centered Label */}
               <div className="rogue-piece" style={{
                 position: 'absolute', top: '0', left: '50%', transform: 'translateX(-50%)',
@@ -191,7 +217,7 @@ export const LiveDeck = () => {
             </div>
 
             {/* SENSIBILITÉ BLOCK */}
-            <div style={{ position: 'absolute', top: '375px', left: '2px', right: '0', height: '310px' }}>
+            <div style={{ position: 'absolute', top: '10px', left: '188px', width: '130px', height: '310px' }}>
               {/* Centered Label */}
               <div className="rogue-piece" style={{
                 position: 'absolute', top: '0', left: '50%', transform: 'translateX(-50%)',
@@ -239,7 +265,7 @@ export const LiveDeck = () => {
             </div>
 
             {/* AUTO TRANSITION BLOCK */}
-            <div style={{ position: 'absolute', top: '740px', left: '2px', right: '0', height: '310px' }}>
+            <div style={{ position: 'absolute', top: '10px', left: '358px', width: '130px', height: '310px' }}>
               {/* Centered Label */}
               <div className="rogue-piece" style={{
                 position: 'absolute', top: '0', left: '50%', transform: 'translateX(-50%)',
@@ -288,13 +314,13 @@ export const LiveDeck = () => {
           </div>
 
           {/* Thick Technic Cables connecting to the Config Board */}
-          <div style={{ position: 'absolute', top: '160px', right: '-40px', width: '60px', height: '16px', backgroundColor: '#111', borderTop: '4px solid #333', borderBottom: '4px solid #000', borderRadius: '8px', boxShadow: '0 8px 10px rgba(0,0,0,0.8)', zIndex: -1, display: 'flex', alignItems: 'center' }}>
+          <div style={{ position: 'absolute', top: '160px', left: '-40px', width: '60px', height: '16px', backgroundColor: '#111', borderTop: '4px solid #333', borderBottom: '4px solid #000', borderRadius: '8px', boxShadow: '0 8px 10px rgba(0,0,0,0.8)', zIndex: -1, display: 'flex', alignItems: 'center' }}>
             <div style={{ width: '12px', height: '100%', backgroundColor: '#ffcd00', marginLeft: '15px' }}></div>
           </div>
-          <div style={{ position: 'absolute', top: '500px', right: '-40px', width: '60px', height: '16px', backgroundColor: '#111', borderTop: '4px solid #333', borderBottom: '4px solid #000', borderRadius: '8px', boxShadow: '0 8px 10px rgba(0,0,0,0.8)', zIndex: -1, display: 'flex', alignItems: 'center' }}>
+          <div style={{ position: 'absolute', top: '220px', left: '-40px', width: '60px', height: '16px', backgroundColor: '#111', borderTop: '4px solid #333', borderBottom: '4px solid #000', borderRadius: '8px', boxShadow: '0 8px 10px rgba(0,0,0,0.8)', zIndex: -1, display: 'flex', alignItems: 'center' }}>
             <div style={{ width: '12px', height: '100%', backgroundColor: '#ffcd00', marginLeft: '15px' }}></div>
           </div>
-          <div style={{ position: 'absolute', top: '840px', right: '-40px', width: '60px', height: '16px', backgroundColor: '#111', borderTop: '4px solid #333', borderBottom: '4px solid #000', borderRadius: '8px', boxShadow: '0 8px 10px rgba(0,0,0,0.8)', zIndex: -1, display: 'flex', alignItems: 'center' }}>
+          <div style={{ position: 'absolute', top: '280px', left: '-40px', width: '60px', height: '16px', backgroundColor: '#111', borderTop: '4px solid #333', borderBottom: '4px solid #000', borderRadius: '8px', boxShadow: '0 8px 10px rgba(0,0,0,0.8)', zIndex: -1, display: 'flex', alignItems: 'center' }}>
             <div style={{ width: '12px', height: '100%', backgroundColor: '#ffcd00', marginLeft: '15px' }}></div>
           </div>
         </div>
@@ -303,9 +329,9 @@ export const LiveDeck = () => {
 
       {/* ======================= CENTER COLUMN ======================= */}
       {/* Telemetry Bar (3 studs tall, 25 wide) */}
-      <GridSpot col={8} row={0}>
+      <GridSpot col={17} row={0}>
         <div className="rogue-piece" style={{
-          width: '750px', height: '90px',
+          width: '900px', height: '90px',
           backgroundColor: '#1a1f24',
           borderTop: '8px solid #2a2d32', borderLeft: '8px solid #20252a', borderBottom: '8px solid #0a0a0a', borderRight: '8px solid #0f0f0f',
           boxSizing: 'border-box', position: 'relative', borderRadius: '4px',
@@ -347,14 +373,14 @@ export const LiveDeck = () => {
       </GridSpot>
 
       {/* Large Orange Baseplate Mount */}
-      <GridSpot col={7} row={4} style={{ zIndex: 0 }}>
-        <div className={`large-orange-baseplate ${isHold ? 'glow-red' : 'glow-green'}`} style={{ width: '810px', height: '330px' }}></div>
+      <GridSpot col={16} row={4} style={{ zIndex: 0 }}>
+        <div className={`large-orange-baseplate ${isHold ? 'glow-red' : 'glow-green'}`} style={{ width: '960px', height: '420px' }}></div>
       </GridSpot>
 
       {/* Config Block */}
-      <GridSpot col={8} row={5}>
+      <GridSpot col={18} row={6}>
         <div className="rogue-piece" style={{
-          width: `${LEGO_MATH.physicalSize(19)}px`, height: `${LEGO_MATH.physicalSize(4)}px`, backgroundColor: '#a0a5a9',
+          width: `${LEGO_MATH.physicalSize(23)}px`, height: `${LEGO_MATH.physicalSize(4)}px`, backgroundColor: '#a0a5a9',
           backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(0,0,0,0.1) 100%)',
           borderTop: '3px solid #dcdcdc', borderLeft: '3px solid #c8c8c8', borderBottom: '3px solid #646464', borderRight: '3px solid #787878',
           boxShadow: '5px 5px 15px rgba(0,0,0,0.6)', borderRadius: '2px',
@@ -406,9 +432,9 @@ export const LiveDeck = () => {
       </GridSpot>
 
       {/* Transition Block */}
-      <GridSpot col={8} row={10}>
+      <GridSpot col={18} row={11}>
         <div className="rogue-piece" style={{
-          width: `${LEGO_MATH.physicalSize(19)}px`, height: `${LEGO_MATH.physicalSize(4)}px`, backgroundColor: '#a0a5a9',
+          width: `${LEGO_MATH.physicalSize(23)}px`, height: `${LEGO_MATH.physicalSize(4)}px`, backgroundColor: '#a0a5a9',
           backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(0,0,0,0.1) 100%)',
           borderTop: '3px solid #dcdcdc', borderLeft: '3px solid #c8c8c8', borderBottom: '3px solid #646464', borderRight: '3px solid #787878',
           boxShadow: '5px 5px 15px rgba(0,0,0,0.6)', borderRadius: '2px',
@@ -455,13 +481,18 @@ export const LiveDeck = () => {
               ))}
             </select>
           </div>
-          {/* Round 2x2 Plate Button */}
-          <button className="rogue-piece" style={{
+          {/* Square 2x2 Plate Button */}
+          <button className="rogue-piece rect-action-button" style={{
             position: 'relative',
-            width: '64px', height: '64px', margin: 0, padding: 0, borderRadius: '50%', border: 'none',
+            width: '80px', height: '80px', margin: 0, padding: 0, borderRadius: '6px', border: 'none',
             backgroundColor: '#0055bf', cursor: 'pointer',
-            boxShadow: 'inset 2px 2px 5px rgba(255,255,255,0.4), inset -3px -3px 8px rgba(0,0,0,0.6), 4px 4px 10px rgba(0,0,0,0.7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            boxShadow: effectiveSelectedConfiguration 
+              ? 'inset 2px 2px 6px rgba(255,255,255,0.5), inset -4px -4px 10px rgba(0,0,0,0.6), 5px 5px 15px rgba(0,0,0,0.8), 0 0 25px rgba(0, 85, 191, 0.7)'
+              : 'inset 2px 2px 6px rgba(255,255,255,0.2), inset -4px -4px 10px rgba(0,0,0,0.4), 5px 5px 12px rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            opacity: effectiveSelectedConfiguration ? 1 : 0.5,
+            overflow: 'visible'
           }}
           onClick={() => sendInstruction({
             page: 'live_deck',
@@ -469,18 +500,56 @@ export const LiveDeck = () => {
             payload: { configuration: effectiveSelectedConfiguration, transition: selectedTransition }
           })}
           disabled={!effectiveSelectedConfiguration}>
-            <div className="round-stud-grid" style={{ transform: 'scale(0.85)', margin: 0 }}>
-              <div className="stud stud-blue"></div>
-              <div className="stud stud-blue"></div>
-              <div className="stud stud-blue"></div>
-              <div className="stud stud-blue"></div>
+            {/* Square Glowing Ring */}
+            <div style={{
+              position: 'absolute',
+              inset: '-8px',
+              borderRadius: '10px',
+              border: '2px solid rgba(0, 181, 226, 0.4)',
+              boxShadow: effectiveSelectedConfiguration ? '0 0 20px rgba(0, 181, 226, 0.5), inset 0 0 10px rgba(0, 181, 226, 0.3)' : 'none',
+              pointerEvents: 'none',
+              animation: effectiveSelectedConfiguration ? 'pulse-ring 2s infinite' : 'none'
+            }} />
+            
+            <div style={{
+              width: '100%',
+              height: '100%',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gridTemplateRows: '1fr 1fr',
+              placeItems: 'center',
+              position: 'relative',
+              zIndex: 2,
+              padding: '10px',
+              boxSizing: 'border-box'
+            }}>
+              {/* 4 Studs in a square pattern */}
+              <div className="stud stud-blue" style={{ width: '20px', height: '20px', backgroundColor: '#00b5e2', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.8), 0 0 8px rgba(0,181,226,0.6)' }}></div>
+              <div className="stud stud-blue" style={{ width: '20px', height: '20px', backgroundColor: '#00b5e2', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.8), 0 0 8px rgba(0,181,226,0.6)' }}></div>
+              <div className="stud stud-blue" style={{ width: '20px', height: '20px', backgroundColor: '#00b5e2', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.8), 0 0 8px rgba(0,181,226,0.6)' }}></div>
+              <div className="stud stud-blue" style={{ width: '20px', height: '20px', backgroundColor: '#00b5e2', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.8), 0 0 8px rgba(0,181,226,0.6)' }}></div>
+              
+              {/* Centered GO text overlay */}
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                color: 'white',
+                fontWeight: '900',
+                fontSize: '1.2rem',
+                textShadow: '0 0 10px rgba(0, 255, 255, 0.8), 0 2px 4px rgba(0,0,0,0.9)',
+                letterSpacing: '2px',
+                pointerEvents: 'none',
+                zIndex: 3
+              }}>GO</div>
             </div>
           </button>
         </div>
       </GridSpot>
 
       {/* Lock Trans Switch */}
-      <GridSpot col={28} row={5}>
+      <GridSpot col={42} row={6}>
         <label className="lock-switch-container">
           <input
             type="checkbox"
@@ -523,52 +592,54 @@ export const LiveDeck = () => {
       </GridSpot>
 
       {/* Drop Button */}
-      <GridSpot col={8} row={16}>
-        <div className="drop-button-container" style={{ width: '750px' }}>
+      <GridSpot col={17} row={21}>
+        <div
+          className="drop-button-container"
+          style={{
+            width: `${DROP_BUTTON_WIDTH_PX - DROP_BUTTON_CROP_PX}px`,
+            height: `${DROP_BUTTON_HEIGHT_PX - DROP_BUTTON_CROP_PX}px`,
+            marginTop: 'calc(0.35 * var(--stud))',
+          }}
+        >
           <button
+            type="button"
             className="giant-drop-button"
-            style={{ width: '100%' }}
+            aria-label="Manual drop"
+            style={{
+              width: `${DROP_BUTTON_WIDTH_PX}px`,
+              height: `${DROP_BUTTON_HEIGHT_PX}px`,
+            }}
             onClick={() => sendInstruction({ page: 'live_deck', action: 'manual_drop' })}
           >
-            <div className="drop-stud-grid">
-              {(() => {
-                let whiteIndex = 0;
-                return wideDropStudPattern.flat().map((isWhite, i) => {
-                  if (!isWhite) return <div key={i} className="stud stud-red"></div>;
-
-                  const currentIndex = whiteIndex++;
-                  // Generate a pseudo-random rotation and shape
-                  const rotation = ((i * 17) % 15) - 7;
-                  const isSquare = (i * 13) % 2 === 0;
-
-                  // Assign colors to specific indices (2 yellow, 1 grey, 5 clears)
-                  const isYellow = currentIndex === 8 || currentIndex === 24;
-                  const isGrey = currentIndex === 16;
-                  const isClear = [4, 11, 18, 27, 34].includes(currentIndex);
-
-                  let colorClass = '';
-                  if (isYellow) colorClass = 'piece-yellow';
-                  else if (isGrey) colorClass = 'piece-grey';
-
-                  return (
-                    <div
-                      key={i}
-                      className={`stud-piece ${isSquare ? 'piece-square' : 'piece-circle'} ${colorClass} ${isClear ? 'piece-clear' : ''}`}
-                      style={{ transform: `rotate(${rotation}deg)` }}
-                    ></div>
-                  );
-                });
-              })()}
+            <div
+              className="drop-button-letterfield"
+              style={{
+                gridTemplateColumns: `repeat(${DROP_STUD_COLS}, var(--stud))`,
+                gridTemplateRows: `repeat(${DROP_STUD_ROWS}, var(--stud))`,
+              }}
+              aria-hidden
+            >
+              {DROP_TILE_PLACEMENTS.map((tile, index) => (
+                <div
+                  key={index}
+                  className={`flat-1x1-tile flat-1x1-tile--${tile.variant}`}
+                  style={{
+                    gridColumn: tile.col + DROP_LETTER_START_COL + 1,
+                    gridRow: tile.row + DROP_LETTER_START_ROW + 1,
+                    transform: `rotate(${tile.rotationDeg}deg)`,
+                  }}
+                />
+              ))}
             </div>
           </button>
         </div>
       </GridSpot>
 
 
-      {/* ======================= RIGHT COLUMN ======================= */}
-      <GridSpot col={35} row={0}>
+      {/* ======================= LEFT PLAYLIST COLUMN ======================= */}
+      <GridSpot col={0} row={0}>
         <div className="rogue-piece" style={{
-          width: '240px', height: 'calc(1 * var(--stud))',
+          width: '360px', height: '45px',
           backgroundColor: '#fcd000',
           backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 4px, transparent 4px, transparent 8px)',
           borderTop: '2px solid rgba(255,255,255,0.6)', borderLeft: '2px solid rgba(255,255,255,0.3)', borderBottom: '2px solid rgba(0,0,0,0.4)', borderRight: '2px solid rgba(0,0,0,0.2)',
@@ -576,16 +647,16 @@ export const LiveDeck = () => {
           boxShadow: '2px 2px 5px rgba(0,0,0,0.5)', borderRadius: '2px', position: 'relative'
         }}>
           <div style={{ backgroundColor: '#fcd000', padding: '0 15px', border: '1px solid #000', boxShadow: '0 0 0 1px #fcd000' }}>
-            <span style={{ color: '#000', fontWeight: '900', fontSize: '0.65rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Presets</span>
+            <span style={{ color: '#000', fontWeight: '900', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Presets</span>
           </div>
         </div>
       </GridSpot>
 
       {availablePlaylists.slice(0, 8).map((name, i) => (
-        <GridSpot key={name} col={35} row={2 + i * 3}>
+        <GridSpot key={name} col={0} row={2 + i * 4}>
           <button
             className={`preset-brick ${presetColors[i % presetColors.length]}`}
-            style={{ width: '240px', position: 'relative' }}
+            style={{ width: '360px', height: '84px', position: 'relative' }}
             onClick={() => {
               setCurrentPlaylist(name);
               sendInstruction({ page: 'live_deck', action: 'select_playlist', payload: { playlist: name } });
@@ -594,26 +665,27 @@ export const LiveDeck = () => {
             {/* Printed White Tile Label */}
             <div className="rogue-piece" style={{
               position: 'absolute', top: '50%', left: '15px', transform: 'translateY(-50%)',
-              width: '120px', height: '18px', backgroundColor: '#f4f4f4',
+              width: '210px', height: '27px', backgroundColor: '#f4f4f4',
               borderTop: '2px solid #fff', borderLeft: '2px solid #ddd', borderBottom: '2px solid #999', borderRight: '2px solid #ccc',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '2px 2px 5px rgba(0,0,0,0.6)', borderRadius: '2px'
             }}>
-              <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.6rem', letterSpacing: '0.5px' }}>{name}</span>
+              <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.9rem', letterSpacing: '0.5px' }}>{name}</span>
             </div>
             {/* Round 1x1 Stud Indicator */}
             <div className="rogue-piece" style={{
               position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)',
-              width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#fcd000',
+              width: 'var(--stud-diameter)', height: 'var(--stud-diameter)', borderRadius: '50%', backgroundColor: '#fcd000',
               boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.8), inset -1px -1px 2px rgba(0,0,0,0.3), 2px 2px 4px rgba(0,0,0,0.6)',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.65rem' }}>{i + 1}</span>
+              <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.85rem' }}>{i + 1}</span>
             </div>
           </button>
         </GridSpot>
       ))}
 
-    </div>
+      </div>
+    </FitBoard>
   );
 };

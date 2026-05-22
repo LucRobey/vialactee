@@ -24,8 +24,7 @@ export const TopologyEditorModeSwitch = ({
         backgroundColor: '#fcd000',
         backgroundImage: `
           var(--highlight),
-          radial-gradient(circle at 15px 15px, #ffcd00 0%, #ffcd00 7px, rgba(0, 0, 0, 0.5) 9px, transparent 10px),
-          var(--shadow)
+          radial-gradient(circle at var(--stud-center) var(--stud-center), #ffcd00 0 var(--stud-radius), rgba(0, 0, 0, 0.5) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px))
         `,
         backgroundSize: 'var(--stud) var(--stud)',
         borderTop: '2px solid rgba(255,255,255,0.3)',
@@ -39,10 +38,10 @@ export const TopologyEditorModeSwitch = ({
 
     {[{ c: 10, r: -12 }, { c: 16, r: -12 }, { c: 10, r: -7 }, { c: 16, r: -7 }].map((pos, i) => (
       <GridSpot key={`green-pin-${i}`} col={INSPECTOR_OFFSET_C + 21 + pos.c} row={INSPECTOR_OFFSET_R + 17 + pos.r} style={{ zIndex: 11 }}>
-        <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 'var(--stud)', height: 'var(--stud)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{
-            width: '18px',
-            height: '18px',
+            width: 'var(--stud-diameter)',
+            height: 'var(--stud-diameter)',
             borderRadius: '50%',
             backgroundColor: '#1a1a1a',
             boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.3), inset -2px -2px 4px rgba(0,0,0,0.8), 2px 2px 3px rgba(0,0,0,0.5)',

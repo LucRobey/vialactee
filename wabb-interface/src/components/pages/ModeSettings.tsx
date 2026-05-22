@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
+import { FitBoard } from '../layout/FitBoard';
 import { GridSpot } from '../layout/GridSpot';
 import {
   sendInstruction,
@@ -15,7 +16,10 @@ type PendingModeSettings = Record<string, Record<string, ModeSettingValue>>;
 
 const PANEL_COL = 4;
 const PANEL_ROW = 2;
-const SCREEN_WIDTH = 44;
+const SCREEN_WIDTH = 56;
+const PANEL_WIDTH = 60;
+const BOARD_WIDTH = LEGO_MATH.physicalSize(68);
+const BOARD_HEIGHT = LEGO_MATH.grid(35);
 
 const valuesMatch = (a: ModeSettingValue | undefined, b: ModeSettingValue | undefined) => {
   if (typeof a === 'number' && typeof b === 'number') {
@@ -115,7 +119,8 @@ export const ModeSettings = () => {
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: 'calc(35 * var(--stud))' }}>
+    <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+      <div style={{ position: 'relative', width: `${BOARD_WIDTH}px`, height: `${BOARD_HEIGHT}px` }}>
       <GridSpot col={PANEL_COL - 4} row={PANEL_ROW + 2}>
         <div className="rogue-piece dark-grey" style={{
           width: `${LEGO_MATH.physicalSize(8)}px`,
@@ -126,13 +131,12 @@ export const ModeSettings = () => {
 
       <GridSpot col={PANEL_COL} row={PANEL_ROW}>
         <div className="rogue-piece" style={{
-          width: `${LEGO_MATH.physicalSize(48)}px`,
+          width: `${LEGO_MATH.physicalSize(PANEL_WIDTH)}px`,
           height: `${LEGO_MATH.physicalSize(28)}px`,
           backgroundColor: '#d22020',
           backgroundImage: `
             var(--highlight),
-            radial-gradient(circle at 15px 15px, #e02b1f 0%, #e02b1f 7px, rgba(0, 0, 0, 0.5) 9px, transparent 10px),
-            var(--shadow)
+            radial-gradient(circle at var(--stud-center) var(--stud-center), #e02b1f 0 var(--stud-radius), rgba(0, 0, 0, 0.5) calc(var(--stud-radius) + var(--stud-edge-width)), transparent calc(var(--stud-radius) + 2px))
           `,
           backgroundSize: 'var(--stud) var(--stud)',
           borderTop: '2px solid rgba(255,255,255,0.4)',
@@ -144,11 +148,11 @@ export const ModeSettings = () => {
         }}></div>
       </GridSpot>
 
-      {[{ c: 0, r: 0 }, { c: 47, r: 0 }, { c: 0, r: 27 }, { c: 47, r: 27 }].map((pos, i) => (
+      {[{ c: 0, r: 0 }, { c: PANEL_WIDTH - 1, r: 0 }, { c: 0, r: 27 }, { c: PANEL_WIDTH - 1, r: 27 }].map((pos, i) => (
         <GridSpot key={`mode-settings-pin-${i}`} col={PANEL_COL + pos.c} row={PANEL_ROW + pos.r} style={{ zIndex: 2 }}>
-          <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 'var(--stud)', height: 'var(--stud)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{
-              width: '18px', height: '18px', borderRadius: '50%',
+              width: 'var(--stud-diameter)', height: 'var(--stud-diameter)', borderRadius: '50%',
               backgroundColor: '#1a1a1a',
               boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.3), inset -2px -2px 4px rgba(0,0,0,0.8), 2px 2px 3px rgba(0,0,0,0.5)',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -162,7 +166,7 @@ export const ModeSettings = () => {
         </GridSpot>
       ))}
 
-      <GridSpot col={PANEL_COL + 15} row={PANEL_ROW + 2} style={{ zIndex: 10 }}>
+      <GridSpot col={PANEL_COL + 22} row={PANEL_ROW + 2} style={{ zIndex: 10 }}>
         <div className="rogue-piece" style={{
           width: 'calc(16 * var(--stud))',
           height: 'calc(1 * var(--stud))',
@@ -243,7 +247,7 @@ export const ModeSettings = () => {
           boxSizing: 'border-box',
           padding: '12px',
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
           alignContent: 'flex-start',
           gap: '10px 8px',
           overflowY: 'auto'
@@ -402,6 +406,7 @@ export const ModeSettings = () => {
           )}
         </div>
       </GridSpot>
-    </div>
+      </div>
+    </FitBoard>
   );
 };

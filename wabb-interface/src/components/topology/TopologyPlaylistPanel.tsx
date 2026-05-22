@@ -117,6 +117,7 @@ export const TopologyPlaylistPanel = ({
               key={action.label}
               onClick={action.onClick}
               disabled={isSaving}
+              className="rect-action-button"
               style={{
                 flex: '1 1 28%',
                 minWidth: '0',
@@ -124,16 +125,25 @@ export const TopologyPlaylistPanel = ({
                 border: '1px solid rgba(0,0,0,0.8)',
                 borderRadius: '2px',
                 backgroundColor: action.color,
-                color: action.fg,
                 cursor: isSaving ? 'not-allowed' : 'pointer',
+                opacity: isSaving ? 0.6 : 1,
+                boxShadow: '2px 2px 4px rgba(0,0,0,0.7)',
+              }}
+            >
+              <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), inset -2px -2px 3px rgba(0,0,0,0.35)',
+                color: action.fg,
                 fontSize: '0.55rem',
                 fontWeight: '900',
                 letterSpacing: '1px',
-                boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), inset -2px -2px 3px rgba(0,0,0,0.35), 2px 2px 4px rgba(0,0,0,0.7)',
-                opacity: isSaving ? 0.6 : 1,
-              }}
-            >
-              {action.label}
+              }}>
+                {action.label}
+              </div>
             </button>
           ))}
         </div>

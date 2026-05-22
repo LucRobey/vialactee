@@ -16,6 +16,7 @@ export const TopologyConfigurationPanel = ({
   onConfigNameChange,
   onRenameConfiguration,
   onDeleteConfiguration,
+  onShow,
   onSave,
 }: {
   editorMode: EditorMode;
@@ -28,12 +29,17 @@ export const TopologyConfigurationPanel = ({
   onConfigNameChange: (value: string) => void;
   onRenameConfiguration: () => void;
   onDeleteConfiguration: () => void;
+  onShow?: () => void;
   onSave: () => void;
 }) => {
   const playlistConfigs = Object.entries(apiConfigurations).find(([name]) => name.trim().toLowerCase() === playlist.trim().toLowerCase())?.[1] || [];
   const effectiveSelectedConfigName = playlistConfigs.some(cfg => cfg.name === selectedConfigName)
     ? selectedConfigName
     : (playlistConfigs[0]?.name ?? '');
+  const actions = [
+    ...(onShow ? [{ label: 'SHOW', onClick: onShow, color: '#00ffff' }] : []),
+    { label: isSaving ? '...' : editorMode === 'BUILD' ? 'SAVE' : 'UPD', onClick: onSave, color: editorMode === 'BUILD' ? '#da291c' : '#ffcd00' },
+  ];
   return (
   <GridSpot
     col={CONFIGURATOR_OFFSET_C + 1}
@@ -126,22 +132,32 @@ export const TopologyConfigurationPanel = ({
                   key={action.label}
                   onClick={action.onClick}
                   disabled={isSaving}
+                  className="rect-action-button"
                   style={{
                     flex: 1,
                     height: '22px',
                     border: '1px solid rgba(0,0,0,0.8)',
                     borderRadius: '2px',
                     backgroundColor: action.color,
-                    color: action.label === 'DEL' ? '#fff' : '#000',
                     cursor: isSaving ? 'not-allowed' : 'pointer',
+                    opacity: isSaving ? 0.6 : 1,
+                    boxShadow: '2px 2px 4px rgba(0,0,0,0.7)',
+                  }}
+                >
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), inset -2px -2px 3px rgba(0,0,0,0.35)',
+                    color: action.label === 'DEL' ? '#fff' : '#000',
                     fontSize: '0.55rem',
                     fontWeight: '900',
                     letterSpacing: '1px',
-                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), inset -2px -2px 3px rgba(0,0,0,0.35), 2px 2px 4px rgba(0,0,0,0.7)',
-                    opacity: isSaving ? 0.6 : 1,
-                  }}
-                >
-                  {action.label}
+                  }}>
+                    {action.label}
+                  </div>
                 </button>
               ))}
             </div>
@@ -173,10 +189,14 @@ export const TopologyConfigurationPanel = ({
           />
         )}
 
-        <button
-          onClick={onSave}
-          disabled={isSaving}
-          style={{
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          {actions.map(action => (
+          <button
+            key={action.label}
+            onClick={action.onClick}
+            disabled={isSaving}
+            className="round-action-button"
+            style={{
             alignSelf: 'center',
             position: 'relative',
             width: '45px',
@@ -184,7 +204,7 @@ export const TopologyConfigurationPanel = ({
             borderRadius: '50%',
             border: 'none',
             outline: 'none',
-            backgroundColor: editorMode === 'BUILD' ? '#da291c' : '#ffcd00',
+            backgroundColor: action.color,
             cursor: isSaving ? 'not-allowed' : 'pointer',
             boxShadow: editorMode === 'BUILD'
               ? 'inset 2px 2px 4px rgba(255,255,255,0.6), inset -2px -2px 6px rgba(0,0,0,0.4), 3px 3px 6px rgba(0,0,0,0.8), 0 0 15px rgba(218,41,28,0.8)'
@@ -199,24 +219,26 @@ export const TopologyConfigurationPanel = ({
             transition: 'all 0.1s ease',
             zIndex: 10,
             opacity: isSaving ? 0.6 : 1,
-          }}
-        >
-          <div style={{
+            }}
+          >
+            <div style={{
             position: 'absolute',
             width: '28px',
             height: '28px',
             borderRadius: '50%',
-            backgroundColor: editorMode === 'BUILD' ? '#da291c' : '#ffcd00',
+            backgroundColor: action.color,
             boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), inset -1px -1px 3px rgba(0,0,0,0.3), 1px 1px 3px rgba(0,0,0,0.5)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
-          }}>
-            <span style={{ position: 'relative', zIndex: 10, opacity: 0.8 }}>
-              {isSaving ? '...' : editorMode === 'BUILD' ? 'SAVE' : 'UPD'}
-            </span>
-          </div>
-        </button>
+            }}>
+              <span style={{ position: 'relative', zIndex: 10, opacity: 0.8 }}>
+                {action.label}
+              </span>
+            </div>
+          </button>
+          ))}
+        </div>
       </div>
       
       <div className="custom-scrollbar" style={{
