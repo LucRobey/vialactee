@@ -70,3 +70,12 @@ class Udp_Sender(HardwareInterface):
             )
         except Exception:
             pass
+
+    def close(self):
+        try:
+            self.sock.close()
+        except Exception:
+            pass
+            
+    def __del__(self):
+        self.close()

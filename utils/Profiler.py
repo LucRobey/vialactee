@@ -13,16 +13,16 @@ class Profiler:
         self.fps = 0.0
         
         # Logging timing
-        self.last_print_time = time.time()
+        self.last_print_time = time.perf_counter()
         self.print_interval = 5.0  # Log summary every 5 seconds if active
 
     @contextmanager
     def measure(self, name: str):
-        start = time.time()
+        start = time.perf_counter()
         try:
             yield
         finally:
-            duration = time.time() - start
+            duration = time.perf_counter() - start
             if name not in self.metrics:
                 self.metrics[name] = duration
             else:
@@ -30,7 +30,7 @@ class Profiler:
 
     def tick(self):
         """Called once per frame/loop to calculate overall FPS and trigger periodic logging."""
-        now = time.time()
+        now = time.perf_counter()
         if self.last_tick_time is not None:
             dt = now - self.last_tick_time
             if dt > 0:

@@ -11,7 +11,19 @@ ROOM_MAX_Y = 246
 spatial_images = {}
 logger = logging.getLogger("Transition_Engine")
 
+TRANSITION_DEFAULTS = {
+    "g": 7000.0,
+    "e": 0.6,
+    "dt": 0.003
+}
+
+_images_loaded = False
+
 def load_spatial_images() -> None:
+    global _images_loaded
+    if _images_loaded:
+        return
+    _images_loaded = True
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'assets', 'transitions'))
     if not os.path.exists(assets_dir):
         logger.warning(f"Spatial transition folder not found at {assets_dir}")
@@ -31,8 +43,7 @@ def load_spatial_images() -> None:
         except Exception as e:
             logger.error(f"Failed to load spatial image {file_path}: {e}")
 
-# Load immediately on import
-load_spatial_images()
+# Load immediately on import removed for lazy loading
 
 def apply_dual_fade(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float) -> None:
     """ Crossfades old mode softly into new mode """
@@ -101,9 +112,9 @@ def apply_gravity_drop(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coord
     H = float(ROOM_MAX_Y)
     
     # --- Tunable Physics Constraints --- #
-    g = 7000.0  # Gravity (downward acceleration mapping)
-    e = 0.6    # Coefficient of restitution (Bounciness)
-    dt = 0.003  # Integration step size
+    g = TRANSITION_DEFAULTS["g"]  # Gravity (downward acceleration mapping)
+    e = TRANSITION_DEFAULTS["e"]    # Coefficient of restitution (Bounciness)
+    dt = TRANSITION_DEFAULTS["dt"]  # Integration step size
     
     # Define deterministically spaced beautiful balls
     base_colors = [
@@ -399,6 +410,7 @@ def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progres
             np.copyto(rgb_list_old, rgb_list_new)
             return
             
+        load_spatial_images()
         if transition_name not in spatial_images:
             apply_dual_fade(rgb_list_old, rgb_list_new, progress)
             return

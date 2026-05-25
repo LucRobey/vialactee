@@ -126,17 +126,7 @@ setup_python_environment() {
   python -m pip install --upgrade pip wheel setuptools
 
   log "Installing Python dependencies..."
-  pip install \
-    numpy \
-    sounddevice \
-    aiohttp \
-    pillow \
-    cython
-
-  # NeoPixels on GPIO (HardwareFactory "rpi" mode).
-  pip install \
-    adafruit-blinka \
-    adafruit-circuitpython-neopixel
+  pip install -r "${INSTALL_DIR}/requirements.txt"
 
   log "Building python_btrack (Cython)..."
   pushd "${INSTALL_DIR}/python_btrack" >/dev/null

@@ -111,9 +111,21 @@ async def main() -> Optional[str]:
     with open(config_path, 'r') as f:
         infos = json.load(f)
         
+    from logging.handlers import RotatingFileHandler
     log_level_str = infos.get("log_level", "INFO").upper()
     log_level = getattr(logging, log_level_str, logging.INFO)
-    logging.basicConfig(level=log_level, format='%(levelname)s - [%(name)s] - %(message)s', force=True)
+    
+    file_handler = RotatingFileHandler(
+        "vialactee.log", maxBytes=5*1024*1024, backupCount=2, encoding="utf-8"
+    )
+    console_handler = logging.StreamHandler()
+    
+    logging.basicConfig(
+        level=log_level, 
+        format='%(levelname)s - [%(name)s] - %(message)s', 
+        force=True,
+        handlers=[file_handler, console_handler]
+    )
     
     listener = Listener.Listener(infos)
     
