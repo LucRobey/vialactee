@@ -28,6 +28,17 @@ The `Mood_Analysis` module translates the 5 physical inputs into 3 high-level se
 3. **Drama ($N_{drama}$)**: Rating from 0.0 to 1.0 representing structural power variation (e.g., dynamic pop verse/chorus vs linear house/techno).
    $$N_{drama} = \text{Dynamics}$$
 
+### C. Semantic Mapping Examples by Genre
+To illustrate how the 3D semantic coordinate system ($N_{dance}, N_{intensity}, N_{drama}$) maps different musical styles, here are typical signatures:
+
+| Genre / Musical Style | Danceability ($N_{dance}$) | Intensity ($N_{intensity}$) | Drama ($N_{drama}$) | Expected Lighting Behavior / Mode Preset |
+| :--- | :---: | :---: | :---: | :--- |
+| **Deep House / Techno** | **High** ($\ge 0.8$) | **Medium-High** ($\ge 0.7$) | **Low** ($\le 0.3$) | Hypnotic tempo-synced beats, sharp periodic flashes, no sudden color shifts. |
+| **Commercial Pop / EDM** | **High** ($\ge 0.8$) | **High** ($\ge 0.7$) | **High** ($\ge 0.7$) | Extreme visual contrast, pre-break visual build-ups, explosive color variations on drops. |
+| **Classic Jazz / Acoustic** | **Low** ($\le 0.3$) | **Low-Medium** ($\le 0.5$) | **Medium** ($\sim 0.5$) | Smooth warm color breathing, slow organic pulses responding to single instrument transients. |
+| **Cinematic / Classical** | **Low** ($\le 0.2$) | **High** (at peaks) | **High** ($\ge 0.8$) | Slow organic waves expanding and shrinking dramatically with global volume swells. |
+| **Ambient / Chillout** | **Low** ($\le 0.2$) | **Low** ($\le 0.3$) | **Low** ($\le 0.2$) | Monochromatic cool washes (blues/cyans) with near-static atmospheric breathing. |
+
 ---
 
 ### Diagram 1: The Core Signal Flow and Translation Pipeline
