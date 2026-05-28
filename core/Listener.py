@@ -52,13 +52,13 @@ class Listener:
                 self.ingestion.calibrate_bb(self.fps_ratio)
             else:
                 self.ingestion.update_band_means_and_smoothed_values(self.fps_ratio)
-                self.ingestion.asserv_fft_bands(self.fps_ratio)
+                self.ingestion.asserv_fft_bands_2(self.fps_ratio)
                 self.ingestion.asserv_total_power(self.fps_ratio)
                 self.analyzer.update_structural_novelty(current_time, self.dt, self.fps_ratio)
                 self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
         else:
             self.ingestion.apply_fake_fft(self.fps_ratio)
-            self.ingestion.asserv_fft_bands(self.fps_ratio)
+            self.ingestion.asserv_fft_bands_2(self.fps_ratio)
             self.ingestion.update_band_means_and_smoothed_values(self.fps_ratio)
             self.ingestion.asserv_total_power(self.fps_ratio)
             self.analyzer.update_structural_novelty(current_time, self.dt, self.fps_ratio)
@@ -72,9 +72,9 @@ class Listener:
         self.spectral_delay_queue.append({
             'time': current_time,
             'fft_band_values': np.copy(self.ingestion.fft_band_values),
-            'chroma_values': np.copy(self.ingestion.chroma_values) if hasattr(self.ingestion, 'chroma_values') else None,
+            'chroma_values': np.copy(self.ingestion.chroma_values),
             'smoothed_fft_band_values': np.copy(self.ingestion.smoothed_fft_band_values),
-            'smoothed_chroma_values': np.copy(self.ingestion.smoothed_chroma_values) if hasattr(self.ingestion, 'smoothed_chroma_values') else None,
+            'smoothed_chroma_values': np.copy(self.ingestion.smoothed_chroma_values),
             'asserved_fft_band': np.copy(self.ingestion.asserved_fft_band),
             'band_proportion': np.copy(self.ingestion.band_proportion),
             'band_means': np.copy(self.ingestion.band_means),
@@ -86,26 +86,30 @@ class Listener:
             'is_verse_chorus_change': getattr(self.analyzer, 'is_verse_chorus_change', False)
         })
 
+        popped_items = []
         while len(self.spectral_delay_queue) > 0:
             if current_time - self.spectral_delay_queue[0]['time'] >= self.analyzer.lookahead_seconds:
-                popped = self.spectral_delay_queue.popleft()
-                self._delayed_fft_band_values = popped['fft_band_values']
-                if popped['chroma_values'] is not None:
-                    self._delayed_chroma_values = popped['chroma_values']
-                self._delayed_smoothed_fft_band_values = popped['smoothed_fft_band_values']
-                if popped['smoothed_chroma_values'] is not None:
-                    self._delayed_smoothed_chroma_values = popped['smoothed_chroma_values']
-                self._delayed_asserved_fft_band = popped['asserved_fft_band']
-                self._delayed_band_proportion = popped['band_proportion']
-                self._delayed_band_means = popped['band_means']
-                self._delayed_smoothed_total_power = popped['smoothed_total_power']
-                self._delayed_asserved_total_power = popped['asserved_total_power']
-                self._delayed_band_peak = popped['band_peak']
-                self._delayed_band_flux = popped['band_flux']
-                self._delayed_is_song_change = popped['is_song_change']
-                self._delayed_is_verse_chorus_change = popped['is_verse_chorus_change']
+                popped_items.append(self.spectral_delay_queue.popleft())
             else:
                 break
+                
+        if len(popped_items) > 0:
+            best_popped = max(popped_items, key=lambda x: x['smoothed_total_power'])
+            
+            self._delayed_fft_band_values = best_popped['fft_band_values']
+            self._delayed_chroma_values = best_popped['chroma_values']
+            self._delayed_smoothed_fft_band_values = best_popped['smoothed_fft_band_values']
+            self._delayed_smoothed_chroma_values = best_popped['smoothed_chroma_values']
+            self._delayed_asserved_fft_band = best_popped['asserved_fft_band']
+            self._delayed_band_proportion = best_popped['band_proportion']
+            self._delayed_band_means = best_popped['band_means']
+            self._delayed_smoothed_total_power = best_popped['smoothed_total_power']
+            self._delayed_asserved_total_power = best_popped['asserved_total_power']
+            self._delayed_band_peak = best_popped['band_peak']
+            self._delayed_band_flux = best_popped['band_flux']
+            
+            self._delayed_is_song_change = any(x['is_song_change'] for x in popped_items)
+            self._delayed_is_verse_chorus_change = any(x['is_verse_chorus_change'] for x in popped_items)
 
     # ==========================================
     # FACADE PROPERTIES FOR MODES AND CONNECTORS

@@ -6,8 +6,8 @@
 // -----------------------------------------------------------------------------
 // USER CONFIGURATION
 // -----------------------------------------------------------------------------
-const char* ssid = "freebox_LAURE";
-const char* password = "laure128";
+#include "secrets.h"
+// Credentials (ssid and password) are now loaded from secrets.h
 
 // Physical ESP32 pins connected to the Data IN of the LED strips
 #define PIN_STRIP_1 2

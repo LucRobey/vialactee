@@ -5,6 +5,10 @@ import json
 import sys
 import os
 import struct
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("Fake_ESP32")
 
 # Add the project root (parent directory) to sys.path so we can import 'hardware.xxx'
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,7 +23,7 @@ PORT_STRIP_2 = 9002
 PORT_METADATA = 9003
 
 def main():
-    print("Starting Fake ESP32 Visualizer...")
+    logger.info("Starting Fake ESP32 Visualizer...")
     
     # Initialize the visualizer
     visualizer = FakeLedsVisualizer()
@@ -41,7 +45,7 @@ def main():
     sock_meta.bind(('127.0.0.1', PORT_METADATA))
     sock_meta.setblocking(False)
 
-    print(f"Fake ESP32 listening on UDP ports {PORT_STRIP_1}, {PORT_STRIP_2} (pixels) and {PORT_METADATA} (metadata)...")
+    logger.info(f"Fake ESP32 listening on UDP ports {PORT_STRIP_1}, {PORT_STRIP_2} (pixels) and {PORT_METADATA} (metadata)...")
 
     while True:
         # Check Strip 1

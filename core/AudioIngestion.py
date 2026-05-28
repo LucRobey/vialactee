@@ -216,12 +216,11 @@ class AudioIngestion:
         self.smoothed_fft_band_values = np.maximum(self.smoothed_fft_band_values, 0)
         
         # --- Chromagram Smoothing ---
-        if hasattr(self, 'chroma_values'):
-            chroma_smoothing = np.where(self.chroma_values > self.smoothed_chroma_values, attack, release)
-            self.smoothed_chroma_values = np.where(self.smoothed_chroma_values < 1,
-                                                   self.chroma_values,
-                                                   chroma_smoothing * self.smoothed_chroma_values + (1 - chroma_smoothing) * self.chroma_values)
-            self.smoothed_chroma_values = np.maximum(self.smoothed_chroma_values, 0)
+        chroma_smoothing = np.where(self.chroma_values > self.smoothed_chroma_values, attack, release)
+        self.smoothed_chroma_values = np.where(self.smoothed_chroma_values < 1,
+                                                self.chroma_values,
+                                                chroma_smoothing * self.smoothed_chroma_values + (1 - chroma_smoothing) * self.chroma_values)
+        self.smoothed_chroma_values = np.maximum(self.smoothed_chroma_values, 0)
         
         retention_mean = 0.999 ** fps_ratio
         self.band_means = np.where(self.band_means < 1,
@@ -286,13 +285,6 @@ class AudioIngestion:
             self.fft_band_values[band_index] += random.randint(-10,10)
             if ( self.fft_band_values[band_index] <= 0):
                 self.fft_band_values[band_index] = 20
-                
-        num=0
-        denom=0
-        for i in range(self.nb_of_fft_band):
-            num+=i*self.fft_band_values[i]
-            denom+=self.fft_band_values[i]
-        self.fft_bary =  (num/denom) /(self.nb_of_fft_band-1)
         
     def process_raw_audio(self, audio_data: np.ndarray) -> None:
         windowed_data = audio_data * self.hanning_window
@@ -300,20 +292,15 @@ class AudioIngestion:
         scale = 150.0 / (self.buffer_size / 1024.0)
         
         mel_bands = np.dot(self.weight_matrix, fft_result) * scale
-        for i in range(self.nb_of_fft_band):
-            self.fft_band_values[i] = int(mel_bands[i])
+        self.fft_band_values[:] = mel_bands.astype(int)
 
-        if hasattr(self, 'chroma_values'):
-            chroma_bands = np.dot(self.chroma_matrix, fft_result) * scale
-            for i in range(12):
-                self.chroma_values[i] = chroma_bands[i]
+        chroma_bands = np.dot(self.chroma_matrix, fft_result) * scale
+        self.chroma_values[:] = chroma_bands
 
 
 
     def asserv_total_power(self, fps_ratio: float) -> None:
-        instantPower = 0
-        for band_index in range(self.nb_of_fft_band):
-            instantPower+= self.fft_band_values[band_index]
+        instantPower = np.sum(self.fft_band_values)
 
         retention_power = 0.5 ** fps_ratio
         self.smoothed_total_power = retention_power * self.smoothed_total_power + (1 - retention_power) * instantPower

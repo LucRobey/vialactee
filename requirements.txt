@@ -1,0 +1,7 @@
+numpy
+sounddevice
+aiohttp
+pillow
+cython
+adafruit-blinka
+adafruit-circuitpython-neopixel

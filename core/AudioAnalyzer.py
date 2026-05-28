@@ -401,12 +401,10 @@ class AudioAnalyzer:
         weighted_buffer = self.odf_buffer * decay_curve
         
         # Fully vectorized cross-correlation phase evaluation
-        p_scores = np.zeros(tau_int)
         buffer_indices = np.arange(self.odf_buffer_size)
-        for p in range(tau_int):
-            # For offset `p`, map each frame in the buffer to its phase location inside the cycle_template
-            phase_indices = (buffer_indices - (self.odf_buffer_size - 1 - p)) % tau_int
-            p_scores[p] = np.sum(weighted_buffer * cycle_template[phase_indices])
+        p_arr = np.arange(tau_int)[:, None]
+        phase_indices = (buffer_indices[None, :] - (self.odf_buffer_size - 1 - p_arr)) % tau_int
+        p_scores = np.sum(weighted_buffer[None, :] * cycle_template[phase_indices], axis=1)
             
         if np.max(p_scores) > 1e-4:
             best_p_idx = int(np.argmax(p_scores))
@@ -570,17 +568,13 @@ class AudioAnalyzer:
             p_max = int(np.ceil(tau_val))
             
             p_arr = np.arange(p_max)[:, None]
-            phase_float = (const_part[None, :] + p_arr) % tau_val
-            norm_phi = phase_float / tau_val 
-            
+            norm_phi = ((const_part[None, :] + p_arr) % tau_val) / tau_val 
             abs_phi = np.abs(norm_phi - 0.5)
-            mask_high = abs_phi >= 0.475
-            mask_medium = abs_phi <= 0.025
             
             template_vals = np.full((p_max, odf_size), -0.2)
-            template_vals[mask_high] = 0.9 + 0.6 * (0.025 - (0.5 - abs_phi[mask_high]))
-            template_vals[abs_phi <= 0.025] = 0.6 + 0.3 * (0.025-(abs_phi[mask_medium]))
-            template_vals[((abs_phi >= 0.22) & (abs_phi <= 0.28))] = 0.0
+            template_vals = np.where(abs_phi >= 0.475, 0.9 + 0.6 * (abs_phi - 0.475), template_vals)
+            template_vals = np.where(abs_phi <= 0.025, 0.6 + 0.3 * (0.025 - abs_phi), template_vals)
+            template_vals = np.where((abs_phi >= 0.22) & (abs_phi <= 0.28), 0.0, template_vals)
             
             p_scores = np.sum(weighted_buffer[None, :] * template_vals, axis=1)
             

@@ -109,7 +109,6 @@ class Segment:
                     if self.way == "DOWN" and self.coords_array is not None:
                         active_coords = self.coords_array[::-1]
 
-                    import core.Transition_Engine as Transition_Engine
                     Transition_Engine.apply_transition(self.rgb_list, self.dual_rgb_list, td.transition_progress, td.transition_type, active_coords)
 
                 
@@ -174,20 +173,22 @@ class Segment:
         # Ensure the default mode is started upon initialization
         if self.activ_mode in self.modes:
             self.modes[self.activ_mode].start()
+        elif self.modes:
+            # Mode auto-load safety fallback
+            self.activ_mode = next(iter(self.modes))
+            self.modes[self.activ_mode].start()
         
     def update_leds(self) -> None:
         """
         Flush the local segment RGB buffer to the global LED array.
         """
-        # Vectorize the luminosity multiplication and convert to native python lists
-        scaled_colors = (self.rgb_list * self.listener.luminosite).astype(np.int32).tolist()
+        # Vectorize the luminosity multiplication directly to the global array
+        scaled_colors = (self.rgb_list * self.listener.luminosite).astype(np.int32)
         
         if self.way == "UP":
-            for i, led_index in enumerate(self.indexes):
-                self.leds[led_index] = scaled_colors[i]
+            self.leds[self.indexes] = scaled_colors
         else:
-            for i, led_index in enumerate(reversed(self.indexes)):
-                self.leds[led_index] = scaled_colors[i]
+            self.leds[self.indexes[::-1]] = scaled_colors
 
     def change_way(self, new_way: str) -> None:
         """
@@ -284,8 +285,7 @@ class Segment:
         Args:
             mode_name (str): The name of the target mode.
         """
-        if self.is_in_transition:
-            return
+        self.is_in_transition = False
             
         mode_name = self._normalize_mode_name(mode_name)
         if mode_name not in self.modes:

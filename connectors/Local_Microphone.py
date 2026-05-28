@@ -2,6 +2,7 @@ import numpy as np
 import asyncio
 import time
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class Local_Microphone:
         self.chunk_size = 1024  # Size of the microphone chunk callbacks
         self.buffer_size = 4096 # Size of the sliding FFT window
         self.audio_data = np.zeros(self.buffer_size)
+        self.audio_lock = threading.Lock()
         self.stream = None
 
         self.listener.audio_stream_state = "disabled" if (not self.useMicrophone or sd is None) else "starting"
@@ -75,7 +77,7 @@ class Local_Microphone:
             self.delay_index = self.delay_index + m
             if self.delay_index >= self.delay_frames:
                 if not getattr(self, '_delay_played_trigger', False):
-                    logger.info("(Local_mic) 🔊🔥 5-SECOND DELAY REACHED! DELAYED AUDIO NOW PLAYING OUT OF SPEAKERS! 🔥🔊")
+                    logger.info("(Local_mic) 5-SECOND DELAY REACHED! DELAYED AUDIO NOW PLAYING OUT OF SPEAKERS!")
                     self._delay_played_trigger = True
                 self.delay_index %= self.delay_frames
         elif outdata is not None:
@@ -96,8 +98,9 @@ class Local_Microphone:
             
         # Roll the continuous buffer backwards and append new data to the front
         m = len(incoming)
-        self.audio_data = np.roll(self.audio_data, -m)
-        self.audio_data[-m:] = incoming
+        with self.audio_lock:
+            self.audio_data = np.roll(self.audio_data, -m)
+            self.audio_data[-m:] = incoming
 
     async def listen_forever(self):
         if not self.useMicrophone or sd is None:
@@ -106,38 +109,41 @@ class Local_Microphone:
             while True:
                 await asyncio.sleep(1)
                 
-        try:
-            self.listener.audio_stream_state = "starting"
-            if self.simulate_delay > 0:
-                self.stream = sd.Stream(
-                    device=(self.input_device_id, None),
-                    samplerate=self.sample_rate,
-                    channels=(1, 2), # Explicitly handle 1 mono mic to 2 output speakers
-                    callback=self.audio_callback,
-                    blocksize=self.chunk_size
-                )
-            else:
-                self.stream = sd.InputStream(
-                    device=self.input_device_id,
-                    samplerate=self.sample_rate,
-                    channels=1,
-                    callback=self.audio_callback,
-                    blocksize=self.chunk_size
-                )
-            self.listener.audio_stream_state = "running"
-            self.listener.audio_stream_error = None
-            logger.info("(Local_mic) Microphone started correctly.")
-            with self.stream:
-                while True:
-                    await self.listen()
-                    # Limit the update loop slightly to match a smooth 60fps
-                    await asyncio.sleep(1/60)
-        except Exception as e:
-            self.listener.audio_stream_state = "error"
-            self.listener.audio_stream_error = str(e)
-            logger.error(f"(Local_mic) Stream Error: {e}")
-            while True:
-                await asyncio.sleep(1)
+        retry_delay = 1
+        while True:
+            try:
+                self.listener.audio_stream_state = "starting"
+                if self.simulate_delay > 0:
+                    self.stream = sd.Stream(
+                        device=(self.input_device_id, None),
+                        samplerate=self.sample_rate,
+                        channels=(1, 2), # Explicitly handle 1 mono mic to 2 output speakers
+                        callback=self.audio_callback,
+                        blocksize=self.chunk_size
+                    )
+                else:
+                    self.stream = sd.InputStream(
+                        device=self.input_device_id,
+                        samplerate=self.sample_rate,
+                        channels=1,
+                        callback=self.audio_callback,
+                        blocksize=self.chunk_size
+                    )
+                self.listener.audio_stream_state = "running"
+                self.listener.audio_stream_error = None
+                logger.info("(Local_mic) Microphone started correctly.")
+                with self.stream:
+                    retry_delay = 1
+                    while True:
+                        await self.listen()
+                        # Limit the update loop slightly to match a smooth 60fps
+                        await asyncio.sleep(1/60)
+            except Exception as e:
+                self.listener.audio_stream_state = "error"
+                self.listener.audio_stream_error = str(e)
+                logger.error(f"(Local_mic) Stream Error: {e}")
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(60, retry_delay * 2)
 
     async def listen(self):
         if hasattr(self, '_newest_sample_time'):
@@ -147,6 +153,8 @@ class Local_Microphone:
             time_since_newest = time.time() - self._newest_sample_time
             self.listener.dynamic_audio_latency = time_since_newest + algorithmic_delay
             
-        self.listener.process_raw_audio(self.audio_data)
+        with self.audio_lock:
+            audio_copy = self.audio_data.copy()
+        self.listener.process_raw_audio(audio_copy)
                 
         logger.debug(f"(Local_mic) Bands: {list(self.listener.fft_band_values)}")

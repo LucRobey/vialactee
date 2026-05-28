@@ -8,7 +8,9 @@ class Plasma_fire_mode(Mode.Mode):
         
         self.fade_ratio = infos.get("fire_fade_ratio", 0.3)
         self.height_multiplier = infos.get("fire_height_multiplier", 1.2)
-        self.hues = np.linspace(0.0, 0.15, self.nb_of_leds)
+        hue_start = infos.get("fire_hue_start", 0.0)
+        hue_end = infos.get("fire_hue_end", 0.15)
+        self.hues = np.linspace(hue_start, hue_end, self.nb_of_leds)
         self.target_colors = np.zeros((self.nb_of_leds, 3), dtype=np.int32)
         
     def run(self):
