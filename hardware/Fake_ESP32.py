@@ -85,6 +85,8 @@ def main():
                             payload.get("mode"),
                             payload.get("target"),
                         )
+                elif payload.get("type") == "analyzer_state":
+                    visualizer.update_analyzer_data(payload)
             except Exception:
                 # Ignore malformed packets to avoid killing the visualizer loop
                 pass

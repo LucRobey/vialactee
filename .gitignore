@@ -1,3 +1,6 @@
 __pycache__/
+*.log
+vialactee.log
 debug-*.log
 playground/
+.pytest_cache/

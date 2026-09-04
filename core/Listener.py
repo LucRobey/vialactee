@@ -30,6 +30,8 @@ class Listener:
         self._delayed_band_flux = np.zeros(self.ingestion.nb_of_fft_band)
         self._delayed_is_song_change = False
         self._delayed_is_verse_chorus_change = False
+        self._delayed_asserved_novelty = 0.0
+        self._delayed_combined_novelty = 0.0
 
     async def update_forever(self) -> None:
         while True:
@@ -83,7 +85,9 @@ class Listener:
             'band_peak': np.copy(self.analyzer.band_peak) if hasattr(self.analyzer, 'band_peak') else np.zeros(self.ingestion.nb_of_fft_band),
             'band_flux': np.copy(self.analyzer.band_flux) if hasattr(self.analyzer, 'band_flux') else np.zeros(self.ingestion.nb_of_fft_band),
             'is_song_change': getattr(self.analyzer, 'is_song_change', False),
-            'is_verse_chorus_change': getattr(self.analyzer, 'is_verse_chorus_change', False)
+            'is_verse_chorus_change': getattr(self.analyzer, 'is_verse_chorus_change', False),
+            'asserved_novelty': getattr(self.analyzer, 'asserved_novelty', 0.0),
+            'combined_novelty': getattr(self.analyzer, 'combined_novelty', 0.0)
         })
 
         popped_items = []
@@ -110,6 +114,8 @@ class Listener:
             
             self._delayed_is_song_change = any(x['is_song_change'] for x in popped_items)
             self._delayed_is_verse_chorus_change = any(x['is_verse_chorus_change'] for x in popped_items)
+            self._delayed_asserved_novelty = best_popped.get('asserved_novelty', 0.0)
+            self._delayed_combined_novelty = best_popped.get('combined_novelty', 0.0)
 
     # ==========================================
     # FACADE PROPERTIES FOR MODES AND CONNECTORS
@@ -195,6 +201,24 @@ class Listener:
     def beat_phase(self): return self.analyzer.beat_phase
 
     @property
+    def is_beat(self): return getattr(self.analyzer, 'is_beat', False)
+
+    @property
+    def is_real_beat(self): return getattr(self.analyzer, 'is_real_beat', False)
+
+    @property
+    def is_dropped_beat(self): return getattr(self.analyzer, 'is_dropped_beat', False)
+
+    @property
+    def beat_tag(self): return getattr(self.analyzer, 'current_beat_tag', 'Bass/Kick')
+
+    @property
+    def beat_confidence(self): return getattr(self.analyzer, 'confidence_score', 0.0)
+
+    @property
+    def flywheel_status(self): return getattr(self.analyzer, 'flywheel_status', 'coasting')
+
+    @property
     def is_song_change(self): return self._delayed_is_song_change
 
     @property
@@ -207,6 +231,18 @@ class Listener:
     def live_is_verse_chorus_change(self): return getattr(self.analyzer, 'is_verse_chorus_change', False)
 
     @property
+    def asserved_novelty(self): return self._delayed_asserved_novelty
+
+    @property
+    def combined_novelty(self): return self._delayed_combined_novelty
+
+    @property
+    def live_asserved_novelty(self): return getattr(self.analyzer, 'asserved_novelty', 0.0)
+
+    @property
+    def live_combined_novelty(self): return getattr(self.analyzer, 'combined_novelty', 0.0)
+
+    @property
     def bpm(self): return self.analyzer.bpm
 
     @property
@@ -214,4 +250,5 @@ class Listener:
 
     def process_raw_audio(self, audio_data: np.ndarray) -> None:
         self.ingestion.process_raw_audio(audio_data)
+
 

@@ -15,6 +15,8 @@ This directory acts as the central registry for the chandelier's static and dyna
 | `startWebApp` | Boolean | `true` | If true, launches the Vite React frontend on port 5173. |
 | `useMicrophone` | Boolean | `true` | If true, `Local_Microphone` actively listens to the system default input device. |
 | `HARDWARE_MODE` | String | `"auto"` | `"auto"`, `"rpi"`, or `"simulation"`. Determines if visualizer relies on physical ESP32 UDP networking or the Pygame visualizer. |
+| `show_music_analyser_panel` | Boolean | `false` | If true, renders the live Music Analyzer status HUD overlay in the Pygame simulation window. |
+| `printCpuFpsInfo` | Boolean | `true` | If true, periodically logs loop execution FPS and profiler timings. |
 | `printTimeOfCalculation` | Boolean | `false` | Enables timing logs for execution loops. |
 | `printModesDetails` | Boolean | `true` | Enables logs from visual modes (overridden by `modesToPrintDetails`). |
 | `printMicrophoneDetails` | Boolean | `false` | Enables logs from `Local_Microphone`. |

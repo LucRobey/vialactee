@@ -2,6 +2,7 @@ import numpy as np
 import socket
 import json
 import struct
+import time
 from hardware.HardwareInterface import HardwareInterface
 
 # Sideband UDP port used by Udp_Sender to ship segment metadata (current mode,
@@ -20,6 +21,11 @@ class Udp_Sender(HardwareInterface):
         self.nb_of_leds = nb_of_leds
         self.data = np.zeros((nb_of_leds, 3), dtype=np.uint8)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._analyzer = None
+
+    def set_analyzer(self, analyzer):
+        """Store a reference to the AudioAnalyzer so show() can stream its state to the simulator."""
+        self._analyzer = analyzer
 
     def __getitem__(self, index):
         return self.data[index]
@@ -48,6 +54,37 @@ class Udp_Sender(HardwareInterface):
                 self.sock.sendto(packet, (self.ip, self.port))
             except Exception as e:
                 print(f"UDP Error to {self.ip}:{self.port} -> {e}")
+
+        if self._analyzer is not None:
+            self._send_analyzer_state()
+
+    def _send_analyzer_state(self):
+        """Send a compact JSON snapshot of the analyzer state on the metadata port."""
+        a = self._analyzer
+        payload = {
+            "type": "analyzer_state",
+            "bpm": round(a.bpm, 1),
+            "phase": round(a.speaker_phase, 3),
+            "status": a.flywheel_status,
+            "confidence": round(a.confidence_score, 3),
+            "beat_tag": a.current_beat_tag,
+            "is_beat": bool(a.is_beat),
+            "is_real_beat": bool(a.is_real_beat),
+            "is_dropped_beat": bool(a.is_dropped_beat),
+            "flux_baseline": round(a.rolling_flux_baseline, 1),
+            "asserved_novelty": round(a.asserved_novelty, 3),
+            "combined_novelty": round(a.combined_novelty, 3),
+            "is_song_change": bool(a.is_song_change),
+            "is_verse_chorus_change": bool(a.is_verse_chorus_change),
+            "silence_frames": int(a.silence_frames),
+        }
+        try:
+            self.sock.sendto(
+                json.dumps(payload).encode("utf-8"),
+                (self.ip, SEGMENT_METADATA_PORT),
+            )
+        except Exception:
+            pass
 
     def set_segment_mode(self, segment_name, mode_name, target_mode_name=None):
         """
@@ -79,3 +116,4 @@ class Udp_Sender(HardwareInterface):
             
     def __del__(self):
         self.close()
+

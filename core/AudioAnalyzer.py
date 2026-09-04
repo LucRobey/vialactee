@@ -1,608 +1,514 @@
+"""
+AudioAnalyzer.py - Predictive Rhythm & Structural Event Analysis Engine
+
+Implements the Anticipation Flywheel ("Oracle") architecture for the Vialactée
+LED chandelier. Uses an O(1) precomputed Pearson template bank, circular logarithmic
+tempo-class math, and 5-second look-ahead phase back-projection to drive a continuous
+speaker-time flywheel with zero lag, breakdown coasting, and frequency-band beat tagging.
+"""
+
+from __future__ import annotations
+from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
 import time
-import numpy as np
-from typing import Dict, Any, Optional, Tuple
 import logging
-from collections import deque
+import numpy as np
+
+from core.RhythmConfig import RhythmConfig
+from core.StructuralNoveltyDetector import StructuralNoveltyDetector
+
+if TYPE_CHECKING:
+    from core.AudioIngestion import AudioIngestion
 
 logger = logging.getLogger(__name__)
 
+
+# =====================================================================
+# HARMONIC TEMPO-CLASS ARITHMETIC CORE
+# =====================================================================
+
+def bpm_to_class(bpm: float) -> float:
+    """Map a linear BPM to a circular float in [0.0, 1.0) based on octave scale."""
+    return float(np.log2(max(1.0, bpm) / 60.0) % 1.0)
+
+
+def class_to_bpm_candidates(bpm_class: float) -> List[float]:
+    """Returns the primary harmonic multipliers (octaves & fifths) for a given tempo class."""
+    base_bpm = 60.0 * (2.0 ** (bpm_class % 1.0))
+    return [
+        base_bpm * 0.5,    # Sub-octave (e.g., 60 BPM)
+        base_bpm * 0.75,   # Sub-fifth (e.g., 90 BPM)
+        base_bpm * 1.0,    # Base tempo (e.g., 120 BPM)
+        base_bpm * 1.5,    # Perfect fifth (e.g., 180 BPM)
+        base_bpm * 2.0     # Double octave (e.g., 240 BPM -> clipped in judge)
+    ]
+
+
+def tempo_class_distance(f1: float, f2: float) -> float:
+    """Shortest circular distance on the [0.0, 1.0) logarithmic ring."""
+    d = abs(f1 - f2)
+    return min(d, 1.0 - d)
+
+
+def harmonic_alignment(current_class: float, long_term_class: float) -> Tuple[float, float]:
+    """
+    Checks straight octaves AND perfect fifths (1.5x / shift = log2(1.5))
+    to safely align without polyrhythmic jumps.
+    """
+    shift = np.log2(1.5)  # approx 0.58496
+    d_oct = tempo_class_distance(current_class, long_term_class)
+    d_fifth_up = tempo_class_distance(current_class, (long_term_class + shift) % 1.0)
+    d_fifth_down = tempo_class_distance(current_class, (long_term_class - shift) % 1.0)
+
+    min_d = min(d_oct, d_fifth_up, d_fifth_down)
+
+    if min_d == d_oct:
+        aligned_class = current_class
+    elif min_d == d_fifth_up:
+        aligned_class = (current_class - shift) % 1.0
+    else:
+        aligned_class = (current_class + shift) % 1.0
+
+    return min_d, aligned_class
+
+
+# =====================================================================
+# FAST TEMPLATE BANK (O(1) Precomputed Pearson Correlation)
+# =====================================================================
+
+class FastTemplateBank:
+    """
+    Precomputes and caches normalized triangular beat pulse templates.
+    Allows Pearson cross-correlation via high-speed compiled NumPy dot products.
+    """
+
+    def __init__(self, btrack_fps: float = 60.0, odf_size: int = 300) -> None:
+        self.btrack_fps = btrack_fps
+        self.odf_size = odf_size
+        self.templates: Dict[float, np.ndarray] = {}
+
+        buffer_indices = np.arange(self.odf_size)
+        self.const_part = buffer_indices - (self.odf_size - 1)
+
+    def get_template(self, bpm_val: float) -> np.ndarray:
+        bpm_key = round(float(bpm_val), 2)
+        if bpm_key in self.templates:
+            return self.templates[bpm_key]
+
+        tau_val = 60.0 * self.btrack_fps / bpm_key
+        p_max = max(1, int(np.ceil(tau_val)))
+
+        p_arr = np.arange(p_max)[:, None]
+        phase_float = (self.const_part[None, :] + p_arr) % tau_val
+        norm_phi = phase_float / tau_val
+
+        # Sharp Triangle Pulse
+        beat_dist = np.minimum(norm_phi, 1.0 - norm_phi)
+        template_vals = np.full((p_max, self.odf_size), -1.0)
+        mask_beat = beat_dist < 0.1
+        template_vals[mask_beat] = 1.0 - (beat_dist[mask_beat] / 0.1)
+
+        template_mean = np.mean(template_vals, axis=1, keepdims=True)
+        template_centered = template_vals - template_mean
+        template_std = np.sqrt(np.sum(template_centered ** 2, axis=1, keepdims=True)) + 1e-6
+
+        # Pre-normalized template for rapid matrix multiplication
+        normalized_template = template_centered / template_std
+        self.templates[bpm_key] = normalized_template
+        return normalized_template
+
+
+# =====================================================================
+# TEMPLATE EVALUATION FUNCTIONS
+# =====================================================================
+
+def evaluate_specific_bpms(
+    odf_buffer: np.ndarray,
+    candidate_bpms: List[float],
+    template_bank: FastTemplateBank,
+    decay_curve: np.ndarray,
+    config: Optional[RhythmConfig] = None
+) -> Tuple[float, float, int]:
+    """Heavy Judge: Evaluates candidate BPMs and scores them with a human prior."""
+    cfg = config or RhythmConfig()
+
+    weighted_buffer = odf_buffer * decay_curve
+    buffer_mean = np.mean(weighted_buffer)
+    buffer_centered = weighted_buffer - buffer_mean
+    buffer_std = np.sqrt(np.sum(buffer_centered ** 2)) + 1e-6
+
+    best_score_pearson = -float('inf')
+    best_bpm_pearson = candidate_bpms[0] if candidate_bpms else 120.0
+    best_phase_idx_pearson = 0
+
+    for bpm_val in candidate_bpms:
+        if not (cfg.bpm_min <= bpm_val <= cfg.bpm_max):
+            continue
+
+        normalized_template = template_bank.get_template(bpm_val)
+
+        # O(1) Vectorized Pearson Correlation via Dot Product
+        p_scores_pearson = (normalized_template @ buffer_centered) / buffer_std
+
+        # Human Prior centered around configured center BPM
+        human_prior = 0.5 + 0.5 * np.exp(
+            -0.5 * ((bpm_val - cfg.human_prior_center) / cfg.human_prior_sigma) ** 2
+        )
+        max_idx = int(np.argmax(p_scores_pearson))
+        weighted_score = float(p_scores_pearson[max_idx] * human_prior)
+
+        if weighted_score > best_score_pearson:
+            best_score_pearson = weighted_score
+            best_bpm_pearson = bpm_val
+            best_phase_idx_pearson = max_idx
+
+    return best_bpm_pearson, best_score_pearson, best_phase_idx_pearson
+
+
+def class_based_phase_sweep(
+    odf_buffer: np.ndarray,
+    class_evals: np.ndarray,
+    template_bank: FastTemplateBank,
+    decay_curve: np.ndarray,
+    config: Optional[RhythmConfig] = None
+) -> Tuple[float, float, int]:
+    """Fast Scout: Sweeps logarithmic tempo classes to identify dominant rhythm."""
+    cfg = config or RhythmConfig()
+
+    weighted_buffer = odf_buffer * decay_curve
+    buffer_mean = np.mean(weighted_buffer)
+    buffer_centered = weighted_buffer - buffer_mean
+    buffer_std = np.sqrt(np.sum(buffer_centered ** 2)) + 1e-6
+
+    best_overall_score = -float('inf')
+    best_overall_class = float(class_evals[0] % 1.0) if len(class_evals) > 0 else 0.0
+    best_phase_idx = 0
+
+    for class_val in class_evals:
+        c = float(class_val % 1.0)
+        base_bpm = 60.0 * (2.0 ** c)
+        eval_bpm = base_bpm if base_bpm >= 90.0 else base_bpm * 2.0
+
+        normalized_template = template_bank.get_template(eval_bpm)
+        p_scores = (normalized_template @ buffer_centered) / buffer_std
+
+        human_prior = 0.5 + 0.5 * np.exp(
+            -0.5 * ((eval_bpm - cfg.human_prior_center) / cfg.human_prior_sigma) ** 2
+        )
+        max_idx = int(np.argmax(p_scores))
+        tau_max_score = float(p_scores[max_idx] * human_prior)
+
+        if tau_max_score > best_overall_score:
+            best_overall_score = tau_max_score
+            best_overall_class = c
+            best_phase_idx = max_idx
+
+    return best_overall_class, best_overall_score, best_phase_idx
+
+
+# =====================================================================
+# AUDIO ANALYZER CORE CLASS
+# =====================================================================
+
 class AudioAnalyzer:
-    def __init__(self, ingestion: Any, infos: Dict[str, Any]) -> None:
+    """
+    Core algorithmic analyzer for beat tracking and structural event detection.
+    
+    Maintains a 5-second look-ahead buffer, back-projects future phase estimates
+    to speaker playback time, and drives a continuous mechanical flywheel.
+    """
+
+    def __init__(
+        self,
+        ingestion: AudioIngestion,
+        infos: Dict[str, Any],
+        config: Optional[RhythmConfig] = None
+    ) -> None:
         self.ingestion = ingestion
-        self.hardware_latency = infos.get("latency", 0.0)
-        self.decay_base = infos.get("decay_base", 0.98)
-        self.build_band_peaks()
+        self.config = config if config is not None else RhythmConfig()
 
-
-    def build_band_peaks(self) -> None:
-        # We start looking for peaks roughly 2.0 "standard deviations" above the exponential mean
-        self.peak_sensitivity = np.ones(self.ingestion.nb_of_fft_band) * 2.0
-        self.delta_time_peak = 0.15 #seconde
-        self.peak_times = []
-        self.band_peak = []
-        self.band_flux = []
-        for band_index in range(self.ingestion.nb_of_fft_band):
-            self.peak_times.append(0.0)
-            self.band_peak.append(0)
-            self.band_flux.append(0.0)
-
-        self.peak_times = np.array(self.peak_times)
-        self.band_peak = np.array(self.band_peak)
-        self.band_flux = np.array(self.band_flux)
-        
-        # BPM Anticipation Grid Variables
-        self.bpm = 90.0
-        self.bpm_trust = 0.0
-        self.binary_trust = 0.0
-        self.last_beat_time = time.time()
-        self.last_update_time = time.time()
-        self.beat_count = 0
-        self.beat_phase = 0.0
-        
-        # New Internal Hybrid Tracker Data Arrays
-        self.standalone_phase = 0.0
-        self.standalone_bpm = 120.0
-        self.standalone_beat_count = 0
-        self.last_standalone_beat_count = 0
-        self.last_standalone_phase = 0.0
-        self.standalone_sub_beat_locked = -1
-        self.time_since_sweep = 0.0
-        self.future_queue = deque()
-        self.lookahead_seconds = 5.0
-        
-        # --- BTrack Internal Arrays ---
-        # Assuming 60 FPS update rate
+        self.hardware_latency = float(infos.get("latency", 0.0))
+        self.decay_base = float(infos.get("decay_base", 0.98))
+        self.lookahead_seconds = float(infos.get("fakeDelay", 5.0))
         self.btrack_fps = 60.0
-        self.odf_buffer_size = 512 # ~8.5 seconds of history
+
+        # Subsystems
+        self.novelty_detector = StructuralNoveltyDetector(
+            nb_fft_bands=self.ingestion.nb_of_fft_band,
+            config=self.config
+        )
+
+        # 5-second ODF Look-Ahead Buffer (~300 frames at 60fps)
+        self.odf_buffer_size = max(60, int(self.lookahead_seconds * self.btrack_fps))
         self.odf_buffer = np.zeros(self.odf_buffer_size)
-        
-        # Tempo limits (60 BPM to 180 BPM)
-        self.tau_min = int(self.btrack_fps * 60.0 / 180.0)
-        self.tau_max = int(self.btrack_fps * 60.0 / 60.0)
-        
-        # Gaussian weighting around ideal 120 BPM in actual BPM space
-        taus = np.arange(self.tau_min, self.tau_max)
-        bpms = 60.0 * self.btrack_fps / taus
-        self.tempo_weights = np.exp(-0.5 * ((bpms - 120.0) / 20.0)**2)
-        
-        self.btrack_tau = 30 # Default 120 BPM
-        self.previous_best_p = 0
-        
-        # --- Structural Novelty & Event Trigger Variables ---
-        self.stm_timbre = np.zeros(self.ingestion.nb_of_fft_band)
-        self.ltm_timbre = np.zeros(self.ingestion.nb_of_fft_band)
-        self.stm_power = 0.0
-        self.ltm_power = 0.0
-        self.stm_weight = 0.02   # ~1.5s smoothing at 60fps
-        self.ltm_weight = 0.0015 # ~6.0s smoothing at 60fps
-        
-        self.novelty_lm = 0.5
-        self.novelty_gm = 0.5
-        self.asserved_novelty = 0.0
-        self.combined_novelty = 0.0
-        
-        self.SONG_NOVELTY_ASSERVED_TH = 0.8
-        
-        self.song_changes_times = []
-        self.structural_changes_times = []
-        self.last_structural_change_time = 0.0
-        self.STRUCTURAL_COOLDOWN_SECONDS = 20.0
-        
-        self.silence_frames = 0
-        self.SILENCE_THRESHOLD_FRAMES = int(1.5 * 60) # ~90 frames
-        
-        self.long_term_bpm = 120.0
-        self.ltm_trust = 10.0
-        self.bpm_jump_threshold = 8.0
-        
-        # Real-time event consumption flags (True for exactly one frame!)
-        self.is_verse_chorus_change = False
-        self.is_song_change = False
-        
-        # Acapella/Vocal breakdown tracking
+        self.decay_curve = np.exp(-1.5 * np.linspace(1.0, 0.0, self.odf_buffer_size))
+
+        # Vectorized template bank
+        self.template_bank = FastTemplateBank(btrack_fps=self.btrack_fps, odf_size=self.odf_buffer_size)
+
+        # Flywheel & Beat State (at Speaker Time T_speaker)
+        self.speaker_phase = 0.0
+        self.bpm = 120.0
+        self.long_term_class = bpm_to_class(120.0)
+        self.confidence_score = 0.0
+        self.flywheel_status = "coasting"
+        self.time_since_sweep = 0.0
+
+        self.beat_count = 0
+        self.last_beat_time = time.time()
+
+        # Per-frame event flags
+        self.is_beat = False
+        self.is_real_beat = False
+        self.is_dropped_beat = False
+        self.current_beat_tag = "Bass/Kick"
+
+        # Onset & Peak Detection buffers
+        self.peak_sensitivity = np.ones(self.ingestion.nb_of_fft_band) * 1.8
+        self.peak_times = np.zeros(self.ingestion.nb_of_fft_band)
+        self.band_peak = np.zeros(self.ingestion.nb_of_fft_band, dtype=int)
+        self.band_flux = np.zeros(self.ingestion.nb_of_fft_band)
+        self.prev_fft_band_values = np.zeros(self.ingestion.nb_of_fft_band)
+        self.smoothed_flux = np.zeros(self.ingestion.nb_of_fft_band)
+        self.rolling_flux_baseline = 0.0
+
+        # Vocals tracking (stub / planned)
         self.vocals_present = False
-        self.acapella_events_times = []
-        self.last_acapella_time = 0.0
-        self.ACAPELLA_COOLDOWN_SECONDS = 5.0
-        
-        
+
+    # ==========================================
+    # PROPERTIES & FACADES
+    # ==========================================
+
+    @property
+    def beat_phase(self) -> float:
+        """Normalized fractional phase [0.0, 1.0) of the current beat at speaker time."""
+        return float(self.speaker_phase)
+
+    @property
+    def standalone_phase(self) -> float:
+        """Alias for beat_phase for backward compatibility."""
+        return float(self.speaker_phase)
+
+    @property
+    def standalone_bpm(self) -> float:
+        """Alias for bpm for backward compatibility."""
+        return float(self.bpm)
+
+    # --- Structural Novelty Delegation Properties ---
+    @property
+    def is_song_change(self) -> bool:
+        return self.novelty_detector.is_song_change
+
+    @is_song_change.setter
+    def is_song_change(self, val: bool) -> None:
+        self.novelty_detector.is_song_change = val
+
+    @property
+    def is_verse_chorus_change(self) -> bool:
+        return self.novelty_detector.is_verse_chorus_change
+
+    @is_verse_chorus_change.setter
+    def is_verse_chorus_change(self, val: bool) -> None:
+        self.novelty_detector.is_verse_chorus_change = val
+
+    @property
+    def asserved_novelty(self) -> float:
+        return self.novelty_detector.asserved_novelty
+
+    @property
+    def combined_novelty(self) -> float:
+        return self.novelty_detector.combined_novelty
+
+    @property
+    def silence_frames(self) -> int:
+        return self.novelty_detector.silence_frames
+
+    @property
+    def song_changes_times(self) -> List[float]:
+        return self.novelty_detector.song_changes_times
+
+    @property
+    def structural_changes_times(self) -> List[float]:
+        return self.novelty_detector.structural_changes_times
+
+    # ==========================================
+    # STRUCTURAL NOVELTY DELEGATION
+    # ==========================================
+
     def update_structural_novelty(self, current_time: float, dt: float, fps_ratio: float) -> None:
-        # current_time from param
-        
-        # 1. Reset boolean triggers from last frame
-        self.is_verse_chorus_change = False
-        self.is_song_change = False
-        
-        # 2. Extract current state
-        current_timbre = self.ingestion.band_proportion
-        current_power = self.ingestion.smoothed_total_power
-        
-        # 3. Update Short-Term and Long-Term Memory (STM/LTM)
-        stm_retention = 0.98 ** fps_ratio
-        ltm_retention = 0.9985 ** fps_ratio
-        
-        self.stm_timbre = stm_retention * self.stm_timbre + (1 - stm_retention) * current_timbre
-        self.ltm_timbre = ltm_retention * self.ltm_timbre + (1 - ltm_retention) * current_timbre
-        
-        self.stm_power = stm_retention * self.stm_power + (1 - stm_retention) * current_power
-        self.ltm_power = ltm_retention * self.ltm_power + (1 - ltm_retention) * current_power
-        
-        # 4. Calculate Euclidean Distance (Timbral) and Relative Distance (Power)
-        timbral_novelty = np.linalg.norm(self.stm_timbre - self.ltm_timbre)
-        power_novelty = np.abs(self.stm_power - self.ltm_power) / (self.ltm_power + 1.0)
-        
-        # 5. Combined Novelty Score
-        self.combined_novelty = timbral_novelty + (power_novelty * 0.2)
-        
-        # === Local & Global Max Envelope (Asserved Normalization) ===
-        if self.combined_novelty >= self.novelty_lm:
-            self.novelty_lm = self.combined_novelty
-        else:
-            self.novelty_lm = max(0.15, self.novelty_lm * (0.9995 ** fps_ratio))
-            
-        passed_gm = self.combined_novelty > self.novelty_gm
-        if self.combined_novelty >= self.novelty_gm:
-            self.novelty_gm = 1.01 * self.combined_novelty
-        else:
-            self.novelty_gm *= 1 + (0.005 * fps_ratio) * ((self.novelty_lm / max(0.001, self.novelty_gm)) - 0.9)
-            
-        safe_gm = max(0.01, self.novelty_gm)
-        target_asserved = self.combined_novelty / safe_gm
-        self.asserved_novelty += min(1.0, 0.4 * fps_ratio) * (target_asserved - self.asserved_novelty)
-        
-        # === A. Detect Seamless DJ Crossfade (Song Change Type I) ===
-        if self.asserved_novelty > self.SONG_NOVELTY_ASSERVED_TH:
-            if len(self.song_changes_times) == 0 or (current_time - self.song_changes_times[-1]) > 20.0:
-                self.song_changes_times.append(current_time)
-                self.is_song_change = True
-                
-                # We no longer clear the future_queue here to allow the remaining 5 seconds 
-                # of the previous song's beats to play out accurately.
-                self.standalone_beat_count = 0
-                self.last_standalone_beat_count = 0
-                self.standalone_sub_beat_locked = -1
-                self.standalone_phase = 0.0
-                self.ingestion.band_means.fill(0.0)
-                self.ingestion.smoothed_fft_band_values.fill(0.0)
-                self.odf_buffer.fill(0.0)
-                
-                # Organic Shock Absorber limit
-                self.novelty_gm = self.combined_novelty * 1.5 
-                self.asserved_novelty = 0.0
-                self.ltm_timbre = np.copy(self.stm_timbre)
-                self.ltm_power = self.stm_power
-                
-        # === B. Detect Verse/Chorus Boundary ===
-        elif passed_gm:
-            if (current_time - self.last_structural_change_time) > self.STRUCTURAL_COOLDOWN_SECONDS:
-                self.structural_changes_times.append(current_time)
-                self.last_structural_change_time = current_time
-                self.is_verse_chorus_change = True
-                
-                self.asserved_novelty = 0.0
-                self.ltm_timbre = np.copy(self.stm_timbre)
-                self.ltm_power = self.stm_power
-                
-        # === C. Song Change Detection (Silence Drop) ===
-        if current_power < 5.0:
-            self.silence_frames += 1
-        else:
-            self.silence_frames = 0
-            
-        if self.silence_frames > self.SILENCE_THRESHOLD_FRAMES:
-            if len(self.song_changes_times) == 0 or (current_time - self.song_changes_times[-1]) > 5.0:
-                self.song_changes_times.append(current_time)
-                self.is_song_change = True
-                
-                # We no longer clear the future_queue here
-                self.standalone_beat_count = 0
-                self.last_standalone_beat_count = 0
-                self.standalone_sub_beat_locked = -1
-                self.standalone_phase = 0.0
-                self.ingestion.band_means.fill(0.0)
-                self.ingestion.smoothed_fft_band_values.fill(0.0)
-                self.odf_buffer.fill(0.0)
-                
-                self.silence_frames = 0
-                
-    def detect_band_peaks(self, current_time: float, dt: float, fps_ratio: float) -> None:
-        """
-        Spectral Flux onset detection.
-        Calculates positive energy influx to find sharp transients.
-        """
-        if not hasattr(self, 'prev_fft_band_values'):
-            self.prev_fft_band_values = np.zeros(self.ingestion.nb_of_fft_band)
-        if not hasattr(self, 'smoothed_flux'):
-            self.smoothed_flux = np.zeros(self.ingestion.nb_of_fft_band)
-            self.peak_sensitivity = np.ones(self.ingestion.nb_of_fft_band) * 1.8
-            
-        # Spectral Flux: Positive difference between current frame and previous frame
-        flux = np.maximum(0, self.ingestion.fft_band_values - self.prev_fft_band_values)
+        """Delegates structural novelty calculation to StructuralNoveltyDetector."""
+        self.novelty_detector.update(
+            current_timbre=self.ingestion.band_proportion,
+            current_power=self.ingestion.smoothed_total_power,
+            current_time=current_time,
+            dt=dt,
+            fps_ratio=fps_ratio
+        )
+        if self.novelty_detector.is_song_change:
+            self.beat_count = 0
+            self.speaker_phase = 0.0
+
+    # ==========================================
+    # SPECTRAL ONSETS & ANTICIPATION FLYWHEEL
+    # ==========================================
+
+    def _compute_spectral_flux(self, current_time: float, fps_ratio: float) -> np.ndarray:
+        """Calculates positive spectral flux, smoothed flux, and adaptive peak thresholds."""
+        flux = np.maximum(0.0, self.ingestion.fft_band_values - self.prev_fft_band_values)
         self.band_flux = flux
         self.prev_fft_band_values = np.copy(self.ingestion.fft_band_values)
-        
-        # current_time from param
-        
-        # Smooth the flux to establish a dynamic baseline of recent transients
-        flux_retention = 0.95 ** fps_ratio
-        self.smoothed_flux = np.where(self.smoothed_flux < 1.0, 
-                                      flux, 
-                                      flux_retention * self.smoothed_flux + (1 - flux_retention) * flux)
-        
-        # A valid transient is significantly higher than the rolling average of transients.
-        # Add a minor noise_floor derived from band_means to ignore silent noise crackles.
-        noise_floor = np.maximum(10.0, self.ingestion.band_means * 0.05)
+
+        flux_retention = self.config.flux_retention_base ** fps_ratio
+        self.smoothed_flux = np.where(
+            self.smoothed_flux < 1.0,
+            flux,
+            flux_retention * self.smoothed_flux + (1 - flux_retention) * flux
+        )
+
+        noise_floor = np.maximum(
+            self.config.noise_floor_min,
+            self.ingestion.band_means * self.config.noise_floor_ratio
+        )
         variance_threshold = (self.smoothed_flux * self.peak_sensitivity) + noise_floor
-        
-        # Vectorized peak detection
-        is_peak = (flux > variance_threshold) & (current_time > self.peak_times + self.delta_time_peak)
-        
+
+        is_peak = (flux > variance_threshold) & (
+            current_time > self.peak_times + self.config.delta_time_peak
+        )
         self.band_peak = is_peak.astype(int)
-        
-        # Update peak times where peak detected
         self.peak_times = np.where(is_peak, current_time, self.peak_times)
-        
-        # Adjust sensitivity: up heavily on beat to prevent double-hits, down slowly otherwise
-        self.peak_sensitivity = np.where(is_peak, 
-                                         np.minimum(self.peak_sensitivity + 1.0, 4.0),
-                                         np.maximum(self.peak_sensitivity - (0.006 * fps_ratio), 1.5))
-                                         
-        # --- PURE PYTHON BTRACK TEMPO & PHASE TRACKING ---
-        # 1. Onset Detection Function (ODF) Aggregation
-        # Multi-band weighting: favor bass (indices 0,1), suppress mids (3,4,5), favor cymbals/highs (6,7)
-        band_weights = np.array([1.5, 1, 0.7, 0.2, 0, 0.1, 0.2, 0.5])
-        if len(self.band_flux) == len(band_weights):
-            weighted_flux = self.band_flux * band_weights
-            gated_flux = np.where(is_peak, weighted_flux, 0.0)
-        else:
-            weighted_flux = self.band_flux[0:3]
-            gated_flux = np.where(is_peak[0:3], weighted_flux, 0.0) # Safe fallback
 
-        # 1a. Hard Onset Gating & Logarithmic Compression (Volume Decoupling)
-        # We strictly block volume from bands that didn't mathematically hit an onset peak,
-        # and compress the energy drastically to explicitly equalise 2000-volume kicks and 50-volume cymbals.
-        energy = np.log1p(np.sum(gated_flux))
-        
-        # 2. Update ODF Ring Buffer
+        self.peak_sensitivity = np.where(
+            is_peak,
+            np.minimum(self.peak_sensitivity + 1.0, self.config.peak_sensitivity_max),
+            np.maximum(self.peak_sensitivity - (0.006 * fps_ratio), self.config.peak_sensitivity_min)
+        )
+        return flux
+
+    def _ingest_odf_buffer(self, flux: np.ndarray) -> bool:
+        """Ingests multi-band weighted flux into the 5-second ODF lookahead buffer."""
+        if len(flux) >= 8:
+            custom_flux = float(2.0 * np.sum(flux[0:2]) + 0.5 * np.sum(flux[-2:]))
+        elif len(flux) >= 2:
+            custom_flux = float(2.0 * np.sum(flux[0:2]))
+        else:
+            custom_flux = float(np.sum(flux))
+
         self.odf_buffer[:-1] = self.odf_buffer[1:]
-        self.odf_buffer[-1] = energy
-        
-        # 3. Autocorrelation (Finding the Tempo/BPM)
-        # Centralize to remove DC offset and improve finding rhythmic periodicities
-        centered_odf = self.odf_buffer - np.mean(self.odf_buffer)
-        acf = np.correlate(centered_odf, centered_odf, mode='full')
-        acf = acf[len(self.odf_buffer)-1:] # Extract only positive lags
-        
-        # UNBIASED ESTIMATOR:
-        # A finite window autocorrelation inherently slopes downwards as a triangle.
-        # We divide by the overlap length at each lag to flatten the baseline.
-        overlap_lengths = np.arange(self.odf_buffer_size, 0, -1)
-        unbiased_acf = acf / overlap_lengths
-        
-        # Multiply by Tempo Preference Weights
-        weighted_acf = np.maximum(0, unbiased_acf[self.tau_min:self.tau_max]) * self.tempo_weights
-        
-        # Strictly look for LOCAL PEAKS to avoid sliding down the edge of the tau=0 mountain
-        # Use 'inf' at boundaries so the very edges (like 180BPM) can never accidentally be considered "peaks"
-        left = np.r_[float('inf'), weighted_acf[:-1]]
-        right = np.r_[weighted_acf[1:], float('inf')]
-        peaks_mask = (weighted_acf > left) & (weighted_acf > right)
-        weighted_peaks = np.where(peaks_mask, weighted_acf, 0)
-        
-        if np.max(weighted_peaks) > 0:
-            current_tau = 60.0 * self.btrack_fps / max(1.0, self.bpm)
-            
-            # --- HARMONIC & POLYRHYTHMIC FOLDING ---
-            # Instead of punishing multipliers, we add their energy to the primary fundamental slower tempo!
-            folded_peaks = np.copy(weighted_peaks)
-            for i in range(len(weighted_peaks)):
-                tau = self.tau_min + i
-                
-                # 1. Fold half-time (double tau) back into main
-                if tau * 2 <= self.tau_max:
-                    idx_double = int(tau * 2) - self.tau_min
-                    if idx_double < len(weighted_peaks):
-                        folded_peaks[i] += 0.5 * weighted_peaks[idx_double]
-                        
-                # 2. Fold double-time (half tau) back into main
-                if tau / 2.0 >= self.tau_min:
-                    idx_half = int(tau / 2.0) - self.tau_min
-                    if idx_half >= 0:
-                        folded_peaks[i] += 0.5 * weighted_peaks[idx_half]
-                        
-                # 3. Fold 1.5x polyrhythm / dotted rhythm (tau / 1.5) back into main (fundamental lower tempo)
-                if tau / 1.5 >= self.tau_min:
-                    idx_15 = int(tau / 1.5) - self.tau_min
-                    if idx_15 >= 0 and idx_15 < len(weighted_peaks):
-                        # Strong reward: 1.5x is extremely common in EDM and pop (triplets)
-                        folded_peaks[i] += 0.6 * weighted_peaks[idx_15]
-                        
-            weighted_peaks = folded_peaks
-                
-            best_tau_idx = int(np.argmax(weighted_peaks))
-            global_max_val = weighted_peaks[best_tau_idx]
-            
-            # Store the absolute global maximum BPM before applying local stubbornness
-            self.global_target_bpm = 60.0 * self.btrack_fps / max(1.0, self.tau_min + best_tau_idx)
-            
-            # --- Check if there are peaks that agree with current BPM ---
-            expected_idx = int(round(current_tau - self.tau_min))
-            
-            window = 3 # Margin of error in frames
-            start_idx = max(0, expected_idx - window)
-            end_idx = min(len(weighted_peaks), expected_idx + window + 1)
-            
-            if start_idx < end_idx:
-                local_max_idx = start_idx + int(np.argmax(weighted_peaks[start_idx:end_idx]))
-                local_max_val = weighted_peaks[local_max_idx]
-                
-                # If there's a peak nearby that is not too small (e.g. >50% of the absolute max),
-                # we prefer it to avoid jumping abruptly to a different BPM
-                if local_max_val > 0.5 * global_max_val:
-                    best_tau_idx = local_max_idx
-            
-            # --- Sub-frame Parabolic Interpolation for smooth Target BPM ---
-            val = weighted_acf[best_tau_idx]
-            left_val = weighted_acf[max(0, best_tau_idx - 1)]
-            right_val = weighted_acf[min(len(weighted_acf)-1, best_tau_idx + 1)]
-            
-            # offset = (left - right) / (2 * (left - 2*val + right))
-            offset = 0.0
-            divisor = 2.0 * (left_val - 2.0*val + right_val)
-            if divisor != 0:
-                offset = (left_val - right_val) / divisor
-                offset = max(-1.0, min(1.0, offset))
-                
-            self.btrack_tau = self.tau_min + best_tau_idx + offset
-            
-            target_bpm = 60.0 * self.btrack_fps / max(1.0, self.btrack_tau)
-            
-            # We must never yank the BPM so violently that it breaks the PLL!
-            # High trust -> absolute inertia (0.999), meaning rock-solid tempo.
-            # Low trust -> smooth but bounded drift (0.992 minimum).
-            base_inertia = max(0.992, self.decay_base + 0.012)
-            decay_factor = min(0.9995, base_inertia + 0.007 * self.bpm_trust)
-            self.bpm = decay_factor * self.bpm + (1.0 - decay_factor) * target_bpm
-            
-            baseline_variance = max(1e-4, unbiased_acf[0])
-            self.binary_trust = min(1.0, np.max(weighted_peaks) / baseline_variance)
-            
-        # 4. Phase Alignment (Bipolar Pulse Template Cross-Correlation)
-        # We find the exact phase offset by rolling the hand-drawn discrete wave template 
-        # (with negative-mean penalty regions) across the entire 8.5 second buffer.
-        tau_int = int(self.btrack_tau)
-        
-        # Build the discrete template for one beat cycle of length `tau_int`
-        cycle_template = np.full(tau_int, -0.2)
-        
-        # [0.95, 1.05] -> 1.0 (Main Beat)
-        w_main = max(1, int(tau_int * 0.05))
-        for i in range(w_main + 1):
-            cycle_template[i] = 1.0
-            cycle_template[-i] = 1.0
-            
-        # [0.45, 0.55] -> 0.6 (Sub Beat / 8th note)
-        w_sub = max(1, int(tau_int * 0.05))
-        c_sub = int(tau_int * 0.5)
-        for i in range(max(0, c_sub - w_sub), min(tau_int, c_sub + w_sub + 1)):
-            cycle_template[i] = 0.6
-            
-        # [0.22, 0.28] and [0.72, 0.78] -> 0.3 (Sub-Sub Beats / 16th notes)
-        w_ss = max(1, int(tau_int * 0.03))
-        c_ss1 = int(tau_int * 0.25)
-        c_ss2 = int(tau_int * 0.75)
-        for i in range(max(0, c_ss1 - w_ss), min(tau_int, c_ss1 + w_ss + 1)):
-            cycle_template[i] = 0.3
-        for i in range(max(0, c_ss2 - w_ss), min(tau_int, c_ss2 + w_ss + 1)):
-            cycle_template[i] = 0.3
-            
-        # Apply elastic exponential decay over the buffer history
-        decay_curve = np.exp(-1.5 * np.linspace(1.0, 0.0, self.odf_buffer_size))
-        weighted_buffer = self.odf_buffer * decay_curve
-        
-        # Fully vectorized cross-correlation phase evaluation
-        buffer_indices = np.arange(self.odf_buffer_size)
-        p_arr = np.arange(tau_int)[:, None]
-        phase_indices = (buffer_indices[None, :] - (self.odf_buffer_size - 1 - p_arr)) % tau_int
-        p_scores = np.sum(weighted_buffer[None, :] * cycle_template[phase_indices], axis=1)
-            
-        if np.max(p_scores) > 1e-4:
-            best_p_idx = int(np.argmax(p_scores))
-            
-            # Sub-frame phase interpolation
-            val_p = p_scores[best_p_idx]
-            left_p = p_scores[(best_p_idx - 1) % tau_int]
-            right_p = p_scores[(best_p_idx + 1) % tau_int]
-            
-            offset_p = 0.0
-            div_p = 2.0 * (left_p - 2.0*val_p + right_p)
-            if div_p != 0:
-                offset_p = (left_p - right_p) / div_p
-                offset_p = max(-1.0, min(1.0, offset_p))
-                
-            best_p = float(best_p_idx) + offset_p
-            self.previous_best_p = best_p_idx
-        else:
-            # Silence/Freewheel: naturally count down the phase
-            best_p = (self.previous_best_p - 1) % max(1, tau_int)
-            self.previous_best_p = int(best_p)
-        
-        # 5. Continuous Freewheeling Phase & Hybrid Tracker
-        dt = dt
-        self.last_update_time = current_time
-        
+        self.odf_buffer[-1] = custom_flux
+
+        decay = self.config.rolling_flux_decay
+        self.rolling_flux_baseline = decay * self.rolling_flux_baseline + (1.0 - decay) * custom_flux
+        is_strong_peak = custom_flux > (
+            self.rolling_flux_baseline * self.config.strong_peak_multiplier + 0.1
+        )
+        return is_strong_peak
+
+    def _run_oracle_sweep(self, dt: float, is_strong_peak: bool) -> None:
+        """Runs the Fast Scout and Heavy Judge to track tempo and back-project phase."""
         self.time_since_sweep += dt
-        if self.time_since_sweep >= 0.2: # Sweeps every 0.2 seconds
-            coarse_bpm = self.standalone_bpm if (50 < self.standalone_bpm < 220) else 120.0
-            
-            total_latency = self.ingestion.dynamic_audio_latency + self.hardware_latency
-            latency_phase_shift = (coarse_bpm / 60.0) * total_latency
-            expected_p_phase = (self.standalone_phase - latency_phase_shift + 1.0) % 1.0
-            
-            # Only inject phase inertia if we have already confidently tracked at least a few beats
-            inertia_param = expected_p_phase if self.standalone_beat_count > 5 else None
-            
-            precise_bpm, precise_phase = self.localized_continuous_phase_sweep(
-                center_bpm=coarse_bpm, 
-                search_radius=1.5, 
-                step=0.1,
-                expected_phase=inertia_param
+        if not (is_strong_peak or self.time_since_sweep >= self.config.sweep_interval):
+            return
+
+        if self.beat_count < 4 or self.confidence_score < self.config.moderate_confidence_threshold:
+            class_evals = np.arange(0.0, 1.0, self.config.coarse_class_step)
+        else:
+            rad = self.config.fine_class_radius
+            class_evals = np.arange(
+                self.long_term_class - rad,
+                self.long_term_class + rad + 0.001,
+                self.config.coarse_class_step
             )
-            
-            # --- BPM Trust Song Change Logic ---
-            current_trust = self.binary_trust
-            bpm_retention = 0.9 ** fps_ratio
-            self.long_term_bpm = bpm_retention * self.long_term_bpm + (1 - bpm_retention) * precise_bpm
-            self.ltm_trust = bpm_retention * self.ltm_trust + (1 - bpm_retention) * current_trust
-            
-            bpm_divergence = np.abs(precise_bpm - self.long_term_bpm)
-            
-            if bpm_divergence > self.bpm_jump_threshold and current_trust < (self.ltm_trust * 0.6):
-                if len(self.song_changes_times) == 0 or (current_time - self.song_changes_times[-1]) > 5.0:
-                    self.song_changes_times.append(current_time)
-                    self.is_song_change = True
-                    
-                    # We no longer clear the future_queue here
-                    self.standalone_beat_count = 0
-                    self.last_standalone_beat_count = 0
-                    self.standalone_sub_beat_locked = -1
-                    self.standalone_phase = 0.0
-                    self.ingestion.band_means.fill(0.0)
-                    self.ingestion.smoothed_fft_band_values.fill(0.0)
-                    self.odf_buffer.fill(0.0)
-                    
-                    # Instantly accept the new tempo reality
-                    self.long_term_bpm = precise_bpm
-            # -----------------------------------
-            
-            self.standalone_bpm = precise_bpm
-            total_latency = self.ingestion.dynamic_audio_latency + self.hardware_latency # Hardware/Buffer latency
-            latency_phase_shift = (precise_bpm / 60.0) * total_latency
-            target_phase = (precise_phase + latency_phase_shift) % 1.0
-            
-            # Eliminate tug-of-war: Hard reset onto the precise sweep if within temporal sanity
-            phase_diff_sweep = (target_phase - self.standalone_phase + 0.5) % 1.0 - 0.5
-            if abs(phase_diff_sweep) < 0.15:
-                self.standalone_phase += phase_diff_sweep
-                
+
+        best_class, sweep_score, scout_phase_idx = class_based_phase_sweep(
+            self.odf_buffer, class_evals, self.template_bank, self.decay_curve, self.config
+        )
+        min_d, aligned_class = harmonic_alignment(best_class, self.long_term_class)
+
+        candidates = class_to_bpm_candidates(aligned_class)
+        best_bpm, score_pearson, judge_phase_idx = evaluate_specific_bpms(
+            self.odf_buffer, candidates, self.template_bank, self.decay_curve, self.config
+        )
+
+        self.confidence_score = score_pearson
+
+        if score_pearson >= self.config.moderate_confidence_threshold:
+            self.flywheel_status = "locked"
+            self.long_term_class = bpm_to_class(best_bpm)
+            self.bpm = best_bpm
             self.time_since_sweep = 0.0
-            
-        # Free-wheel phase advance
-        phase_delta = (self.standalone_bpm / 60.0) * dt
-        self.standalone_phase += phase_delta
-        
-        while self.standalone_phase >= 1.0:
-            self.standalone_phase -= 1.0
-            self.standalone_beat_count += 1
-        while self.standalone_phase < 0.0:
-            self.standalone_phase += 1.0
-            self.standalone_beat_count -= 1
-            
-        is_beat = False
-        is_sub_beat = False
-        if self.standalone_beat_count > self.last_standalone_beat_count:
-            is_beat = True
-            self.last_standalone_beat_count = self.standalone_beat_count
-            
-        if self.last_standalone_phase < 0.5 and self.standalone_phase >= 0.5:
-            if self.standalone_sub_beat_locked < self.last_standalone_beat_count:
-                is_sub_beat = True
-                self.standalone_sub_beat_locked = self.last_standalone_beat_count
-                
-        self.last_standalone_phase = self.standalone_phase
-        
-        # High res flux analog for real-time: decouple frequency bands
-        bass_flux_val = np.sum(flux[0:2])
-        treble_flux_val = np.sum(flux[6:8])
-        
-        self.future_queue.append({
-            'timestamp': current_time,
-            'bpm': self.standalone_bpm,
-            'bass_flux': bass_flux_val,
-            'treble_flux': treble_flux_val,
-            'is_beat': is_beat,
-            'is_sub_beat': is_sub_beat,
-            'phase': self.standalone_phase,
-            'beat_count': self.standalone_beat_count
-        })
-        
-        # RIGID BEAT POPPING
-        # Pop beats precisely when they are lookahead_seconds old
-        best_p = 0
-        while len(self.future_queue) > 0:
-            time_diff = current_time - self.future_queue[0]['timestamp']
-            
-            if time_diff < self.lookahead_seconds:
-                break
-                
-            popped = self.future_queue.popleft()
-            self.bpm = popped['bpm']
-            self.beat_phase = popped['phase']
-            
-            # The beat counters & triggers 
-            if popped['is_beat']:
-                self.beat_count += 1
-                self.last_beat_time = current_time
-            elif popped['is_sub_beat']:
-                pass # You can use is_sub_beat trigger if Mode_master needs it
 
-        self.previous_best_p = best_p
+            tau_val = 60.0 * self.btrack_fps / self.bpm
+            ingest_phase = (judge_phase_idx % tau_val) / tau_val
 
-    def localized_continuous_phase_sweep(self, center_bpm: float, search_radius: float = 1.5, step: float = 0.1, expected_phase: Optional[float] = None) -> Tuple[float, float]:
-        odf_size = len(self.odf_buffer)
-        decay_curve = np.exp(-1.5 * np.linspace(1.0, 0.0, odf_size))
-        weighted_buffer = self.odf_buffer * decay_curve
-        
-        best_overall_score = -float('inf')
-        best_overall_bpm = center_bpm
-        best_overall_p = 0
-        
-        buffer_indices = np.arange(odf_size)
-        bpm_evals = np.arange(max(50.0, center_bpm - search_radius), min(220.0, center_bpm + search_radius + step/2), step)
-        
-        btrack_fps = self.btrack_fps
-        const_part = buffer_indices - (odf_size - 1)
-        
-        for bpm_val in bpm_evals:
-            tau_val = 60.0 * btrack_fps / bpm_val
-            p_max = int(np.ceil(tau_val))
-            
-            p_arr = np.arange(p_max)[:, None]
-            norm_phi = ((const_part[None, :] + p_arr) % tau_val) / tau_val 
-            abs_phi = np.abs(norm_phi - 0.5)
-            
-            template_vals = np.full((p_max, odf_size), -0.2)
-            template_vals = np.where(abs_phi >= 0.475, 0.9 + 0.6 * (abs_phi - 0.475), template_vals)
-            template_vals = np.where(abs_phi <= 0.025, 0.6 + 0.3 * (0.025 - abs_phi), template_vals)
-            template_vals = np.where((abs_phi >= 0.22) & (abs_phi <= 0.28), 0.0, template_vals)
-            
-            p_scores = np.sum(weighted_buffer[None, :] * template_vals, axis=1)
-            
-            # --- NEW: PHASE INERTIA LOGIC ---
-            # If we have established momentum, heavily penalize severe phase jumps
-            # Eliminates 180-degree phase inversions caused by loud hi-hats during drops.
-            if expected_phase is not None:
-                expected_p = (expected_phase * tau_val) % tau_val
-                dist_p = np.minimum(np.abs(p_arr[:, 0] - expected_p), tau_val - np.abs(p_arr[:, 0] - expected_p))
-                norm_dist = dist_p / tau_val
-                
-                # Strict 0.20 variance prevents "tug-of-war" snapping
-                phase_inertia = np.exp(-0.5 * (norm_dist / 0.20)**2)
-                p_scores = p_scores * (0.1 + 0.9 * phase_inertia)
-            # --------------------------------
-                
-            tau_max_score = np.max(p_scores)
-            best_p = np.argmax(p_scores)
-            
-            gaussian_weight = np.exp(-0.5 * ((bpm_val - center_bpm) / (search_radius * 1.5))**2)
-            weighted_score = tau_max_score * (0.8 + 0.2 * gaussian_weight)
-            
-            if weighted_score > best_overall_score:
-                best_overall_score = weighted_score
-                best_overall_bpm = bpm_val
-                best_overall_p = best_p
-                
-        optimal_tau = 60.0 * btrack_fps / best_overall_bpm
-        precise_phase = best_overall_p / optimal_tau
-        return best_overall_bpm, precise_phase
-            
+            # Back-project to Speaker Time T_speaker
+            total_delay = (
+                self.lookahead_seconds
+                + self.ingestion.dynamic_audio_latency
+                + self.hardware_latency
+            )
+            latency_phase = (self.bpm / 60.0) * total_delay
+            target_speaker_phase = (ingest_phase - latency_phase) % 1.0
+
+            phase_err = (target_speaker_phase - self.speaker_phase + 0.5) % 1.0 - 0.5
+
+            # Smart Anticipation Soft-Snap
+            snap_ratio = (
+                self.config.high_snap_ratio
+                if score_pearson > self.config.high_confidence_threshold
+                else self.config.moderate_snap_ratio
+            )
+            self.speaker_phase = (self.speaker_phase + snap_ratio * phase_err) % 1.0
+        else:
+            self.flywheel_status = "coasting"
+
+    def _advance_flywheel(self, current_time: float, dt: float) -> None:
+        """Advances continuous speaker flywheel phase and commits beat triggers & classification."""
+        phase_increment = (self.bpm / 60.0) * dt
+        self.speaker_phase += phase_increment
+
+        if self.speaker_phase >= 1.0:
+            self.speaker_phase -= 1.0
+            self.beat_count += 1
+            self.is_beat = True
+            self.last_beat_time = current_time
+
+            # Validate physical presence: Check local ODF energy at speaker time window (indices 0..6)
+            local_energy = float(np.max(self.odf_buffer[0:7]))
+            if (
+                local_energy > (self.config.real_beat_baseline_ratio * self.rolling_flux_baseline)
+                or local_energy > self.config.real_beat_energy_floor
+            ):
+                self.is_real_beat = True
+                self.is_dropped_beat = False
+            else:
+                self.is_real_beat = False
+                self.is_dropped_beat = True
+
+            # Transient Frequency-Band Classification
+            if len(self.band_flux) >= 8:
+                b_val = float(np.sum(self.band_flux[0:2]))
+                m_val = float(np.sum(self.band_flux[2:6]))
+                h_val = float(np.sum(self.band_flux[6:8]))
+                if b_val >= m_val and b_val >= h_val:
+                    self.current_beat_tag = "Bass/Kick"
+                elif m_val >= b_val and m_val >= h_val:
+                    self.current_beat_tag = "Snare/Mid"
+                else:
+                    self.current_beat_tag = "Hi-hat/Cymbal"
+            else:
+                self.current_beat_tag = "Bass/Kick"
+
+    def detect_band_peaks(self, current_time: float, dt: float, fps_ratio: float) -> None:
+        """
+        Calculates positive spectral flux, ingests into the 5-second look-ahead buffer,
+        runs the Oracle predictive phase sweep, and advances the continuous speaker flywheel.
+        """
+        # 1. Reset per-frame triggers
+        self.is_beat = False
+        self.is_real_beat = False
+        self.is_dropped_beat = False
+
+        # 2. Pipeline stages
+        flux = self._compute_spectral_flux(current_time, fps_ratio)
+        is_strong_peak = self._ingest_odf_buffer(flux)
+        self._run_oracle_sweep(dt, is_strong_peak)
+        self._advance_flywheel(current_time, dt)

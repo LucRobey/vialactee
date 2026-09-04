@@ -7,5 +7,6 @@
     "log_level": "INFO",
     "luminosity": 46,
     "sensibility": 45,
-    "auto_transition_time": 80
+    "auto_transition_time": 80,
+    "show_music_analyser_panel": true
 }

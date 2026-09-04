@@ -101,9 +101,10 @@ async def main() -> Optional[str]:
         default_config = {
             "startServer"     : False,
             "useMicrophone"   : True,
-            "printCpuFpsInfo" : False,
-            "HARDWARE_MODE"   : "auto", # 'auto', 'rpi', or 'simulation'
-            "log_level"       : "INFO"
+            "printCpuFpsInfo" : True,
+            "HARDWARE_MODE"   : "simulation", # 'auto', 'rpi', or 'simulation'
+            "log_level"       : "INFO",
+            "show_music_analyser_panel" : True
         }
         with open(config_path, 'w') as f:
             json.dump(default_config, f, indent=4)
@@ -130,6 +131,12 @@ async def main() -> Optional[str]:
     listener = Listener.Listener(infos)
     
     leds1, leds2 = HardwareFactory.create_hardware(infos)
+
+    # Wire the analyzer to the simulator so the HUD panel can render live state
+    if infos.get("show_music_analyser_panel", False):
+        if hasattr(leds1, 'set_analyzer'):
+            leds1.set_analyzer(listener.analyzer)
+
     mode_master = Mode_master.Mode_master(listener, infos, leds1, leds2)                                 
    
     local_microphone = Local_Microphone.Local_Microphone(listener, infos)
@@ -146,7 +153,7 @@ async def main() -> Optional[str]:
     ]
     if infos.get("startServer", False):
         tasks.append(asyncio.create_task(connector.start_server(), name="Connector"))
-    tasks.append(asyncio.create_task(launch_webapp(infos), name="WebApp"))
+        tasks.append(asyncio.create_task(launch_webapp(infos), name="WebApp"))
 
     try:
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)

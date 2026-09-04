@@ -352,6 +352,10 @@ class Segment:
         """
         self.isBlocked = False
 
+    def unblock(self) -> None:
+        """Alias for unBlock (PEP8 naming)."""
+        self.unBlock()
+
 
     #Pass from user friendly name (example : plasma fire) to the internal name (example : Plasma_Fire_mode)
     def _normalize_mode_name(self, mode_name: str) -> str:

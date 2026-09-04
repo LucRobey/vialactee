@@ -21,6 +21,8 @@ class FakeLedsVisualizer:
             cls._instance.clock = pygame.time.Clock()
             # Maps the segment_def internal name (e.g. "segment_v4") to its current mode info
             cls._instance.segment_modes = {}
+            # Latest analyzer state received from the main process (for HUD overlay)
+            cls._instance._analyzer_data = None
             
             # Exact chandelier geometry mapping
             cls._instance.segments_def = [
@@ -138,7 +140,176 @@ class FakeLedsVisualizer:
                         
                     cursor += 1
             
+        self._draw_analyzer_hud()
         pygame.display.flip()
+
+    # ==========================================
+    # ANALYZER HUD OVERLAY
+    # ==========================================
+
+    def update_analyzer_data(self, data):
+        """Store latest analyzer state received from the main process via UDP."""
+        self._analyzer_data = data
+
+    def _draw_analyzer_hud(self):
+        """Draw the music analyzer HUD overlay in the bottom-left corner."""
+        if self._analyzer_data is None:
+            return
+        d = self._analyzer_data
+
+        # Lazy-init HUD fonts
+        if not hasattr(self, '_hud_fonts_ready'):
+            self._hud_fonts_ready = True
+            self._hud_title_font = pygame.font.SysFont('consolas', 14, bold=True)
+            self._hud_section_font = pygame.font.SysFont('consolas', 12, bold=True)
+            self._hud_label_font = pygame.font.SysFont('consolas', 11)
+            self._hud_value_font = pygame.font.SysFont('consolas', 11, bold=True)
+
+        # Panel geometry
+        px, py = 10, 545
+        pw, ph = 295, 345
+
+        # Semi-transparent background
+        bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
+        bg.fill((12, 12, 20, 215))
+        self.screen.blit(bg, (px, py))
+        pygame.draw.rect(self.screen, (160, 60, 220), (px, py, pw, ph), 2)
+
+        # Title
+        title = self._hud_title_font.render("MUSIC ANALYZER", True, (220, 220, 255))
+        self.screen.blit(title, (px + pw // 2 - title.get_width() // 2, py + 8))
+        pygame.draw.line(self.screen, (80, 40, 120),
+                         (px + 8, py + 28), (px + pw - 8, py + 28), 1)
+
+        lx = px + 12          # label x
+        vx = px + 120         # value x
+        bar_w = 120           # bar width
+        cy = py + 36          # cursor y
+
+        # ── FLYWHEEL ──────────────────────────────────
+        self._hud_section("FLYWHEEL", lx, cy, (200, 80, 255))
+        cy += 18
+
+        # BPM
+        self._hud_row("BPM", f"{d.get('bpm', 0):.1f}", lx, vx, cy)
+        cy += 16
+
+        # Phase bar
+        phase = d.get('phase', 0)
+        self._hud_label("Phase", lx, cy)
+        self._hud_bar(vx, cy + 1, bar_w, 11, phase, (0, 200, 255))
+        self._hud_small_val(f"{phase:.2f}", vx + bar_w + 6, cy)
+        cy += 16
+
+        # Status
+        status = d.get('status', 'coasting')
+        locked = status == 'locked'
+        color = (50, 255, 100) if locked else (255, 200, 50)
+        self._hud_label("Status", lx, cy)
+        pygame.draw.circle(self.screen, color, (vx + 5, cy + 6), 4)
+        s = self._hud_value_font.render(status, True, color)
+        self.screen.blit(s, (vx + 14, cy))
+        cy += 16
+
+        # Confidence bar
+        conf = d.get('confidence', 0)
+        self._hud_label("Confidence", lx, cy)
+        bar_color = (50, 255, 100) if conf >= 0.3 else (255, 60, 60)
+        self._hud_bar(vx, cy + 1, bar_w, 11, min(1.0, max(0.0, conf)), bar_color)
+        self._hud_small_val(f"{conf:.2f}", vx + bar_w + 6, cy)
+        cy += 16
+
+        # Beat Tag
+        tag = d.get('beat_tag', '')
+        self._hud_label("Beat Tag", lx, cy)
+        s = self._hud_value_font.render(tag, True, (100, 220, 255))
+        self.screen.blit(s, (vx, cy))
+        cy += 22
+
+        # ── separator ──
+        pygame.draw.line(self.screen, (80, 40, 120),
+                         (px + 8, cy), (px + pw - 8, cy), 1)
+        cy += 8
+
+        # ── ONSETS ────────────────────────────────────
+        self._hud_section("ONSETS", lx, cy, (200, 80, 255))
+        cy += 18
+
+        # Beat / Real / Dropped indicators
+        self._hud_label("Beat", lx, cy)
+        self._hud_indicator(lx + 40, cy + 5, d.get('is_beat', False), (50, 120, 255))
+        self._hud_label("Real", lx + 65, cy)
+        self._hud_indicator(lx + 100, cy + 5, d.get('is_real_beat', False), (50, 255, 50))
+        self._hud_label("Drop", lx + 125, cy)
+        self._hud_indicator(lx + 160, cy + 5, d.get('is_dropped_beat', False), (255, 50, 50))
+        cy += 16
+
+        # Flux Baseline
+        self._hud_row("Flux Base", f"{d.get('flux_baseline', 0):.1f}", lx, vx, cy)
+        cy += 22
+
+        # ── separator ──
+        pygame.draw.line(self.screen, (80, 40, 120),
+                         (px + 8, cy), (px + pw - 8, cy), 1)
+        cy += 8
+
+        # ── STRUCTURE ─────────────────────────────────
+        self._hud_section("STRUCTURE", lx, cy, (200, 80, 255))
+        cy += 18
+
+        # Asserved Novelty bar
+        nov = d.get('asserved_novelty', 0)
+        self._hud_label("Novelty", lx, cy)
+        bar_color = (255, 220, 50) if nov < 0.6 else (255, 60, 60)
+        self._hud_bar(vx, cy + 1, bar_w, 11, min(1.0, max(0.0, nov)), bar_color)
+        self._hud_small_val(f"{nov:.2f}", vx + bar_w + 6, cy)
+        cy += 16
+
+        # Combined Novelty
+        self._hud_row("Combined", f"{d.get('combined_novelty', 0):.3f}", lx, vx, cy)
+        cy += 16
+
+        # Song / V-C / Silence row
+        self._hud_label("Song", lx, cy)
+        self._hud_indicator(lx + 38, cy + 5, d.get('is_song_change', False), (255, 50, 50))
+        self._hud_label("V/C", lx + 63, cy)
+        self._hud_indicator(lx + 93, cy + 5, d.get('is_verse_chorus_change', False), (255, 220, 50))
+        sil = d.get('silence_frames', 0)
+        self._hud_label("Silence", lx + 118, cy)
+        sil_color = (255, 60, 60) if sil > 30 else (200, 200, 200)
+        s = self._hud_value_font.render(str(sil), True, sil_color)
+        self.screen.blit(s, (lx + 170, cy))
+
+    # ── HUD drawing helpers ──
+
+    def _hud_section(self, text, x, y, color):
+        s = self._hud_section_font.render(text, True, color)
+        self.screen.blit(s, (x, y))
+
+    def _hud_label(self, text, x, y):
+        s = self._hud_label_font.render(text, True, (150, 150, 160))
+        self.screen.blit(s, (x, y))
+
+    def _hud_row(self, label, value, lx, vx, y):
+        self._hud_label(label, lx, y)
+        s = self._hud_value_font.render(str(value), True, (255, 255, 255))
+        self.screen.blit(s, (vx, y))
+
+    def _hud_small_val(self, text, x, y):
+        s = self._hud_label_font.render(text, True, (200, 200, 200))
+        self.screen.blit(s, (x, y))
+
+    def _hud_bar(self, x, y, w, h, value, fill_color):
+        pygame.draw.rect(self.screen, (40, 40, 50), (x, y, w, h))
+        fw = int(max(0.0, min(1.0, value)) * w)
+        if fw > 0:
+            pygame.draw.rect(self.screen, fill_color, (x, y, fw, h))
+        pygame.draw.rect(self.screen, (70, 70, 80), (x, y, w, h), 1)
+
+    def _hud_indicator(self, x, y, active, active_color):
+        color = active_color if active else (45, 45, 50)
+        pygame.draw.circle(self.screen, color, (x, y), 5)
+        pygame.draw.circle(self.screen, (80, 80, 90), (x, y), 5, 1)
 
 visualizer = FakeLedsVisualizer()
 
@@ -149,6 +320,10 @@ class Fake_leds(HardwareInterface):
         self.nb_of_leds = nb_of_leds
         self.data = np.zeros((nb_of_leds, 3), dtype=int)
         self.strip_id = visualizer.register_strip(nb_of_leds)
+        self._analyzer = None
+
+    def set_analyzer(self, analyzer):
+        self._analyzer = analyzer
 
     def __getitem__(self, index):
         return self.data[index]
@@ -170,6 +345,25 @@ class Fake_leds(HardwareInterface):
         pass
 
     def show(self):
+        if self._analyzer is not None:
+            a = self._analyzer
+            visualizer.update_analyzer_data({
+                "type": "analyzer_state",
+                "bpm": round(a.bpm, 1),
+                "phase": round(a.speaker_phase, 3),
+                "status": a.flywheel_status,
+                "confidence": round(a.confidence_score, 3),
+                "beat_tag": a.current_beat_tag,
+                "is_beat": bool(a.is_beat),
+                "is_real_beat": bool(a.is_real_beat),
+                "is_dropped_beat": bool(a.is_dropped_beat),
+                "flux_baseline": round(a.rolling_flux_baseline, 1),
+                "asserved_novelty": round(a.asserved_novelty, 3),
+                "combined_novelty": round(a.combined_novelty, 3),
+                "is_song_change": bool(a.is_song_change),
+                "is_verse_chorus_change": bool(a.is_verse_chorus_change),
+                "silence_frames": int(a.silence_frames),
+            })
         visualizer.update_strip(self.strip_id, self.data)
         visualizer.show()
 
@@ -182,3 +376,4 @@ class Fake_leds(HardwareInterface):
         """
         internal_name = segment_name.lower().replace(" ", "_")
         visualizer.set_segment_mode(internal_name, mode_name, target_mode_name)
+

@@ -375,6 +375,83 @@ def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: 
             blended = (base_color * (1.0 - fire_alpha) + blast_color * fire_alpha).astype(np.int32)
             rgb_list_old[mask_blast] = blended
 
+def apply_horizontal_wipe(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, beam_thickness: float = 0.04, reverse: bool = False) -> None:
+    """ Sweeps horizontally across the room with a laser boundary line. """
+    progress = max(0.0, min(1.0, float(progress)))
+    if progress <= 0.0: return
+    if progress >= 1.0:
+        np.copyto(rgb_list_old, rgb_list_new)
+        return
+
+    nx = coords[:, 0] / max(1.0, float(ROOM_MAX_X))
+    if reverse:
+        nx = 1.0 - nx
+
+    half_beam = beam_thickness / 2.0
+    mask_new = nx < (progress - half_beam)
+    np.copyto(rgb_list_old, rgb_list_new, where=mask_new[:, np.newaxis])
+
+    mask_beam = np.abs(nx - progress) <= half_beam
+    if np.any(mask_beam):
+        np.copyto(rgb_list_old, np.array([255, 255, 255]), where=mask_beam[:, np.newaxis])
+
+def apply_vertical_wipe(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, beam_thickness: float = 0.04) -> None:
+    """ Sweeps vertically across the room with a laser boundary line. """
+    progress = max(0.0, min(1.0, float(progress)))
+    if progress <= 0.0: return
+    if progress >= 1.0:
+        np.copyto(rgb_list_old, rgb_list_new)
+        return
+
+    ny = coords[:, 1] / max(1.0, float(ROOM_MAX_Y))
+    half_beam = beam_thickness / 2.0
+    mask_new = ny < (progress - half_beam)
+    np.copyto(rgb_list_old, rgb_list_new, where=mask_new[:, np.newaxis])
+
+    mask_beam = np.abs(ny - progress) <= half_beam
+    if np.any(mask_beam):
+        np.copyto(rgb_list_old, np.array([255, 255, 255]), where=mask_beam[:, np.newaxis])
+
+def apply_box_wipe(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, beam_thickness: float = 0.04) -> None:
+    """ Sweeps outwards from the geometric center of the installation in a rectangular frame. """
+    progress = max(0.0, min(1.0, float(progress)))
+    if progress <= 0.0: return
+    if progress >= 1.0:
+        np.copyto(rgb_list_old, rgb_list_new)
+        return
+
+    cx = ROOM_MAX_X / 2.0
+    cy = ROOM_MAX_Y / 2.0
+    dist = np.maximum(np.abs(coords[:, 0] - cx) / max(1.0, cx), np.abs(coords[:, 1] - cy) / max(1.0, cy))
+
+    half_beam = beam_thickness / 2.0
+    mask_new = dist < (progress - half_beam)
+    np.copyto(rgb_list_old, rgb_list_new, where=mask_new[:, np.newaxis])
+
+    mask_beam = np.abs(dist - progress) <= half_beam
+    if np.any(mask_beam):
+        np.copyto(rgb_list_old, np.array([255, 255, 255]), where=mask_beam[:, np.newaxis])
+
+def apply_spiral_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, beam_thickness: float = 0.04) -> None:
+    """ Radial clock wipe pivoting around the installation center. """
+    progress = max(0.0, min(1.0, float(progress)))
+    if progress <= 0.0: return
+    if progress >= 1.0:
+        np.copyto(rgb_list_old, rgb_list_new)
+        return
+
+    cx = ROOM_MAX_X / 2.0
+    cy = ROOM_MAX_Y / 2.0
+    angles = (np.arctan2(coords[:, 1] - cy, coords[:, 0] - cx) + np.pi) / (2.0 * np.pi)
+
+    half_beam = beam_thickness / 2.0
+    mask_new = angles < (progress - half_beam)
+    np.copyto(rgb_list_old, rgb_list_new, where=mask_new[:, np.newaxis])
+
+    mask_beam = np.abs(angles - progress) <= half_beam
+    if np.any(mask_beam):
+        np.copyto(rgb_list_old, np.array([255, 255, 255]), where=mask_beam[:, np.newaxis])
+
 def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float, transition_name: str, coords: Optional[np.ndarray] = None, beam_thickness: float = 0.04) -> None:
     """ 
     Route transition requests to specifically written geometric handlers or PNG spatial maps.
