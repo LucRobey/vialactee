@@ -1,7 +1,0 @@
-.DS_Store
-.vscode
-build
-
-beat_tracker.cpp
-beat_tracker.html
-btrack.*.so
