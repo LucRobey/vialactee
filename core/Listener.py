@@ -39,6 +39,9 @@ class Listener:
             await asyncio.sleep(1/60)
 
     def update(self) -> None:
+        self._delayed_is_song_change = False
+        self._delayed_is_verse_chorus_change = False
+
         if not hasattr(self, 'last_env_time'):
             self.last_env_time = time.time()
         
@@ -247,6 +250,9 @@ class Listener:
 
     @property
     def standalone_bpm(self): return self.analyzer.standalone_bpm
+
+    @property
+    def standalone_phase(self): return self.analyzer.standalone_phase
 
     def process_raw_audio(self, audio_data: np.ndarray) -> None:
         self.ingestion.process_raw_audio(audio_data)

@@ -4,31 +4,41 @@ This directory acts as the central registry for the chandelier's static and dyna
 
 ## Key Components:
 
-- **`segments.json`**: Defines the physical hardware geometry and 2D coordinate mapping. It includes strip ordering, LED counts, orientation (`horizontal` or `vertical`), and geometry vectors (`start`, `step`) used by spatial transitions.
-- **`app_config.json`**: Contains global application variables (like network ports, audio thresholds, and persisted Live Deck `luminosity` / `sensibility`) that can be tweaked without modifying code.
+- **`segments_full.json` & `segments_small.json`**: Unified single source of truth defining both physical hardware geometry AND Web App UI layout for each hardware profile:
+  - **Hardware Geometry**: Physical strip ordering (`order`), LED counts (`size`), physical orientation (`horizontal` or `vertical`), and 2D spatial coordinate mapping vectors (`start`, `step`) used by spatial transitions.
+  - **Web App UI Layout**: Studio grid rendering metadata (`id`, `ui`: `col`, `row`, `w`, `h`, `color`) for the interactive Wabb Topology board.
+  - **Cables Array**: Top-level `cables` array defining Bezier connection curves (`start`, `end`, `cp1`, `cp2`) rendered in the Wabb Topology view.
+- **`app_config.json`**: Contains global application variables (network ports, hardware profile selection, audio thresholds, and persisted Live Deck `luminosity` / `sensibility`).
+- **`Configuration_manager.py`**: Dynamic configuration resolution utility and spatial coordinate builder:
+  - `resolve_segments_file_path(infos=None)`: Resolves the active segment layout (`segments_small.json` for `small`, `segments_full.json` for `full`).
+  - `resolve_configurations_file_path(infos=None)`: Resolves the active playlist/mode configuration file (`data/configurations_small.json` for `small`, `data/configurations_full.json` for `full`).
+  - `Configurations_manager`: Class that loads segment definitions and provides `get_segment_coordinates(segment_name)` to generate 2D coordinate arrays `[[x, y], ...]` for spatial transition algorithms.
 
 ### `app_config.json` Schema
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `startServer` | Boolean | `false` | If true, launches the aiohttp connector on port 8080. |
-| `startWebApp` | Boolean | `true` | If true, launches the Vite React frontend on port 5173. |
-| `useMicrophone` | Boolean | `true` | If true, `Local_Microphone` actively listens to the system default input device. |
-| `HARDWARE_MODE` | String | `"auto"` | `"auto"`, `"rpi"`, or `"simulation"`. Determines if visualizer relies on physical ESP32 UDP networking or the Pygame visualizer. |
-| `show_music_analyser_panel` | Boolean | `false` | If true, renders the live Music Analyzer status HUD overlay in the Pygame simulation window. |
-| `printCpuFpsInfo` | Boolean | `true` | If true, periodically logs loop execution FPS and profiler timings. |
-| `printTimeOfCalculation` | Boolean | `false` | Enables timing logs for execution loops. |
-| `printModesDetails` | Boolean | `true` | Enables logs from visual modes (overridden by `modesToPrintDetails`). |
-| `printMicrophoneDetails` | Boolean | `false` | Enables logs from `Local_Microphone`. |
-| `printAppDetails` | Boolean | `false` | Enables core application logs. |
-| `printAsservmentDetails` | Boolean | `false` | Enables logs for mathematical asservment logic. |
-| `printConfigurationLoads` | Boolean | `false` | Enables logs when configuration files are read. |
-| `printConfigChanges` | Boolean | `false` | Enables logs when visual configurations transition. |
-| `modesToPrintDetails` | Array of Strings | `["PSG"]` | List of mode names to isolate for detailed print logs. |
+| `hardware_profile` | String | `"full"` | Active profile: `"full"` (11 segments, 2 channels, 1,304 LEDs) or `"small"` (3 segments, 1 channel, 249 LEDs). Determines which segment and configuration store files are loaded. |
+| `HARDWARE_MODE` | String | `"auto"` | Hardware driver selection: `"auto"`, `"simulation"`, `"esp32"`, or `"rpi"`. |
+| `startServer` | Boolean | `false` | If true, starts the aiohttp WebSocket and REST API server on port 8080. |
+| `useMicrophone` | Boolean | `true` | If true, enables audio ingestion from the system default microphone or input loopback. |
+| `esp32_ip` | String | `"192.168.0.26"` | Target ESP32 controller IP address when using UDP network streaming. |
+| `log_level` | String | `"INFO"` | Standard library logger verbosity (`"DEBUG"`, `"INFO"`, `"WARNING"`, `"ERROR"`). |
+| `luminosity` | Integer | `50` | Master brightness scale percentage (0–100), persisted across sessions. |
+| `sensibility` | Integer | `50` | Audio gain sensitivity scale percentage (1–100), persisted across sessions. |
+| `auto_transition_time` | Integer | `80` | Automatic timer duration (seconds) before transitioning between configuration playlist presets. |
+| `show_music_analyser_panel` | Boolean | `true` | If true, renders the live audio analysis HUD overlay in the visualizer window. |
+| `printCpuFpsInfo` | Boolean | `true` | If true, periodically logs loop execution FPS and profiler timings to stdout. |
 
-- **`Configuration_manager.py`**: A utility script to load and inject these JSON configurations into the Python architecture safely.
+## Hardware Profiles (`full` vs `small`)
 
-Saved playlists and visual configurations live in `data/configurations.json`, not in `/config`. Both `Mode_master` and the Wabb web app load that file as the source of truth. The web app accesses it through `/api/configurations`, so playlist and configuration names must not be duplicated or hardcoded in React. Runtime mode or direction overrides from the Topology tab in **LIVE** do not change this file; they only affect the active `Segment` objects until the next configuration apply or reload.
+| Profile | Channel Count | Total Segments | Total LEDs | Segment File | Configuration Store |
+|---|---|---|---|---|---|
+| **`full`** | 2 channels (`segs_1`, `segs_2`) | 11 segments (`v1`–`v4`, `h00`, `h10`, `h11`, `h20`, `h30`–`h32`) | 1,304 LEDs | `config/segments_full.json` | `data/configurations_full.json` |
+| **`small`** | 1 channel (`segs_1`) | 3 segments (`s1`, `s2`, `s3`) | 249 LEDs | `config/segments_small.json` | `data/configurations_small.json` |
 
 ## How it works:
-When the program starts, the configuration manager parses the JSON files. The `segments.json` geometry is used by `Segment.py` to correctly map the 1D NeoPixel array into a 2D logical workspace, ensuring the visual algorithms display correctly on the physical chandelier. `AudioIngestion` initializes Live Deck luminosity and sensibility from `app_config.json`, and `Mode_master` persists slider changes back to that file. `Mode_master.load_configurations()` separately reads `data/configurations.json` for playlist rotation and saved segment mode/direction assignments.
+When the program starts, `Configuration_manager.resolve_segments_file_path()` and `resolve_configurations_file_path()` determine which files to load based on `hardware_profile` in `app_config.json`. 
+
+The segment definitions map the 1D NeoPixel arrays into a 2D logical workspace for `Segment.py` and provide layout metadata for the Wabb Web App over `GET /api/topology`. `AudioIngestion` initializes Live Deck luminosity and sensibility from `app_config.json`, and `Mode_master` persists slider changes back to that file. `Mode_master.load_configurations()` reads the resolved configuration JSON (`data/configurations_full.json` or `data/configurations_small.json`) for playlist rotation and saved segment mode/direction assignments.
+

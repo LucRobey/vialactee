@@ -16,7 +16,7 @@ To achieve perfect synchronization and offload Bluetooth processing, the physica
 2. **LED Controller (ESP32):**
 
    * Receives pre-calculated RGB UDP packets from the Raspberry Pi over the local Wi-Fi router.
-   * Uses a DMA driver to push data in parallel to two WS2812B NeoPixel strips (e.g., 650 LEDs each), achieving 50+ FPS without needing to compute the heavy audio DSP or process Bluetooth.
+   * Uses a DMA driver to push data in parallel across physical WS2812B NeoPixel channels (Full profile: 1,304 LEDs across 2 channels with 785 LEDs on Channel 1 and 519 LEDs on Channel 2; Small profile: 249 LEDs on Channel 1), achieving 50+ FPS without needing to compute the heavy audio DSP or process Bluetooth.
 
 
 
@@ -100,9 +100,9 @@ graph TD
 
     UDP_In --> Driver
 
-    Driver -->|GPIO Pin A| Strip1
+    Driver -->|GPIO Pin 2 / Ch 1| Strip1["Channel 1 (785 LEDs / 249 LEDs)"]
 
-    Driver -->|GPIO Pin B| Strip2
+    Driver -->|GPIO Pin 4 / Ch 2| Strip2["Channel 2 (519 LEDs)"]
 
 ```
 

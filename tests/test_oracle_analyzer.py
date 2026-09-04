@@ -114,13 +114,18 @@ class TestHarmonicMath(unittest.TestCase):
 
 class TestTemplateBank(unittest.TestCase):
     def test_template_bank_generation(self):
-        bank = FastTemplateBank(btrack_fps=60.0, odf_size=300)
+        bank = FastTemplateBank(odf_fps=60.0, odf_size=300)
         t_120 = bank.get_template(120.0)
         self.assertEqual(t_120.shape, (30, 300))
         
         for row in t_120:
             self.assertAlmostEqual(float(np.mean(row)), 0.0, places=3)
             self.assertAlmostEqual(float(np.sum(row**2)), 1.0, places=3)
+
+        # Backwards compatibility check
+        legacy_bank = FastTemplateBank(btrack_fps=60.0, odf_size=300)
+        self.assertEqual(legacy_bank.odf_fps, 60.0)
+        self.assertEqual(legacy_bank.btrack_fps, 60.0)
 
 
 class TestAudioAnalyzerIntegration(unittest.TestCase):

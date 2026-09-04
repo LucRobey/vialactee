@@ -3,6 +3,7 @@
     "useMicrophone": true,
     "printCpuFpsInfo": true,
     "HARDWARE_MODE": "auto",
+    "hardware_profile": "full",
     "esp32_ip": "192.168.0.26",
     "log_level": "INFO",
     "luminosity": 46,

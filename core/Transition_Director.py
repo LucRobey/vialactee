@@ -4,6 +4,7 @@ import logging
 import random
 import json
 import os
+from config.Configuration_manager import resolve_segments_file_path
 
 class Transition_Director:
     """
@@ -25,6 +26,7 @@ class Transition_Director:
         """
         self.mode_master = mode_master
         self.listener = listener
+        self.infos = infos
         self.logger = logging.getLogger("Transition_Director")
         self.silence_threshold = infos.get("silence_threshold", 150)
         self.silence_duration_trigger = infos.get("silence_duration_trigger", 10.0)
@@ -54,11 +56,11 @@ class Transition_Director:
         """
         Read the segments configuration to understand the hardware layout.
 
-        Parses the segments.json file to classify available segments into 
+        Parses the active segments file to classify available segments into 
         vertical and horizontal groups for geometric-based logic.
         """
         try:
-            config_path = os.path.join(os.path.dirname(__file__), "..", "config", "segments.json")
+            config_path = resolve_segments_file_path(self.infos)
             with open(config_path, "r") as f:
                 data = json.load(f)
                 if isinstance(data.get("segments"), list):
@@ -68,6 +70,8 @@ class Transition_Director:
 
                 for segment_list in segment_lists:
                     for seg in segment_list:
+                        if not isinstance(seg, dict) or "name" not in seg:
+                            continue
                         name = seg["name"]
                         self.all_segments.append(name)
                         if seg.get("orientation") == "vertical":
@@ -76,7 +80,7 @@ class Transition_Director:
                             self.horizontals.append(name)
             self.logger.info(f"(TD) Instantiated geometry maps: {len(self.verticals)} Verticals, {len(self.horizontals)} Horizontals")
         except Exception as e:
-            self.logger.error(f"(TD) Failed to load segments.json: {e}")
+            self.logger.error(f"(TD) Failed to load segments configuration: {e}")
 
     def start_transition(self, transition_config: Optional[Dict[str, Any]]) -> None:
         """ Start tracking a new global transition. """
@@ -85,11 +89,9 @@ class Transition_Director:
         self.state = "TRANSITION_DUAL"
         self.transition_progress = 0.0
         self.transition_type = transition_config["type"]
-        duration = transition_config.get("duration", 2.0)
-        if duration > 0:
-            self.transition_step = (1.0 / 30.0) / duration
-        else:
-            self.transition_step = 1.0
+        duration = float(transition_config.get("duration", 2.0))
+        self.transition_duration = duration
+        self.transition_step = (1.0 / 30.0) / duration if duration > 0 else 1.0
 
     async def update(self, current_time: float) -> None:
         """
@@ -100,8 +102,9 @@ class Transition_Director:
             current_time (float): The current system time.
         """
         if self.last_update_time is None:
-            self.last_update_time = current_time
-        dt = current_time - self.last_update_time
+            dt = 1.0 / 30.0
+        else:
+            dt = max(0.0, current_time - self.last_update_time)
         self.last_update_time = current_time
         
         self.upcoming_song_change_countdown = max(0.0, self.upcoming_song_change_countdown - dt)
@@ -119,7 +122,9 @@ class Transition_Director:
             self.logger.info(f"(TD) Live Structural Change detected! Visual impact in {lookahead}s.")
 
         if self.state == "TRANSITION_DUAL":
-            self.transition_progress += self.transition_step
+            duration = getattr(self, "transition_duration", 2.0)
+            step = (dt / duration) if duration > 0 else 1.0
+            self.transition_progress += step
             if self.transition_progress >= 1.0:
                 self.transition_progress = 1.0
                 self.state = "PASSATION"

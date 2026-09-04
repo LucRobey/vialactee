@@ -12,8 +12,28 @@ The **Live Deck** (`components/pages/LiveDeck.tsx`) is the primary performance i
 
 The Live Deck is built on an absolute coordinate grid using the `<GridSpot>` wrapper. Components do not "flow"; they are pegged into exact coordinates (X, Y in studs).
 
-### A. Left Column: Manual Overrides (three vertical sliders)
-*   **Coordinate Plane:** `col=0`
+### A. Left Column: Preset Blocks
+*   **Coordinate Plane:** `col=0, row=0`
+*   **Purpose:** Rapid firing of saved playlists.
+*   **Design:** High-relief, bright colored bricks (Blue, Orange, Green, Purple, Yellow, Red, Cyan, Magenta) stacked absolutely at precise 3-stud vertical intervals (`row=2`, `row=5`, `row=8`, ...). The visible bricks are capped to the first eight playlists.
+*   **Data Rule:** Preset bricks are generated dynamically via `loadConfigurationStore()` and `state.playlists` from the `mode_master_state` WebSocket snapshot. Do not hardcode playlist names or add special synthetic entries such as `CUSTOM`.
+
+### B. Center Column: Telemetry & Transition Engine
+*   **Coordinate Plane:** Starts at `col=16..18`
+*   **Telemetry Bar:** Spans roughly 30 studs horizontally (`col=17, row=0`). Displays critical live stats sourced from `mode_master_state`/`state.system`:
+    *   CPU TEMP (`system.cpuTempC`)
+    *   PLAYLIST (`activePlaylist`)
+    *   CONFIG (`activeConfiguration`)
+    *   LATENCY (`system.dynamicAudioLatencyMs`)
+*   **Central Mounting Baseplate:** Critical configuration and transition controls are mounted onto a large Orange baseplate (`col=16, row=4`). This baseplate features a localized LED circuit where only the outermost perimeter studs glow (Green for "Live" mode, Red for "Hold" mode), leaving the interior mounting studs a natural solid orange.
+*   **Next Configuration / Transition Blocks:**
+    *   Mounted at `col=18, row=6` and `col=18, row=11`, designed as **Flat Lego Tiles** (stud-less, glossy finish) hosting flat dropdowns.
+    *   The Next Configuration row also exposes a round blue 2x2-style baton-pass button that fires `go_to_next_configuration` (queued configuration + selected transition).
+*   **Lock Switch:** Mounted at `col=42, row=6`, toggles `lock_current_configuration`.
+*   **The DROP Button:** A massive red button mounted at `col=17, row=21` that emits a `manual_drop` instruction. Instead of glowing LEDs, the word "DROP" is physically constructed on its surface using individual 1x1 white Lego pieces (a mix of square and round plates). It features a "messy builder" aesthetic with slight random rotations, deliberate mismatched colored pieces (yellow and grey), and smooth "clear" tiles.
+
+### C. Right Column: Manual Overrides (Three Vertical Sliders)
+*   **Coordinate Plane:** `col=55, row=0`
 *   **Purpose:** Direct tactile control over global visual / scheduling properties.
 *   **Components:** Three vertical Lego sliders stacked inside a single dark "control rack" housing.
 *   **Sliders:**
@@ -22,34 +42,15 @@ The Live Deck is built on an absolute coordinate grid using the `<GridSpot>` wra
     *   **AUTO TRANS (S)** (5 → 300 seconds, sends `set_auto_transition_time`)
 *   **Design:** Each slider is wrapped in an `.absurd-slider-mechanism` decorative cluster (Technic beams, guide rails, mounts, spinning gears, drop weights). Recessed tracks contain a thumb mimicking a 1x2 physical Lego brick. The label tile sits above each track on a white printed brick.
 
-### B. Center Column: Telemetry & Transition Engine
-*   **Coordinate Plane:** Starts at `col=4`
-*   **Telemetry Bar:** Spans roughly 25 studs horizontally. Displays critical live stats sourced from `mode_master_state`/`state.system`:
-    *   CPU TEMP (`system.cpuTempC`)
-    *   PLAYLIST (`activePlaylist`)
-    *   CONFIG (`activeConfiguration`)
-    *   LATENCY (`system.dynamicAudioLatencyMs`)
-*   **Central Mounting Baseplate:** Critical configuration and transition controls are mounted onto a large Orange baseplate (`col=7`). This baseplate features a localized LED circuit where only the outermost perimeter studs glow (Green for "Live" mode, Red for "Hold" mode), leaving the interior mounting studs a natural solid orange.
-*   **Next Configuration / Transition Blocks:**
-    *   Designed as **Flat Lego Tiles** (stud-less, glossy finish) hosting flat dropdowns.
-    *   The Next Configuration row also exposes a round blue 2x2-style baton-pass button that fires `go_to_next_configuration` (queued configuration + selected transition).
-*   **The DROP Button:** A massive red button mounted at `col=8, row=16` that emits a `manual_drop` instruction. Instead of glowing LEDs, the word "DROP" is physically constructed on its surface using individual 1x1 white Lego pieces (a mix of square and round plates). It features a "messy builder" aesthetic with slight random rotations, deliberate mismatched colored pieces (yellow and grey), and smooth "clear" tiles (tiles lacking a top stud).
-
-### C. Right Column: Preset Blocks
-*   **Coordinate Plane:** `col=35`
-*   **Purpose:** Rapid firing of saved playlists.
-*   **Design:** High-relief, bright colored bricks (Blue, Orange, Green, Purple, Yellow, Red, Cyan, Magenta) stacked absolutely at precise 3-stud vertical intervals (`row=2`, `row=5`, `row=8`, ...). The visible bricks are capped to the first eight playlists.
-*   **Data Rule:** Preset bricks are generated only from `data/configurations.json` via `loadConfigurationStore()` and `state.playlists` from the `mode_master_state` WebSocket snapshot. Do not hardcode playlist names or add special synthetic entries such as `CUSTOM`.
-
 ## 3. Interaction Logic (The "Baton Pass")
 
 The Live Deck supports a non-destructive "Queue and Drop" workflow that's crucial for live performance:
-1.  **Select:** The user taps a preset brick on the right (sends `select_playlist`) or selects a queued saved configuration from the Next Configuration dropdown (sends `select_configuration`).
+1.  **Select:** The user taps a preset brick on the left (sends `select_playlist`) or selects a queued saved configuration from the Next Configuration dropdown (sends `select_configuration`).
 2.  **Transition:** The user picks a transition style from the Next Transition dropdown (`CUT`, `FADE IN/OUT`, `CROSSFADE`, sends `select_transition`).
 3.  **Lock (optional):** Flipping the HOLD / LIVE switch toggles `lock_current_configuration` to freeze automatic progression and changes the orange baseplate glow color.
 4.  **Baton Pass:** The round blue button next to the Next Transition dropdown fires `go_to_next_configuration` with the queued configuration and selected transition.
 5.  **DROP:** The giant DROP button fires `manual_drop`, asking Mode_master to execute a music-drop style override.
-6.  **Override:** At any time, the operator can ride the left-column sliders (luminosity, sensibility, auto-transition time) for instant master adjustments.
+6.  **Override:** At any time, the operator can ride the right-column sliders (luminosity, sensibility, auto-transition time) for instant master adjustments.
 
 ## 4. Runtime State Contract
 

@@ -1,0 +1,40 @@
+{
+  "configurations": {
+    "Default": [
+      {
+        "name": "Rainbow Triad",
+        "modes": {
+          "Segment s1": "Rainbow",
+          "Segment s2": "Shining Stars",
+          "Segment s3": "Rainbow"
+        },
+        "way": {
+          "Segment s1": "UP",
+          "Segment s2": "UP",
+          "Segment s3": "UP"
+        },
+        "modeSettings": {
+          "Rainbow": {
+            "smoothRatio": 0.5,
+            "intensityBase": 0.1,
+            "intensityMultiplier": 0.9
+          }
+        }
+      },
+      {
+        "name": "Pulse",
+        "modes": {
+          "Segment s1": "PSG",
+          "Segment s2": "Metronome",
+          "Segment s3": "PSG"
+        },
+        "way": {
+          "Segment s1": "UP",
+          "Segment s2": "UP",
+          "Segment s3": "DOWN"
+        },
+        "modeSettings": {}
+      }
+    ]
+  }
+}

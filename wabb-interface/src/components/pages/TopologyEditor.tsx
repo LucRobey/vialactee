@@ -3,6 +3,7 @@ import { LEGO_MATH } from '../../utils/legoMath';
 import { FitBoard } from '../layout/FitBoard';
 import { NoticeBanner } from '../common/NoticeBanner';
 import { initialTopology, type TopologySegment } from '../../constants/topologyData';
+import { loadTopology, type TopologyCable } from '../../utils/topologyStore';
 import { sendInstruction, subscribeModeMasterState, type ModeMasterState } from '../../utils/controlBridge';
 import { loadConfigurationStore, saveConfigurationStore, type ConfigurationStore, type ModeSettingsMap, type SegmentConfiguration } from '../../utils/configurationStore';
 import { useBridgeStatus } from '../../utils/useBridgeStatus';
@@ -60,13 +61,30 @@ export const TopologyEditor = ({
   const [playlistNameDraft, setPlaylistNameDraft] = useState('');
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [notice, setNotice] = useState<TopologyNotice | null>(null);
+  const [cables, setCables] = useState<TopologyCable[]>([]);
   const playlist = apiPlaylists[playlistIndex] || '';
   const playlistLightColor = playlist ? (playlistIndex % 2 === 0 ? '#00ffff' : '#ff00ff') : '#555';
   const bridgeStatus = useBridgeStatus();
 
+  useEffect(() => {
+    loadTopology()
+      .then(store => {
+        if (!isMountedRef.current) return;
+        if (store.segments.length > 0) {
+          setSegments(store.segments);
+          setSelectedSegId(prev => (store.segments.some(s => s.id === prev) ? prev : store.segments[0].id));
+        }
+        setCables(store.cables);
+      })
+      .catch(err => {
+        console.error('TopologyEditor: Could not load dynamic topology', err);
+      });
+  }, []);
+
   const pendingLiveSegmentEditsRef = useRef<Map<string, LiveSegmentPending>>(new Map());
   const isMountedRef = useRef(true);
   const noticeTimerRef = useRef<number | null>(null);
+  const currentHardwareProfileRef = useRef<string | null>(null);
 
   const showNotice = useCallback((tone: TopologyNoticeTone, title: string, message: string) => {
     setNotice({ tone, title, message });
@@ -116,6 +134,34 @@ export const TopologyEditor = ({
   }, [apiConfigurations]);
 
   const applyModeMasterState = useCallback((state: ModeMasterState) => {
+    if (state.hardwareProfile && currentHardwareProfileRef.current !== null && state.hardwareProfile !== currentHardwareProfileRef.current) {
+      currentHardwareProfileRef.current = state.hardwareProfile;
+      loadTopology()
+        .then(store => {
+          if (!isMountedRef.current) return;
+          if (store.segments.length > 0) {
+            setSegments(store.segments);
+            setSelectedSegId(store.segments[0].id);
+          }
+          setCables(store.cables);
+        })
+        .catch(err => console.error('TopologyEditor: Could not reload topology', err));
+
+      configurationStoreLoader()
+        .then(store => {
+          if (!isMountedRef.current) return;
+          setApiPlaylists(store.playlists);
+          setApiConfigurations(store.configurations);
+          setPlaylistNameDraft(store.playlists[0] || '');
+          const firstConfig = store.configurations[store.playlists[0] || '']?.[0]?.name ?? '';
+          setSelectedConfigName(firstConfig);
+          setConfigName(firstConfig);
+        })
+        .catch(err => console.error('TopologyEditor: Could not reload configurations', err));
+    } else if (state.hardwareProfile && currentHardwareProfileRef.current === null) {
+      currentHardwareProfileRef.current = state.hardwareProfile;
+    }
+
     if (syncPlaylistsFromModeMaster && state.playlists.length > 0) {
       setApiPlaylists(state.playlists);
     }
@@ -637,6 +683,7 @@ export const TopologyEditor = ({
           onSelectSegment={handleSegmentSelect}
           onToggleDirection={handleDirectionToggle}
           segmentShiftCols={showEditPanels ? 0 : 2}
+          cables={cables}
         />
 
         <TopologyEditorModeSwitch

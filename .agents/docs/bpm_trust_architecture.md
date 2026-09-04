@@ -17,7 +17,7 @@ flowchart TD
     A[Raw Audio Chunk @ T_ingest]:::signal -->|FFT + Mel Bands| B[AudioIngestion.py]:::math
     B -->|Transient Flux| C[(5-Second ODF Buffer B)]:::signal
 
-    C --> D[Standardize Buffer\nB_centered = B - mean\nB_std = std]:::math
+    C --> D["Exponential Recency Weighting\nB_weighted = B × exp(-1.5 × linspace(1, 0, N))\nB_centered = B_weighted - mean\nB_std = std"]:::math
     
     subgraph "Pearson Correlation Confidence Engine"
         D --> E[FastTemplateBank\nNormalized Triangular Templates T]:::math
@@ -28,7 +28,7 @@ flowchart TD
 
     subgraph "Harmonic Alignment & Gatekeeper"
         H --> I["Evaluate Harmonic Multipliers\n(Octaves & 3:2 Fifths)"]:::math
-        I --> J["Candidate Scoring\nPearson + Prior - 0.5 × Dist(Current, Candidate)"]:::math
+        I --> J["Candidate Scoring\nWeighted Score = Pearson × Prior_Human(BPM)"]:::math
         J --> K["Winning BPM & Target Phase φ_target"]:::core
     end
 
@@ -44,27 +44,32 @@ flowchart TD
 
 ## 2. Step-by-Step Explanation
 
-### 1. Onset Detection Function (ODF) Buffer
+### 1. Onset Detection Function (ODF) Buffer & Exponential Recency
 The `AudioIngestion` layer generates a continuous spectral flux combining low-end bass kicks and mid/high transient attacks. This is pushed into an $N$-frame sliding ring buffer ($N \approx 300$ frames for 5 seconds at 60 FPS).
+
+Before correlation, an exponential recency decay weighting is applied across the buffer:
+$$\mathbf{B}_{\text{weighted}} = \mathbf{B} \odot \exp\left(-1.5 \cdot \text{linspace}(1.0, 0.0, N)\right)$$
+This gives higher priority to recent rhythmic energy while maintaining sufficient historical context.
 
 ### 2. $O(1)$ Pearson Template Cross-Correlation
 Instead of legacy autocorrelation (which suffered from sub-harmonic bias and high CPU usage), the engine uses a pre-computed bank of zero-mean, unit-variance triangular beat pulses $\mathbf{T}_{\text{norm}}$ across all candidate BPMs and phase shifts.
 
 The Pearson correlation coefficient is computed in a single vectorized NumPy operation:
-$$\text{Score}_{\text{Pearson}} = \frac{\mathbf{T}_{\text{norm}} \cdot (\mathbf{B} - \mu_B)}{\sigma_B}$$
+$$\text{Score}_{\text{Pearson}} = \frac{\mathbf{T}_{\text{norm}} \cdot (\mathbf{B}_{\text{weighted}} - \mu_{B})}{\sigma_B}$$
 
 - **High Confidence ($> 0.30$ to $0.70+$)**: Occurs when a clear, repeating drum grid aligns strongly with the template.
 - **Low Confidence ($< 0.15$)**: Occurs during ambient intros, vocal solos, drum fills, or musical breakdowns.
 
-### 3. Circular Logarithmic Tempo-Class Trust
+### 3. Circular Logarithmic Tempo-Class Trust & Multiplicative Human Prior
 Tempos are evaluated in circular octave space:
 $$f(\text{BPM}) = \log_2\left(\frac{\text{BPM}}{60}\right) \pmod 1$$
 This ensures 60, 120, and 240 BPM all map to distance $0.0$, eliminating polyrhythmic ping-pong jumping.
 
-Candidate tempos are scored using:
-$$\text{Total Score} = \text{Score}_{\text{Pearson}} + \text{Prior}_{\text{Human}}(\text{BPM}) - 0.5 \times D_{\text{harmonic}}(\text{BPM}, \text{Current BPM})$$
-
-The penalty term acts as a mathematical **inertia gatekeeper**, preventing erratic BPM flips unless a new tempo presents overwhelmingly strong evidence.
+Candidate tempos are evaluated against the template bank and scored using a multiplicative Gaussian human prior:
+$$\text{Total Score} = \text{Score}_{\text{Pearson}} \times \text{Prior}_{\text{Human}}(\text{BPM})$$
+where:
+$$\text{Prior}_{\text{Human}}(\text{BPM}) = 0.5 + 0.5 \cdot \exp\left(-0.5 \left(\frac{\text{BPM} - \mu_{\text{prior}}}{\sigma_{\text{prior}}}\right)^2\right)$$
+with default $\mu_{\text{prior}} = 120.0$ and $\sigma_{\text{prior}} = 25.0$ defined in [`core/RhythmConfig.py`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/core/RhythmConfig.py). The highest scoring candidate wins, locking in the target BPM and target phase $\phi_{\text{target}}$.
 
 ### 4. Confidence-Adaptive Flywheel Modulation
 Rather than abruptly jumping or resetting the phase, the continuous speaker flywheel modulates its soft-snap strength based on real-time Pearson confidence:

@@ -81,8 +81,9 @@ class FastTemplateBank:
     Allows Pearson cross-correlation via high-speed compiled NumPy dot products.
     """
 
-    def __init__(self, btrack_fps: float = 60.0, odf_size: int = 300) -> None:
-        self.btrack_fps = btrack_fps
+    def __init__(self, odf_fps: float = 60.0, odf_size: int = 300, btrack_fps: Optional[float] = None) -> None:
+        self.odf_fps = btrack_fps if btrack_fps is not None else odf_fps
+        self.btrack_fps = self.odf_fps  # backwards compatibility alias
         self.odf_size = odf_size
         self.templates: Dict[float, np.ndarray] = {}
 
@@ -94,7 +95,7 @@ class FastTemplateBank:
         if bpm_key in self.templates:
             return self.templates[bpm_key]
 
-        tau_val = 60.0 * self.btrack_fps / bpm_key
+        tau_val = 60.0 * self.odf_fps / bpm_key
         p_max = max(1, int(np.ceil(tau_val)))
 
         p_arr = np.arange(p_max)[:, None]
@@ -229,7 +230,8 @@ class AudioAnalyzer:
         self.hardware_latency = float(infos.get("latency", 0.0))
         self.decay_base = float(infos.get("decay_base", 0.98))
         self.lookahead_seconds = float(infos.get("fakeDelay", 5.0))
-        self.btrack_fps = 60.0
+        self.odf_fps = 60.0
+        self.btrack_fps = self.odf_fps  # backwards compatibility alias
 
         # Subsystems
         self.novelty_detector = StructuralNoveltyDetector(
@@ -238,12 +240,12 @@ class AudioAnalyzer:
         )
 
         # 5-second ODF Look-Ahead Buffer (~300 frames at 60fps)
-        self.odf_buffer_size = max(60, int(self.lookahead_seconds * self.btrack_fps))
+        self.odf_buffer_size = max(60, int(self.lookahead_seconds * self.odf_fps))
         self.odf_buffer = np.zeros(self.odf_buffer_size)
         self.decay_curve = np.exp(-1.5 * np.linspace(1.0, 0.0, self.odf_buffer_size))
 
         # Vectorized template bank
-        self.template_bank = FastTemplateBank(btrack_fps=self.btrack_fps, odf_size=self.odf_buffer_size)
+        self.template_bank = FastTemplateBank(odf_fps=self.odf_fps, odf_size=self.odf_buffer_size)
 
         # Flywheel & Beat State (at Speaker Time T_speaker)
         self.speaker_phase = 0.0
@@ -436,7 +438,7 @@ class AudioAnalyzer:
             self.bpm = best_bpm
             self.time_since_sweep = 0.0
 
-            tau_val = 60.0 * self.btrack_fps / self.bpm
+            tau_val = 60.0 * self.odf_fps / self.bpm
             ingest_phase = (judge_phase_idx % tau_val) / tau_val
 
             # Back-project to Speaker Time T_speaker

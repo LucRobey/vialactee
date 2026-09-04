@@ -4,6 +4,7 @@ import logging
 import os
 from aiohttp import web
 from core.Webapp_instruction_logger import WebappInstructionLogger
+from config.Configuration_manager import resolve_configurations_file_path, resolve_segments_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class Connector:
         app.router.add_get("/", self.handle_index)
         app.router.add_get("/api/configurations", self.handle_get_configurations)
         app.router.add_post("/api/configurations", self.handle_post_configurations)
+        app.router.add_get("/api/topology", self.handle_get_topology)
         app.router.add_get("/ws", self.websocket_handler)
 
         web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
@@ -50,7 +52,8 @@ class Connector:
         return web.Response(text="Web interface not found. Please create web/index.html", status=404)
 
     def configurations_file_path(self):
-        return os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "configurations.json")
+        infos = getattr(self.mode_master, "infos", None)
+        return resolve_configurations_file_path(infos)
 
     async def handle_get_configurations(self, request):
         file_path = self.configurations_file_path()
@@ -62,6 +65,37 @@ class Connector:
             return web.json_response({"error": "could_not_read_configurations"}, status=500)
 
         return web.json_response(data)
+
+    def segments_file_path(self):
+        infos = getattr(self.mode_master, "infos", None)
+        return resolve_segments_file_path(infos)
+
+    async def handle_get_topology(self, request):
+        file_path = self.segments_file_path()
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as exc:
+            logger.error("(C) Could not read segments configuration: %s", exc)
+            return web.json_response({"error": "could_not_read_segments"}, status=500)
+
+        segments = []
+        cables = data.get("cables", [])
+        for key, value in data.items():
+            if key.startswith("segs_") and isinstance(value, list):
+                for seg in value:
+                    if isinstance(seg, dict) and "name" in seg:
+                        segments.append(seg)
+
+        if not segments and isinstance(data.get("segments"), list):
+            segments = [s for s in data["segments"] if isinstance(s, dict)]
+
+        segments.sort(key=lambda s: s.get("order", 0))
+
+        return web.json_response({
+            "segments": segments,
+            "cables": cables,
+        })
 
     async def handle_post_configurations(self, request):
         try:

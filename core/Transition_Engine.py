@@ -17,6 +17,42 @@ TRANSITION_DEFAULTS = {
     "dt": 0.003
 }
 
+def init_room_bounds(infos=None) -> None:
+    """Dynamically determine room bounds from the active segments file."""
+    global ROOM_MAX_X, ROOM_MAX_Y
+    try:
+        from config.Configuration_manager import resolve_segments_file_path
+        import json
+        seg_path = resolve_segments_file_path(infos)
+        if os.path.exists(seg_path):
+            with open(seg_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            segs = []
+            for k, v in data.items():
+                if k.startswith("segs_") and isinstance(v, list):
+                    segs.extend(v)
+            if not segs and isinstance(data.get("segments"), list):
+                segs = data["segments"]
+            max_x = 0
+            max_y = 0
+            for s in segs:
+                if isinstance(s, dict) and "start" in s and "size" in s and "step" in s:
+                    x0 = int(s["start"].get("x", 0))
+                    y0 = int(s["start"].get("y", 0))
+                    step_x = int(s["step"].get("x", 0))
+                    step_y = int(s["step"].get("y", 0))
+                    size = int(s.get("size", 0))
+                    max_x = max(max_x, x0, x0 + (size * step_x))
+                    max_y = max(max_y, y0, y0 + (size * step_y))
+            if max_x > 0:
+                ROOM_MAX_X = max_x
+            if max_y > 0:
+                ROOM_MAX_Y = max_y
+    except Exception as e:
+        logger.debug(f"Could not load dynamic room bounds: {e}")
+
+init_room_bounds()
+
 _images_loaded = False
 
 def load_spatial_images() -> None:
@@ -238,8 +274,9 @@ def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coord
     block_hash = ((bx * 373 + by * 113) % 100) / 100.0
     
     # Outbreak mechanic: calculate distance from an epicenter (center of room)
-    cx, cy = 500, 120
-    dist_norm = np.sqrt((bx * block_size_x - cx)**2 + (by * block_size_y - cy)**2) / 800.0
+    cx, cy = ROOM_MAX_X / 2.0, ROOM_MAX_Y / 2.0
+    dist_scale = max(1.0, max(ROOM_MAX_X, ROOM_MAX_Y) * 1.5)
+    dist_norm = np.sqrt((bx * block_size_x - cx)**2 + (by * block_size_y - cy)**2) / dist_scale
     dist_norm = np.clip(dist_norm, 0.0, 1.0)
     
     # Infection threshold combines outbreak wave + block randomness (0.0 to ~0.75 max)
@@ -293,12 +330,12 @@ def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: 
         np.copyto(rgb_list_old, rgb_list_new)
         return
         
-    cx, cy = 500, 120
+    cx, cy = ROOM_MAX_X / 2.0, ROOM_MAX_Y / 2.0
     dx = coords[:, 0] - cx
     dy = coords[:, 1] - cy
     dist = np.sqrt(dx**2 + dy**2)
     angle = np.arctan2(dy, dx)
-    max_dist = 800.0
+    max_dist = max(ROOM_MAX_X, ROOM_MAX_Y) * 1.5
     
     # Timing assumes a ~5.0s total transition (3.9s implosion, 0.1s pitch black, 1.0s explosion)
     t_implode = 0.78 
@@ -456,7 +493,7 @@ def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progres
     """ 
     Route transition requests to specifically written geometric handlers or PNG spatial maps.
     """
-    if transition_name == "fade_to_black":
+    if transition_name in ("fade_to_black", "fade_in_out"):
         apply_dual_fade(rgb_list_old, rgb_list_new, progress)
     elif transition_name == "global_change":
         apply_colorful_glitch(rgb_list_old, rgb_list_new, progress)
@@ -495,8 +532,8 @@ def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progres
         image = spatial_images[transition_name]
         
         # Clip coordinates to avoid IndexErrors just in case segments are out of bounds
-        x_coords = np.clip(coords[:, 0], 0, ROOM_MAX_X - 1).astype(int)
-        y_coords = np.clip(coords[:, 1], 0, ROOM_MAX_Y - 1).astype(int)
+        x_coords = np.clip(coords[:, 0], 0, image.shape[0] - 1).astype(int)
+        y_coords = np.clip(coords[:, 1], 0, image.shape[1] - 1).astype(int)
         
         # Extract threshold for each physical coordinate dynamically
         led_thresholds = image[x_coords, y_coords]

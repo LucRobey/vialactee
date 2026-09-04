@@ -5,7 +5,7 @@ description: Protocols, REST endpoints, WebSocket message contracts, and state s
 
 # Vialactée Web Connector & UI Skill
 
-Use this skill whenever you are modifying the web remote control interface, WebSocket event handling, or configuration persistence layers in `connectors/Connector.py`, `wabb-interface/`, or `data/configurations.json`.
+Use this skill whenever you are modifying the web remote control interface, WebSocket event handling, or configuration persistence layers in `connectors/Connector.py`, `wabb-interface/`, or `data/configurations_full.json` / `data/configurations_small.json`.
 
 ## Core Guidelines & Invariants
 
@@ -13,14 +13,15 @@ Use this skill whenever you are modifying the web remote control interface, WebS
 * In local simulator testing on Windows, `Main.py` provides `startServer: False` in `infos` to prevent port `8080` socket collisions on successive restarts.
 * When testing web interface features, explicitly set `startServer: True`.
 
-### 2. State Synchronization Model
-* **Single Source of Truth**: The Python `Mode_master` engine holds the authoritative runtime state.
-* Whenever configurations or modes change, `Connector.broadcast_state_if_changed()` broadcasts `mode_master_state` to all connected React clients.
-* React components should bind their UI elements reactively to the latest `mode_master_state` payload.
+### 2. State Synchronization Model & Topology
+* **Single Source of Truth**: The Python `Mode_master` engine holds authoritative runtime state.
+* **Dynamic Topology (`GET /api/topology`)**: React loads segment layouts (`id`, `name`, `orientation`, `ui`: `col`, `row`, `w`, `h`, `color`) and `cables` splines dynamically from the active profile's segment file (`segments_full.json` or `segments_small.json`). Never hardcode segment geometry in TypeScript.
+* Whenever configurations, modes, or hardware profiles change, `Connector.broadcast_state_if_changed()` broadcasts `mode_master_state` (including `hardwareProfile`) to all connected React clients.
+* React components re-fetch topology and configuration stores when `state.hardwareProfile` changes.
 
 ### 3. LIVE Swaps vs Persistence Separation
-* **LIVE Swaps**: Changing a mode or toggling a direction in real-time must send WebSocket actions (`select_segment_mode` / `toggle_segment_direction`). `Mode_master` modifies its runtime copies (`modes`/`way`) without mutating the loaded configuration definitions on disk.
-* **PERSIST**: Saving a playlist or layout permanently is done strictly via `POST /api/configurations`. Do not write arbitrary JSON mutations outside this endpoint.
+* **LIVE Swaps**: Changing a mode or toggling a direction in real-time must send WebSocket actions (`select_segment_mode` / `toggle_segment_direction`). `Mode_master` modifies its runtime copies (`modes`/`way`) without mutating loaded configuration definitions on disk.
+* **PERSIST**: Saving a playlist or layout permanently is done strictly via `POST /api/configurations` which persists to the active profile's configuration file via `resolve_configurations_file_path()`. Do not write arbitrary JSON mutations outside this endpoint.
 
 ### 4. Protocol Reference
 * Consult [api_protocol.md](./references/api_protocol.md) for endpoint specifications, payload shapes, and action names.

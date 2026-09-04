@@ -1,0 +1,74 @@
+{
+  "cables": [
+    { "start": [26, 21.5], "end": [14, 17.5], "cp1": [24, 25], "cp2": [16, 23] },
+    { "start": [14, 18], "end": [38, 20.5], "cp1": [20, 27], "cp2": [32, 27] }
+  ],
+  "segs_1": [
+    {
+      "id": "s1",
+      "name": "Segment s1",
+      "size": 49,
+      "order": 1,
+      "orientation": "vertical",
+      "start": {
+        "x": 175,
+        "y": 210
+      },
+      "step": {
+        "x": 0,
+        "y": -1
+      },
+      "ui": {
+        "col": 11,
+        "row": 5,
+        "w": 2,
+        "h": 10,
+        "color": "#3264ff"
+      }
+    },
+    {
+      "id": "s2",
+      "name": "Segment s2",
+      "size": 108,
+      "order": 0,
+      "orientation": "vertical",
+      "start": {
+        "x": 255,
+        "y": 210
+      },
+      "step": {
+        "x": 0,
+        "y": -1
+      },
+      "ui": {
+        "col": 23,
+        "row": 1,
+        "w": 2,
+        "h": 18,
+        "color": "#ff3232"
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Segment s3",
+      "size": 92,
+      "order": 2,
+      "orientation": "vertical",
+      "start": {
+        "x": 335,
+        "y": 210
+      },
+      "step": {
+        "x": 0,
+        "y": -1
+      },
+      "ui": {
+        "col": 35,
+        "row": 2,
+        "w": 2,
+        "h": 16,
+        "color": "#00ff00"
+      }
+    }
+  ]
+}

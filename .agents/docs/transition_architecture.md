@@ -1,89 +1,85 @@
-# Transition Architecture: Spatial Orchestration & Logic
+# Transition Architecture: Spatial Orchestration & Engine Reality
 
-The Transition Engine prevents the installation from turning into chaotic visual noise by applying an **Aesthetic Logic Filter** before a transition fires. It operates across Global sweeps and relies on strict probabilistic state management.
+> **Status:** Current Production Architecture  
+> **See Also:** Prospective and planned transition concepts are archived in [transition_architecture_potential_ideas.md](./transition_architecture_potential_ideas.md).
+
+The Transition Engine prevents the chandelier installation from abruptly snapping between lighting modes. It smoothly blends between active and queued presets across physical 2D space using a centralized state machine and mathematical spatial masks.
+
+---
+
+## 1. The Operational Decision Flow (`Transition_Director`)
+
+The `Transition_Director` operates autonomously inside the asynchronous update loop. When an automated change interval expires, it commands the `Mode_master` to begin a transition:
 
 ```mermaid
 graph TD
-    %% Inputs
-    Audio["Audio Analyzer"] -->|"Event Triggers: Drop, Verse, Change"| Trigger["Trigger Event"]
-    Timer["Timer Safety-Net"] -->|"30s Stagnation"| Trigger
-    Playlist["Playlist Mood"] -->|"Constraints (Electro, Lo-Fi)"| Gate
-    
-    Trigger -->|"Request Transition"| Gate["Probabilistic Gate"]
-    
-    %% Probabilistic Gate
-    subgraph Director["Transition Director"]
-        Gate -->|"Evaluates"| Hist["Historical Memory"]
-        Gate -->|"Evaluates"| Conf["Signal Confidence"]
-        Gate -->|"Evaluates"| Cool["Global Cooldowns"]
-        
-        Hist --> Logic["Aesthetic Logic Filter"]
-        Conf --> Logic
-        Cool --> Logic
+    subgraph Director ["Transition_Director"]
+        Timer["Timer Check: current_time > next_change_time"]
+        StartTrans["start_transition(duration, effect)"]
+        State["State: PASSATION -> TRANSITION_DUAL"]
+        Prog["Progress: progress += dt / duration"]
     end
-    
-    %% Outputs
-    Logic -->|"Execute Transition"| Global["Global Spatial Transition"]
-    
-    %% Global Transitions
-    subgraph Global_Sweeps["Global Sweeps"]
-        Global --> G1["Radar Scan / Matrix Rain"]
-        Global --> G2["Radial Explosion / Pendulum"]
-        Global --> G3["Audio-Spatial Gravity Cannon"]
+
+    subgraph Master ["Mode_master"]
+        ChangeCfg["change_configuration()"]
+        LoadNext["Loads Next Mode & Preset"]
     end
+
+    subgraph Segments ["Physical Segments (1..N)"]
+        DualBuf["Dual Buffer Blend: rgb_list & dual_rgb_list"]
+        Engine["Transition_Engine.apply_transition()"]
+    end
+
+    Timer -->|Interval Expired| ChangeCfg
+    ChangeCfg --> StartTrans
+    StartTrans --> State
+    State --> Prog
+    Prog --> DualBuf
+    DualBuf --> Engine
 ```
 
----
-
-## 1. The Global Decision Matrix (`Transition_Director`)
-
-The `Transition_Director` operates autonomously, constantly evaluating the audio context and internal timers. When it decides a change is necessary, it issues direct commands (e.g., `change_configuration`) to the `Mode_master`. The `Mode_master` acts purely as an executor, obeying the director's orders without questioning the transition logic.
-
-Transitions are exclusively global by design. The timing and intensity of a global sweep are governed by **Audio Context** and **Playlist Mood**:
-
-- **Massive Energy Spikes:**
-  If the `Listener` detects a huge crescendo, an intense volume swell, or the drop of a song, the Director commands a sharp **Global Spatial Transition**. Sweeping the entire physical room mathematically creates a massive, unified release.
-
-- **Playlist-Level Constraints:**
-  When an "Electro" playlist is selected, it loads aggressive Global Transitions (like radial explosions). A "Lo-Fi Lounge" playlist restricts the system strictly to soft global fading.
+### Current Trigger Mechanism:
+- **Timer Interval (`auto_transition_time`):** Loaded from `config/app_config.json` (or set via the web app Live Deck slider). Transitions trigger when `current_time > self.next_change_time`.
+- **Manual Overrides:** The web interface Live Deck exposes a manual DROP trigger and configuration switching, directly invoking `Mode_master.change_configuration()`.
+- **Lookahead & Audio Events:** Real-time audio lookahead drops (`live_is_song_change`, `live_is_verse_chorus_change`) are currently tracked for telemetry logging and prospective integration. Production transition triggering is timer- and UI-driven.
 
 ---
 
-## 2. Spatial Output & Mathematical Transitions
+## 2. Centralized State Machine & Dual-Buffer Blending
 
-Because the architecture successfully tracks absolute geometric physical coordinates `(X, Y)` for every individual LED across the entire room, transition masks are perfectly mapped in 2D space.
+The `Transition_Director` encapsulates all transition timing:
+- **`PASSATION`**: Normal single-mode execution. `Segment.rgb_list` renders the active mode.
+- **`TRANSITION_DUAL`**: Active transition. `Segment.rgb_list` renders the incoming mode, while `Segment.dual_rgb_list` renders the departing mode.
 
-### A. Global Spatial Sweeps
-1. **The X/Y Radar Scan:** A literal physical beam pushes across the 430-pixel width of the room. Everything to the Left of the beam draws the Old Mode; everything to the Right draws the New Mode.
-2. **Gravitational Drop / Matrix Rain:** The Old Mode literally "melts" and drips off the physical bottom of the installation, plummeting towards `Y=0`. Simultaneously, the New Mode falls rapidly from the ceiling (`Y=244`). Drops cross the empty space between floating pieces seamlessly.
-3. **Radial Explosion (Supernova Shockwave):** Using `sqrt(x^2 + y^2)`, a center point is chosen (dynamically anchored to the brightest current segment). A physical shockwave blasts outward in a perfect 2D circle across the wall, permanently replacing the old mode with the incoming mode as the boundary hits each physical LED coordinate.
-4. **The Pendulum (Clock Wipe):** Using `arctan2`, the geometric center of the installation acts as a pivot. A sweeping line spins 360-degrees, leaving the new mode behind it.
-5. **Audio-Spatial Gravity Cannon:** An invisible ray "shoots" up from the floor on massive bass kicks, blowing holes in the Old Mode. Fragments fall via gravity, exposing the New Mode.
-6. **Venetian Blinds (Interlaced Geometry):** The Y-axis is sliced into 10-pixel horizontal lines. Even lines render New Mode, odd lines Old Mode. The New Mode bands grow downwards until the installation is saturated.
-7. **Black Hole Collapse:** The edges of the Old Mode accelerate towards the center pivot, crushing into a singularity dot, holding for 0.5s of absolute silence, then exploding outward violently revealing the New Mode.
+### Execution Invariant:
+Segments receive the centralized `Transition_Director` instance during their `update(td)` call. Every physical LED strip processes the mathematical dual-buffer blend using the exact same `td.transition_progress` timestamp down to the frame, strictly preventing visual tearing across strips.
 
+When `transition_progress >= 1.0`, `Transition_Director` switches state back to `PASSATION`, and the segments resume single-buffer rendering.
 
 ---
 
-## 3. Centralized State Management
+## 3. Production Transition Routines (`core/Transition_Engine.py`)
 
-The `Transition_Director` completely encapsulates and manages the transition state (`transition_progress`, `transition_type`, and `state`). 
-Individual segments no longer track or process their own transition timeline independently. Instead, they receive the centralized `Transition_Director` instance securely during their update loop. 
+Because the architecture tracks absolute geometric coordinates `(X, Y)` for every LED derived from the active segment layout, transitions operate seamlessly across 2D space:
 
-This architectural constraint guarantees absolute synchronization across the entire room: every physical LED strip processes the mathematical dual-buffer blend using the exact same `transition_progress` timestamp down to the specific frame, strictly preventing visual tearing or desynchronization.
+| Transition Routine | Identifier / Name | Description |
+| :--- | :--- | :--- |
+| **Dual Fade** | `"fade_to_black"`, `"fade_in_out"` | Fades departing mode to black during the first half ($progress < 0.5$), then fades incoming mode in from black during the second half. |
+| **Linear Crossfade** | `"crossfade"` | Direct linear alpha blend: $RGB = (1 - p) \cdot RGB_{\text{old}} + p \cdot RGB_{\text{new}}$. |
+| **Horizontal Wipe** | `"horizontal_wipe"` | Sweeps a vertical boundary line across the X-axis from $X_{\min}$ to $X_{\max}$. LEDs to the left display the new mode; LEDs to the right display the old mode. |
+| **Vertical Wipe** | `"vertical_wipe"` | Sweeps a horizontal boundary line down the Y-axis from $Y_{\max}$ to $Y_{\min}$. |
+| **Box Wipe** | `"box_wipe"` | Expands an axis-aligned bounding box from the centroid of the room outward. |
+| **Radial Explosion** | `"explosion"` | Expands a circular wavefront outward from the geometric center $(X_c, Y_c)$: $r(t) = p \cdot R_{\max}$. LEDs within $r(t)$ render the new mode. |
+| **Radial Implosion** | `"implosion"` | Contracts a circular boundary from $R_{\max}$ inward toward $(X_c, Y_c)$. |
+| **Weird Glitch** | `"weird_glitch"` | Applies a pseudo-random hash mask across LED indices, generating a digital disintegration effect. |
+| **Colorful Glitch** | `"colorful_glitch"` | High-contrast stochastic spatial switch with chromatic aberration. |
+| **PNG Spatial Maps** | `assets/transitions/*.png` | Greyscale bitmap masks where pixel luminance maps directly to transition trigger timestamps across 2D space. |
 
----
+### Dynamic Spatial Bounds (`init_room_bounds`):
+Before applying spatial transitions, `Transition_Engine.init_room_bounds(segments)` queries all physical segment coordinate arrays via `Configurations_manager.get_segment_coordinates()` to compute:
+- `ROOM_MIN_X`, `ROOM_MAX_X`
+- `ROOM_MIN_Y`, `ROOM_MAX_Y`
+- Centroid: `ROOM_CENTER_X`, `ROOM_CENTER_Y`
+- Maximum spatial radius: $R_{\max} = \sqrt{(X_{\max} - X_{\min})^2 + (Y_{\max} - Y_{\min})^2}$
 
-## 3. The Stateful Probabilistic Model
-
-The system does not tick randomly. It is driven by explicit Event Triggers, while the *Outcome* of those triggers relies on a historically-aware probability matrix.
-
-### The Explicit Triggers
-1. **The Audio Event:** A signal from the Music Analyzer (Song Change, Verse, Chorus Drop). This event **SHOULD ALWAYS** trigger a transition.
-2. **The Timer Safety-Net:** If the music is stagnant and nothing has organically happened for `~30 seconds`, the Director explicitly triggers a change to prevent visual boredom.
-
-### The Probabilistic Gate
-When a trigger fires, the Director must choose what actually happens. The choice is weighted by:
-* **Historical Memory:** "I just did a Global Wipe 10 seconds ago, so the probability of picking Global Wipe again is drastically reduced to near 0%."
-* **Signal Confidence:** "The music analyzer is 99% confident this is a Massive Chorus Drop. Therefore, the probability of selecting an aggressive new Global State is maximized."
-* **Global Cooldowns:** Ensures transitions do not fire too frequently, preventing the installation from feeling erratic or visually overwhelming.
+This guarantees that spatial transitions scale dynamically to both `full` (1,304 LEDs) and `small` (249 LEDs) hardware profiles without hardcoded spatial limits.

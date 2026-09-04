@@ -57,5 +57,13 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 ### 6. Mode Registration
 When adding a new mode:
 1. Create the mode file in `modes/<ModeName>_mode.py`.
-2. Register the mode in `modes/modes_description.md` with description, tags, and parameters.
-3. Import and mount the mode class in `core/Mode_master.py` (`MODES_AVAILABLE` mapping).
+2. Register the mode in `modes/modes_description.md` with visual description, orientation, and parameter schema.
+3. Register the mode entry in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json):
+   ```json
+   {
+     "name": "Display Name",
+     "module": "<ModeName>_mode",
+     "class": "<ModeName>_mode"
+   }
+   ```
+   Each segment in `core/Segment.py` reads `modes.json` on boot and dynamically imports/instantiates the mode.

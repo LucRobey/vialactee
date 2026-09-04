@@ -7,9 +7,10 @@ It serves as the official remote control for the chandelier. We pivoted to this 
 ## Structure and Workflow
 
 - **React Framework**: Built using React, TypeScript, and Vite for lightning-fast HMR and compilation.
-- **Network Layer**: Communicates with the Raspberry Pi's backend over HTTP and WebSockets (handled by `Connector.py` in the `connectors/` folder).
-- **Configuration Source**: Playlists and configurations are loaded from `data/configurations.json` through `/api/configurations`. Do not hardcode playlist names or configuration names in React components.
-- **Interface Capabilities**: Provides sliders, toggles, lists, and visual feedback so the user can manipulate playlist rotation, force mode changes, tune per-mode settings, and observe the system's real-time performance metrics.
+- **Network Layer**: Communicates with the backend over HTTP and WebSockets (handled by `Connector.py` in the `connectors/` folder).
+- **Configuration Source**: Playlists and configurations are loaded dynamically from the active hardware profile (`data/configurations_full.json` or `data/configurations_small.json`) through `/api/configurations`. Do not hardcode playlist names or configuration names in React components.
+- **Dynamic Topology Source**: Chandelier segments and cable wiring are loaded dynamically from `GET /api/topology` (`src/utils/topologyStore.ts`), which reads the active profile's segment file (`config/segments_full.json` or `config/segments_small.json`). Segment positions on the Lego grid (`col`, `row`, `w`, `h`, `color`) and Bezier connection `cables` are unified in the backend config.
+- **Interface Capabilities**: Provides sliders, toggles, lists, and visual feedback so the user can manipulate playlist rotation, force mode changes, tune per-mode settings, and observe real-time system and hardware profile metrics.
 
 ## Tabs (`App.tsx`)
 
@@ -18,19 +19,25 @@ The interface exposes five tabs, all currently implemented:
 | Tab | Component | Purpose |
 |---|---|---|
 | **Live Deck** | `components/pages/LiveDeck.tsx` | Performance dashboard: telemetry strip, three vertical sliders (luminosity / sensibility / auto-transition time), Next Configuration & Next Transition queue, baton-pass button, HOLD/LIVE switch, manual DROP, eight preset bricks. |
-| **Topology** | `components/pages/TopologyEditor.tsx` rendered with `allowedModes={['LIVE']}` | LIVE spatial map of the chandelier with per-segment inspector. No preset authoring panels are visible here. |
+| **Topology** | `components/pages/TopologyEditor.tsx` rendered with `allowedModes={['LIVE']}` | LIVE spatial map of the chandelier with per-segment inspector. Segment layout and cables load dynamically from `/api/topology`. No preset authoring panels are visible here. |
 | **Configurator** | `components/pages/Configurator.tsx` (reuses the same `TopologyEditor`) | Preset authoring: MODIFY / BUILD over `POST /api/configurations` plus the configuration & playlist inspector panels. |
 | **Mode Settings** | `components/pages/ModeSettings.tsx` | Dynamic per-mode tuning driven by `modeSettingsCatalog`; emits `set_mode_setting`. |
-| **System** | `components/pages/SystemSetup.tsx` | Live telemetry + dangerous actions (`restart_python_loop`, `restart_raspberry_pi`) gated by backend capability flags. |
+| **System** | `components/pages/SystemSetup.tsx` | Live telemetry, active hardware profile display (`FULL`: 2 Channels · 11 Segments, or `SMALL`: 1 Channel · 3 Segments), and dangerous actions (`restart_python_loop`, `restart_raspberry_pi`) gated by backend capability flags. |
 
-## Configuration JSON
+## Dynamic Topology & Configuration APIs
 
-The shared helper `src/utils/configurationStore.ts` is the frontend boundary for reading and writing `data/configurations.json`.
+### 1. Topology (`/api/topology`)
+Handled by `src/utils/topologyStore.ts` via `loadTopology()`:
+- `GET /api/topology` returns `{ "segments": RawSegmentDefinition[], "cables": TopologyCable[] }`.
+- `normalizeTopologySegments()` converts backend segment definitions into UI `TopologySegment` objects, applying grid offsets (`MAP_OFFSET_C`, `MAP_OFFSET_R`).
+- When the backend switches `hardwareProfile`, `TopologyEditor` dynamically re-fetches topology and configuration stores.
 
-- `GET /api/configurations` returns `{ "playlists": string[], "configurations": Record<string, Configuration[]> }`.
+### 2. Configuration Store (`/api/configurations`)
+The shared helper `src/utils/configurationStore.ts` is the frontend boundary for reading and writing configurations:
+- `GET /api/configurations` returns `{ "playlists": string[], "configurations": Record<string, Configuration[]> }` for the active profile.
 - `POST /api/configurations` persists the same shape back to disk.
-- During Vite development, `vite.config.ts` serves this API.
-- During Python-backed operation, `connectors/Connector.py` serves the same API and asks `Mode_master` to reload the saved playlists/configurations.
+- During Vite development, `vite.config.ts` serves this API and detects profile from `config/app_config.json`.
+- During Python-backed operation, `connectors/Connector.py` serves the same API and reloads `Mode_master`.
 - `loadConfigurationStore()` uses the HTTP endpoint (Live Deck / Topology). `loadConfigurationFileStore()` resolves the file via Vite's `?raw` import — used by the Configurator to avoid racing live snapshots.
 
 ## WebSocket Control And State
@@ -50,7 +57,13 @@ The app emits control instructions from the UI to the backend bridge through a s
 }
 ```
 
-The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck, Topology, Configurator, Mode Settings, and System with the current active playlist, active/queued configuration, transition lock, luminosity, sensibility, **auto-transition time**, the backend-provided `availableModes` catalog, each segment's active mode/direction, the mode-settings catalog, the current effective per-mode values for the active configuration, and the live `system` telemetry block.
+The same WebSocket also receives `mode_master_state` messages from Python. These snapshots hydrate Live Deck, Topology, Configurator, Mode Settings, and System with:
+- `hardwareProfile`: Current active profile (`"full"` or `"small"`). Triggers reactive reload of topology and configs when changed.
+- `activePlaylist`, `activeConfiguration`, `queuedConfiguration`, `transitionLocked`.
+- Sliders: `luminosity`, `sensibility`, `auto_transition_time`.
+- Catalogs: `availableModes`, `modeSettingsCatalog`, effective `modeSettings`.
+- Segments: active `mode` and `direction` per segment.
+- `system`: telemetry block (hardware mode, profile, temperatures, FPS, resource usage).
 
 **Topology `LIVE`:** segment mode/direction changes are sent as instructions only (no `POST /api/configurations`). The UI merges snapshots with short-lived pending values so rapid broadcasts do not undo a click before Python applies it.
 **Configurator `MODIFY` / `BUILD`:** saving writes through `POST /api/configurations` and issues `modify_configuration` or `build_configuration`.

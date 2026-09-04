@@ -47,7 +47,7 @@ class Magnetic_ball_mode(Mode.Mode):
         
         # Wall collision detection (perfect elastic bounce)
         if self.ball_pos < 0:
-            self.ball_pos_pos = 0.1
+            self.ball_pos = 0.1
             self.ball_speed = abs(self.ball_speed) * 0.9 # bounce with energy loss
         elif self.ball_pos >= self.nb_of_leds:
             self.ball_pos = self.nb_of_leds - 1.1

@@ -12,6 +12,7 @@ import core.Segment as Segment
 import core.Listener as Listener
 import core.Transition_Director as Transition_Director
 import utils.Profiler as Profiler
+from config.Configuration_manager import resolve_configurations_file_path, resolve_segments_file_path
 
 
 
@@ -38,6 +39,7 @@ class Mode_master:
             *leds: References to the LED strip hardware/simulators.
         """
         self.infos = infos
+        self.hardware_profile = infos.get("hardware_profile", "full")
         self.listener = listener
         self.onRaspberry = infos.get("onRaspberry", False)
         self.leds_list = leds
@@ -268,7 +270,7 @@ class Mode_master:
         self._apply_mode_settings_to_segments(self._get_effective_mode_settings())
 
     def _persist_configurations_store(self) -> bool:
-        file_path = os.path.join(os.path.dirname(__file__), "..", "data", "configurations.json")
+        file_path = resolve_configurations_file_path(self.infos)
         payload = {
             "playlists": list(self.playlists),
             "configurations": self.configurations,
@@ -333,6 +335,7 @@ class Mode_master:
         })
 
         return {
+            "hardwareProfile": self.hardware_profile,
             "activePlaylist": active_playlist,
             "enabledPlaylists": enabled_playlists,
             "activeConfiguration": self.activ_configuration.get("name"),
@@ -406,7 +409,7 @@ class Mode_master:
         """
         Load modes and playlists from the configurations.json file.
         """
-        file_path = os.path.join(os.path.dirname(__file__), "..", "data", "configurations.json")
+        file_path = resolve_configurations_file_path(self.infos)
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -459,7 +462,7 @@ class Mode_master:
 
     def initiate_segments(self) -> None:
         """
-        Initialize all segments based on the segments.json configuration file.
+        Initialize all segments based on the active segments configuration file.
         """
         def add_segments(info_list: List[Dict[str, Any]], leds: Any) -> None:
             offset = 0
@@ -471,9 +474,7 @@ class Mode_master:
                 self.segments_list.append(new_segment)
                 self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
                 
-        import json
-        import os
-        file_path = os.path.join(os.path.dirname(__file__), "..", "config", "segments.json")
+        file_path = resolve_segments_file_path(self.infos)
         with open(file_path, "r", encoding='utf-8') as f:
             data = json.load(f)
             

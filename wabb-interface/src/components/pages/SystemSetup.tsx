@@ -450,12 +450,16 @@ const ActionButton = ({
 
 export const SystemSetup = () => {
   const [system, setSystem] = useState<SystemStatus>(EMPTY_SYSTEM_STATUS);
+  const [hardwareProfile, setHardwareProfile] = useState<string>('full');
   const bridgeStatus = useBridgeStatus();
 
   useEffect(() => {
     return subscribeModeMasterState((state) => {
       if (state.system) {
         setSystem(state.system);
+      }
+      if (state.hardwareProfile) {
+        setHardwareProfile(state.hardwareProfile);
       }
     });
   }, []);
@@ -565,6 +569,14 @@ export const SystemSetup = () => {
           transformOrigin: 'top left',
         }}>
           <StatusRow label="MODE" descriptor={describeSimulation(system)} />
+          <StatusRow
+            label="PROFILE"
+            descriptor={{
+              value: hardwareProfile.toUpperCase(),
+              subtitle: hardwareProfile === 'small' ? '1 Channel · 3 Segments' : '2 Channels · 11 Segments',
+              color: hardwareProfile === 'small' ? '#f6ad55' : '#63b3ed',
+            }}
+          />
           <StatusRow label="ESP32 OUTPUT" descriptor={describeEsp32(system)} />
           <StatusRow label="PHONE TO PI" descriptor={describePhone(system)} />
           <StatusRow label="AUDIO INPUT" descriptor={describeAudio(system)} />

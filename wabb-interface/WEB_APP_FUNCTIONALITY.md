@@ -17,7 +17,7 @@ The web app is the **official remote control** for the chandelier: it replaces a
 - Tune **per-mode parameters** for the active configuration without editing Python or JSON by hand.
 - Monitor **host health**, **audio path**, and **output chain** status, and perform **controlled restarts** when the backend allows it.
 
-**End goal (engineering):** the UI stays a thin client: **no hardcoded playlist or configuration names**; lists come from `data/configurations.json` via HTTP, while authoritative **live state** comes from the Python **Mode_master** over a WebSocket snapshot stream.
+**End goal (engineering):** the UI stays a thin client: **no hardcoded playlist or configuration names**, and **no hardcoded segment grid positions or cables**; lists come from the active configuration store via HTTP `/api/configurations`, segments and cables come from `/api/topology`, while authoritative **live state** and **hardware profile** come from the Python **Mode_master** over a WebSocket snapshot stream.
 
 ---
 
@@ -25,13 +25,16 @@ The web app is the **official remote control** for the chandelier: it replaces a
 
 | Layer | Responsibility |
 |--------|----------------|
-| **HTTP** `GET/POST /api/configurations` | Load and persist the shared store: playlists + per-playlist configuration presets (`SegmentConfiguration`: segment modes, directions, optional `modeSettings`). |
-| **WebSocket** `/ws` (default `ws://<host>:8080/ws`, override with `VITE_WABB_WS_URL`) | Bidirectional: UI sends **instructions** (JSON); server pushes **`mode_master_state`** snapshots. |
+| **HTTP** `GET /api/topology` | Retrieves dynamic segment layout (`id`, `name`, `size`, `orientation`, `ui` grid placement) and `cables` splines from the active profile's segment file (`config/segments_full.json` or `config/segments_small.json`). |
+| **HTTP** `GET/POST /api/configurations` | Load and persist the shared store for the active profile (`data/configurations_full.json` or `data/configurations_small.json`): playlists + configuration presets (`SegmentConfiguration`: segment modes, directions, optional `modeSettings`). |
+| **WebSocket** `/ws` (default `ws://<host>:8080/ws`, override with `VITE_WABB_WS_URL`) | Bidirectional: UI sends **instructions** (JSON); server pushes **`mode_master_state`** snapshots (including `hardwareProfile`). |
+| **`src/utils/topologyStore.ts`** | Typed boundary for `/api/topology`: `loadTopology()`, `normalizeTopologySegments()`, and cable spline definitions. |
 | **`src/utils/configurationStore.ts`** | Typed boundary for the configurations API; normalizes malformed entries defensively. Exposes `loadConfigurationStore()` (HTTP) and `loadConfigurationFileStore()` (bundled raw JSON for the Configurator). |
-| **`src/utils/controlBridge.ts`** | Singleton WebSocket client: subscribe to state, subscribe to connection status, queue outbound messages when offline, validate inbound `mode_master_state`. |
+| **`src/utils/controlBridge.ts`** | Singleton WebSocket client: subscribe to state, subscribe to connection status, queue outbound messages when offline, validate inbound `mode_master_state` (including `hardwareProfile`). |
 | **`src/utils/useBridgeStatus.ts`** | Maps socket lifecycle to UI (`open` / `connecting` / `closed`). |
 
-**Dev vs production:** Vite's `vite.config.ts` implements the same `/api/configurations` routes against `../data/configurations.json`. When the stack is run via `Main.py`, `connectors/Connector.py` serves the API and reloads playlists after saves.
+**Dev vs production:** Vite's `vite.config.ts` implements the same `/api/topology` and `/api/configurations` routes, reading `hardware_profile` from `config/app_config.json`. When the stack is run via `Main.py`, `connectors/Connector.py` serves the APIs and reloads configurations after saves.
+
 
 ---
 
@@ -69,9 +72,9 @@ The web app is the **official remote control** for the chandelier: it replaces a
 
 ### UI highlights
 
-- Three Lego-themed **vertical sliders** stacked in the left column: Luminosité, Sensibilité, Auto Trans (S).
-- **Telemetry strip:** CPU temp, current playlist name, active configuration name, measured dynamic audio latency.
-- **Preset bricks:** one button per playlist (up to eight), color-cycled through Blue, Orange, Green, Purple, Yellow, Red, Cyan, and Magenta.
+- Three Lego-themed **vertical sliders** stacked in the **right column** (`col=55`): Luminosité, Sensibilité, Auto Trans (S).
+- **Preset bricks:** Stacked in the **left column** (`col=0`), one button per playlist (up to eight), color-cycled through Blue, Orange, Green, Purple, Yellow, Red, Cyan, and Magenta.
+- **Center column:** Housing the Telemetry strip (CPU temp, current playlist, active configuration, dynamic latency), Next Configuration & Transition blocks, Lock Trans switch, and the giant DROP button.
 - **Notice banners:** the deck surfaces `LIVE DATA STATUS` and `CONFIGURATION STORE` banners whenever the WebSocket bridge is not `open` or the configuration file fails to load.
 
 ---
@@ -101,10 +104,12 @@ The `TopologyEditor` component is shared between this tab and the Configurator a
 **Role:** **preset authoring** surface for playlists and configurations. Uses the same topology canvas as the Topology tab, but exposes:
 
 - **TopologyEditorModeSwitch:** toggles between `MODIFY` and `BUILD` (no `LIVE` here).
-- **TopologyConfigurationPanel:** configuration name field, selector, rename/delete/save (save rules depend on editor mode).
+- **TopologyConfigurationPanel:** configuration name field, selector, rename/delete/save, and a **`SHOW`** preview button.
 - **TopologyPlaylistPanel:** playlist name draft, create/rename/delete playlist, cycle playlist with `select_playlist_slot`.
 
-Because the Configurator never enters LIVE, `mode_master_state` snapshots do not overwrite the local segment map (the underlying `TopologyEditor` only mirrors snapshots when `editorMode === 'LIVE'`). Selecting a configuration in the dropdown re-applies stored modes/directions to the canvas. The Configurator also bypasses HTTP for the initial load by using `loadConfigurationFileStore` (Vite raw import of `data/configurations.json`), so live snapshots cannot race the authoring view.
+Because the Configurator never enters LIVE, `mode_master_state` snapshots do not overwrite the local segment map (the underlying `TopologyEditor` only mirrors snapshots when `editorMode === 'LIVE'`). Selecting a configuration in the dropdown re-applies stored modes/directions to the canvas. The Configurator loads dynamically via `loadConfigurationStore()` (`/api/configurations`), ensuring seamless multi-profile support (`full` vs `small`).
+
+The panel includes a **`SHOW`** button (`handleShow`), which instantly broadcasts `select_segment_mode` and `toggle_segment_direction` for all segments to preview drafted visual configurations live on the chandelier before committing to disk.
 
 ### Editor modes (contract)
 
@@ -159,9 +164,9 @@ Because the Configurator never enters LIVE, `mode_master_state` snapshots do not
 
 **Role:** **read-only telemetry** plus **dangerous actions** gated by backend capability flags.
 
-### Display (from `state.system`)
+### Display (from `state.system` and `state.hardwareProfile`)
 
-Examples include: CPU temperature, RAM/disk usage, Python loop FPS and health, simulation vs Pi hardware resolution, ESP32 reachability, phone Bluetooth status, microphone enabled flag, audio stream state/health, last sample age, dynamic latency, uptime, hostname, platform, connected **web client count**, and **last system action** feedback.
+Examples include: active hardware profile (`PROFILE`: e.g. `FULL` 2 Channels · 11 Segments, or `SMALL` 1 Channel · 3 Segments), CPU temperature, RAM/disk usage, Python loop FPS and health, simulation vs Pi hardware resolution, ESP32 reachability, phone Bluetooth status, microphone enabled flag, audio stream state/health, last sample age, dynamic latency, uptime, hostname, platform, connected **web client count**, and **last system action** feedback.
 
 ### User actions (WebSocket `page: "system"`)
 

@@ -34,7 +34,7 @@ class TestTransitionDirector(unittest.TestCase):
         self.assertIsNone(self.director.transition_type)
         self.assertEqual(self.director.configuration_duration, 20.0)
         
-        # Verify segment geometry loaded from config/segments.json
+        # Verify segment geometry loaded from active segments config
         self.assertGreater(len(self.director.all_segments), 0)
         self.assertGreater(len(self.director.verticals), 0)
         self.assertGreater(len(self.director.horizontals), 0)

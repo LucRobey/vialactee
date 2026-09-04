@@ -1,0 +1,258 @@
+{
+  "configurations": {
+    "Luc": [
+      {
+        "name": "luc1",
+        "modes": {
+          "Segment v4": "Coloured Middle Wave",
+          "Segment h32": "Rainbow",
+          "Segment h31": "Rainbow",
+          "Segment h30": "Rainbow",
+          "Segment v3": "Rainbow",
+          "Segment h20": "Rainbow",
+          "Segment h00": "Flying Ball",
+          "Segment v2": "Rainbow",
+          "Segment h11": "Rainbow",
+          "Segment h10": "Rainbow",
+          "Segment v1": "Rainbow"
+        },
+        "way": {
+          "Segment v4": "UP",
+          "Segment h32": "UP",
+          "Segment h31": "UP",
+          "Segment h30": "UP",
+          "Segment v3": "UP",
+          "Segment h20": "UP",
+          "Segment h00": "UP",
+          "Segment v2": "UP",
+          "Segment h11": "UP",
+          "Segment h10": "UP",
+          "Segment v1": "UP"
+        },
+        "modeSettings": {
+          "Rainbow": {
+            "smoothRatio": 0.5,
+            "intensityBase": 0.1,
+            "intensityMultiplier": 0.9
+          },
+          "Hyper Strobe": {
+            "fluxThreshold": 0.7,
+            "decayRatio": 0.3,
+            "listenBand": 1
+          },
+          "Chromatic Chaser": {
+            "speed": 2,
+            "fadeRatio": 0.05,
+            "bounceEnabled": true
+          },
+          "Metronome": {
+            "brightnessMultiplier": 1,
+            "alternateSubBeats": true,
+            "accentColor": "blue"
+          }
+        }
+      },
+      {
+        "name": "test",
+        "modes": {
+          "Segment v4": "Plasma_fire_mode",
+          "Segment h32": "Plasma_fire_mode",
+          "Segment h31": "Plasma_fire_mode",
+          "Segment h30": "Metronome_mode",
+          "Segment v3": "Metronome_mode",
+          "Segment h20": "Metronome_mode",
+          "Segment h00": "Hyper_strobe_mode",
+          "Segment v2": "Metronome_mode",
+          "Segment h11": "Metronome_mode",
+          "Segment h10": "Metronome_mode",
+          "Segment v1": "Flying Ball"
+        },
+        "way": {
+          "Segment v4": "UP",
+          "Segment h32": "UP",
+          "Segment h31": "UP",
+          "Segment h30": "UP",
+          "Segment v3": "UP",
+          "Segment h20": "UP",
+          "Segment h00": "UP",
+          "Segment v2": "UP",
+          "Segment h11": "UP",
+          "Segment h10": "UP",
+          "Segment v1": "UP"
+        },
+        "modeSettings": {
+          "Chromatic Chaser": {
+            "bounceEnabled": true
+          },
+          "Metronome": {
+            "accentColor": "purple"
+          }
+        }
+      },
+      {
+        "name": "luc-3",
+        "modes": {
+          "Segment v4": "Plasma Fire",
+          "Segment h32": "Rainbow",
+          "Segment h31": "Rainbow",
+          "Segment h30": "Rainbow",
+          "Segment v3": "Rainbow",
+          "Segment h20": "Rainbow",
+          "Segment h00": "Flying Ball",
+          "Segment v2": "Shining Stars",
+          "Segment h11": "Rainbow",
+          "Segment h10": "Rainbow",
+          "Segment v1": "Shining Stars"
+        },
+        "way": {
+          "Segment v4": "UP",
+          "Segment h32": "UP",
+          "Segment h31": "UP",
+          "Segment h30": "UP",
+          "Segment v3": "UP",
+          "Segment h20": "UP",
+          "Segment h00": "UP",
+          "Segment v2": "UP",
+          "Segment h11": "UP",
+          "Segment h10": "UP",
+          "Segment v1": "UP"
+        },
+        "modeSettings": {}
+      },
+      {
+        "name": "emily <3 me",
+        "modes": {
+          "Segment v4": "Plasma Fire",
+          "Segment h32": "Rainbow",
+          "Segment h31": "Rainbow",
+          "Segment h30": "Rainbow",
+          "Segment v3": "Plasma Fire",
+          "Segment h20": "Rainbow",
+          "Segment h00": "Rainbow",
+          "Segment v2": "Power Bar",
+          "Segment h11": "Rainbow",
+          "Segment h10": "Rainbow",
+          "Segment v1": "Rainbow"
+        },
+        "way": {
+          "Segment v4": "UP",
+          "Segment h32": "UP",
+          "Segment h31": "UP",
+          "Segment h30": "UP",
+          "Segment v3": "UP",
+          "Segment h20": "UP",
+          "Segment h00": "UP",
+          "Segment v2": "UP",
+          "Segment h11": "UP",
+          "Segment h10": "UP",
+          "Segment v1": "UP"
+        },
+        "modeSettings": {}
+      }
+    ],
+    "Camille": [
+      {
+        "name": "parmi toutes les étoiles du ciel",
+        "modes": {
+          "Segment v4": "Shining Stars",
+          "Segment h32": "Shining Stars",
+          "Segment h31": "Shining Stars",
+          "Segment h30": "Shining Stars",
+          "Segment v3": "Shining Stars",
+          "Segment h20": "Shining Stars",
+          "Segment h00": "Shining Stars",
+          "Segment v2": "Shining Stars",
+          "Segment h11": "Shining Stars",
+          "Segment h10": "Shining Stars",
+          "Segment v1": "Shining Stars"
+        },
+        "way": {
+          "Segment v4": "UP",
+          "Segment h32": "UP",
+          "Segment h31": "UP",
+          "Segment h30": "UP",
+          "Segment v3": "UP",
+          "Segment h20": "UP",
+          "Segment h00": "UP",
+          "Segment v2": "UP",
+          "Segment h11": "UP",
+          "Segment h10": "UP",
+          "Segment v1": "UP"
+        },
+        "modeSettings": {
+          "Rainbow": {
+            "smoothRatio": 0.45,
+            "intensityBase": 0.1,
+            "intensityMultiplier": 0.9
+          },
+          "Hyper Strobe": {
+            "fluxThreshold": 0.7,
+            "decayRatio": 0.3,
+            "listenBand": 1
+          },
+          "Chromatic Chaser": {
+            "speed": 2,
+            "fadeRatio": 0.05,
+            "bounceEnabled": true
+          },
+          "Metronome": {
+            "brightnessMultiplier": 1,
+            "alternateSubBeats": true,
+            "accentColor": "blue"
+          }
+        }
+      },
+      {
+        "name": "aaaaaaaaaaaaaaah",
+        "modes": {
+          "Segment v4": "Static Wave",
+          "Segment h32": "Plasma Fire",
+          "Segment h31": "Plasma Fire",
+          "Segment h30": "Metronome",
+          "Segment v3": "Plasma Fire",
+          "Segment h20": "Power Bar",
+          "Segment h00": "Bary Rainbow",
+          "Segment v2": "PSG",
+          "Segment h11": "Chromatic Chaser",
+          "Segment h10": "Metronome",
+          "Segment v1": "Chromatic Chaser"
+        },
+        "way": {
+          "Segment v4": "UP",
+          "Segment h32": "UP",
+          "Segment h31": "UP",
+          "Segment h30": "UP",
+          "Segment v3": "UP",
+          "Segment h20": "UP",
+          "Segment h00": "UP",
+          "Segment v2": "UP",
+          "Segment h11": "UP",
+          "Segment h10": "DOWN",
+          "Segment v1": "DOWN"
+        },
+        "modeSettings": {
+          "Rainbow": {
+            "smoothRatio": 0.5,
+            "intensityBase": 0.1,
+            "intensityMultiplier": 0.9
+          },
+          "Hyper Strobe": {
+            "fluxThreshold": 0.7,
+            "decayRatio": 0.3,
+            "listenBand": 1
+          },
+          "Chromatic Chaser": {
+            "speed": 2,
+            "fadeRatio": 0.05,
+            "bounceEnabled": true
+          },
+          "Metronome": {
+            "brightnessMultiplier": 1,
+            "alternateSubBeats": true,
+            "accentColor": "blue"
+          }
+        }
+      }
+    ]
+  }
+}

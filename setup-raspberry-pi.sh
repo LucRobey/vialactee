@@ -14,7 +14,7 @@
 #   1. Stops any running Vialactée processes
 #   2. Removes previous Vialactée project folders and virtualenvs
 #   3. Clones (or updates) https://github.com/LucRobey/vialactee.git
-#   4. Creates a Python venv, installs dependencies, builds python_btrack
+#   4. Creates a Python venv and installs dependencies
 #   5. Installs Node.js deps for wabb-interface (used by Main.py on first launch)
 #
 # Override defaults:
@@ -128,18 +128,13 @@ setup_python_environment() {
   log "Installing Python dependencies..."
   pip install -r "${INSTALL_DIR}/requirements.txt"
 
-  log "Building python_btrack (Cython)..."
-  pushd "${INSTALL_DIR}/python_btrack" >/dev/null
-  python setup.py build_ext --inplace
-  popd >/dev/null
-
   # Convenience: run Main.py without activating venv manually.
   cat > "${INSTALL_DIR}/run-vialactee.sh" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 cd "${INSTALL_DIR}"
 source "${VENV_DIR}/bin/activate"
-export PYTHONPATH="${INSTALL_DIR}:${INSTALL_DIR}/python_btrack:\${PYTHONPATH:-}"
+export PYTHONPATH="${INSTALL_DIR}:\${PYTHONPATH:-}"
 exec python Main.py "\$@"
 EOF
   chmod +x "${INSTALL_DIR}/run-vialactee.sh"

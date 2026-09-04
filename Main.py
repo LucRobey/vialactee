@@ -130,14 +130,14 @@ async def main() -> Optional[str]:
     
     listener = Listener.Listener(infos)
     
-    leds1, leds2 = HardwareFactory.create_hardware(infos)
+    hardware_leds = HardwareFactory.create_hardware(infos)
 
     # Wire the analyzer to the simulator so the HUD panel can render live state
-    if infos.get("show_music_analyser_panel", False):
-        if hasattr(leds1, 'set_analyzer'):
-            leds1.set_analyzer(listener.analyzer)
+    if infos.get("show_music_analyser_panel", False) and len(hardware_leds) > 0:
+        if hasattr(hardware_leds[0], 'set_analyzer'):
+            hardware_leds[0].set_analyzer(listener.analyzer)
 
-    mode_master = Mode_master.Mode_master(listener, infos, leds1, leds2)                                 
+    mode_master = Mode_master.Mode_master(listener, infos, *hardware_leds)                                 
    
     local_microphone = Local_Microphone.Local_Microphone(listener, infos)
     connector = Connector.Connector(mode_master, infos)

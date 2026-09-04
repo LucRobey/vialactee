@@ -28,45 +28,40 @@ def main():
     # Initialize the visualizer
     visualizer = FakeLedsVisualizer()
     
-    # Register the two strips (sizes from the main code)
-    strip1_id = visualizer.register_strip(785)
-    strip2_id = visualizer.register_strip(519)
+    from hardware.HardwareFactory import _get_channel_specs
+    channel_specs = _get_channel_specs()
+
+    strip_channels = []
+    for spec in channel_specs:
+        strip_id = visualizer.register_strip(spec["count"])
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('127.0.0.1', spec["port"]))
+        sock.setblocking(False)
+        strip_channels.append({
+            "strip_id": strip_id,
+            "sock": sock,
+            "port": spec["port"],
+            "count": spec["count"],
+        })
     
-    # Setup UDP sockets for listening
-    sock1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock1.bind(('127.0.0.1', PORT_STRIP_1))
-    sock1.setblocking(False)
-
-    sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock2.bind(('127.0.0.1', PORT_STRIP_2))
-    sock2.setblocking(False)
-
     sock_meta = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock_meta.bind(('127.0.0.1', PORT_METADATA))
     sock_meta.setblocking(False)
 
-    logger.info(f"Fake ESP32 listening on UDP ports {PORT_STRIP_1}, {PORT_STRIP_2} (pixels) and {PORT_METADATA} (metadata)...")
+    listening_ports = [ch["port"] for ch in strip_channels]
+    logger.info(f"Fake ESP32 listening on UDP ports {listening_ports} (pixels) and {PORT_METADATA} (metadata)...")
 
     while True:
-        # Check Strip 1
-        try:
-            data, _ = sock1.recvfrom(65535)
-            if len(data) >= 2:
-                start_index = struct.unpack('<H', data[:2])[0]
-                arr = np.frombuffer(data[2:], dtype=np.uint8).reshape(-1, 3)
-                visualizer.strips[strip1_id][start_index:start_index+len(arr)] = arr
-        except BlockingIOError:
-            pass
-
-        # Check Strip 2
-        try:
-            data, _ = sock2.recvfrom(65535)
-            if len(data) >= 2:
-                start_index = struct.unpack('<H', data[:2])[0]
-                arr = np.frombuffer(data[2:], dtype=np.uint8).reshape(-1, 3)
-                visualizer.strips[strip2_id][start_index:start_index+len(arr)] = arr
-        except BlockingIOError:
-            pass
+        # Check all active strips
+        for ch in strip_channels:
+            try:
+                data, _ = ch["sock"].recvfrom(65535)
+                if len(data) >= 2:
+                    start_index = struct.unpack('<H', data[:2])[0]
+                    arr = np.frombuffer(data[2:], dtype=np.uint8).reshape(-1, 3)
+                    visualizer.strips[ch["strip_id"]][start_index:start_index+len(arr)] = arr
+            except BlockingIOError:
+                pass
 
         # Drain pending segment-metadata packets (bounded to keep frame snappy)
         for _ in range(64):

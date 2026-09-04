@@ -9,9 +9,11 @@ The `core` directory is the engine room of Vialactée. It contains the primary m
 - **`StructuralNoveltyDetector.py`**: Dedicated structural novelty engine. Autonomously identifies Verse/Chorus boundaries, Seamless Crossfades, and Silence Drops using Short-Term Memory (STM) vs Long-Term Memory (LTM) tension wrapped in dynamic asserved mathematical envelopes.
 - **`RhythmConfig.py`**: Centralized, strongly-typed configuration dataclass holding all thresholds, cooldowns, and constants for beat tracking, flywheel trust levels, and structural novelty detection.
 - **`Listener.py`**: The transparent facade orchestrator. Instantiates Ingestion and Analysis layers and provides a fully backward-compatible API (`beat_phase`, `beat_count`, `bpm`, `is_real_beat`, `is_dropped_beat`, `beat_tag`, `beat_confidence`, `is_song_change`, `is_verse_chorus_change`) to feed data into the visual modes and transition engine. Manages a 5-second non-causal delay queue to synchronize real-time spectral arrays with the predictive lookahead of the beat tracker.
-- **`Mode_master.py`**: The 30FPS rendering engine. Polls the `Listener` for audio features, loads playlist/configuration rotation from `data/configurations.json`, routes state to the currently active visual modes, and exposes JSON-safe state snapshots for the web app.
-- **`Transition_Director.py` & `Transition_Engine.py`**: Orchestrates large-scale lighting changes based on musical structure (e.g., dropping the lights during a heavy bass drop or changing the animation style at a chorus).
-- **`Segment.py`**: A logical abstraction of the physical LED strips, mapping mathematical vectors to physical addresses.
+- **`Mode_master.py`**: The 30FPS rendering engine. Polls the `Listener` for audio features, resolves the active hardware profile (`"full"` vs `"small"`), loads playlist/configuration rotation from the resolved configuration store (`data/configurations_full.json` or `data/configurations_small.json`), routes state to the active visual modes, and exposes JSON-safe state snapshots (including `hardwareProfile`) for the web app.
+- **`Transition_Director.py` & `Transition_Engine.py`**: Orchestrates lighting transitions across presets based on configurable timer intervals (`auto_transition_time`). `Transition_Engine.py` uses `init_room_bounds()` to dynamically compute spatial room bounds from the active segment geometry and provides 10 spatial/alpha blending routines.
+- **`Segment.py`**: A logical abstraction of the physical LED strips, mapping mathematical vectors to physical addresses using the resolved segment configuration. Handles dual-buffer blending (`rgb_list` and `dual_rgb_list`) during transitions.
+- **`BeatGridQuantizer.py`**: Decoupled beat grid quantization and O(1) motif pattern recognition layer. Quantizes continuous note events onto beat tracker phase-aligned grid subdivisions (16th/8th notes) and detects repeating melodic motifs in real-time.
+- **`Webapp_instruction_logger.py`**: Instruction logger sink instantiated by `connectors/Connector.py` to parse, format, and log incoming WebSocket commands from the web interface.
 
 ## How it works:
 
@@ -29,21 +31,22 @@ classDiagram
         -transition_director : Transition_Director
         -segments_list : list
         -activ_configuration : dict
-        -next_change_of_configuration_time : float
         +update()
         +change_configuration(transition_config)
         +update_segments_modes(transition_config)
-        +force_standby_playlist(transition_config)
     }
 
     %% Spatial & Transition Logic Filter
     class Transition_Director {
         -listener : Listener
         -state : str
-        -is_in_standby : bool
+        -next_change_time : float
+        -transition_progress : float
+        -transition_type : str
         -all_segments : list
         -verticals : list
         -horizontals : list
+        +start_transition(transition_config) : None
         +update(current_time) : None
     }
 
@@ -127,7 +130,7 @@ classDiagram
    `Mode_master` fires `listener.update()` every frame. The `Listener` (acting as a facade) processes raw audio through `AudioIngestion`, updates `StructuralNoveltyDetector` for macro-structure, and runs the predictive beat tracking pipeline in `AudioAnalyzer`.
 2. **Context Evaluation:**
    `Mode_master` asks the `Transition_Director` to update its state and progress transitions by passing the time state: `transition_director.update(current_time)`.
-3. **Probabilistic Decision:**
-   `Transition_Director` looks at the state of the `Listener` (checking variables like incoming events and timers). It determines whether to allow a transition to happen. If a transition is needed, it directly commands the `Mode_master` (e.g., via `mode_master.change_configuration()`).
+3. **Interval Evaluation:**
+   `Transition_Director.update(current_time)` checks whether the automated transition interval (`auto_transition_time`) has elapsed or a manual trigger has fired. When an update is required, it directly commands `await self.mode_master.change_configuration(transition_config)`.
 4. **Execution:**
-   `Mode_master` receives the `action` returned by the director. If the action is `"allow_change"`, the orchestrator executes `change_configuration()` passing along the spatial transition configuration matrix requested by the director to all the underlying physical `Segment` objects.
+   `Mode_master.change_configuration()` loads the new preset from the active configuration store, initializes the transition configuration matrix via `transition_director.start_transition(transition_config)`, and pushes the dual-buffer blend state to all underlying physical `Segment` objects.

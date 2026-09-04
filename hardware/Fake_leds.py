@@ -24,28 +24,93 @@ class FakeLedsVisualizer:
             # Latest analyzer state received from the main process (for HUD overlay)
             cls._instance._analyzer_data = None
             
-            # Exact chandelier geometry mapping
-            cls._instance.segments_def = [
-                # Strip 0 (segs_1)
-                [
-                    (173, "vertical_up", 962, 510, "segment_v4", (50, 100, 255)),
-                    (48, "horizontal", 866, 270, "segment_h32", (255, 50, 50)),
-                    (48, "horizontal", 866, 442, "segment_h31", (255, 0, 255)),
-                    (47, "horizontal", 866, 102, "segment_h30", (150, 150, 150)),
-                    (173, "vertical_up", 866, 592, "segment_v3", (0, 255, 255)),
-                    (91, "horizontal", 684, 132, "segment_h20", (150, 255, 150)),
-                    (205, "horizontal", 100, 132, "segment_h00", (0, 0, 255))
-                ],
-                # Strip 1 (segs_2)
-                [
-                    (173, "vertical_up", 684, 592, "segment_v2", (0, 255, 0)),
-                    (87, "horizontal", 510, 246, "segment_h11", (255, 150, 100)),
-                    (86, "horizontal", 510, 478, "segment_h10", (150, 50, 200)),
-                    (173, "vertical_up", 510, 478, "segment_v1", (255, 255, 0))
-                ]
-            ]
+            # Dynamic geometry mapping based on active profile
+            cls._instance.segments_def = cls._instance._load_visualizer_segments_def()
             
         return cls._instance
+
+    @staticmethod
+    def _hex_to_rgb(hex_str):
+        if not hex_str or not isinstance(hex_str, str) or not hex_str.startswith("#") or len(hex_str) < 7:
+            return (200, 200, 200)
+        try:
+            return (int(hex_str[1:3], 16), int(hex_str[3:5], 16), int(hex_str[5:7], 16))
+        except ValueError:
+            return (200, 200, 200)
+
+    @classmethod
+    def _load_visualizer_segments_def(cls, infos=None):
+        """
+        Build segments_def dynamically based on active hardware profile.
+        Reconstructs the layout directly from the active segment JSON file
+        (resolved via resolve_segments_file_path) to maintain a single source of truth.
+        """
+        try:
+            from config.Configuration_manager import resolve_segments_file_path
+            import json
+            seg_path = resolve_segments_file_path(infos)
+            with open(seg_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            channel_keys = [k for k in data.keys() if k.startswith("segs_")]
+            channel_keys.sort(key=lambda k: int(k.split("_")[1]) if k.split("_")[1].isdigit() else 0)
+
+            strips_defs = []
+            for ch_key in channel_keys:
+                segs = data.get(ch_key, [])
+                sorted_segs = sorted(segs, key=lambda s: s.get("order", 0))
+                channel_defs = []
+                for s in sorted_segs:
+                    size = int(s.get("size", 0))
+                    orientation_raw = s.get("orientation", "horizontal")
+                    step = s.get("step", {})
+                    step_y = step.get("y", 0)
+                    if orientation_raw == "vertical" and step_y < 0:
+                        orientation = "vertical_up"
+                    else:
+                        orientation = orientation_raw
+
+                    start = s.get("start", {})
+                    start_x_grid = start.get("x", 0)
+                    start_y_grid = start.get("y", 0)
+
+                    # Scale factor 2, Offset 100
+                    start_x = 100 + (start_x_grid * 2)
+                    if orientation == "vertical_up":
+                        start_y = 100 + (start_y_grid * 2) + 2
+                    else:
+                        start_y = 100 + (start_y_grid * 2)
+
+                    name = f"segment_{s.get('id', s.get('name', ''))}"
+                    border_color = cls._hex_to_rgb(s.get("ui", {}).get("color", "#ffffff"))
+                    channel_defs.append((size, orientation, start_x, start_y, name, border_color))
+                strips_defs.append(channel_defs)
+
+            if strips_defs and any(len(c) > 0 for c in strips_defs):
+                return strips_defs
+        except Exception as exc:
+            print(f"(Fake_leds) Warning: Could not dynamically load segment geometry from JSON: {exc}")
+
+        # Fallback to default chandelier geometry if JSON load fails
+        return [
+            # Strip 0 (segs_1)
+            [
+                (173, "vertical_up", 962, 510, "segment_v4", (50, 100, 255)),
+                (48, "horizontal", 866, 270, "segment_h32", (255, 50, 50)),
+                (48, "horizontal", 866, 442, "segment_h31", (255, 0, 255)),
+                (47, "horizontal", 866, 102, "segment_h30", (150, 150, 150)),
+                (173, "vertical_up", 866, 592, "segment_v3", (0, 255, 255)),
+                (91, "horizontal", 684, 132, "segment_h20", (150, 255, 150)),
+                (205, "horizontal", 100, 132, "segment_h00", (0, 0, 255))
+            ],
+            # Strip 1 (segs_2)
+            [
+                (173, "vertical_up", 684, 592, "segment_v2", (0, 255, 0)),
+                (87, "horizontal", 510, 246, "segment_h11", (255, 150, 100)),
+                (86, "horizontal", 510, 478, "segment_h10", (150, 50, 200)),
+                (173, "vertical_up", 510, 478, "segment_v1", (255, 255, 0))
+            ]
+        ]
 
     def register_strip(self, nb_of_leds):
         strip_id = len(self.strips)
@@ -376,4 +441,8 @@ class Fake_leds(HardwareInterface):
         """
         internal_name = segment_name.lower().replace(" ", "_")
         visualizer.set_segment_mode(internal_name, mode_name, target_mode_name)
+
+    @staticmethod
+    def _load_visualizer_segments_def(infos=None):
+        return FakeLedsVisualizer._load_visualizer_segments_def(infos)
 

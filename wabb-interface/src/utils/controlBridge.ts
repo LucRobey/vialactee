@@ -85,6 +85,7 @@ export type SystemStatus = {
 };
 
 export type ModeMasterState = {
+  hardwareProfile?: string;
   activePlaylist: string | null;
   enabledPlaylists: string[];
   activeConfiguration: string | null;
@@ -173,6 +174,7 @@ const isSystemStatus = (value: unknown): value is SystemStatus => (
 
 const isModeMasterState = (value: unknown): value is ModeMasterState => (
   isRecord(value)
+  && (value.hardwareProfile === undefined || typeof value.hardwareProfile === 'string')
   && (typeof value.activePlaylist === 'string' || value.activePlaylist === null)
   && Array.isArray(value.enabledPlaylists)
   && value.enabledPlaylists.every(item => typeof item === 'string')

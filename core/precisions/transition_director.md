@@ -76,10 +76,11 @@ stateDiagram
 ## 2. Internal Workflow Explained
 
 ### 1. Geometry Mapping
-On startup, it parses `config/segments.json` to map out which segments are vertical vs horizontal, storing them for transition effects.
+On startup, it parses the active segments file (resolved dynamically via `resolve_segments_file_path(self.infos)` — e.g. `config/segments_full.json` or `config/segments_small.json`) to map out which segments are vertical vs horizontal, storing them for geometric transition effects.
 
 ### 2. State Management
 It switches between `PASSATION` (normal operation/standby) and `TRANSITION_DUAL` (actively crossfading or switching between modes).
 
 ### 3. Timer-Based Overrides
 In its `update()` loop, it monitors `next_change_time`. When this timer expires, it proactively commands the `mode_master` to execute a global transition (currently default to an `"explosion"` effect for testing) and resets the timer.
+

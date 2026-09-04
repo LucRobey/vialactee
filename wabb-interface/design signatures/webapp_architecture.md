@@ -16,8 +16,8 @@ This document outlines the structural layout and user experience philosophy for 
 
 **Components (implemented in `components/pages/LiveDeck.tsx`):**
 *   **Telemetry strip:** CPU temperature, active playlist, active configuration, and dynamic audio latency hydrated from `mode_master_state` / `state.system`. No local placeholder values.
-*   **Playlist Presets:** Up to eight thumb-friendly bricks generated only from the playlists exposed by `data/configurations.json` and `mode_master_state.playlists`. The UI never seeds fallback or demo playlist names.
-*   **Macro Sliders (left column):** Three vertical Lego sliders:
+*   **Playlist Presets (left column, `col=0`):** Up to eight thumb-friendly bricks generated dynamically from the playlists exposed by `loadConfigurationStore()` and `mode_master_state.playlists`. The UI never seeds fallback or demo playlist names.
+*   **Macro Sliders (right column, `col=55`):** Three vertical Lego sliders:
     *   *Luminosité* (1 → 100) — `set_luminosity`
     *   *Sensibilité* (1 → 100) — `set_sensibility`
     *   *Auto Trans (S)* (5 → 300 seconds) — `set_auto_transition_time`
@@ -44,11 +44,12 @@ This document outlines the structural layout and user experience philosophy for 
 **Components (`components/pages/Configurator.tsx` reuses `TopologyEditor` with `allowedModes={['MODIFY', 'BUILD']}` and `syncPlaylistsFromModeMaster=false`):**
 *   Full topology map + segment inspector for editing modes / directions locally.
 *   `TopologyEditorModeSwitch` toggles between `MODIFY` and `BUILD` (no `LIVE` here).
-*   `TopologyConfigurationPanel` — configuration selector, name field, rename / delete / save controls.
+*   `TopologyConfigurationPanel` — configuration selector, name field, rename / delete / save controls, and a **`SHOW`** preview button.
 *   `TopologyPlaylistPanel` — playlist name draft + create / rename / delete / cycle (`select_playlist_slot`).
+*   **SHOW Preview:** Clicking `SHOW` broadcasts `select_segment_mode` and `toggle_segment_direction` instructions for all segments to preview the drafted layout live on the chandelier before committing to disk.
 *   **MODIFY:** Save overwrites the selected configuration. After a successful `POST /api/configurations`, the UI emits `modify_configuration` so `Mode_master` reloads from disk.
 *   **BUILD:** Save can append a new configuration or, with confirm-overwrite, replace an existing one. The UI emits `build_configuration` after the disk write.
-*   Configuration JSON is loaded from the bundled raw file via `loadConfigurationFileStore`, so the Configurator does not race the live `mode_master_state` snapshots.
+*   Configuration JSON is dynamically fetched via `loadConfigurationStore` (`/api/configurations`), ensuring seamless multi-profile compatibility (`full` vs `small`).
 
 ---
 
@@ -74,7 +75,7 @@ This document outlines the structural layout and user experience philosophy for 
 
 ## Data And State Rules
 
-* `data/configurations.json` is the single source of truth for playlists and saved configurations.
-* `src/utils/configurationStore.ts` is the React load/save boundary for that JSON file (HTTP for Live Deck/Topology, bundled raw file for Configurator).
+* `data/configurations_full.json` or `data/configurations_small.json` is the single source of truth for playlists and saved configurations according to the active hardware profile.
+* `src/utils/configurationStore.ts` is the React load/save boundary for configuration presets over `/api/configurations`.
 * `/api/configurations` is implemented both by Vite during local development and by `connectors/Connector.py` when Python serves the backend.
 * `/ws` remains the live control channel. The browser sends page/action instructions and receives `mode_master_state` snapshots describing the active playlist, active/queued configuration, transition state, luminosity, sensibility, auto-transition time, current segment modes/directions, the mode-settings catalog and effective `modeSettings`, plus the `system` telemetry block. Topology in `LIVE` treats those snapshots as authoritative once they agree with any pending user override for a segment.

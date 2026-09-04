@@ -436,7 +436,7 @@ Small inconsistency — the `future_queue` is an `AudioAnalyzer` concept but `AG
 
 #### 10.2 No `requirements.txt` or `pyproject.toml`
 
-There is no dependency specification file. A fresh Pi deployment requires manual `pip install` guessing. A minimal `requirements.txt` listing `numpy`, `sounddevice`, `python-btrack` (or whatever is used), `aiohttp`/`websockets`, `pygame` would make deployment reproducible.
+There is no dependency specification file. A fresh Pi deployment requires manual `pip install` guessing. A minimal `requirements.txt` listing `numpy`, `sounddevice`, `aiohttp`/`websockets`, `pillow` would make deployment reproducible.
 
 ---
 

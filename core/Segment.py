@@ -18,7 +18,6 @@ class Segment:
     """
     
     listener = None
-    _configuration_manager = Configuration_manager.Configurations_manager()
 
     def __init__(self, name: str, listener: Any, leds: Any, indexes: List[int], orientation: str, infos: Dict[str, Any]) -> None:
         """
@@ -37,6 +36,7 @@ class Segment:
         self.leds = leds
         self.indexes = indexes
         self.infos = infos
+        self._configuration_manager = Configuration_manager.Configurations_manager(infos)
         self.nb_of_leds=len(self.indexes)
         if self.listener is None:
             self.listener = listener
@@ -67,7 +67,7 @@ class Segment:
         """
         coords_list = self._configuration_manager.get_segment_coordinates(self.name)
         if coords_list is None:
-            self.logger.warning(f"Could not find coordinates for {self.name} in segments.json")
+            self.logger.warning(f"Could not find coordinates for {self.name} in segments configuration")
         elif len(coords_list) < self.nb_of_leds:
             self.logger.warning(f"Coordinate length mismatch for {self.name}. Expected {self.nb_of_leds}, got {len(coords_list)}")
         else:

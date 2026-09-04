@@ -4,7 +4,7 @@ The `connectors` directory manages all external Data In (Audio) and Data Out (Ne
 
 ## Key Components:
 
-- **`Connector.py`**: An aiohttp server on port `8080` that exposes `/ws` for bidirectional web app state/control and `/api/configurations` for persisted playlist/configuration JSON. It validates instruction payloads, logs them, acknowledges receipt, and broadcasts `Mode_master` state snapshots back to connected clients.
+- **`Connector.py`**: An aiohttp server on port `8080` that exposes `/ws` for bidirectional web app state/control, `/api/topology` for dynamic segment geometry and wiring, and `/api/configurations` for persisted playlist/configuration JSON. It validates instruction payloads, logs them, acknowledges receipt, and broadcasts `Mode_master` state snapshots back to connected clients.
 - **`Local_Microphone.py`**: Wraps the Python `sounddevice` library. It maintains a continuous sliding buffer of analog audio input and asynchronously pushes raw PCM data arrays directly into the `Listener` engine (which routes it to `AudioIngestion` for actual DSP math).
 
 ## How it works:
@@ -30,6 +30,7 @@ It also pushes live snapshots to every connected web client:
 {
   "type": "mode_master_state",
   "payload": {
+    "hardwareProfile": "full",
     "activePlaylist": "Luc",
     "activeConfiguration": "luc1",
     "queuedConfiguration": "luc-3",
@@ -43,12 +44,38 @@ It also pushes live snapshots to every connected web client:
 }
 ```
 
-The `mode_master_state` payload now also includes a nested `system` block for the System page. It carries host/runtime telemetry such as resolved hardware mode, simulation state, CPU temperature when available, RAM and disk usage, loop FPS/health, microphone state, best-effort ESP32 reachability, Bluetooth phone status when detectable, connected web-client count, and the capability / last-feedback fields for the dangerous system actions.
+The `mode_master_state` payload includes `"hardwareProfile"` (`"full"` or `"small"`) and a nested `system` block for the System page. It carries host/runtime telemetry such as resolved hardware mode, simulation state, CPU temperature when available, RAM and disk usage, loop FPS/health, microphone state, best-effort ESP32 reachability, Bluetooth phone status when detectable, connected web-client count, and the capability / last-feedback fields for the dangerous system actions.
 
-## Configuration API
+## REST Endpoints
 
-`GET /api/configurations` reads `data/configurations.json`.
-`POST /api/configurations` validates and writes the same JSON shape:
+### 1. Dynamic Topology API (`GET /api/topology`)
+Reads the active segment layout via `resolve_segments_file_path(infos)` (`segments_full.json` or `segments_small.json`) and returns all defined segments along with cable connection splines:
+
+```json
+{
+  "segments": [
+    {
+      "id": "v4",
+      "name": "Segment v4",
+      "size": 173,
+      "order": 0,
+      "orientation": "vertical",
+      "start": { "x": 0, "y": 204 },
+      "step": { "x": 0, "y": -1 },
+      "ui": { "col": 43, "row": 1, "w": 2, "h": 18, "color": "#3264ff" }
+    }
+  ],
+  "cables": [
+    { "start": [2.5, 3], "end": [2.5, 6.5], "cp1": [1, 3], "cp2": [1, 6.5] }
+  ]
+}
+```
+
+### 2. Configuration API (`GET / POST /api/configurations`)
+Reads and writes the active profile's configuration store dynamically via `resolve_configurations_file_path(infos)` (`data/configurations_full.json` or `data/configurations_small.json`):
+
+- `GET /api/configurations` returns the active profile's playlists and presets.
+- `POST /api/configurations` validates and writes the same JSON shape:
 
 ```json
 {

@@ -14,13 +14,14 @@ The entire page operates on an absolute coordinate system based on Lego studs.
 * All sizes and gaps are calculated using the `LEGO_MATH` engine (e.g., `LEGO_MATH.physicalSize(studs) = (studs * 30) - 4px`) to account for the physical 4px tolerance gap between real bricks.
 
 ## 2. The Interactive SVG Mapper
-The main area of the page is a top-down view of the chandelier's LED segments.
+The main area of the page is a top-down view of the chandelier's LED segments. Segment definitions (`id`, `name`, `orientation`, `ui`: `col`, `row`, `w`, `h`, `color`) are loaded dynamically from `/api/topology` via `loadTopology()` (`src/utils/topologyStore.ts`), which parses the active profile's segment file (`config/segments_full.json` or `config/segments_small.json`).
 * **Segments**: Rendered as physical `rogue-piece` elements that glow in their respective colors. They feature a `var(--highlight)` and `var(--shadow)` stud overlay so they look like translucent plates.
 * **Selection**: Clicking a segment applies a strong white border and outer glow, marking it as active for the Inspector.
 * **Junction Boxes**: The component runs an AABB (Axis-Aligned Bounding Box) collision check across all segments. Where horizontal and vertical segments intersect, it automatically spawns a physical dark-grey "Junction Box" brick over the intersection.
 
 ## 3. Physical Wiring (SVG Layer)
 To bridge the gap between the theoretical map and the physical "Inspector" console, heavy-duty cables connect the segments to the panel.
+* Cable definitions (`start`, `end`, `cp1`, `cp2`) are provided by the backend topology API via the top-level `cables` array in the active segment file, passed as `cables` prop into `TopologyMap`.
 * Implemented using absolute `<svg>` paths laid over the grid.
 * Uses Bezier curves (`C`) to create natural drooping loops.
 * Features multi-layered styling: a thick dark stroke, a translucent white stroke offset by `-2px` for a glossy highlight, and an SVG drop-shadow filter to separate it from the baseplate.
@@ -45,12 +46,12 @@ The available modes are listed as a physical switchboard. The list comes from `m
 
 ## 7. Playlist And Configuration Data
 
-The shared component uses `data/configurations.json` as its persistence layer:
+The shared component uses the active hardware profile's configuration file (`data/configurations_full.json` or `data/configurations_small.json`) as its persistence layer:
 
 * It loads playlists/configurations through `src/utils/configurationStore.ts`. The Topology tab uses `loadConfigurationStore()` (HTTP `/api/configurations`); the Configurator tab uses `loadConfigurationFileStore()` (raw bundled file) to avoid races with live snapshots.
 * It saves **only from `MODIFY` or `BUILD`** through `POST /api/configurations`. `handleSave` short-circuits with a warning when the editor mode is `LIVE`.
 * The saved JSON shape is `{ "playlists": string[], "configurations": Record<string, Configuration[]> }`.
-* Segment mode keys must stay in Python format (`Segment v4`, `Segment h32`, etc.) so `Mode_master` can apply them directly.
+* Segment mode keys must stay in Python format (`Segment v4`, `Segment h32` for `full`, or `Segment s1` for `small`) so `Mode_master` can apply them directly.
 * The UI must not seed fake playlist names. If the JSON file is empty, the controls show an empty/no-playlist state.
 * Playlist management lives in the same inspector panel: `NEW` creates a saved playlist with the typed name, `REN` renames the selected playlist while preserving all configurations attached to it, and `DEL` removes a playlist with confirm.
 * Configuration management exposes a selector plus editable name field: `REN` renames the selected configuration and `DEL` removes it from the current playlist.

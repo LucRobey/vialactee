@@ -40,8 +40,7 @@ graph TD
         J["3. segments.update(transition_director)"]:::loop
         K["4. transition_director.update(current_time)"]:::loop
         BCAST["5. Broadcast state if changed"]:::loop
-        L{"Transition_Director triggers change?"}:::decision
-        M[force_standby_playlist]:::action
+        L{"Interval expired or trigger fired?"}:::decision
         N[change_configuration]:::action
         P[End of Frame / Wait]:::loop
         
@@ -53,11 +52,9 @@ graph TD
         K --> L
         K --> BCAST
         
-        L -->|Yes: Standby| M
         L -->|Yes: New Config| N
         L -->|No| P
         
-        M --> P
         N --> P
         BCAST --> P
         P --> F
@@ -111,8 +108,9 @@ graph TD
 
 ### 1. Initialization (`__init__`)
 When `Mode_master` starts, it sets up the environment:
-*   **`load_configurations()`**: Reads `data/configurations.json` to load all available visual modes, per-configuration `modeSettings`, and playlists into memory. (Global application settings are read from `config/app_config.json`).
-*   **`initiate_segments()`**: Reads `config/segments.json` and creates `Segment` objects for every defined physical hardware strip (h00, v4, etc.).
+*   **Hardware Profile**: Reads `hardware_profile` from `infos` (default `"full"`).
+*   **`load_configurations()`**: Uses `resolve_configurations_file_path(self.infos)` to read `data/configurations_full.json` (or `data/configurations_small.json`) to load available visual modes, per-configuration `modeSettings`, and playlists into memory. (Global application settings are read from `config/app_config.json`).
+*   **`initiate_segments()`**: Uses `resolve_segments_file_path(self.infos)` to read `config/segments_full.json` (or `config/segments_small.json`) and creates `Segment` objects for every defined physical hardware strip (`v4`, `h32`, etc., for `full`, or `s1`–`s3` for `small`).
 *   **`initiate_configuration()`**: Seeds the system with an initial random configuration by drawing from the configuration shuffle bag.
 *   **`Transition_Director`**: Bootstraps the director responsible for deciding exactly *when* configurations should change based on audio analysis.
 
@@ -134,17 +132,18 @@ Once a configuration is picked, `update_segments_modes()` first reapplies the ac
 ### 4. External Web App Instructions
 At any time, the Wabb web app can send JSON instructions through `Connector.py` and `/ws`. `process_instruction()` handles the supported page/action pairs for Live Deck, Topology, Mode Settings, and System controls.
 
-The web app never owns playlist or configuration names. Both Python and React load them from `data/configurations.json`. Topology **persists** presets only through `POST /api/configurations` from `MODIFY` / `BUILD`; after a save, `Mode_master.load_configurations()` refreshes the in-memory playlist list and the connector broadcasts a fresh snapshot.
+The web app never owns playlist or configuration names. Both Python and React load them dynamically from the active profile's configuration file via `resolve_configurations_file_path()`. Topology **persists** presets only through `POST /api/configurations` from `MODIFY` / `BUILD`; after a save, `Mode_master.load_configurations()` refreshes the in-memory playlist list and the connector broadcasts a fresh snapshot.
 
-**Topology runtime overrides:** `page: "topology"`, `action: "select_segment_mode"` / `"toggle_segment_direction"` call `Segment.execute_mode_swap()` / `change_way()` on the live instances. They do **not** mutate `data/configurations.json` or the in-memory playlist tables.
+**Topology runtime overrides:** `page: "topology"`, `action: "select_segment_mode"` / `"toggle_segment_direction"` call `Segment.execute_mode_swap()` / `change_way()` on the live instances. They do **not** mutate disk configuration stores or the in-memory playlist tables.
 
-**Active configuration isolation:** When a configuration is applied (`_apply_configuration`, initial pick, or `change_configuration`), `Mode_master` stores a shallow copy of that preset’s `modes`, `way`, and `modeSettings` dicts on `activ_configuration`. Live segment swaps and live mode-setting edits therefore cannot accidentally rewrite the shared configuration objects loaded from `data/configurations.json`.
+**Active configuration isolation:** When a configuration is applied (`_apply_configuration`, initial pick, or `change_configuration`), `Mode_master` stores a shallow copy of that preset’s `modes`, `way`, and `modeSettings` dicts on `activ_configuration`. Live segment swaps and live mode-setting edits therefore cannot accidentally rewrite the shared configuration objects loaded from disk.
 
-**Mode Settings runtime fan-out:** `Mode_master` builds a settings catalog by introspecting the loaded `Mode` instances held inside each `Segment`. When the web app sends `page: "mode_settings", action: "set_mode_setting"`, `Mode_master` validates the request against that catalog, updates the active configuration's `modeSettings`, reapplies the effective values to every segment instance for that mode, persists the active configuration back into `data/configurations.json`, and then rebroadcasts state.
+**Mode Settings runtime fan-out:** `Mode_master` builds a settings catalog by introspecting the loaded `Mode` instances held inside each `Segment`. When the web app sends `page: "mode_settings", action: "set_mode_setting"`, `Mode_master` validates the request against that catalog, updates the active configuration's `modeSettings`, reapplies the effective values to every segment instance for that mode, persists the active configuration back into the resolved configuration JSON file via `_persist_configurations_store()`, and then rebroadcasts state.
 
 ### 5. State Snapshot Contract
 `get_state_snapshot()` returns a JSON-safe view of:
 
+* `hardwareProfile`: Active profile string (`"full"` or `"small"`).
 * Active playlist and enabled playlists.
 * Active and queued configuration names.
 * Selected transition label and transition lock/progress.

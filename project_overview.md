@@ -56,8 +56,8 @@ graph TD
     end
 
     Config -->|Loads app_config.json| ModeMaster
-    Config -->|Loads segments.json| ModeMaster
-    Config -->|Loads segments.json| TransDir
+    Config -->|Resolves segments config (full/small)| ModeMaster
+    Config -->|Resolves segments config (full/small)| TransDir
 
     ModeMaster -->|Calls segment update| Seg
     Seg -->|Queries State and Progress| TransDir
@@ -67,16 +67,19 @@ graph TD
 
     %% Hardware Output Layer
     subgraph Hardware [Hardware Abstraction]
-        HwFac["HardwareFactory"]
-        Fake["Fake_leds (Pygame Simulator)"]
-        Rpi["Rpi_NeoPixels (Raspberry Pi GPIO)"]
-        UDP["Udp_Sender (ESP32 / Fake_ESP32)"]
+        HwFac["HardwareFactory (Dynamic Channels)"]
+        UDP["Udp_Sender (Network UDP Packets)"]
+        FakeESP["Fake_ESP32 Subprocess -> Fake_leds (Pygame Window)"]
+        PhysESP["Physical ESP32 Chandelier Controller"]
+        Rpi["Rpi_NeoPixels (Legacy Raspberry Pi GPIO)"]
     end
 
     ModeMaster -->|Flushes Frame Array| HwFac
-    HwFac -->|If Windows| Fake
-    HwFac -->|If Linux/Pi| Rpi
-    HwFac -->|If Network| UDP
+    HwFac -->|Simulation / Auto on PC| UDP
+    HwFac -->|Physical ESP32 Network| UDP
+    HwFac -->|Direct Pi GPIO Fallback| Rpi
+    UDP -->|UDP 127.0.0.1:9001/9002| FakeESP
+    UDP -->|UDP 192.168.0.26:9001/9002| PhysESP
 ```
 
 ---
@@ -85,12 +88,12 @@ graph TD
 
 Here is a breakdown of the core directories in this project:
 
-- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `AudioAnalyzer`, and the `Listener` facade), and the Transition Director.
+- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `BeatGridQuantizer`, `Webapp_instruction_logger`, and `Transition_Director`.
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
-- **`/config`**: JSON files and managers detailing the hardware geometry and global settings.
-- **`/connectors`**: The external communication handlers. This includes the HTTP/WebSocket server that talks to the web interface, serves `/api/configurations`, and broadcasts mode-master state, as well as the microphone stream capture tool (`Local_Microphone.py`).
-- **`/hardware`**: Hardware abstractions. Allows switching seamlessly between testing on a PC (with Pygame simulated LEDs or UDP Fake ESP32) and running on real hardware (Raspberry Pi GPIO or real ESP32s over network).
-- **`/wabb-interface`**: A React-based web application serving as the remote controller for the user to change playlists, transition modes, or tweak per-mode settings on the fly. Playlist and configuration names are loaded from `data/configurations.json` through `/api/configurations`; they must not be hardcoded in React.
+- **`/config`**: JSON files and managers detailing hardware profiles (`hardware_profile`: `"full"` vs `"small"` in `app_config.json`), unified physical geometry + Web App UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
+- **`/connectors`**: External communication handlers: `Connector.py` (HTTP/WebSocket server on port 8080 exposing `/ws`, `/api/topology`, and `/api/configurations`) and `Local_Microphone.py` (analog audio push stream).
+- **`/hardware`**: Hardware abstractions. Dynamically provisions channels via `HardwareFactory._get_channel_specs()`, streaming UDP frames via `Udp_Sender` to either `Fake_ESP32` (Pygame visualizer) or physical ESP32 controllers, with `Rpi_NeoPixels` as a legacy direct GPIO fallback.
+- **`/wabb-interface`**: A React-based web application serving as the remote controller. Loads segment layout dynamically from `/api/topology`, and playlists/configurations from the active profile via `/api/configurations`.
 - **`/.agents`**: Core context, architectural rules, and technical specifications designed for AI agents working on the codebase.
 
 ---
@@ -101,22 +104,22 @@ Do not guess how the architecture works. Depending on the task you have been giv
 
 - **If you are modifying or creating a Visual Mode (LED animation):**
 
-  - 👉 Read `modes/README.md` (if it exists) and review an existing mode to understand the `run()` loop and numpy matrix structure.
+  - 👉 Read `modes/README.md` and `modes/modes_description.md`, and review an existing mode to understand the `run()` loop and numpy matrix structure.
 - **If you are working on Beat Detection or Rhythm Tracking:**
 
-  - 👉 Read `.agents/docs/rhythm_tracker_architecture.md`. Understand the non-causal Phase Inertia Flywheel before touching DSP code.
+  - 👉 Read `.agents/docs/rhythm_tracker_architecture.md` and `.agents/docs/bpm_trust_architecture.md`. Understand the Anticipation Flywheel ("Oracle") before touching DSP code.
 - **If you are working on Music Events (Drops, Verse/Chorus detection):**
 
-  - 👉 Read `.agents/docs/music_events_architecture.md`.
+  - 👉 Read `.agents/docs/music_events_architecture.md` (and companion `.agents/docs/music_events_architecture_potential_ideas.md`).
 - **If you are working on Transitions between modes:**
 
-  - 👉 Read `.agents/docs/transition_architecture.md`.
+  - 👉 Read `.agents/docs/transition_architecture.md` (and companion `.agents/docs/transition_architecture_potential_ideas.md`).
 - **If you are touching the Main Orchestrator or Async loops:**
 
   - 👉 Read `.agents/AGENT.md` to understand our `asyncio` constraints and frame-independent math requirements.
 - **If you are modifying Web App playlists, configurations, Mode Settings, Live Deck, or Topology state:**
 
-  - 👉 Read `wabb-interface/README.md`, `wabb-interface/design rules/topology.md`, `connectors/README.md`, and `core/precisions/mode_master.md`. Keep `data/configurations.json` as the source of truth and preserve the `/ws` state snapshot flow. Topology **LIVE** uses instructions for runtime segment mode/direction only; persisting presets uses `POST /api/configurations` from **MODIFY** or **BUILD** only. Per-mode tuning belongs to configuration-scoped `modeSettings` and flows through `Mode_master` over `/ws`.
+  - 👉 Read `wabb-interface/README.md`, `wabb-interface/design rules/topology.md`, `connectors/README.md`, and `core/precisions/mode_master.md`. The active configuration store (`data/configurations_full.json` or `data/configurations_small.json`) is the source of truth for presets, and `GET /api/topology` provides dynamic segment geometry and cables. Preserve the `/ws` state snapshot flow (`hardwareProfile`, `mode_master_state`). Topology **LIVE** uses instructions for runtime segment mode/direction only; persisting presets uses `POST /api/configurations` from **MODIFY** or **BUILD** only. Per-mode tuning belongs to configuration-scoped `modeSettings` and flows through `Mode_master` over `/ws`.
 
 ---
 
@@ -126,7 +129,7 @@ Do not guess how the architecture works. Depending on the task you have been giv
 
 1. **Locate the Context:** Find the relevant `.md` file from the navigation map above and read it.
 2. **Check Configuration:** Never hardcode paths, pins, or IPs. Check `config/app_config.json` to see if a variable already exists.
-3. **Verify Dependencies:** Understand that this project must run on both Windows (Pygame simulator) and Raspberry Pi (NeoPixels). Ensure your imports do not break the `HardwareFactory.py` abstraction.
+3. **Verify Dependencies:** Understand that this project must run on both Windows (Pygame simulator) and Raspberry Pi (NeoPixels / ESP32). Ensure your imports do not break the `HardwareFactory.py` abstraction.
 
 ### ✅ AFTER Doing a Task:
 
@@ -135,4 +138,4 @@ Do not guess how the architecture works. Depending on the task you have been giv
    - Are your calculations frame-independent (using `fps_ratio`)?
 2. **Update Documentation:** If you changed how a core algorithm works, added a new feature, or changed a configuration schema, **you must update the relevant `.md` file in `.agents/docs/`**.
 3. **Simulator Check:** If possible, confirm that the code will execute properly under the `Fake_leds` Pygame simulator.
-4. If you made temporary python files, remember to delete them or to put them.
+4. If you made temporary python files, remember to delete them or move them to the `playground/` directory.

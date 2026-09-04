@@ -3,7 +3,9 @@ import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { MAP_OFFSET_C, MAP_OFFSET_R, type TopologySegment } from '../../constants/topologyData';
 
-const Cable = ({ start, end, cp1, cp2 }: { start: number[]; end: number[]; cp1: number[]; cp2: number[] }) => {
+import type { TopologyCable } from '../../utils/topologyStore';
+
+const Cable = ({ start, end, cp1, cp2 }: TopologyCable) => {
   const sx = LEGO_MATH.physicalSize(start[0]);
   const sy = LEGO_MATH.physicalSize(start[1]);
   const ex = LEGO_MATH.physicalSize(end[0]);
@@ -33,12 +35,14 @@ export const TopologyMap = ({
   onSelectSegment,
   onToggleDirection,
   segmentShiftCols = 0,
+  cables = [],
 }: {
   segments: TopologySegment[];
   selectedSegId: string;
   onSelectSegment: (segmentId: string) => void;
   onToggleDirection: (event: MouseEvent, segmentId: string) => void;
   segmentShiftCols?: number;
+  cables?: TopologyCable[];
 }) => {
   const getModeClass = (modeName: string) => `anim-${modeName.toLowerCase().replace(/\s+/g, '-')}`;
 
@@ -48,18 +52,24 @@ export const TopologyMap = ({
         <div className="rogue-piece dark-grey" style={{ width: `${LEGO_MATH.physicalSize(50)}px`, height: `${LEGO_MATH.physicalSize(29)}px`, boxShadow: 'inset 0 0 40px #000' }} />
       </GridSpot>
 
-      <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
-        <defs>
-          <filter id="drop-shadow-wire" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="3" dy="5" stdDeviation="3" floodColor="#000" floodOpacity="0.7" />
-          </filter>
-        </defs>
-        <Cable start={[2.5, 3]} end={[2.5, 6.5]} cp1={[1, 3]} cp2={[1, 6.5]} />
-        <Cable start={[46, 21.5]} end={[21.5, 21.5]} cp1={[46, 26]} cp2={[30, 21.5]} />
-        <Cable start={[32, 24.5]} end={[16.5, 26.5]} cp1={[32, 28]} cp2={[16.5, 30]} />
-        <Cable start={[23.5, 20]} end={[21.5, 19.5]} cp1={[22, 20]} cp2={[22, 19.5]} />
-        <Cable start={[24, 2.5]} end={[16.5, 5.5]} cp1={[24, -0.5]} cp2={[16.5, -0.5]} />
-      </svg>
+      {cables.length > 0 && (
+        <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
+          <defs>
+            <filter id="drop-shadow-wire" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="3" dy="5" stdDeviation="3" floodColor="#000" floodOpacity="0.7" />
+            </filter>
+          </defs>
+          {cables.map((cable, idx) => (
+            <Cable
+              key={`cable-${idx}`}
+              start={cable.start}
+              end={cable.end}
+              cp1={cable.cp1}
+              cp2={cable.cp2}
+            />
+          ))}
+        </svg>
+      )}
 
       {segments.map(seg => {
         const isSelected = selectedSegId === seg.id;
