@@ -16,7 +16,7 @@ class Listener:
 
         # Ring buffer dimensions
         lookahead = getattr(self.analyzer, 'lookahead_seconds', 5.0)
-        self._ring_capacity = int(lookahead * 60 * 1.5) + 2  # ~450 slots for 5s at 60fps
+        self._ring_capacity = max(16, int(lookahead * 60 * 1.5) + 2)  # At least 16 slots, ~450 for 5s at 60fps
         nb_fft = self.ingestion.nb_of_fft_band
         nb_chroma = self.ingestion.nb_of_chroma
 

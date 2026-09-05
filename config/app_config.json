@@ -1,6 +1,7 @@
 {
     "startServer": false,
     "useMicrophone": true,
+    "audio_preset": "spotify",
     "printCpuFpsInfo": true,
     "HARDWARE_MODE": "esp32",
     "hardware_profile": "small",

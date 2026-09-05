@@ -101,3 +101,117 @@ class Configurations_manager:
         if self._segment_coords_by_name is None:
             self._segment_coords_by_name = self._load_segments_locations()
         return self._segment_coords_by_name.get(segment_name)
+
+
+def resolve_audio_config(infos: dict) -> dict:
+    """
+    Intelligently resolves audio devices (input, output) and fakeDelay
+    based on infos['audio_preset'].
+    Supported presets: 'spotify', 'spotify_aux', 'aux', 'mic', 'custom'.
+    """
+    if not isinstance(infos, dict):
+        return infos
+
+    preset = str(infos.get("audio_preset", "spotify")).lower().strip()
+    if preset == "custom":
+        return infos
+
+    import logging
+    logger = logging.getLogger("AudioConfig")
+
+    try:
+        import sounddevice as sd
+        devices = sd.query_devices()
+        default_in, default_out = sd.default.device
+    except Exception as e:
+        logger.warning(
+            f"Unable to query sounddevice ({e}). Keeping raw audio config."
+        )
+        return infos
+
+    def find_device(patterns, kind="input", exclude_patterns=None):
+        exclude_patterns = [x.lower() for x in (exclude_patterns or [])]
+        for idx, dev in enumerate(devices):
+            name = dev["name"].lower()
+            if any(ex in name for ex in exclude_patterns):
+                continue
+            is_valid_kind = (dev["max_input_channels"] > 0) if kind == "input" else (dev["max_output_channels"] > 0)
+            if is_valid_kind and any(pat.lower() in name for pat in patterns):
+                return idx, dev["name"]
+        return None, None
+
+    if preset == "spotify":
+        idx_in, name_in = find_device(["cable output", "vb-audio", "virtual audio cable", "virtual cable", "cable-a", "cable-b"], kind="input")
+        idx_out, name_out = find_device(
+            ["speakers", "haut-parleur"],
+            kind="output",
+            exclude_patterns=["cable", "vb-audio"]
+        )
+        if idx_in is not None:
+            infos["input_device_id"] = idx_in
+            infos["output_device_id"] = idx_out if idx_out is not None else default_out
+            infos["fakeDelay"] = 5.0
+            logger.info(f"[AudioPreset: spotify] In: '{name_in}' (idx={idx_in}), Out: '{name_out}' (idx={infos['output_device_id']}), fakeDelay=5.0s")
+        else:
+            logger.warning(
+                "[AudioPreset: spotify] Virtual Cable not detected. "
+                "Download VB-Audio Cable from https://vb-audio.com/Cable/ to capture Spotify with 5s delay. "
+                f"Falling back to default input (idx={default_in})."
+            )
+            infos["input_device_id"] = default_in
+            infos["output_device_id"] = idx_out if idx_out is not None else default_out
+            infos["fakeDelay"] = 5.0
+
+    elif preset == "spotify_aux":
+        idx_in, name_in = find_device(["cable output", "vb-audio", "virtual audio cable", "virtual cable", "cable-a", "cable-b"], kind="input")
+        idx_out, name_out = find_device(
+            ["casque", "headphones", "headphone", "aux", "line out", "speakers 2"],
+            kind="output",
+            exclude_patterns=["cable", "vb-audio"]
+        )
+        if idx_out is None:
+            idx_out, name_out = find_device(
+                ["speakers", "haut-parleur"],
+                kind="output",
+                exclude_patterns=["cable", "vb-audio"]
+            )
+        if idx_in is not None:
+            infos["input_device_id"] = idx_in
+            infos["output_device_id"] = idx_out if idx_out is not None else default_out
+            infos["fakeDelay"] = 5.0
+            logger.info(f"[AudioPreset: spotify_aux] In: '{name_in}' (idx={idx_in}), Out: '{name_out}' (idx={infos['output_device_id']}), fakeDelay=5.0s")
+        else:
+            logger.warning(
+                "[AudioPreset: spotify_aux] Virtual Cable not detected. "
+                "Download VB-Audio Cable from https://vb-audio.com/Cable/ to use 5s anticipation mode."
+            )
+            infos["input_device_id"] = default_in
+            infos["output_device_id"] = idx_out if idx_out is not None else default_out
+            infos["fakeDelay"] = 5.0
+
+    elif preset == "aux":
+        idx_in, name_in = find_device(["line in", "entrée ligne", "line-in", "aux"], kind="input")
+        if idx_in is None:
+            idx_in = default_in
+            name_in = devices[default_in]["name"] if default_in is not None and default_in >= 0 else "Default Mic"
+        idx_out, name_out = find_device(
+            ["speakers", "haut-parleur", "line out", "casque", "headphones"],
+            kind="output",
+            exclude_patterns=["cable", "vb-audio"]
+        )
+        infos["input_device_id"] = idx_in
+        infos["output_device_id"] = idx_out if idx_out is not None else default_out
+        infos["fakeDelay"] = 5.0
+        logger.info(f"[AudioPreset: aux] In: '{name_in}' (idx={idx_in}), Out: '{name_out}' (idx={infos['output_device_id']}), fakeDelay=5.0s")
+
+    elif preset == "mic":
+        infos["input_device_id"] = default_in
+        infos["output_device_id"] = None
+        infos["fakeDelay"] = 0.0
+        mic_name = devices[default_in]["name"] if default_in is not None and default_in >= 0 else "Default Mic"
+        logger.info(f"[AudioPreset: mic] Using default microphone '{mic_name}' (idx={default_in}), fakeDelay=0.0s")
+
+    else:
+        logger.warning(f"Unknown audio_preset '{preset}'. Keeping raw configuration.")
+
+    return infos

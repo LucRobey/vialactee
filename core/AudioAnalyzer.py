@@ -239,8 +239,8 @@ class AudioAnalyzer:
             config=self.config
         )
 
-        # 5-second ODF Look-Ahead Buffer (~300 frames at 60fps)
-        self.odf_buffer_size = max(60, int(self.lookahead_seconds * self.odf_fps))
+        # 5-second ODF Look-Ahead Buffer (at least 300 frames at 60fps for stable Pearson correlation)
+        self.odf_buffer_size = max(300, int(self.lookahead_seconds * self.odf_fps))
         self.odf_buffer = np.zeros(self.odf_buffer_size)
         self.decay_curve = np.exp(-1.5 * np.linspace(1.0, 0.0, self.odf_buffer_size))
 
@@ -473,8 +473,12 @@ class AudioAnalyzer:
             self.is_beat = True
             self.last_beat_time = current_time
 
-            # Validate physical presence: Check local ODF energy at speaker time window (indices 0..6)
-            local_energy = float(np.max(self.odf_buffer[0:7]))
+            # Validate physical presence: Check local ODF energy at speaker time window
+            speaker_offset = int(self.lookahead_seconds * self.odf_fps)
+            speaker_center = max(0, min(self.odf_buffer_size - 1, (self.odf_buffer_size - 1) - speaker_offset))
+            w_start = max(0, speaker_center - 3)
+            w_end = min(self.odf_buffer_size, speaker_center + 4)
+            local_energy = float(np.max(self.odf_buffer[w_start:w_end]))
             if (
                 local_energy > (self.config.real_beat_baseline_ratio * self.rolling_flux_baseline)
                 or local_energy > self.config.real_beat_energy_floor

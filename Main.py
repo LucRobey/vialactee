@@ -13,6 +13,7 @@ import connectors.Local_Microphone as Local_Microphone
 import connectors.Connector as Connector
 import core.Mode_master as Mode_master
 import hardware.HardwareFactory as HardwareFactory
+import config.Configuration_manager as Configuration_manager
 
 
 RESTART_REQUESTED = "restart_requested"
@@ -134,6 +135,8 @@ async def main() -> Optional[str]:
         force=True,
         handlers=[file_handler, console_handler]
     )
+    
+    infos = Configuration_manager.resolve_audio_config(infos)
     
     listener = Listener.Listener(infos)
     

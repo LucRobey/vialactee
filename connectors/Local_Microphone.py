@@ -17,6 +17,7 @@ class Local_Microphone:
         self.useMicrophone          = infos.get("useMicrophone", True)
         self.simulate_delay         = infos.get("fakeDelay", 5.0)
         self.input_device_id        = infos.get("input_device_id", None)
+        self.output_device_id       = infos.get("output_device_id", None)
         
         # Audio capture settings
         self.sample_rate = 44100
@@ -120,11 +121,28 @@ class Local_Microphone:
         while True:
             try:
                 self.listener.audio_stream_state = "starting"
+                # Dynamically determine input channels (1 or 2) based on device capabilities
+                in_channels = 1
+                if self.input_device_id is not None and sd is not None:
+                    try:
+                        dev_info = sd.query_devices(self.input_device_id)
+                        in_channels = min(2, max(1, int(dev_info.get("max_input_channels", 1))))
+                    except Exception:
+                        in_channels = 1
+                elif sd is not None:
+                    try:
+                        default_in = sd.default.device[0]
+                        if default_in is not None and default_in >= 0:
+                            dev_info = sd.query_devices(default_in)
+                            in_channels = min(2, max(1, int(dev_info.get("max_input_channels", 1))))
+                    except Exception:
+                        in_channels = 1
+
                 if self.simulate_delay > 0:
                     self.stream = sd.Stream(
-                        device=(self.input_device_id, None),
+                        device=(self.input_device_id, self.output_device_id),
                         samplerate=self.sample_rate,
-                        channels=(1, 2), # Explicitly handle 1 mono mic to 2 output speakers
+                        channels=(in_channels, 2), # Explicitly handle 1 mono / 2 stereo in to 2 output speakers
                         callback=self.audio_callback,
                         blocksize=self.chunk_size
                     )
@@ -132,7 +150,7 @@ class Local_Microphone:
                     self.stream = sd.InputStream(
                         device=self.input_device_id,
                         samplerate=self.sample_rate,
-                        channels=1,
+                        channels=in_channels,
                         callback=self.audio_callback,
                         blocksize=self.chunk_size
                     )

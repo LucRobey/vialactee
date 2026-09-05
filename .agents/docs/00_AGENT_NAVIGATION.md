@@ -37,6 +37,10 @@ These documents map out the **Output Layer**. Once the Rhythm Tracker detects an
 ### 💻 4. Hardware Abstraction
 - **`../hardware/README.md`**
   *Read this to understand:* The **Simulation and Networking Layer**. How Vialactée abstracts the Pygame simulation, physical Raspberry Pi GPIOs, and the ESP32 UDP driver logic.
+
+### ⚙️ 5. Central Configuration & Audio Presets
+- **`config_descriptions.md`**
+  *Read this to understand:* The **Master Configuration Reference**. Exhaustive breakdown of `config/app_config.json`, the 5 audio presets (`spotify`, `spotify_aux`, `aux`, `mic`, `custom`), hardware driver modes, profiler settings, `config/modes.json`, and segment topology (`segments_*.json`).
 ---
 
 ## 📌 Agent Instructions Formatter

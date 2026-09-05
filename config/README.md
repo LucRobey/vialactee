@@ -22,6 +22,7 @@ This directory acts as the central registry for the chandelier's static and dyna
 | `HARDWARE_MODE` | String | `"auto"` | Hardware driver selection: `"auto"`, `"simulation"`, `"esp32"`, or `"rpi"`. |
 | `startServer` | Boolean | `false` | If true, starts the aiohttp WebSocket and REST API server on port 8080. |
 | `useMicrophone` | Boolean | `true` | If true, enables audio ingestion from the system default microphone or input loopback. |
+| `audio_preset` | String | `"spotify"` | Automatic audio routing preset: `"spotify"` (Spotify in via Virtual Cable, 5s delay, PC speakers out), `"spotify_aux"` (Spotify in via Virtual Cable, 5s delay, AUX jack out), `"aux"` (external Line-in/jack in, 5s delay, PC speakers out), `"mic"` (ambient room mic, 5s delay), or `"custom"` (uses explicit `input_device_id`, `output_device_id`, and `fakeDelay`). |
 | `esp32_ip` | String | `"192.168.0.26"` | Target ESP32 controller IP address when using UDP network streaming. |
 | `log_level` | String | `"INFO"` | Standard library logger verbosity (`"DEBUG"`, `"INFO"`, `"WARNING"`, `"ERROR"`). |
 | `luminosity` | Integer | `50` | Master brightness scale percentage (0–100), persisted across sessions. |
