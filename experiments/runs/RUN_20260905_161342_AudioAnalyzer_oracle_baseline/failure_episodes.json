@@ -1,0 +1,32 @@
+[
+  {
+    "episode_id": "EP_GHOST_BURST_synthetic_breakdown_dropout_1",
+    "song": "synthetic_breakdown_dropout",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      11.98,
+      31.98
+    ],
+    "ghost_beats_count": 18,
+    "diagnostic": "Detected 18 ghost beats emitted during low-energy interval (flux < 0.05). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_GHOST_BURST_synthetic_step_tempo_1",
+    "song": "synthetic_step_tempo",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      16.0,
+      29.57
+    ],
+    "ghost_beats_count": 20,
+    "diagnostic": "Detected 20 ghost beats emitted during low-energy interval (flux < 0.05). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_step_tempo_1",
+    "song": "synthetic_step_tempo",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 62.12,
+    "phase_bias_ms": -6.43,
+    "diagnostic": "Phase jitter standard deviation is 62.1ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  }
+]

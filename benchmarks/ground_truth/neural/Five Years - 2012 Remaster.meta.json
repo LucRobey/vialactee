@@ -1,0 +1,11 @@
+{
+  "track": "Five Years - 2012 Remaster",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Five Years - 2012 Remaster.mp3",
+  "duration_sec": 283.75,
+  "total_beats": 738,
+  "total_downbeats": 184,
+  "estimated_bpm": 157.89,
+  "interval_jitter_ms": 22.36,
+  "compute_time_sec": 8.59,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

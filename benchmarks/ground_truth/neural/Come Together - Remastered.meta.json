@@ -1,0 +1,11 @@
+{
+  "track": "Come Together - Remastered",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Come Together - Remastered.mp3",
+  "duration_sec": 259.95,
+  "total_beats": 384,
+  "total_downbeats": 96,
+  "estimated_bpm": 83.33,
+  "interval_jitter_ms": 135.8,
+  "compute_time_sec": 10.69,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

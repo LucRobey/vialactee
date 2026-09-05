@@ -1,0 +1,11 @@
+{
+  "track": "Flashback",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Flashback.mp3",
+  "duration_sec": 267.56,
+  "total_beats": 538,
+  "total_downbeats": 135,
+  "estimated_bpm": 120.0,
+  "interval_jitter_ms": 26.41,
+  "compute_time_sec": 11.49,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

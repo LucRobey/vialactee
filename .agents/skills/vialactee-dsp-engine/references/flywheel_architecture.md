@@ -55,7 +55,11 @@ $$\phi_{\text{speaker}} = \left(\phi_{\text{ingest}} - \frac{\text{BPM}}{60} \cd
   - If Pearson confidence $r \ge 0.30$ (high confidence): Snap phase by $50\%$ toward target $\phi_{\text{speaker}}$.
   - If $0.15 \le r < 0.30$ (moderate confidence): Gentle nudge ($15\%$).
   - If $r < 0.15$ (breakdowns / silence): Zero nudge ($0\%$), freewheel smoothly on inertia.
+* **Backward Wrap Guard**:
+  Soft-snap adjustments near the beat boundary ($\phi < 0.25$) are clamped to $\ge 0.0$ to prevent snapping backwards into $[0.75, 1.0)$ immediately after a beat has triggered.
+* **Refractory Lockout**:
+  Enforces a physical refractory period $T_{\min} = \max(0.18\text{s}, 0.40 \times \frac{60}{\text{BPM}})$ between emitted beats to prevent double-trigger chatter.
 * **Real vs. Dropped Beat Validation**:
   When `beat_phase` wraps around $0.0$, local delayed ODF energy is validated:
-  - If local transient energy $> \text{threshold}$: `is_real_beat = True`, tagged as `'Bass/Kick'`, `'Snare/Mid'`, or `'Hi-hat/Cymbal'`.
-  - If transient is missing (breakdown): `is_real_beat = False`, `is_dropped_beat = True` (visual modes can choose to ignore or soften effects).
+  - If local transient energy $> \text{baseline\_ratio} \times \text{baseline}$ **AND** $\ge \text{energy\_floor}$: `is_real_beat = True`, tagged as `'Bass/Kick'`, `'Snare/Mid'`, or `'Hi-hat/Cymbal'`.
+  - If transient energy is below threshold (breakdown / silence): `is_real_beat = False`, `is_dropped_beat = True` (the metronome freewheels cleanly on inertia without triggering kick animations).

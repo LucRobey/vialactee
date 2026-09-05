@@ -1,0 +1,11 @@
+{
+  "track": "Chanson pour l'auvergnat",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Chanson pour l'auvergnat.mp3",
+  "duration_sec": 182.38,
+  "total_beats": 304,
+  "total_downbeats": 101,
+  "estimated_bpm": 100.0,
+  "interval_jitter_ms": 20.83,
+  "compute_time_sec": 4.25,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

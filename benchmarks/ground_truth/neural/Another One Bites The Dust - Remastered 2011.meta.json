@@ -1,0 +1,11 @@
+{
+  "track": "Another One Bites The Dust - Remastered 2011",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Another One Bites The Dust - Remastered 2011.mp3",
+  "duration_sec": 429.31,
+  "total_beats": 730,
+  "total_downbeats": 365,
+  "estimated_bpm": 111.11,
+  "interval_jitter_ms": 137.13,
+  "compute_time_sec": 7.72,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

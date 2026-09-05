@@ -1,0 +1,11 @@
+{
+  "track": "01-Plastic-People",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\01-Plastic-People.mp3",
+  "duration_sec": 861.53,
+  "total_beats": 1765,
+  "total_downbeats": 442,
+  "estimated_bpm": 125.0,
+  "interval_jitter_ms": 17.5,
+  "compute_time_sec": 19.73,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

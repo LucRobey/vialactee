@@ -1,0 +1,15 @@
+{
+  "run_id": "RUN_20260905_164050_AudioAnalyzer_AudioAnalyzer_fixes_applied",
+  "timestamp": "2026-09-05T16:40:50.180069",
+  "git_commit": "8f4c1cb",
+  "model": "AudioAnalyzer",
+  "suite": "synthetic",
+  "macro_scores": {
+    "f1_50ms": 0.9200125,
+    "cmlt": 0.9165,
+    "amlt": 0.9165,
+    "upbeat_gap": 0.0,
+    "jitter_ms": 17.564999999999998,
+    "cpu_ms": 1.898625
+  }
+}

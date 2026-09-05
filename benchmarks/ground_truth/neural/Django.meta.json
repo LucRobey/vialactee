@@ -1,0 +1,11 @@
+{
+  "track": "Django",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Django.mp3",
+  "duration_sec": 173.7,
+  "total_beats": 275,
+  "total_downbeats": 69,
+  "estimated_bpm": 96.77,
+  "interval_jitter_ms": 72.2,
+  "compute_time_sec": 4.18,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

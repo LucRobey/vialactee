@@ -1,0 +1,11 @@
+{
+  "track": "Djon maya ma\u00ef (feat. Victor D\u00e9m\u00e9)",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Djon maya ma\u00ef (feat. Victor D\u00e9m\u00e9).mp3",
+  "duration_sec": 389.42,
+  "total_beats": 687,
+  "total_downbeats": 172,
+  "estimated_bpm": 103.45,
+  "interval_jitter_ms": 25.9,
+  "compute_time_sec": 12.15,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

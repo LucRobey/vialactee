@@ -15,6 +15,7 @@ import numpy as np
 
 from core.RhythmConfig import RhythmConfig
 from core.StructuralNoveltyDetector import StructuralNoveltyDetector
+from core.BaseAudioAnalyzer import BaseAudioAnalyzer
 
 if TYPE_CHECKING:
     from core.AudioIngestion import AudioIngestion
@@ -210,7 +211,7 @@ def class_based_phase_sweep(
 # AUDIO ANALYZER CORE CLASS
 # =====================================================================
 
-class AudioAnalyzer:
+class AudioAnalyzer(BaseAudioAnalyzer):
     """
     Core algorithmic analyzer for beat tracking and structural event detection.
     
@@ -224,8 +225,8 @@ class AudioAnalyzer:
         infos: Dict[str, Any],
         config: Optional[RhythmConfig] = None
     ) -> None:
-        self.ingestion = ingestion
         self.config = config if config is not None else RhythmConfig()
+        super().__init__(ingestion, infos, config=self.config)
 
         self.hardware_latency = float(infos.get("latency", 0.0))
         self.decay_base = float(infos.get("decay_base", 0.98))
@@ -256,7 +257,7 @@ class AudioAnalyzer:
         self.time_since_sweep = 0.0
 
         self.beat_count = 0
-        self.last_beat_time = time.time()
+        self.last_beat_time = -100.0
 
         # Per-frame event flags
         self.is_beat = False
@@ -277,8 +278,74 @@ class AudioAnalyzer:
         self.vocals_present = False
 
     # ==========================================
+    # LIFECYCLE & EXECUTION IMPLEMENTATION
+    # ==========================================
+
+    def reset(self) -> None:
+        """Resets all internal history buffers, phase accumulators, and flywheels."""
+        self.odf_buffer.fill(0.0)
+        self.speaker_phase = 0.0
+        self.bpm = 120.0
+        self.long_term_class = bpm_to_class(120.0)
+        self.confidence_score = 0.0
+        self.flywheel_status = "coasting"
+        self.time_since_sweep = 0.0
+
+        self.beat_count = 0
+        self.last_beat_time = -100.0
+
+        self.is_beat = False
+        self.is_real_beat = False
+        self.is_dropped_beat = False
+        self.current_beat_tag = "Bass/Kick"
+
+        self.peak_sensitivity = np.ones(self.ingestion.nb_of_fft_band) * 1.8
+        self.peak_times.fill(0.0)
+        self.band_peak.fill(0)
+        self.band_flux.fill(0.0)
+        self.prev_fft_band_values.fill(0.0)
+        self.smoothed_flux.fill(0.0)
+        self.rolling_flux_baseline = 0.0
+
+        self.novelty_detector = StructuralNoveltyDetector(
+            nb_fft_bands=self.ingestion.nb_of_fft_band,
+            config=self.config
+        )
+
+    def update(self, current_time: float, dt: float, fps_ratio: float) -> None:
+        """
+        Primary per-frame processing step. Updates structural novelty,
+        evaluates spectral flux, advances flywheel, and detects beats.
+        """
+        self.update_structural_novelty(current_time, dt, fps_ratio)
+        self.detect_band_peaks(current_time, dt, fps_ratio)
+
+    def capture_frame_telemetry(self) -> Dict[str, Any]:
+        """Captures rich mathematical telemetry for benchmark analysis and AI pattern mining."""
+        return {
+            "bpm": float(self.bpm),
+            "beat_phase": float(self.speaker_phase),
+            "confidence": float(self.confidence_score),
+            "status": str(self.flywheel_status),
+            "long_term_class": float(self.long_term_class),
+            "is_beat": bool(self.is_beat),
+            "is_real_beat": bool(self.is_real_beat),
+            "is_dropped_beat": bool(self.is_dropped_beat),
+            "beat_tag": str(self.current_beat_tag),
+            "rolling_flux_baseline": float(self.rolling_flux_baseline),
+            "custom_flux": float(self.odf_buffer[-1]) if len(self.odf_buffer) > 0 else 0.0,
+            "asserved_novelty": float(self.asserved_novelty),
+            "combined_novelty": float(self.combined_novelty),
+        }
+
+    # ==========================================
     # PROPERTIES & FACADES
     # ==========================================
+
+    @property
+    def beat_confidence(self) -> float:
+        """Internal model confidence score in [0.0, 1.0]."""
+        return float(self.confidence_score)
 
     @property
     def beat_phase(self) -> float:
@@ -452,13 +519,20 @@ class AudioAnalyzer:
 
             phase_err = (target_speaker_phase - self.speaker_phase + 0.5) % 1.0 - 0.5
 
-            # Smart Anticipation Soft-Snap
+            # Smart Anticipation Soft-Snap with boundary wrap clamp
             snap_ratio = (
                 self.config.high_snap_ratio
                 if score_pearson > self.config.high_confidence_threshold
                 else self.config.moderate_snap_ratio
             )
-            self.speaker_phase = (self.speaker_phase + snap_ratio * phase_err) % 1.0
+            new_phase = self.speaker_phase + snap_ratio * phase_err
+            # Clamp backwards snapping across the 0.0 boundary if near the start of cycle
+            if self.speaker_phase < 0.25 and new_phase < 0.0:
+                self.speaker_phase = 0.0
+            elif self.speaker_phase > 0.75 and new_phase >= 1.0:
+                self.speaker_phase = 0.999
+            else:
+                self.speaker_phase = new_phase % 1.0
         else:
             self.flywheel_status = "coasting"
 
@@ -469,39 +543,43 @@ class AudioAnalyzer:
 
         if self.speaker_phase >= 1.0:
             self.speaker_phase -= 1.0
-            self.beat_count += 1
-            self.is_beat = True
-            self.last_beat_time = current_time
 
-            # Validate physical presence: Check local ODF energy at speaker time window
-            speaker_offset = int(self.lookahead_seconds * self.odf_fps)
-            speaker_center = max(0, min(self.odf_buffer_size - 1, (self.odf_buffer_size - 1) - speaker_offset))
-            w_start = max(0, speaker_center - 3)
-            w_end = min(self.odf_buffer_size, speaker_center + 4)
-            local_energy = float(np.max(self.odf_buffer[w_start:w_end]))
-            if (
-                local_energy > (self.config.real_beat_baseline_ratio * self.rolling_flux_baseline)
-                or local_energy > self.config.real_beat_energy_floor
-            ):
-                self.is_real_beat = True
-                self.is_dropped_beat = False
-            else:
-                self.is_real_beat = False
-                self.is_dropped_beat = True
+            # Refractory period: human music cannot have beats faster than ~240-300 BPM
+            min_beat_interval = max(0.18, 0.40 * (60.0 / max(1.0, self.bpm)))
+            if (current_time - self.last_beat_time) >= min_beat_interval:
+                self.beat_count += 1
+                self.is_beat = True
+                self.last_beat_time = current_time
 
-            # Transient Frequency-Band Classification
-            if len(self.band_flux) >= 8:
-                b_val = float(np.sum(self.band_flux[0:2]))
-                m_val = float(np.sum(self.band_flux[2:6]))
-                h_val = float(np.sum(self.band_flux[6:8]))
-                if b_val >= m_val and b_val >= h_val:
-                    self.current_beat_tag = "Bass/Kick"
-                elif m_val >= b_val and m_val >= h_val:
-                    self.current_beat_tag = "Snare/Mid"
+                # Validate physical presence: Check local ODF energy at speaker time window
+                speaker_offset = int(self.lookahead_seconds * self.odf_fps)
+                speaker_center = max(0, min(self.odf_buffer_size - 1, (self.odf_buffer_size - 1) - speaker_offset))
+                w_start = max(0, speaker_center - 3)
+                w_end = min(self.odf_buffer_size, speaker_center + 4)
+                local_energy = float(np.max(self.odf_buffer[w_start:w_end]))
+                if (
+                    local_energy > (self.config.real_beat_baseline_ratio * self.rolling_flux_baseline)
+                    and local_energy >= self.config.real_beat_energy_floor
+                ):
+                    self.is_real_beat = True
+                    self.is_dropped_beat = False
                 else:
-                    self.current_beat_tag = "Hi-hat/Cymbal"
-            else:
-                self.current_beat_tag = "Bass/Kick"
+                    self.is_real_beat = False
+                    self.is_dropped_beat = True
+
+                # Transient Frequency-Band Classification
+                if len(self.band_flux) >= 8:
+                    b_val = float(np.sum(self.band_flux[0:2]))
+                    m_val = float(np.sum(self.band_flux[2:6]))
+                    h_val = float(np.sum(self.band_flux[6:8]))
+                    if b_val >= m_val and b_val >= h_val:
+                        self.current_beat_tag = "Bass/Kick"
+                    elif m_val >= b_val and m_val >= h_val:
+                        self.current_beat_tag = "Snare/Mid"
+                    else:
+                        self.current_beat_tag = "Hi-hat/Cymbal"
+                else:
+                    self.current_beat_tag = "Bass/Kick"
 
     def detect_band_peaks(self, current_time: float, dt: float, fps_ratio: float) -> None:
         """

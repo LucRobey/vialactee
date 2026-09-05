@@ -1,0 +1,11 @@
+{
+  "track": "Boogie Wonderland",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Boogie Wonderland.mp3",
+  "duration_sec": 576.6,
+  "total_beats": 1270,
+  "total_downbeats": 318,
+  "estimated_bpm": 130.43,
+  "interval_jitter_ms": 19.6,
+  "compute_time_sec": 13.27,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

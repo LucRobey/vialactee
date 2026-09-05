@@ -1,0 +1,11 @@
+{
+  "track": "Bohemian Rhapsody - Remastered 2011",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Bohemian Rhapsody - Remastered 2011.mp3",
+  "duration_sec": 354.33,
+  "total_beats": 632,
+  "total_downbeats": 158,
+  "estimated_bpm": 136.36,
+  "interval_jitter_ms": 204.43,
+  "compute_time_sec": 16.01,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

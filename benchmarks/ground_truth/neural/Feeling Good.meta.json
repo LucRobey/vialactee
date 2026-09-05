@@ -1,0 +1,11 @@
+{
+  "track": "Feeling Good",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Feeling Good.mp3",
+  "duration_sec": 397.61,
+  "total_beats": 724,
+  "total_downbeats": 362,
+  "estimated_bpm": 111.11,
+  "interval_jitter_ms": 37.55,
+  "compute_time_sec": 11.22,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

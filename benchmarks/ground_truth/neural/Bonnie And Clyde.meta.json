@@ -1,0 +1,11 @@
+{
+  "track": "Bonnie And Clyde",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Bonnie And Clyde.mp3",
+  "duration_sec": 256.0,
+  "total_beats": 411,
+  "total_downbeats": 103,
+  "estimated_bpm": 96.77,
+  "interval_jitter_ms": 39.61,
+  "compute_time_sec": 8.09,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

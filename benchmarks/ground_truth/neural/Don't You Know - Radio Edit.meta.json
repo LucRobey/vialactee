@@ -1,0 +1,11 @@
+{
+  "track": "Don't You Know - Radio Edit",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Don't You Know - Radio Edit.mp3",
+  "duration_sec": 185.0,
+  "total_beats": 369,
+  "total_downbeats": 92,
+  "estimated_bpm": 120.0,
+  "interval_jitter_ms": 23.05,
+  "compute_time_sec": 4.19,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

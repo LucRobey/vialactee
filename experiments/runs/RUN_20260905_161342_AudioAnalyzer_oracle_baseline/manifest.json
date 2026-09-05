@@ -1,0 +1,15 @@
+{
+  "run_id": "RUN_20260905_161342_AudioAnalyzer_oracle_baseline",
+  "timestamp": "2026-09-05T16:13:42.996447",
+  "git_commit": "8f4c1cb",
+  "model": "AudioAnalyzer",
+  "suite": "synthetic",
+  "macro_scores": {
+    "f1_50ms": 0.8597,
+    "cmlt": 0.8557750000000001,
+    "amlt": 0.8557750000000001,
+    "upbeat_gap": 0.0,
+    "jitter_ms": 25.859999999999996,
+    "cpu_ms": 3.33475
+  }
+}

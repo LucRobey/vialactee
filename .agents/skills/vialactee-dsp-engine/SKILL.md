@@ -36,3 +36,9 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 ### 6. Listener Facade Contract & Zero-Allocation Delay Buffer
 * `Listener.py` manages a pre-allocated 2D/1D NumPy circular ring buffer (zero heap allocations per frame) that aligns real-time spectral data with delayed beat triggers.
 * Any new property added to `AudioIngestion`, `AudioAnalyzer`, or `StructuralNoveltyDetector` must be exposed via delayed properties in `Listener.py` so visual modes receive time-aligned metrics.
+
+### 7. BaseAudioAnalyzer Contract & Benchmark Verification
+* Any modification or replacement of beat tracking algorithms must subclass `core/BaseAudioAnalyzer.py`.
+* Always evaluate changes against the immutable benchmark suite (`python -m benchmarks.run_benchmark --suite synthetic --save-run`) before merging.
+* Enforce the physical refractory lockout ($T_{\min} = \max(0.18\text{s}, 0.40 \times 60/\text{BPM})$) and backward wrap clamp on soft-snapping to prevent double-trigger chatter and phase jitter.
+

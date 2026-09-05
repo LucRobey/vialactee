@@ -1,0 +1,11 @@
+{
+  "track": "Elle a les yeux revolver",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Elle a les yeux revolver.mp3",
+  "duration_sec": 216.81,
+  "total_beats": 285,
+  "total_downbeats": 143,
+  "estimated_bpm": 78.95,
+  "interval_jitter_ms": 36.99,
+  "compute_time_sec": 5.27,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}
