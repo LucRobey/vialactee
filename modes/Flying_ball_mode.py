@@ -1,3 +1,10 @@
+"""
+Flying Ball Mode
+A luminous cluster with exponential decay trail that glides across the strip.
+Its physical position tracks the audio spectral center of gravity (bass pulls left, treble right).
+Ball color smoothly cycles through the spectrum based on frequency centroid dynamics.
+Recreates the classic physical chandelier analog tracker.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import numpy as np

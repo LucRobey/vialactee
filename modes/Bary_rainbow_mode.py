@@ -1,3 +1,10 @@
+"""
+Barycentric Rainbow Mode
+Displays a symmetrical rainbow gradient mirrored outward from the strip's center.
+The center LED serves as an anchor, while dynamic hue shifts are driven by the
+spectral barycenter (pitch balance) of the audio—bass pulls towards red, treble towards purple.
+Maintains full saturation across both symmetric halves.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import numpy as np

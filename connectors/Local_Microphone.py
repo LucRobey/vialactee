@@ -24,6 +24,8 @@ class Local_Microphone:
         self.buffer_size = 4096 # Size of the sliding FFT window
         self.audio_data = np.zeros(self.buffer_size)
         self.audio_lock = threading.Lock()
+        self._audio_write_pos = 0
+        self._newest_sample_time = None
         self.stream = None
 
         self.listener.audio_stream_state = "disabled" if (not self.useMicrophone or sd is None) else "starting"
@@ -87,20 +89,25 @@ class Local_Microphone:
         # time_info contains the PortAudio timestamp when the first sample hit the ADC
         os_latency = max(0.0, time_info.currentTime - time_info.inputBufferAdcTime)
         
-        # We lock the time.time() of when the newest sample in this frame was acoustically captured
-        self._newest_sample_time = time.time() - os_latency
-        
         # If stereo, average out the two channels into mono for FFT pipeline
         if indata.shape[1] > 1:
             incoming = np.mean(indata, axis=1)
         else:
             incoming = indata[:, 0]
             
-        # Roll the continuous buffer backwards and append new data to the front
+        # Write incoming data into circular buffer (zero allocation)
         m = len(incoming)
         with self.audio_lock:
-            self.audio_data = np.roll(self.audio_data, -m)
-            self.audio_data[-m:] = incoming
+            pos = self._audio_write_pos
+            end = pos + m
+            if end <= self.buffer_size:
+                self.audio_data[pos:end] = incoming
+            else:
+                chunk1 = self.buffer_size - pos
+                self.audio_data[pos:] = incoming[:chunk1]
+                self.audio_data[:m - chunk1] = incoming[chunk1:]
+            self._audio_write_pos = end % self.buffer_size
+            self._newest_sample_time = time.time() - os_latency
 
     async def listen_forever(self):
         if not self.useMicrophone or sd is None:
@@ -135,9 +142,17 @@ class Local_Microphone:
                 with self.stream:
                     retry_delay = 1
                     while True:
+                        if not self.stream.active:
+                            self.listener.audio_stream_state = "disconnected"
+                            logger.warning("(Local_mic) Audio stream became inactive (device disconnected?)")
+                            break
                         await self.listen()
                         # Limit the update loop slightly to match a smooth 60fps
                         await asyncio.sleep(1/60)
+            except asyncio.CancelledError:
+                self.listener.audio_stream_state = "stopped"
+                logger.info("(Local_mic) Audio stream task cancelled.")
+                raise
             except Exception as e:
                 self.listener.audio_stream_state = "error"
                 self.listener.audio_stream_error = str(e)
@@ -146,15 +161,22 @@ class Local_Microphone:
                 retry_delay = min(60, retry_delay * 2)
 
     async def listen(self):
-        if hasattr(self, '_newest_sample_time'):
+        with self.audio_lock:
+            newest_sample_time = self._newest_sample_time
+            # Linearize the circular buffer into a contiguous array
+            pos = self._audio_write_pos
+            if pos == 0:
+                audio_copy = self.audio_data.copy()
+            else:
+                audio_copy = np.concatenate((self.audio_data[pos:], self.audio_data[:pos]))
+
+        if newest_sample_time is not None:
             # The center of the Hanning window is delayed by exactly half the buffer size
             algorithmic_delay = (self.buffer_size / 2.0) / self.sample_rate
             # The async polling drift + OS audio latency
-            time_since_newest = time.time() - self._newest_sample_time
+            time_since_newest = time.time() - newest_sample_time
             self.listener.dynamic_audio_latency = time_since_newest + algorithmic_delay
             
-        with self.audio_lock:
-            audio_copy = self.audio_data.copy()
         self.listener.process_raw_audio(audio_copy)
                 
         logger.debug(f"(Local_mic) Bands: {list(self.listener.fft_band_values)}")

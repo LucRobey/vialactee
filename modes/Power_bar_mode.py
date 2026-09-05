@@ -1,3 +1,10 @@
+"""
+Power Bar Mode
+Classic audio VU peak meter designed for vertical or linear segments.
+A solid colored bar rises and falls with instantaneous track power.
+A persistent peak-hold white dot marks the maximum crest and falls slowly under simulated gravity.
+Background LEDs smoothly fade to black outside the active power column.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import random

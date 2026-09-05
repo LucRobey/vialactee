@@ -1,3 +1,10 @@
+"""
+Hyper Strobe Mode
+High-energy kinetic strobe effect that remains dark until strong transient hits occur.
+When frequency band flux exceeds the configurable trigger threshold, flashes pure white across the segment.
+Decays rapidly back to black within a few frames via an exponential decay envelope.
+Supports live adjustment of trigger threshold, decay rate, and target frequency band.
+"""
 import numpy as np
 import modes.Mode as Mode
 import utils.colors as colors

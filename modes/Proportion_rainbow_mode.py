@@ -1,3 +1,10 @@
+"""
+Proportion Rainbow Mode
+Full rainbow gradient spanning the strip whose color regions scale with FFT band energy.
+The spatial width and boundary of each color slice expand or contract dynamically based on the
+proportional energy distribution across all 8 frequency bands.
+Creates an organic shifting spectrum where prominent musical frequencies dominate the visual space.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import numpy as np

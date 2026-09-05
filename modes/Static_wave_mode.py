@@ -1,3 +1,10 @@
+"""
+Static Wave Mode
+A central pulsing color bar whose width breathes symmetrically in and out to low-frequency bass energy.
+Bounded by bright white outer caps that define the active pulse boundaries.
+Interior color hue and brightness subtly modulate with overall track power.
+Creates a punchy, tactile visual pulse synchronized with kicks and basslines.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import random

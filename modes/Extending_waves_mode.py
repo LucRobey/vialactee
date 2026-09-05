@@ -1,3 +1,10 @@
+"""
+Extending Waves Mode
+Spawns colored wavefronts at the strip center that ripple outward to both ends on detected beats.
+Wave propagation speed and luminosity scale dynamically with total audio power.
+Uses an internal half-strip history buffer mirrored symmetrically across the segment.
+Creates an organic water-ripple visual effect reacting to rhythmic audio impulses.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import random

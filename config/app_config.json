@@ -2,12 +2,19 @@
     "startServer": false,
     "useMicrophone": true,
     "printCpuFpsInfo": true,
-    "HARDWARE_MODE": "auto",
-    "hardware_profile": "full",
-    "esp32_ip": "192.168.0.26",
+    "HARDWARE_MODE": "esp32",
+    "hardware_profile": "small",
+    "esp32_ip": "192.168.1.41",
     "log_level": "INFO",
-    "luminosity": 46,
+    "luminosity": 30,
     "sensibility": 45,
     "auto_transition_time": 80,
-    "show_music_analyser_panel": true
+    "show_music_analyser_panel": false,
+    "profiler": {
+        "interval_seconds": 5.0,
+        "format": "dashboard",
+        "target_fps": 30,
+        "alert_threshold_ms": 35.0,
+        "track_slowest_mode": true
+    }
 }

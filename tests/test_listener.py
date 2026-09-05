@@ -77,60 +77,77 @@ class TestListener(unittest.TestCase):
 
     def test_spectral_delay_queue_synchronization(self):
         """
-        Verify that values pushed into spectral_delay_queue emerge only after lookahead_seconds.
+        Verify that values pushed into the ring buffer emerge only after lookahead_seconds.
         """
         lookahead = self.listener.analyzer.lookahead_seconds  # 5.0s
         t0 = 1000.0
 
-        # Inject a unique synthetic item into the queue timestamped at t0
+        # Inject a unique synthetic item into the ring buffer timestamped at t0
         synthetic_bands = np.array([11.0, 22.0, 33.0, 44.0, 55.0, 66.0, 77.0, 88.0])
-        self.listener.spectral_delay_queue.append({
-            'time': t0,
-            'fft_band_values': synthetic_bands,
-            'chroma_values': np.zeros(12),
-            'smoothed_fft_band_values': synthetic_bands,
-            'smoothed_chroma_values': np.zeros(12),
-            'asserved_fft_band': synthetic_bands,
-            'band_proportion': np.zeros(8),
-            'band_means': np.zeros(8),
-            'smoothed_total_power': 100.0,
-            'asserved_total_power': 100.0,
-            'band_peak': np.zeros(8),
-            'band_flux': np.zeros(8),
-            'is_song_change': True,
-            'is_verse_chorus_change': True,
-            'asserved_novelty': 0.88,
-            'combined_novelty': 0.95,
-        })
+        w = self.listener._ring_write
+        self.listener._ring_timestamps[w] = t0
+        self.listener._ring_fft_band[w, :] = synthetic_bands
+        self.listener._ring_smoothed_total_power[w] = 100.0
+        self.listener._ring_is_song_change[w] = True
+        self.listener._ring_is_verse_chorus_change[w] = True
+        self.listener._ring_asserved_novelty[w] = 0.88
+        self.listener._ring_combined_novelty[w] = 0.95
+        
+        self.listener._ring_write = (w + 1) % self.listener._ring_capacity
+        self.listener._ring_count += 1
+        
+        import unittest.mock
+        
+        # Scenario A: Before lookahead expires
+        with unittest.mock.patch('time.time', return_value=t0 + 2.0):
+            # don't call update() because it pushes fake audio which could overwrite our injected frame.
+            # actually we can just manually process the read logic like update() does:
+            pass
 
-        # Scenario A: Before lookahead expires (e.g. t0 + 2.0s), popped_items should be empty
-        self.listener.last_env_time = t0 + 2.0
-        # Check popping logic manually or via time simulation
-        popped_items = []
         sim_time = t0 + 2.0
-        while len(self.listener.spectral_delay_queue) > 0:
-            if sim_time - self.listener.spectral_delay_queue[0]['time'] >= lookahead:
-                popped_items.append(self.listener.spectral_delay_queue.popleft())
+        expired_count = 0
+        best_idx = -1
+        any_song_change = False
+        r = self.listener._ring_read
+        while self.listener._ring_count > 0:
+            if sim_time - self.listener._ring_timestamps[r] >= lookahead:
+                expired_count += 1
+                best_idx = r
+                if self.listener._ring_is_song_change[r]:
+                    any_song_change = True
+                self.listener._ring_read = (r + 1) % self.listener._ring_capacity
+                self.listener._ring_count -= 1
+                r = self.listener._ring_read
             else:
                 break
-        self.assertEqual(len(popped_items), 0)
-        self.assertFalse(self.listener.is_song_change)
+                
+        self.assertEqual(expired_count, 0)
+        self.assertFalse(any_song_change)
 
-        # Scenario B: After lookahead expires (e.g. t0 + 5.1s), item should pop and update facade
+        # Scenario B: After lookahead expires
         sim_time = t0 + 5.1
-        while len(self.listener.spectral_delay_queue) > 0:
-            if sim_time - self.listener.spectral_delay_queue[0]['time'] >= lookahead:
-                popped_items.append(self.listener.spectral_delay_queue.popleft())
+        r = self.listener._ring_read
+        any_verse_chorus_change = False
+        while self.listener._ring_count > 0:
+            if sim_time - self.listener._ring_timestamps[r] >= lookahead:
+                expired_count += 1
+                best_idx = r
+                if self.listener._ring_is_song_change[r]:
+                    any_song_change = True
+                if self.listener._ring_is_verse_chorus_change[r]:
+                    any_verse_chorus_change = True
+                self.listener._ring_read = (r + 1) % self.listener._ring_capacity
+                self.listener._ring_count -= 1
+                r = self.listener._ring_read
             else:
                 break
 
-        self.assertEqual(len(popped_items), 1)
-        best = popped_items[0]
-        self.listener._delayed_fft_band_values = best['fft_band_values']
-        self.listener._delayed_is_song_change = best['is_song_change']
-        self.listener._delayed_is_verse_chorus_change = best['is_verse_chorus_change']
-        self.listener._delayed_asserved_novelty = best['asserved_novelty']
-        self.listener._delayed_combined_novelty = best['combined_novelty']
+        self.assertEqual(expired_count, 1)
+        self.listener._delayed_fft_band_values = self.listener._ring_fft_band[best_idx].copy()
+        self.listener._delayed_is_song_change = any_song_change
+        self.listener._delayed_is_verse_chorus_change = any_verse_chorus_change
+        self.listener._delayed_asserved_novelty = self.listener._ring_asserved_novelty[best_idx]
+        self.listener._delayed_combined_novelty = self.listener._ring_combined_novelty[best_idx]
 
         np.testing.assert_array_equal(self.listener.fft_band_values, synthetic_bands)
         self.assertTrue(self.listener.is_song_change)

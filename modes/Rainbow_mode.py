@@ -1,3 +1,10 @@
+"""
+Rainbow Mode
+Continuous smooth rainbow spectrum distributed across the strip.
+Color positions can gently drift while brightness and saturation pulse with audio frequency bands.
+Maintains a rich ambient colorway during quiet passages and bursts into high-contrast reactive pulses on beats.
+Supports adjustable smoothing ratio, base intensity, and speed via settings schema.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import utils.colors as colors

@@ -1,3 +1,10 @@
+"""
+Shining Stars Mode
+Ambient dark canvas where individual LEDs ("stars") twinkle into existence at random positions.
+Stars ignite when specific frequency bands exceed activation thresholds, adopting the band's hue.
+Active stars gradually fade back to black, creating a gentle celestial constellation effect.
+Replicates across sub-segments to optimize computational overhead on long strips.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import numpy as np

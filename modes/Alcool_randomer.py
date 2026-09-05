@@ -1,3 +1,10 @@
+"""
+Alcool Randomer Mode
+An arcade-style roulette wheel animation for shot-selection games.
+A luminous cursor accelerates through ramp-up, constant cruise, and deceleration phases,
+eventually stopping at a randomized LED index to select an outcome.
+Configurable via shot_base_speed, shot_max_speed, and shot_fade_ratio.
+"""
 import modes.Mode as Mode
 import time
 import random

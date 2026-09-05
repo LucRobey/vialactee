@@ -16,11 +16,12 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 
 ### 2. Zero-Division & Floating-Point Safeguards
 * In complete silence (or when audio devices disconnect), audio signals can drop to absolute zero.
-* **NEVER** divide by sum/mean/variance without asserting `np.where(denom == 0, 1.0, denom)` or adding $\epsilon = 1e-9$ safety floors.
+* **NEVER** divide by sum/mean/variance without asserting `np.where(denom == 0, 1.0, denom)` or adding $\epsilon = 1e-9$ safety floors (e.g., `safe_gm = max(self.total_power_gm, 1e-9)` in `AudioIngestion.asserv_total_power`).
 * Ensure all float normalization operations clamp output arrays to $[0.0, 1.0]$.
 
 ### 3. Dynamic Latency Calibration
 * Do not introduce static latency numbers. Always preserve the dynamic latency equation linking `sounddevice`'s `time_info.inputBufferAdcTime` to the 4096-sample Hanning window center.
+* Synchronize capture timestamps strictly within `audio_lock` in `Local_Microphone` to prevent phase jitter race conditions.
 
 ### 4. Oracle Flywheel & Phase Projection
 * Beat tracking utilizes non-causal 5-second lookahead Pearson correlation template matching (`FastTemplateBank`).
@@ -32,6 +33,6 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 * Structural music events (Verse/Chorus boundaries, Seamless Crossfades, Silence Drops) are managed by `core/StructuralNoveltyDetector.py`.
 * Macro-structure tension is computed from Short-Term Memory (STM) vs Long-Term Memory (LTM) Euclidean distance and asserved dynamically via Local Max / Global Max decay envelopes.
 
-### 6. Listener Facade Contract
-* `Listener.py` manages the non-causal delay queue that aligns real-time spectral data with delayed beat triggers.
+### 6. Listener Facade Contract & Zero-Allocation Delay Buffer
+* `Listener.py` manages a pre-allocated 2D/1D NumPy circular ring buffer (zero heap allocations per frame) that aligns real-time spectral data with delayed beat triggers.
 * Any new property added to `AudioIngestion`, `AudioAnalyzer`, or `StructuralNoveltyDetector` must be exposed via delayed properties in `Listener.py` so visual modes receive time-aligned metrics.

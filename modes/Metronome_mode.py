@@ -1,3 +1,10 @@
+"""
+Metronome Mode
+Rhythm visualization lock-stepped to the Anticipation Flywheel ("Oracle") beat tracker.
+Flashes bright white on primary downbeats and pulses deep blue on sub-beats.
+Uses sharp attack and exponential decay envelopes for precise rhythmic cadence.
+Exposes adjustable brightness multiplier and alternating sub-beat toggle in settings schema.
+"""
 import numpy as np
 import utils.rgb_hsv as RGB_HSV
 import modes.Mode as Mode

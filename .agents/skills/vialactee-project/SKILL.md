@@ -12,7 +12,7 @@ Use this skill as the primary architectural authority for the Vialactée music-r
 ## 1. Directory Structure
 
 * `Main.py`: The asynchronous orchestration entry point.
-* `core/`: The math and execution engine (`Mode_master.py`, `Transition_Director.py`, `Transition_Engine.py`, `Listener.py`, `AudioAnalyzer.py`, `AudioIngestion.py`, `Segment.py`).
+* `core/`: The math and execution engine (`Mode_master.py`, `CommandRouter.py`, `PresetRepository.py`, `Transition_Director.py`, `Transition_Engine.py`, `Listener.py`, `AudioAnalyzer.py`, `AudioIngestion.py`, `Segment.py`).
 * `modes/`: Visual light animation modes inheriting from `modes.Mode`.
 * `config/`: Hardware profiles (`hardware_profile` in `app_config.json`), unified physical geometry + UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
 * `hardware/`: Physical abstractions (`Fake_leds.py`, `Rpi_NeoPixels.py`, `Udp_Sender.py`, `HardwareFactory.py`, `Fake_ESP32.py`).

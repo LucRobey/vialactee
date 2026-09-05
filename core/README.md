@@ -4,14 +4,16 @@ The `core` directory is the engine room of Vialactée. It contains the primary m
 
 ## Key Components:
 
-- **`AudioIngestion.py`**: Leaf DSP filterbank engine. Receives raw PCM audio, initializes persisted luminosity/sensibility from `config/app_config.json`, and applies pure `numpy` vectorization to compute FFTs, Mel-band weights (8 bands), Chromagrams (12 pitch classes), and ADSR envelopes.
+- **`CommandRouter.py`**: Modular instruction router. Extracts WebSocket action handling out of `Mode_master` using a clean decorator-based dispatch table (`@router.register(page, action)`) across `live_deck`, `topology`, `mode_settings`, and `system`.
+- **`PresetRepository.py`**: Dedicated configuration repository. Encapsulates configuration persistence, playlist querying, and shuffle bag selection. Automatically offloads synchronous disk writes (`json.dump`) to background threads via `loop.run_in_executor()` to prevent frame stalls in the 30 FPS render loop.
+- **`AudioIngestion.py`**: Leaf DSP filterbank engine. Receives raw PCM audio, initializes persisted luminosity/sensibility from `config/app_config.json`, and applies pure `numpy` vectorization to compute FFTs, Mel-band weights (8 bands), Chromagrams (12 pitch classes), and ADSR envelopes with explicit zero-division guards.
 - **`AudioAnalyzer.py`**: Executes the **Anticipation Flywheel ("Oracle")** engine with an $O(1)$ Pearson template bank, logarithmic tempo-class arithmetic, look-ahead phase back-projection to speaker time, real/dropped beat validation, and frequency-band tagging. Fully decomposed into cohesive pipeline stages (`_compute_spectral_flux`, `_ingest_odf_buffer`, `_run_oracle_sweep`, `_advance_flywheel`).
 - **`StructuralNoveltyDetector.py`**: Dedicated structural novelty engine. Autonomously identifies Verse/Chorus boundaries, Seamless Crossfades, and Silence Drops using Short-Term Memory (STM) vs Long-Term Memory (LTM) tension wrapped in dynamic asserved mathematical envelopes.
 - **`RhythmConfig.py`**: Centralized, strongly-typed configuration dataclass holding all thresholds, cooldowns, and constants for beat tracking, flywheel trust levels, and structural novelty detection.
-- **`Listener.py`**: The transparent facade orchestrator. Instantiates Ingestion and Analysis layers and provides a fully backward-compatible API (`beat_phase`, `beat_count`, `bpm`, `is_real_beat`, `is_dropped_beat`, `beat_tag`, `beat_confidence`, `is_song_change`, `is_verse_chorus_change`) to feed data into the visual modes and transition engine. Manages a 5-second non-causal delay queue to synchronize real-time spectral arrays with the predictive lookahead of the beat tracker.
-- **`Mode_master.py`**: The 30FPS rendering engine. Polls the `Listener` for audio features, resolves the active hardware profile (`"full"` vs `"small"`), loads playlist/configuration rotation from the resolved configuration store (`data/configurations_full.json` or `data/configurations_small.json`), routes state to the active visual modes, and exposes JSON-safe state snapshots (including `hardwareProfile`) for the web app.
-- **`Transition_Director.py` & `Transition_Engine.py`**: Orchestrates lighting transitions across presets based on configurable timer intervals (`auto_transition_time`). `Transition_Engine.py` uses `init_room_bounds()` to dynamically compute spatial room bounds from the active segment geometry and provides 10 spatial/alpha blending routines.
-- **`Segment.py`**: A logical abstraction of the physical LED strips, mapping mathematical vectors to physical addresses using the resolved segment configuration. Handles dual-buffer blending (`rgb_list` and `dual_rgb_list`) during transitions.
+- **`Listener.py`**: The transparent facade orchestrator. Instantiates Ingestion and Analysis layers and provides a fully backward-compatible API (`beat_phase`, `beat_count`, `bpm`, `is_real_beat`, `is_dropped_beat`, `beat_tag`, `beat_confidence`, `is_song_change`, `is_verse_chorus_change`) to feed data into the visual modes and transition engine. Manages a zero-allocation, pre-allocated 2D/1D NumPy circular ring buffer to synchronize real-time spectral arrays with the predictive lookahead of the beat tracker.
+- **`Mode_master.py`**: The 30FPS rendering engine. Polls the `Listener` for audio features, resolves the active hardware profile (`"full"` vs `"small"`), delegates configuration queries and shuffle bag rotation to `PresetRepository`, dispatches WebSocket instructions to `CommandRouter`, routes state to active visual modes, and exposes JSON-safe state snapshots for the web app.
+- **`Transition_Director.py` & `Transition_Engine.py`**: Orchestrates lighting transitions across presets based on configurable timer intervals (`auto_transition_time`) respecting user-selected transition configs. `Transition_Engine.py` uses `init_room_bounds()` to dynamically compute spatial room bounds from active segment geometry and provides 10 spatial/alpha blending routines.
+- **`Segment.py`**: A logical abstraction of the physical LED strips, mapping mathematical vectors to physical addresses using the resolved segment configuration. Features zero-allocation pre-allocated output buffers (`_scaled_buffer`), cached index reversal, and dual-buffer rendering via `Mode.render(buffer)`.
 - **`BeatGridQuantizer.py`**: Decoupled beat grid quantization and O(1) motif pattern recognition layer. Quantizes continuous note events onto beat tracker phase-aligned grid subdivisions (16th/8th notes) and detects repeating melodic motifs in real-time.
 - **`Webapp_instruction_logger.py`**: Instruction logger sink instantiated by `connectors/Connector.py` to parse, format, and log incoming WebSocket commands from the web interface.
 
@@ -107,11 +109,25 @@ classDiagram
         +change_mode(new_mode, transition_config)
     }
 
+    %% Subsystem Collaborators
+    class CommandRouter {
+        +dispatch(mode_master, instruction) : dict
+        +register(page, action) : decorator
+    }
+
+    class PresetRepository {
+        +load_configurations()
+        +pick_a_random_conf()
+        +persist_configurations_store()
+    }
+
     %% --- Relationships and Interactions ---
 
     %% Composition / Ownership
     Mode_master *-- Transition_Director : Instantiates
     Mode_master *-- Listener : Instantiates / Owns
+    Mode_master *-- PresetRepository : Owns
+    Mode_master ..> CommandRouter : Dispatches via
     Mode_master "1" *-- "*" Segment : Orchestrates
     Listener *-- AudioIngestion : Facades
     Listener *-- AudioAnalyzer : Facades

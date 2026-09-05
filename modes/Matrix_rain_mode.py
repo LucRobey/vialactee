@@ -1,3 +1,10 @@
+"""
+Matrix Rain Mode
+Classic digital rain effect designed for vertical chandelier strips.
+Neon green raindrops spawn at the top of the strip on high-frequency transients (snares/hi-hats).
+Drops cascade downwards pixel-by-pixel, trailing a soft fading green decay.
+Configurable trigger threshold, fade ratio, rain color, and trigger frequency band.
+"""
 import numpy as np
 import modes.Mode as Mode
 import utils.colors as colors

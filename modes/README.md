@@ -12,14 +12,19 @@ The `modes` directory contains the creative visual algorithms for the chandelier
 
 ## The Architecture Contract
 
-### 1. `run()` vs `update()`
-All mode subclasses must override `run()`, **not** `update()`.
-*   `Mode.update()` is a final method on the base class that automatically handles performance profiling, listener synchronization, and boilerplate updates. It internally calls `self.run()`.
-*   Overriding `update()` inside a mode subclass breaks the performance profiling pipeline.
+### 1. `render()` and `run()` Execution Methods
+All visual mode subclasses implement their visual rendering by overriding either:
+*   **`render(self, buffer=None, audio_ctx=None, frame_info=None)`** *(Recommended modern signature)*: Directly renders into `buffer` (or falls back to `self.rgb_list`).
+*   **`run(self)`** *(Legacy signature)*: Renders into `self.rgb_list`.
 
-### 2. The `rgb_list` Array
-The visual canvas for a segment is managed natively as a 2D numpy matrix: `self.rgb_list` (shape: `[number_of_leds, 3]`). 
-Modes operate by slicing and mutating this matrix directly, taking advantage of C-level vectorization to compute thousands of LEDs without Python loops.
+**Backward Compatibility Guarantee**:
+The base class `Mode.render()` handles buffer redirection automatically: if a mode implements `run()`, calling `render(buffer)` temporarily points `self.rgb_list` to the target buffer, executes `self.run()`, and safely restores `self.rgb_list`. Never override `update()` directly.
+
+### 2. The `rgb_list` Array & Immutable Color Constants
+The visual canvas for a segment is managed natively as a 2D numpy matrix: `self.rgb_list` (shape: `[number_of_leds, 3]`, `int32`). Modes operate by slicing and mutating this matrix directly, taking advantage of C-level vectorization to compute thousands of LEDs without Python loops.
+
+**Color Immutability**:
+Shared color constants (e.g. `self.white` on `Mode` and module-level constants in `utils.colors` like `red`, `green`, `blue`, `gold`, `white`, `black`) are strictly defined as immutable tuples `(R, G, B)` to prevent accidental cross-instance mutation across segments. NumPy vectorized assignments (`self.rgb_list[:] = self.white`) accept tuples natively.
 
 ### 3. The `infos` Payload & Mode Settings Schema
 Variables controlling visual behavior (speeds, color palettes, thresholds, physical constraints) are passed through `self.infos` rather than hardcoded. `self.infos` is populated by merging `app_config.json` with dynamic `modeSettings` injected from active segment configurations.

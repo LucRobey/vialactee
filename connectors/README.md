@@ -4,8 +4,8 @@ The `connectors` directory manages all external Data In (Audio) and Data Out (Ne
 
 ## Key Components:
 
-- **`Connector.py`**: An aiohttp server on port `8080` that exposes `/ws` for bidirectional web app state/control, `/api/topology` for dynamic segment geometry and wiring, and `/api/configurations` for persisted playlist/configuration JSON. It validates instruction payloads, logs them, acknowledges receipt, and broadcasts `Mode_master` state snapshots back to connected clients.
-- **`Local_Microphone.py`**: Wraps the Python `sounddevice` library. It maintains a continuous sliding buffer of analog audio input and asynchronously pushes raw PCM data arrays directly into the `Listener` engine (which routes it to `AudioIngestion` for actual DSP math).
+- **`Connector.py`**: An aiohttp server on port `8080` that exposes `/ws` for bidirectional web app state/control, `/api/topology` for dynamic segment geometry and wiring, and `/api/configurations` for persisted playlist/configuration JSON. It validates instruction payloads, dispatches them through `CommandRouter` (`core/CommandRouter.py`), acknowledges receipt, and broadcasts `Mode_master` state snapshots back to connected clients.
+- **`Local_Microphone.py`**: Wraps the Python `sounddevice` library. It maintains an in-place circular buffer of analog audio input (zero heap allocations inside the PortAudio C callback thread), synchronizes timestamping under `audio_lock` to eliminate phase jitter, detects device disconnections via `stream.active`, and asynchronously pushes linear PCM data directly into `Listener` (which routes it to `AudioIngestion` for DSP math).
 
 ## How it works:
 These modules run concurrently in async tasks. The `Local_Microphone` strictly acts as an I/O push-stream (performing no math), feeding raw audio to the math engine. Meanwhile, `Connector` accepts WebSocket instructions and validates the control payload shape:

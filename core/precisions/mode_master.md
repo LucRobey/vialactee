@@ -123,14 +123,14 @@ Running at approximately 30 frames per second (`update_forever`), the core loop 
 5.  **Web State Snapshot**: If a connector is attached, `get_state_snapshot()` is serialized and broadcast only when the visible state changes. This keeps Live Deck and Topology synchronized with automatic transitions without streaming every rendered frame.
 
 ### 3. Configuration Management (The Shuffle Bag)
-To ensure that all configurations in the allowed playlists are seen before repeating, `Mode_master` uses a **Shuffle Bag** (`pick_a_random_conf()`):
+Configuration storage, playlist querying, and rotation are encapsulated in `PresetRepository` (`core/PresetRepository.py`). To ensure that all configurations in the allowed playlists are seen before repeating, it uses a **Shuffle Bag** (`pick_a_random_conf()`):
 *   It dumps all available configurations into a list and randomizes it.
 *   It pops one configuration at a time.
 *   When the bag is empty, it refills and reshuffles it.
 Once a configuration is picked, `update_segments_modes()` first reapplies the active configuration's effective `modeSettings` to every live mode instance across the segments, then passes the new mode/direction targets to the segments, skipping any segments that are currently marked as `isBlocked`.
 
-### 4. External Web App Instructions
-At any time, the Wabb web app can send JSON instructions through `Connector.py` and `/ws`. `process_instruction()` handles the supported page/action pairs for Live Deck, Topology, Mode Settings, and System controls.
+### 4. External Web App Instructions & Command Routing
+At any time, the Wabb web app can send JSON instructions through `Connector.py` and `/ws`. `Mode_master.process_instruction()` delegates directly to `CommandRouter` (`core/CommandRouter.py`), which uses a modular decorator-based dispatch table (`@router.register(page, action)`) for `live_deck`, `topology`, `mode_settings`, and `system`.
 
 The web app never owns playlist or configuration names. Both Python and React load them dynamically from the active profile's configuration file via `resolve_configurations_file_path()`. Topology **persists** presets only through `POST /api/configurations` from `MODIFY` / `BUILD`; after a save, `Mode_master.load_configurations()` refreshes the in-memory playlist list and the connector broadcasts a fresh snapshot.
 
@@ -138,7 +138,7 @@ The web app never owns playlist or configuration names. Both Python and React lo
 
 **Active configuration isolation:** When a configuration is applied (`_apply_configuration`, initial pick, or `change_configuration`), `Mode_master` stores a shallow copy of that preset’s `modes`, `way`, and `modeSettings` dicts on `activ_configuration`. Live segment swaps and live mode-setting edits therefore cannot accidentally rewrite the shared configuration objects loaded from disk.
 
-**Mode Settings runtime fan-out:** `Mode_master` builds a settings catalog by introspecting the loaded `Mode` instances held inside each `Segment`. When the web app sends `page: "mode_settings", action: "set_mode_setting"`, `Mode_master` validates the request against that catalog, updates the active configuration's `modeSettings`, reapplies the effective values to every segment instance for that mode, persists the active configuration back into the resolved configuration JSON file via `_persist_configurations_store()`, and then rebroadcasts state.
+**Mode Settings runtime fan-out & Non-Blocking Persistence:** `Mode_master` builds a settings catalog by introspecting the loaded `Mode` instances held inside each `Segment`. When the web app sends `page: "mode_settings", action: "set_mode_setting"`, the `CommandRouter` validates the request against that catalog, updates the active configuration's `modeSettings`, reapplies the effective values to every segment instance for that mode, and persists the active configuration back into the resolved configuration JSON file via `_persist_configurations_store()`. Both `_persist_configurations_store()` and `_persist_app_config_value()` offload synchronous disk writes (`json.dump`) to background threads via `loop.run_in_executor()`, ensuring slider adjustments never cause frame drops in the 30 FPS rendering loop.
 
 ### 5. State Snapshot Contract
 `get_state_snapshot()` returns a JSON-safe view of:

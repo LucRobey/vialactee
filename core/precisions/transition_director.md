@@ -81,6 +81,6 @@ On startup, it parses the active segments file (resolved dynamically via `resolv
 ### 2. State Management
 It switches between `PASSATION` (normal operation/standby) and `TRANSITION_DUAL` (actively crossfading or switching between modes).
 
-### 3. Timer-Based Overrides
-In its `update()` loop, it monitors `next_change_time`. When this timer expires, it proactively commands the `mode_master` to execute a global transition (currently default to an `"explosion"` effect for testing) and resets the timer.
+### 3. Timer-Based Transitions
+In its `update()` loop, it monitors `next_change_time`. When this timer expires, it proactively commands the `mode_master` to execute a global transition using the user's active `selected_transition_config` (defaulting to `"fade_in_out"` with 2.0s duration) and resets the timer.
 

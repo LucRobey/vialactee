@@ -1,7 +1,14 @@
+"""
+Base Mode Class
+Defines the core interface and execution lifecycle for all visual animation modes.
+Provides standardized buffer rendering, vectorized color conversions, smoothing, and fading utilities.
+Manages dynamic settings schemas and catalogs exposed to the React web interface.
+Subclasses implement render() or run() to generate 60 FPS LED visualizations.
+"""
 import utils.rgb_hsv as RGB_HSV
 import time
 import numpy as np
-from typing import List, Dict, Any, Tuple, Union
+from typing import List, Dict, Any, Tuple, Union, Optional
 import logging
 
 ModeSettingValue = Union[str, int, float, bool]
@@ -9,7 +16,7 @@ ModeSettingValue = Union[str, int, float, bool]
 class Mode:
 
     listener = None
-    white = RGB_HSV.fromHSV_toRGB(0,0,1.0)
+    white = (255, 255, 255)
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         self.name = name
@@ -206,8 +213,23 @@ class Mode:
         self.isActiv = True
         self.logger.debug("  on active le "+self.name+" du "+self.segment_name)
 
-    def update(self):
-        self.run()
+    def render(self, buffer: Optional[np.ndarray] = None, audio_ctx: Any = None, frame_info: Any = None) -> None:
+        """
+        Unified rendering interface for visual modes.
+        If a buffer is supplied, self.rgb_list is temporarily redirected to it.
+        Calls self.run() for backward compatibility with existing modes.
+        """
+        old_buffer = self.rgb_list
+        if buffer is not None:
+            self.rgb_list = buffer
+        try:
+            self.run()
+        finally:
+            if buffer is not None:
+                self.rgb_list = old_buffer
 
-    def run(self):
+    def update(self) -> None:
+        self.render()
+
+    def run(self) -> None:
         pass

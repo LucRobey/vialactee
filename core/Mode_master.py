@@ -12,6 +12,8 @@ import core.Segment as Segment
 import core.Listener as Listener
 import core.Transition_Director as Transition_Director
 import utils.Profiler as Profiler
+from core.CommandRouter import router as command_router
+from core.PresetRepository import PresetRepository
 from config.Configuration_manager import resolve_configurations_file_path, resolve_segments_file_path
 
 
@@ -44,7 +46,7 @@ class Mode_master:
         self.onRaspberry = infos.get("onRaspberry", False)
         self.leds_list = leds
         self.logger = logging.getLogger("Mode_master")
-        self.profiler = Profiler.Profiler(infos.get("printCpuFpsInfo", False), self.logger)
+        self.profiler = Profiler.Profiler(infos.get("printCpuFpsInfo", False), self.logger, config=infos.get("profiler", {}))
         self.current_time = time.time()
         self.appli_connector = None
         self.segments_list: List[Segment.Segment] = []
@@ -62,6 +64,8 @@ class Mode_master:
         self._restart_requested = asyncio.Event()
         self._last_update_monotonic: Optional[float] = None
 
+        # Delegate configuration persistence to PresetRepository
+        self._preset_repo = PresetRepository(infos)
         self.load_configurations()
 
         self.initiate_segments()
@@ -270,20 +274,14 @@ class Mode_master:
         self._apply_mode_settings_to_segments(self._get_effective_mode_settings())
 
     def _persist_configurations_store(self) -> bool:
-        file_path = resolve_configurations_file_path(self.infos)
-        payload = {
-            "playlists": list(self.playlists),
-            "configurations": self.configurations,
-        }
-
+        self._preset_repo.configurations = self.configurations
+        self._preset_repo.playlists = self.playlists
         try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2)
-                f.write("\n")
+            loop = asyncio.get_running_loop()
+            loop.run_in_executor(None, self._preset_repo._persist_configurations_store_sync)
             return True
-        except Exception as e:
-            self.logger.error(f"(MM) Failed to persist configurations.json: {e}")
-            return False
+        except RuntimeError:
+            return self._preset_repo._persist_configurations_store_sync()
 
     def _persist_active_configuration_mode_settings(self) -> bool:
         playlist_name = self.activ_configuration.get("playlist")
@@ -357,11 +355,19 @@ class Mode_master:
 
     async def update_forever(self) -> None:
         """
-        Continuously update the system at approximately 30 FPS.
+        Continuously update the system paced to the target FPS.
         """
+        target_fps = getattr(self.profiler, "target_fps", 30.0) if hasattr(self, "profiler") else 30.0
+        target_dt = 1.0 / target_fps if target_fps > 0 else 1.0 / 30.0
+
         while True:
+            t0 = time.perf_counter()
             await self.update()
-            await asyncio.sleep(1/30)
+            elapsed = time.perf_counter() - t0
+            sleep_time = max(0.001, target_dt - elapsed)
+
+            with self.profiler.measure("idle_sleep"):
+                await asyncio.sleep(sleep_time)
 
     async def update(self) -> None:
         """
@@ -380,7 +386,7 @@ class Mode_master:
 
         is_rpi_hardware = len(self.leds_list) > 0 and "Rpi_NeoPixels" in str(type(self.leds_list[0]))
         
-        with self.profiler.measure("app"):
+        with self.profiler.measure("hardware_show"):
             if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or is_rpi_hardware:
                 loop = asyncio.get_running_loop()
                 for led_strip in self.leds_list:
@@ -389,14 +395,32 @@ class Mode_master:
                 for led_strip in self.leds_list:
                     led_strip.show()
 
-        with self.profiler.measure("mode_master"):
-            for seg_index in range(len(self.segments_list)):
-                self.segments_list[seg_index].update(self.transition_director)
+        slowest_seg = None
+        slowest_seg_time = 0.0
+        slowest_mode_name = None
+
+        with self.profiler.measure("modes_render"):
+            if getattr(self.profiler, "track_slowest_mode", False) and getattr(self.profiler, "active", False):
+                for seg in self.segments_list:
+                    t0 = time.perf_counter()
+                    seg.update(self.transition_director)
+                    t_seg = time.perf_counter() - t0
+                    if t_seg > slowest_seg_time:
+                        slowest_seg_time = t_seg
+                        slowest_seg = seg.name
+                        slowest_mode_name = getattr(seg, "activ_mode", "unknown")
+            else:
+                for seg in self.segments_list:
+                    seg.update(self.transition_director)
+
+        if slowest_seg is not None:
+            self.profiler.record_slowest_mode(slowest_seg, slowest_mode_name, slowest_seg_time)
 
         #==============================================
         self.current_time = time.time()
         
-        await self.transition_director.update(self.current_time)
+        with self.profiler.measure("transitions"):
+            await self.transition_director.update(self.current_time)
 
         with self.profiler.measure("connector"):
             if self.appli_connector is not None:
@@ -408,21 +432,14 @@ class Mode_master:
     def load_configurations(self) -> None:
         """
         Load modes and playlists from the configurations.json file.
+        Delegates to PresetRepository for actual file I/O.
         """
-        file_path = resolve_configurations_file_path(self.infos)
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            self.configurations = data.get('configurations', {})
-            self.playlists = list(self.configurations.keys())
-            self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists from {file_path}")
-        except Exception as e:
-            self.logger.error(f"Error reading JSON configuration file: {e}")
-            self.configurations = {}
-            self.playlists = []
-
-        self.blocked_playlists = [False for _ in self.playlists]
-        self.shuffle_bag = []
+        self._preset_repo.load_configurations()
+        self.configurations = self._preset_repo.configurations
+        self.playlists = self._preset_repo.playlists
+        self.blocked_playlists = self._preset_repo.blocked_playlists
+        self.shuffle_bag = self._preset_repo.shuffle_bag
+        self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists")
     def update_segments_modes(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
         Apply the active configuration to all relevant segments.
@@ -526,77 +543,22 @@ class Mode_master:
         return None
 
     def _set_only_playlist_active(self, playlist_name: Any) -> bool:
-        if not isinstance(playlist_name, str):
-            return False
-
-        normalized_name = playlist_name.strip()
-        if normalized_name.upper() == "CUSTOM":
-            return False
-
-        selected_index = None
-        for index, name in enumerate(self.playlists):
-            if name.lower() == normalized_name.lower():
-                selected_index = index
-                break
-
-        if selected_index is None:
-            return False
-
-        self.blocked_playlists = [idx != selected_index for idx in range(len(self.playlists))]
-        self.shuffle_bag = []
-        return True
+        self._preset_repo.playlists = self.playlists
+        success = self._preset_repo.set_only_playlist_active(playlist_name)
+        if success:
+            self.blocked_playlists = self._preset_repo.blocked_playlists
+            self.shuffle_bag = self._preset_repo.shuffle_bag
+        return success
 
     def _pick_random_conf_from_playlist(self, playlist_name: Any) -> Optional[Dict[str, Any]]:
-        if not isinstance(playlist_name, str):
-            return None
-
-        selected_playlist = None
-        for name in self.playlists:
-            if name.lower() == playlist_name.strip().lower():
-                selected_playlist = name
-                break
-
-        if selected_playlist is None:
-            return None
-
-        playlist_configs = self.configurations.get(selected_playlist, [])
-        if len(playlist_configs) == 0:
-            return None
-
-        conf_index = random.randrange(len(playlist_configs))
-        conf = playlist_configs[conf_index]
-        return {
-            "playlist": selected_playlist,
-            "index": conf_index,
-            "name": conf.get("name"),
-            "modes": conf.get("modes", {}),
-            "way": conf.get("way", {}),
-            "modeSettings": conf.get("modeSettings", {}),
-        }
+        self._preset_repo.configurations = self.configurations
+        self._preset_repo.playlists = self.playlists
+        return self._preset_repo.pick_random_conf_from_playlist(playlist_name)
 
     def _find_configuration(self, configuration_name: Any, playlist_name: Optional[Any] = None) -> Optional[Dict[str, Any]]:
-        if not isinstance(configuration_name, str):
-            return None
-        wanted_name = configuration_name.strip().lower()
-
-        candidate_playlists = []
-        if isinstance(playlist_name, str):
-            candidate_playlists = [p for p in self.playlists if p.lower() == playlist_name.strip().lower()]
-        if len(candidate_playlists) == 0:
-            candidate_playlists = list(self.playlists)
-
-        for playlist in candidate_playlists:
-            for conf_index, conf in enumerate(self.configurations.get(playlist, [])):
-                if conf.get("name", "").strip().lower() == wanted_name:
-                    return {
-                        "playlist": playlist,
-                        "index": conf_index,
-                        "name": conf.get("name"),
-                        "modes": conf.get("modes", {}),
-                        "way": conf.get("way", {}),
-                        "modeSettings": conf.get("modeSettings", {}),
-                    }
-        return None
+        self._preset_repo.configurations = self.configurations
+        self._preset_repo.playlists = self.playlists
+        return self._preset_repo.find_configuration(configuration_name, playlist_name)
 
     def _detach_configuration_modes(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -620,254 +582,35 @@ class Mode_master:
 
     def _persist_app_config_value(self, key: str, value: Any) -> None:
         self.infos[key] = value
-
-        import json
-        import os
-        file_path = os.path.join(os.path.dirname(__file__), "..", "config", "app_config.json")
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if not isinstance(data, dict):
-                data = {}
-            data[key] = value
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4)
-                f.write("\n")
-        except Exception as e:
-            self.logger.error(f"(MM) Failed to persist {key} in app_config.json: {e}")
+            loop = asyncio.get_running_loop()
+            loop.run_in_executor(None, self._preset_repo._persist_app_config_value_sync, key, value)
+        except RuntimeError:
+            self._preset_repo._persist_app_config_value_sync(key, value)
 
     async def process_instruction(self, instruction: Dict[str, Any]) -> Dict[str, Any]:
-        page = instruction.get("page")
-        action = instruction.get("action")
-        payload = instruction.get("payload", {})
+        """
+        Process a WebSocket instruction by delegating to the CommandRouter.
 
-        if not isinstance(payload, dict):
-            return {"applied": False, "reason": "invalid_payload"}
-
-        if page == "live_deck":
-            if action == "set_luminosity":
-                value = payload.get("value")
-                if isinstance(value, (int, float)):
-                    persisted_value = int(round(max(0.0, min(100.0, float(value)))))
-                    self.listener.luminosite = persisted_value / 100.0
-                    self._persist_app_config_value("luminosity", persisted_value)
-                    return {"applied": True}
-                return {"applied": False, "reason": "invalid_value"}
-
-            if action == "set_sensibility":
-                value = payload.get("value")
-                if isinstance(value, (int, float)):
-                    persisted_value = int(round(max(0.0, min(100.0, float(value)))))
-                    self.listener.sensi = persisted_value / 100.0
-                    self._persist_app_config_value("sensibility", persisted_value)
-                    return {"applied": True}
-                return {"applied": False, "reason": "invalid_value"}
-
-            if action == "set_auto_transition_time":
-                value = payload.get("value")
-                if isinstance(value, (int, float)):
-                    persisted_value = int(round(max(1.0, float(value))))
-                    self.transition_director.configuration_duration = float(persisted_value)
-                    self._persist_app_config_value("auto_transition_time", persisted_value)
-                    return {"applied": True}
-                return {"applied": False, "reason": "invalid_value"}
-
-            if action == "select_transition":
-                self.selected_transition_config = self._normalize_transition(payload.get("transition"))
-                return {"applied": True}
-
-            if action == "select_configuration":
-                configuration_name = payload.get("configuration")
-                config = self._find_configuration(configuration_name)
-                if config is not None:
-                    self.queued_configuration_name = config["name"]
-                    return {"applied": True}
-                return {"applied": False, "reason": "unknown_configuration"}
-
-            if action == "select_playlist":
-                playlist_name = payload.get("playlist")
-                if self._set_only_playlist_active(playlist_name):
-                    config = self._pick_random_conf_from_playlist(playlist_name)
-                    if config is not None:
-                        self.queued_configuration_name = config["name"]
-                        self._apply_configuration(config, self.selected_transition_config)
-                        return {"applied": True, "configuration": config["name"]}
-                    return {"applied": True}
-                return {"applied": False, "reason": "unknown_playlist"}
-
-            if action == "go_to_next_configuration":
-                self.selected_transition_config = self._normalize_transition(payload.get("transition"))
-                configuration_name = payload.get("configuration")
-                config = self._find_configuration(configuration_name)
-                if config is None:
-                    config = self.pick_a_random_conf()
-                self._apply_configuration(config, self.selected_transition_config)
-                return {"applied": True}
-
-            if action == "manual_drop":
-                config = self._find_configuration(self.queued_configuration_name) if self.queued_configuration_name else None
-                if config is None:
-                    config = self.pick_a_random_conf()
-                self._apply_configuration(config, self.selected_transition_config)
-                return {"applied": True}
-
-            if action == "lock_current_configuration":
-                locked = payload.get("locked")
-                self.transition_locked = bool(locked)
-                return {"applied": True}
-
-        if page == "topology":
-            if action == "select_playlist_slot":
-                if self._set_only_playlist_active(payload.get("playlist")):
-                    return {"applied": True}
-                return {"applied": False, "reason": "unknown_playlist"}
-
-            if action == "select_configuration":
-                if self._set_only_playlist_active(payload.get("playlist")):
-                    self.shuffle_bag = []
-                config = self._find_configuration(payload.get("configuration"), payload.get("playlist"))
-                if config is not None:
-                    self._apply_configuration(config, self.selected_transition_config)
-                    return {"applied": True}
-                return {"applied": False, "reason": "unknown_configuration"}
-
-            if action == "select_segment_mode":
-                segment_name = self._segment_name_from_id(payload.get("segmentId"))
-                mode_name = payload.get("mode")
-                if segment_name is None or not isinstance(mode_name, str):
-                    return {"applied": False, "reason": "invalid_segment_or_mode"}
-                segment = self._find_segment_by_name(segment_name)
-                if segment is None:
-                    return {"applied": False, "reason": "unknown_segment"}
-                segment.execute_mode_swap(mode_name)
-                return {"applied": True}
-
-            if action == "toggle_segment_direction":
-                segment_name = self._segment_name_from_id(payload.get("segmentId"))
-                direction = payload.get("direction")
-                if segment_name is None or direction not in ("UP", "DOWN"):
-                    return {"applied": False, "reason": "invalid_segment_or_direction"}
-                segment = self._find_segment_by_name(segment_name)
-                if segment is None:
-                    return {"applied": False, "reason": "unknown_segment"}
-                segment.change_way(direction)
-                return {"applied": True}
-
-            if action in {"build_configuration", "modify_configuration"}:
-                self.load_configurations()
-                return {"applied": True}
-
-            if action in {"set_editor_mode", "select_segment"}:
-                return {"applied": True}
-
-        if page == "mode_settings":
-            if action == "set_mode_setting":
-                mode_name = payload.get("mode")
-                setting_key = payload.get("key")
-                if not isinstance(mode_name, str) or not isinstance(setting_key, str):
-                    return {"applied": False, "reason": "invalid_mode_setting"}
-
-                descriptor = self._get_mode_setting_descriptor(mode_name, setting_key)
-                if descriptor is None:
-                    return {"applied": False, "reason": "unknown_mode_setting"}
-
-                normalized_value, ok = self._normalize_mode_setting_value(descriptor, payload.get("value"))
-                if not ok:
-                    return {"applied": False, "reason": "invalid_setting_value"}
-
-                current_mode_settings = self._copy_mode_settings_map(self.activ_configuration.get("modeSettings", {}))
-                current_mode_settings.setdefault(mode_name, {})
-                current_mode_settings[mode_name][setting_key] = normalized_value
-                self.activ_configuration["modeSettings"] = current_mode_settings
-
-                self._apply_active_mode_settings()
-                persisted = self._persist_active_configuration_mode_settings()
-
-                return {
-                    "applied": True,
-                    "mode": mode_name,
-                    "key": setting_key,
-                    "value": normalized_value,
-                    "persisted": persisted,
-                }
-
-            return {"applied": False, "reason": "unsupported_mode_settings_action"}
-
-        if page == "system":
-            if action == "restart_python_loop":
-                if self.pending_system_action is not None:
-                    return {"applied": False, "reason": "system_action_already_pending"}
-
-                capability = self.system_status.get_restart_python_capability()
-                if not capability.get("available", False):
-                    message = capability.get("reason") or "Python restart is unavailable."
-                    self._set_system_action_feedback(action, "error", message)
-                    return {"applied": False, "reason": "restart_python_unavailable", "message": message}
-
-                self.pending_system_action = action
-                self._set_system_action_feedback(
-                    action,
-                    "pending",
-                    "Restarting the Python process...",
-                )
-                asyncio.create_task(self._restart_python_process_task())
-                return {"applied": True, "status": "pending"}
-
-            if action == "restart_raspberry_pi":
-                if self.pending_system_action is not None:
-                    return {"applied": False, "reason": "system_action_already_pending"}
-
-                capability = self.system_status.get_reboot_raspberry_capability()
-                if not capability.get("available", False):
-                    message = capability.get("reason") or "Raspberry reboot is unavailable."
-                    self._set_system_action_feedback(action, "error", message)
-                    return {"applied": False, "reason": "restart_raspberry_unavailable", "message": message}
-
-                self.pending_system_action = action
-                self._set_system_action_feedback(
-                    action,
-                    "pending",
-                    "Reboot command queued. The app should return automatically after boot.",
-                )
-                asyncio.create_task(self._reboot_raspberry_task())
-                return {"applied": True, "status": "pending"}
-
-            return {"applied": False, "reason": "unsupported_system_action"}
-
-        return {"applied": False, "reason": "unsupported_instruction"}
+        All handler logic has been extracted into core/CommandRouter.py as
+        individually registered async handlers.
+        """
+        return await command_router.dispatch(self, instruction)
 
     def pick_a_random_conf(self) -> Dict[str, Any]:
         """
         Select a random configuration from the unblocked playlists using a shuffle bag approach.
+        Delegates to PresetRepository.
 
         Returns:
             dict: The selected configuration dictionary.
         """
-        # If our shuffle bag is empty, we must refill it with all available configurations
-        if len(self.shuffle_bag) == 0:
-            for playlist_index in range(len(self.playlists)):
-                if not self.blocked_playlists[playlist_index]:
-                    playlist_name = self.playlists[playlist_index]
-                    # Add every configuration from this playlist into the bag
-                    for conf_index in range(len(self.configurations[playlist_name])):
-                        self.shuffle_bag.append({
-                            "playlist": playlist_name,
-                            "index": conf_index,
-                            "name": self.configurations[playlist_name][conf_index]["name"],
-                            "modes": self.configurations[playlist_name][conf_index]["modes"],
-                            "way": self.configurations[playlist_name][conf_index]["way"],
-                            "modeSettings": self.configurations[playlist_name][conf_index].get("modeSettings", {}),
-                        })
-            # Shuffle the bag like a deck of cards
-            random.shuffle(self.shuffle_bag)
-
-        # Fallback just in case all playlists are somehow blocked preventing refill
-        if len(self.shuffle_bag) == 0:
-            return self.activ_configuration
-
-        # Pop the next configuration from the shuffle bag
-        new_conf = self.shuffle_bag.pop()
-
+        self._preset_repo.configurations = self.configurations
+        self._preset_repo.playlists = self.playlists
+        self._preset_repo.blocked_playlists = self.blocked_playlists
+        self._preset_repo.shuffle_bag = self.shuffle_bag
+        new_conf = self._preset_repo.pick_a_random_conf(self.activ_configuration)
+        self.shuffle_bag = self._preset_repo.shuffle_bag
         self.logger.debug(f"(MM)   pick_a_random_conf() :     conf = {new_conf}")
         return new_conf
 

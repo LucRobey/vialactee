@@ -1,3 +1,10 @@
+"""
+Coloured Middle Wave Mode
+Divides the strip symmetrically from the center outwards into 8 frequency band sections.
+Low bass frequencies originate at the center (red/orange) and transition to treble at outer edges (purple).
+Each section pulses outward proportionally to its corresponding FFT band energy.
+Creates a symmetrical real-time graphic equalizer visualization.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import random

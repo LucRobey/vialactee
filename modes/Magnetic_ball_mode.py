@@ -1,3 +1,10 @@
+"""
+Magnetic Ball Mode
+Physics-based simulation of an elastic ball with mass, friction, and a center gravity well.
+Audio transients and beat impulses kick the ball outward toward strip edges, where it bounces elastically.
+Ball size expands proportionally with instantaneous audio power while friction returns it to center.
+Renders with smooth sub-pixel anti-aliasing and dynamic hue shifts.
+"""
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
 import random

@@ -1,3 +1,10 @@
+"""
+Middle Bar Mode
+A solid colored bar that expands and contracts symmetrically outward from the strip center.
+Bar width is directly proportional to the energy of a selected FFT frequency band.
+Unlit outer segments fade smoothly to black, focusing visual impact at the center.
+The target frequency band and corresponding hue are randomly assigned on initialization.
+"""
 import modes.Mode as Mode
 import random
 import utils.rgb_hsv as RGB_HSV

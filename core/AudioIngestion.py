@@ -1,6 +1,5 @@
 import time
 import numpy as np
-import random
 from typing import Dict, Any
 import logging
 
@@ -9,10 +8,7 @@ logger = logging.getLogger(__name__)
 class AudioIngestion:
     def __init__(self, infos: Dict[str, Any]) -> None:
         self.useMicrophone          = infos.get("useMicrophone", True)
-        self.momentum_multiplier = infos.get("momentum_mult", 0.05)
-        self.base_pull = infos.get("base_pull", 0.01)
         self.dynamic_audio_latency = 0.069
-        self.decay_base = infos.get("decay_base", 0.98)
         self.luminosite = max(0.0, min(1.0, float(infos.get("luminosity", 100)) / 100.0))
         self.sensi = max(0.0, float(infos.get("sensibility", 100)) / 100.0)
         self.nb_of_fft_band = 8
@@ -70,83 +66,20 @@ class AudioIngestion:
 
 
     def build_asserved_fft_lists(self) -> None:
-        """
-        This function prepares the asservissement of the fft
-
-        The human ear hears the frequencies in a x^n way, meaning we notice the difference between 2 frequencies as a ratio, not a difference
-
-        Therefore, in order to represent that effect, we have to regroup the fft results in bands wich sizes change according to the frequency
-        the first band will be only 1 value wide, when the last one is actually more than a 1000 wide!
-
-        this is what this function trys to represent
-
-        Nf(k) represents the index of the k'th note 
-
-        There is an A such that Nf(k+1)=A*Nf(k), therefore Nf(k)=A^(k-1)*Nf(1)
-        we choose Nf(1)=1
-        we need to hafe Nf(nb_of_bands) = lenFFT, therefore A^(nb_of_bands-1) = lenFFT
-        therefore, A = (lenFFT)^(1/(nb_of_bands-1))
-        """
-
-        self.fft_bary = 0             #by_center of the frequencies
-        
-        
-        self.fft_band_values = []   
-        self.smoothed_fft_band_values = []
-        self.band_means = [] 
-        self.band_mean_distances = []   
-        self.asserved_fft_band_2 = []     
-        self.band_lm = []                  #asserved_fft_band_local_max   used for the asservissement of the band values
-        self.band_gm = []                  #asserved_fft_band_global_max   used for the asservissement of the band values
-        self.asserved_fft_band = []     #result of the asservissement (numbers between 0 and 1)
-        self.band_proportion = []
-        self.segm_fft_indexs = [1]    #index that separate each band
-        
+        """Initialize the FFT band and chromagram analysis arrays."""
         self.nb_of_chroma = 12
-        self.chroma_values = []
-        self.smoothed_chroma_values = []
 
-        """self.lenFFT = int(512/2)
-        
-        A=np.power(self.lenFFT,1/(self.nb_of_fft_band-1))
-        for _ in range(1,self.nb_of_fft_band):
-            self.segm_fft_indexs.append(self.segm_fft_indexs[-1]*A)
-        for band_index in range(1,self.nb_of_fft_band):
-            self.segm_fft_indexs[band_index]=int(self.segm_fft_indexs[band_index])
-            print(self.segm_fft_indexs)"""
-        
-        
-        for _ in range(self.nb_of_fft_band):
-            self.fft_band_values.append(0.0)
-            self.band_lm.append(100.0)
-            self.band_gm.append(100.0)
-            self.asserved_fft_band.append(0.0)
-            self.smoothed_fft_band_values.append(0.0)
-            self.band_means.append(0.0)
-            self.band_mean_distances.append(0.0)
-            self.asserved_fft_band_2.append(0.0)
-            self.band_proportion.append(0.0)
-            
-        for _ in range(self.nb_of_chroma):
-            self.chroma_values.append(0.0)
-            self.smoothed_chroma_values.append(0.0)
-     
-        self.fft_band_values = np.array(self.fft_band_values)
-        self.chroma_values = np.array(self.chroma_values)
-        self.smoothed_chroma_values = np.array(self.smoothed_chroma_values)
-        self.band_lm = np.array(self.band_lm)
-        self.band_gm = np.array(self.band_gm)
-        self.asserved_fft_band = np.array(self.asserved_fft_band)
-        self.smoothed_fft_band_values=np.array(self.smoothed_fft_band_values)
-        self.band_means=np.array(self.band_means)
-        self.band_mean_distances=np.array(self.band_mean_distances)
-        
-        self.smooth_sensi = [0.9,0.6,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5]
-        self.rearrange_list=[]
-        for band_index in range(self.nb_of_fft_band):
-            self.rearrange_list.append(np.power((band_index+1),1.8))
+        # FFT band arrays (nb_of_fft_band = 8)
+        self.fft_band_values = np.zeros(self.nb_of_fft_band)
+        self.smoothed_fft_band_values = np.zeros(self.nb_of_fft_band)
+        self.band_means = np.zeros(self.nb_of_fft_band)
+        self.band_mean_distances = np.zeros(self.nb_of_fft_band)
+        self.asserved_fft_band = np.zeros(self.nb_of_fft_band)
+        self.band_proportion = np.zeros(self.nb_of_fft_band)
 
-        self.manual_calibration = [1500,300,120,140,220,350,300,270,250,310,318,380,467,630,850,1266]
+        # Chromagram arrays (12 pitch classes)
+        self.chroma_values = np.zeros(self.nb_of_chroma)
+        self.smoothed_chroma_values = np.zeros(self.nb_of_chroma)
         
         
     def build_asserved_total_power(self) -> None:
@@ -235,9 +168,6 @@ class AudioIngestion:
         
         total = np.sum(self.smoothed_fft_band_values)
         
-        if not isinstance(self.band_proportion, np.ndarray):
-            self.band_proportion = np.array(self.band_proportion)
-            
         if total > 0:
             self.band_proportion = self.smoothed_fft_band_values / total
         else:
@@ -259,32 +189,9 @@ class AudioIngestion:
         
         self.asserved_fft_band = np.clip(self.asserved_fft_band, 0.0, 1.0)
 
-    def asserv_fft_bands(self, fps_ratio: float) -> None:
-        """
-        we use a glomal_max and local_max to asser each band's value
-
-        each time the smoothed_value is not higher than the local_mac, we lower local_max a little
-
-        global max triez to stabilize at 1.2 times the local max but smoothly
-        """
-        for band_index in range(self.nb_of_fft_band):
-            if( self.smoothed_fft_band_values[band_index]>=self.band_lm[band_index] ):
-                self.band_lm[band_index]=self.smoothed_fft_band_values[band_index]
-            else :
-                self.band_lm[band_index] *= (0.9995 ** fps_ratio)
-
-            if( self.smoothed_fft_band_values[band_index]>=self.band_gm[band_index] ):
-                self.band_gm[band_index]=1.01*self.smoothed_fft_band_values[band_index]
-            else:
-                self.band_gm[band_index] *= 1 + (0.005 * fps_ratio) * (self.band_lm[band_index]/max(0.001, self.band_gm[band_index]) - 0.9)
-
-            self.asserved_fft_band[band_index] += min(1.0, 0.4 * fps_ratio) * (self.smoothed_fft_band_values[band_index]/self.band_gm[band_index] - self.asserved_fft_band[band_index])
-
     def apply_fake_fft(self, fps_ratio: float) -> None:
-        for band_index in range(self.nb_of_fft_band):
-            self.fft_band_values[band_index] += random.randint(-10,10)
-            if ( self.fft_band_values[band_index] <= 0):
-                self.fft_band_values[band_index] = 20
+        self.fft_band_values += np.random.randint(-10, 11, size=self.nb_of_fft_band)
+        self.fft_band_values = np.where(self.fft_band_values <= 0, 20, self.fft_band_values)
         
     def process_raw_audio(self, audio_data: np.ndarray) -> None:
         windowed_data = audio_data * self.hanning_window
@@ -313,6 +220,8 @@ class AudioIngestion:
         if (self.smoothed_total_power > self.total_power_gm):
             self.total_power_gm = 1.01 * self.smoothed_total_power
         else:
-            self.total_power_gm *= 1 + (0.005 * fps_ratio) * ( (self.total_power_lm/self.total_power_gm) - 0.9)
+            safe_gm = max(self.total_power_gm, 1e-9)
+            self.total_power_gm *= 1 + (0.005 * fps_ratio) * ( (self.total_power_lm/safe_gm) - 0.9)
 
-        self.asserved_total_power += min(1.0, 0.4 * fps_ratio) * ( self.smoothed_total_power/self.total_power_gm - self.asserved_total_power)
+        safe_gm = max(self.total_power_gm, 1e-9)
+        self.asserved_total_power += min(1.0, 0.4 * fps_ratio) * ( self.smoothed_total_power/safe_gm - self.asserved_total_power)

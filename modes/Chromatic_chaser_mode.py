@@ -1,3 +1,10 @@
+"""
+Chromatic Chaser Mode
+A concentrated, high-intensity laser head sweeps continuously across the strip and bounces at boundaries.
+Leaves behind a smooth exponential decay trail as it moves.
+The head color shifts in real time around the color wheel mapped to the dominant musical pitch.
+Supports configurable travel speed and trail fade ratio via settings schema.
+"""
 import numpy as np
 import utils.rgb_hsv as RGB_HSV
 import modes.Mode as Mode

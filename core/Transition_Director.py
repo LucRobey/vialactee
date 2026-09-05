@@ -142,13 +142,8 @@ class Transition_Director:
                 self.next_change_time = current_time + self.configuration_duration
                 return
             self.logger.info(f"(TD) Timer Expired")
-            
-            # Temporary override for testing!
-            self.logger.info("(TD) TEST OVERRIDE: Forcing spatial global transition via timer!")
-            chosen_effect = "explosion"
-            transition_config = {
-                "type": chosen_effect, 
-                "duration": 4.0
-            }
+            transition_config = getattr(self.mode_master, 'selected_transition_config', None)
+            if transition_config is None:
+                transition_config = {"type": "fade_in_out", "duration": 2.0}
             await self.mode_master.change_configuration(transition_config)
             self.next_change_time = current_time + self.configuration_duration

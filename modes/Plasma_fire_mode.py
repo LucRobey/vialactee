@@ -1,3 +1,10 @@
+"""
+Plasma Fire Mode
+Simulates a rising column of fiery plasma optimized for vertical chandelier segments.
+Flame height modulates dynamically with smoothed total audio power.
+Interpolates a smooth heat gradient from deep crimson at the base to orange, yellow, and white at the tip.
+Vectorized HSV color conversion ensures high-performance 60 FPS rendering with natural decay.
+"""
 import numpy as np
 import utils.rgb_hsv as RGB_HSV
 import modes.Mode as Mode

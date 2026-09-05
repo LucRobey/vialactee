@@ -43,6 +43,8 @@ class Segment:
         self.fused_list = []
         self.rgb_list = np.zeros((len(indexes), 3), dtype=np.int32)
         self.dual_rgb_list = np.zeros((len(indexes), 3), dtype=np.int32)
+        self._scaled_buffer = np.zeros((len(indexes), 3), dtype=np.int32)
+        self._reversed_indexes = list(reversed(indexes))
         self.global_rgb_list = None
         
         self.coords_array = None
@@ -96,13 +98,14 @@ class Segment:
                 if not self.modes[self.activ_mode].has_custom_transition:
                     
                     # --- UPDATE NEW MODE INTO SECONDARY BUFFER ---
-                    # We point the incoming mode exclusively to our dual_rgb_list buffer
-                    self.modes[self.target_mode_name].rgb_list = self.dual_rgb_list
-                    if self.modes[self.target_mode_name].isActiv:
-                        self.modes[self.target_mode_name].update()
-                    
-                    # Immediately restore the pointer for data safety
-                    self.modes[self.target_mode_name].rgb_list = self.rgb_list
+                    target_mode = self.modes[self.target_mode_name]
+                    if target_mode.isActiv:
+                        if hasattr(target_mode, "render"):
+                            target_mode.render(self.dual_rgb_list)
+                        else:
+                            target_mode.rgb_list = self.dual_rgb_list
+                            target_mode.update()
+                            target_mode.rgb_list = self.rgb_list
 
                     # --- SPATIAL MIX BOTH BUFFERS INTO PRIMARY BUFFER ---
                     active_coords = self.coords_array
@@ -181,14 +184,14 @@ class Segment:
     def update_leds(self) -> None:
         """
         Flush the local segment RGB buffer to the global LED array.
+        Uses pre-allocated buffer to avoid per-frame memory allocation.
         """
-        # Vectorize the luminosity multiplication directly to the global array
-        scaled_colors = (self.rgb_list * self.listener.luminosite).astype(np.int32)
+        np.multiply(self.rgb_list, self.listener.luminosite, out=self._scaled_buffer, casting='unsafe')
         
         if self.way == "UP":
-            self.leds[self.indexes] = scaled_colors
+            self.leds[self.indexes] = self._scaled_buffer
         else:
-            self.leds[self.indexes[::-1]] = scaled_colors
+            self.leds[self._reversed_indexes] = self._scaled_buffer
 
     def change_way(self, new_way: str) -> None:
         """

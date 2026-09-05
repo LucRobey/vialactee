@@ -1,3 +1,10 @@
+"""
+PSG (Paris Saint-Germain) Mode
+Split-spectrum visualizer featuring club colors: red bar on the left, blue bar on the right.
+The left red bar expands proportionally to bass energy; the right blue bar expands to treble energy.
+A stark white balance dot dynamically floats at the equilibrium position between low and high frequencies.
+Produces an energetic dual-spectrum level meter across the strip.
+"""
 import modes.Mode as Mode
 import utils.colors as colors
 import time

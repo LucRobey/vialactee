@@ -28,7 +28,8 @@ This directory acts as the central registry for the chandelier's static and dyna
 | `sensibility` | Integer | `50` | Audio gain sensitivity scale percentage (1–100), persisted across sessions. |
 | `auto_transition_time` | Integer | `80` | Automatic timer duration (seconds) before transitioning between configuration playlist presets. |
 | `show_music_analyser_panel` | Boolean | `true` | If true, renders the live audio analysis HUD overlay in the visualizer window. |
-| `printCpuFpsInfo` | Boolean | `true` | If true, periodically logs loop execution FPS and profiler timings to stdout. |
+| `printCpuFpsInfo` | Boolean | `true` | If true, periodically logs loop execution FPS, component timings, and performance metrics to stdout. |
+| `profiler` | Object | `{...}` | Granular profiler tuning: `format` (`"compact"`, `"dashboard"`, `"alerts_only"`), `interval_seconds` (default `5.0`), `target_fps` (default `30`), `alert_threshold_ms` (default `35.0`), `track_slowest_mode` (default `true`). |
 
 ## Hardware Profiles (`full` vs `small`)
 

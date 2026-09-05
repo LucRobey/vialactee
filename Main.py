@@ -101,10 +101,17 @@ async def main() -> Optional[str]:
         default_config = {
             "startServer"     : False,
             "useMicrophone"   : True,
-            "printCpuFpsInfo" : True,
+            "printCpuFpsInfo" : False,
             "HARDWARE_MODE"   : "simulation", # 'auto', 'rpi', or 'simulation'
             "log_level"       : "INFO",
-            "show_music_analyser_panel" : True
+            "show_music_analyser_panel" : True,
+            "profiler": {
+                "interval_seconds": 5.0,
+                "format": "compact",
+                "target_fps": 30,
+                "alert_threshold_ms": 35.0,
+                "track_slowest_mode": true
+            }
         }
         with open(config_path, 'w') as f:
             json.dump(default_config, f, indent=4)

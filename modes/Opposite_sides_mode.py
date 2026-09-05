@@ -1,3 +1,10 @@
+"""
+Opposite Sides Mode
+Dual complementary audio-reactive bars advancing toward each other across a central gap.
+A warm bass bar (red/orange) expands outward from the middle-left based on low-frequency energy.
+A cool treble bar (blue/purple) expands outward from the middle-right based on high-frequency energy.
+Creates a dynamic visual tug-of-war responding to frequency balance.
+"""
 import modes.Mode as Mode
 import utils.colors as colors
 import utils.rgb_hsv as RGB_HSV

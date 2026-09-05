@@ -1,3 +1,10 @@
+"""
+Synesthesia Mode
+Maps musical harmony directly to light color using a 12-dimensional chromagram pitch analysis.
+Each musical pitch class (C, C#, D...) corresponds to a specific hue angle on the 360-degree color wheel.
+Chords and harmonic blends calculate a center-of-mass hue vector, rendering a unified harmonic color.
+Overall strip brightness pulses dynamically with total track power.
+"""
 import numpy as np
 import utils.rgb_hsv as RGB_HSV
 import modes.Mode as Mode
