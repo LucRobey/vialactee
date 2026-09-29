@@ -1,0 +1,80 @@
+[
+  {
+    "episode_id": "EP_GHOST_BURST_Bohemian Rhapsody - Remastered 2011_1",
+    "song": "Bohemian Rhapsody - Remastered 2011",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      9.4,
+      352.3
+    ],
+    "ghost_beats_count": 10,
+    "diagnostic": "Detected 10 ghost beats emitted during low-energy interval (flux < 77.64). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Bohemian Rhapsody - Remastered 2011_1",
+    "song": "Bohemian Rhapsody - Remastered 2011",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 45.91,
+    "phase_bias_ms": 10.59,
+    "diagnostic": "Phase jitter standard deviation is 45.9ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_GHOST_BURST_Flashback_1",
+    "song": "Flashback",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      23.8,
+      258.7
+    ],
+    "ghost_beats_count": 4,
+    "diagnostic": "Detected 4 ghost beats emitted during low-energy interval (flux < 183.83). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Flashback_1",
+    "song": "Flashback",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 26.46,
+    "phase_bias_ms": 9.48,
+    "diagnostic": "Phase jitter standard deviation is 26.5ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Genesis_1",
+    "song": "Genesis",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 46.24,
+    "phase_bias_ms": 0.05,
+    "diagnostic": "Phase jitter standard deviation is 46.2ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Roadgame_1",
+    "song": "Roadgame",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 45.5,
+    "phase_bias_ms": 1.72,
+    "diagnostic": "Phase jitter standard deviation is 45.5ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Sugar (feat. Francesco Yates)_1",
+    "song": "Sugar (feat. Francesco Yates)",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 37.35,
+    "phase_bias_ms": 3.53,
+    "diagnostic": "Phase jitter standard deviation is 37.4ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Sweet Child O' Mine_1",
+    "song": "Sweet Child O' Mine",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 46.12,
+    "phase_bias_ms": 16.14,
+    "diagnostic": "Phase jitter standard deviation is 46.1ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Under Pressure - Remastered 2011_1",
+    "song": "Under Pressure - Remastered 2011",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 39.04,
+    "phase_bias_ms": 8.61,
+    "diagnostic": "Phase jitter standard deviation is 39.0ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  }
+]

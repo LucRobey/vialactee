@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional
 import asyncio
+import atexit
 import logging
 import json
 import os
@@ -111,7 +112,7 @@ async def main() -> Optional[str]:
                 "format": "compact",
                 "target_fps": 30,
                 "alert_threshold_ms": 35.0,
-                "track_slowest_mode": true
+                "track_slowest_mode": True
             }
         }
         with open(config_path, 'w') as f:
@@ -148,6 +149,7 @@ async def main() -> Optional[str]:
             hardware_leds[0].set_analyzer(listener.analyzer)
 
     mode_master = Mode_master.Mode_master(listener, infos, *hardware_leds)                                 
+    atexit.register(mode_master.flush_sync)                                 
    
     local_microphone = Local_Microphone.Local_Microphone(listener, infos)
     connector = Connector.Connector(mode_master, infos)
@@ -197,6 +199,9 @@ async def main() -> Optional[str]:
     except Exception as e:
         logging.error(f"Critical error in main task group: {e}")
         return None
+    finally:
+        mode_master.flush_sync()
+        atexit.unregister(mode_master.flush_sync)
 
 def run_forever() -> None:
     while True:

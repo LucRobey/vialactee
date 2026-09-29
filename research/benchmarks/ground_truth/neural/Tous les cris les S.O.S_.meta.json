@@ -1,0 +1,11 @@
+{
+  "track": "Tous les cris les S.O.S_",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Tous les cris les S.O.S_.mp3",
+  "duration_sec": 307.88,
+  "total_beats": 543,
+  "total_downbeats": 136,
+  "estimated_bpm": 90.91,
+  "interval_jitter_ms": 158.92,
+  "compute_time_sec": 5.61,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

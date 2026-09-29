@@ -1,0 +1,11 @@
+{
+  "track": "Je l'aime \u00e0 mourir - Remastered",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Je l'aime \u00e0 mourir - Remastered.mp3",
+  "duration_sec": 163.48,
+  "total_beats": 409,
+  "total_downbeats": 103,
+  "estimated_bpm": 150.0,
+  "interval_jitter_ms": 25.46,
+  "compute_time_sec": 3.17,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

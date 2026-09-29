@@ -1,0 +1,11 @@
+{
+  "track": "Hooked On A Feeling",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Hooked On A Feeling.mp3",
+  "duration_sec": 172.89,
+  "total_beats": 340,
+  "total_downbeats": 85,
+  "estimated_bpm": 120.0,
+  "interval_jitter_ms": 42.37,
+  "compute_time_sec": 3.55,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

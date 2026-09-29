@@ -1,0 +1,11 @@
+{
+  "track": "Power",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Power.mp3",
+  "duration_sec": 187.33,
+  "total_beats": 360,
+  "total_downbeats": 90,
+  "estimated_bpm": 136.36,
+  "interval_jitter_ms": 180.66,
+  "compute_time_sec": 3.74,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

@@ -1,0 +1,11 @@
+{
+  "track": "Money For Nothing_1",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Money For Nothing_1.mp3",
+  "duration_sec": 1021.87,
+  "total_beats": 2096,
+  "total_downbeats": 524,
+  "estimated_bpm": 136.36,
+  "interval_jitter_ms": 155.23,
+  "compute_time_sec": 13.35,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

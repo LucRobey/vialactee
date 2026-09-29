@@ -1,0 +1,11 @@
+{
+  "track": "Me Gustas Tu",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Me Gustas Tu.mp3",
+  "duration_sec": 239.94,
+  "total_beats": 430,
+  "total_downbeats": 107,
+  "estimated_bpm": 88.24,
+  "interval_jitter_ms": 163.73,
+  "compute_time_sec": 5.02,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

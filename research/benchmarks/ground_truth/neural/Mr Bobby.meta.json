@@ -1,0 +1,11 @@
+{
+  "track": "Mr Bobby",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Mr Bobby.mp3",
+  "duration_sec": 229.38,
+  "total_beats": 574,
+  "total_downbeats": 144,
+  "estimated_bpm": 150.0,
+  "interval_jitter_ms": 12.14,
+  "compute_time_sec": 4.21,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

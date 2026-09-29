@@ -1,0 +1,11 @@
+{
+  "track": "Il jouait du piano debout - Remasteris\u00e9 en 2004",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Il jouait du piano debout - Remasteris\u00e9 en 2004.mp3",
+  "duration_sec": 273.64,
+  "total_beats": 482,
+  "total_downbeats": 121,
+  "estimated_bpm": 107.14,
+  "interval_jitter_ms": 20.62,
+  "compute_time_sec": 5.21,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

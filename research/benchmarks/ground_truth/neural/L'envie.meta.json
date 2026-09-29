@@ -1,0 +1,11 @@
+{
+  "track": "L'envie",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\L'envie.mp3",
+  "duration_sec": 232.43,
+  "total_beats": 515,
+  "total_downbeats": 128,
+  "estimated_bpm": 125.0,
+  "interval_jitter_ms": 69.63,
+  "compute_time_sec": 3.92,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

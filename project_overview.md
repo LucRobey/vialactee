@@ -32,8 +32,8 @@ graph TD
     subgraph Core [Core Engine]
         Config["Configuration_manager"]
         ListenerFacade["Listener (Facade & 5s Delay Buffer)"]
-        AudioIngest["AudioIngestion (FFT Math & Smoothers)"]
-        AudioAnalyz["AudioAnalyzer (DSP and Rhythm Lookahead)"]
+        AudioIngest["AudioIngestion (Dual-Res Mel Filterbanks: 8/32 Bands)"]
+        AudioAnalyz["MultiBandOnsetAudioAnalyzer (Production 32-Band Onset Engine)<br/><i>Fallback: AudioAnalyzer (Legacy Single-ODF)</i>"]
         ModeMaster["Mode_master (Orchestrator)"]
         TransDir["Transition_Director"]
     end
@@ -42,9 +42,9 @@ graph TD
     Conn -->|Overrides / Requests| ModeMaster
     ModeMaster -->|Active playlist/config/segments| Conn
     ListenerFacade -->|Routes Audio| AudioIngest
-    AudioIngest -->|Raw Values| AudioAnalyz
-    AudioIngest -->|Raw FFT / Power| ListenerFacade
-    ListenerFacade -->|Delayed Smoothed FFT / Power| ModeMaster
+    AudioIngest -->|32-Band Mel Energies| AudioAnalyz
+    AudioIngest -->|8-Band Smoothed FFT / Power| ListenerFacade
+    ListenerFacade -->|Delayed Smoothed 8-Band FFT / Power| ModeMaster
     AudioAnalyz -->|BPM / Phase| ModeMaster
     AudioAnalyz -->|Structural Music Drops| TransDir
     TransDir -->|Commands Configuration Changes| ModeMaster
@@ -88,13 +88,16 @@ graph TD
 
 Here is a breakdown of the core directories in this project:
 
-- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `BeatGridQuantizer`, `Webapp_instruction_logger`, and `Transition_Director`.
+- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `MultiBandOnsetAudioAnalyzer`, `comb_kernels`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `BeatGridQuantizer`, `Webapp_instruction_logger`, and `Transition_Director`.
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
 - **`/config`**: JSON files and managers detailing hardware profiles (`hardware_profile`: `"full"` vs `"small"` in `app_config.json`), unified physical geometry + Web App UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
 - **`/connectors`**: External communication handlers: `Connector.py` (HTTP/WebSocket server on port 8080 exposing `/ws`, `/api/topology`, and `/api/configurations`) and `Local_Microphone.py` (analog audio push stream).
 - **`/hardware`**: Hardware abstractions. Dynamically provisions channels via `HardwareFactory._get_channel_specs()`, streaming UDP frames via `Udp_Sender` to either `Fake_ESP32` (Pygame visualizer) or physical ESP32 controllers, with `Rpi_NeoPixels` as a legacy direct GPIO fallback.
 - **`/wabb-interface`**: A React-based web application serving as the remote controller. Loads segment layout dynamically from `/api/topology`, and playlists/configurations from the active profile via `/api/configurations`.
+- **`/research`**: The offline MIR laboratory. Houses immutable evaluation benchmark suites (`run_benchmark.py`, synthetic stress tests, BeatNet neural references, Ballroom academic dataset) and the iterative experiment ledger (`LEADERBOARD.md`, candidate models in `research/experiments/models/`). Kept strictly separate from the live embedded Raspberry Pi runtime.
 - **`/.agents`**: Core context, architectural rules, and technical specifications designed for AI agents working on the codebase.
+- **`/work_history`**: Permanent chronological audit trail and memory ledger where agents and developers log sessions using `TEMPLATE.md` to prevent agent amnesia. Master index is kept in `work_history/README.md`.
+- **`/docs`**: General project and deployment documentation, including Web App network connection setup (`docs/connect.md`) and historical agent handoffs.
 
 ---
 
@@ -139,3 +142,5 @@ Do not guess how the architecture works. Depending on the task you have been giv
 2. **Update Documentation:** If you changed how a core algorithm works, added a new feature, or changed a configuration schema, **you must update the relevant `.md` file in `.agents/docs/`**.
 3. **Simulator Check:** If possible, confirm that the code will execute properly under the `Fake_leds` Pygame simulator.
 4. If you made temporary python files, remember to delete them or move them to the `playground/` directory.
+5. **Mandatory Work History Logging:** Every engineering or research session that modifies code or project configuration **must create or update a dated entry in `work_history/`** following [`work_history/TEMPLATE.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/work_history/TEMPLATE.md) and add it to the chronological table in [`work_history/README.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/work_history/README.md).
+

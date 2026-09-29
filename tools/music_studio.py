@@ -16,7 +16,8 @@ import glob
 import math
 import json
 import argparse
-from typing import Dict, Any, List, Optional, Tuple
+import importlib.util
+from typing import Dict, Any, List, Optional, Tuple, Type, Callable
 
 # Ensure repository root is on sys.path
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +32,56 @@ import pygame
 
 from core.Listener import Listener
 from core.RhythmConfig import RhythmConfig
-from core.AudioAnalyzer import bpm_to_class
+from core.BaseAudioAnalyzer import BaseAudioAnalyzer
+from core.AudioAnalyzer import AudioAnalyzer, bpm_to_class
+
+
+def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]:
+    """
+    Dynamically loads any model subclassing BaseAudioAnalyzer without importing heavy
+    offline MIR benchmarking packages (torchaudio, mir_eval, matplotlib, etc.).
+    """
+    if model_name in ("AudioAnalyzer", "baseline"):
+        return AudioAnalyzer
+    if model_name in ("MultiBandOnsetAudioAnalyzer", "production", "default"):
+        from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+        return MultiBandOnsetAudioAnalyzer
+
+    models_dir = os.path.join(repo_root, "research", "experiments", "models")
+    discovered_classes: Dict[str, Type[BaseAudioAnalyzer]] = {}
+
+    if os.path.exists(models_dir):
+        for fname in sorted(os.listdir(models_dir)):
+            if fname.endswith(".py") and not fname.startswith("__"):
+                fpath = os.path.join(models_dir, fname)
+                mod_name = f"research.experiments.models.{fname[:-3]}"
+                try:
+                    spec = importlib.util.spec_from_file_location(mod_name, fpath)
+                    if spec and spec.loader:
+                        module = importlib.util.module_from_spec(spec)
+                        sys.modules[mod_name] = module
+                        spec.loader.exec_module(module)
+                        for attr_name in dir(module):
+                            obj = getattr(module, attr_name)
+                            if (
+                                isinstance(obj, type)
+                                and issubclass(obj, BaseAudioAnalyzer)
+                                and obj is not BaseAudioAnalyzer
+                            ):
+                                discovered_classes[attr_name.lower()] = obj
+                                discovered_classes[attr_name] = obj
+                except Exception as e:
+                    print(f"[Warning] Failed to import model module {fname}: {e}")
+
+    if model_name in discovered_classes:
+        return discovered_classes[model_name]
+    elif model_name.lower() in discovered_classes:
+        return discovered_classes[model_name.lower()]
+
+    available = sorted(set([k for k in discovered_classes.keys() if not k.islower()] + ["AudioAnalyzer"]))
+    raise ValueError(
+        f"Model '{model_name}' not found. Available models: {available}"
+    )
 
 
 # =====================================================================
@@ -41,8 +91,8 @@ from core.AudioAnalyzer import bpm_to_class
 class AudioStreamer:
     """
     Sample-accurate audio streamer using sounddevice with 5.0s predictive lookahead.
-    Feeds future audio chunks to Listener while streaming speaker-time audio
-    to physical speakers in perfect synchronization.
+    Feeds future audio chunks to Listener in strict 735-sample increments (60 FPS parity)
+    while streaming speaker-time audio to physical speakers in perfect synchronization.
     """
 
     def __init__(self, audio_file_path: str, listener: Listener, sample_rate: int = 44100):
@@ -51,6 +101,7 @@ class AudioStreamer:
         self.sample_rate = sample_rate
         self.lookahead_seconds = getattr(listener.analyzer, 'lookahead_seconds', 5.0)
         self.lookahead_samples = int(self.lookahead_seconds * self.sample_rate)
+        self.hop_samples = int(round(self.sample_rate / 60.0))  # Exactly 735 samples at 44100 Hz
 
         print(f"Loading audio: {os.path.basename(audio_file_path)}...")
         raw_data, sr = sf.read(audio_file_path, dtype='float32')
@@ -73,6 +124,7 @@ class AudioStreamer:
         self.total_duration = self.total_samples / float(self.sample_rate)
 
         self.speaker_sample_pos = 0
+        self.ingest_sample_pos = 0
         self.dac_latency = 0.0
         self.is_playing = False
         self.is_finished = False
@@ -129,23 +181,25 @@ class AudioStreamer:
     def seek(self, target_seconds: float, sync_offset_seconds: float = 0.0) -> None:
         target_sample = int(np.clip(target_seconds * self.sample_rate, 0, max(0, self.total_samples - 1024)))
         self.speaker_sample_pos = target_sample
+        if hasattr(self.listener.analyzer, 'reset'):
+            self.listener.analyzer.reset()
         self.prime_analyzer(sync_offset_seconds)
 
     def prime_analyzer(self, sync_offset_seconds: float = 0.0) -> None:
-        hop = int(self.sample_rate / 60.0)
         start_ingest = self.get_actual_speaker_sample() + int(sync_offset_seconds * self.sample_rate)
         now = time.time()
 
         for i in range(300):
-            ingest_center = start_ingest + i * hop
+            ingest_center = start_ingest + i * self.hop_samples
             s_start = max(0, ingest_center - 2048)
-            s_end = ingest_center + 2048
+            s_end = min(self.total_samples, ingest_center + 2048)
             chunk = np.zeros(4096, dtype=np.float32)
-            if s_start < self.total_samples:
-                sl = self.mono_data[s_start:min(s_end, self.total_samples)]
-                chunk[:len(sl)] = sl
+            if s_start < self.total_samples and s_end > s_start:
+                chunk[:s_end - s_start] = self.mono_data[s_start:s_end]
             self.listener.process_raw_audio(chunk)
-            self.listener.update()
+            self.listener.update(fixed_dt=1/60.0)
+
+        self.ingest_sample_pos = start_ingest + 300 * self.hop_samples
 
         count = self.listener._ring_count
         read_idx = self.listener._ring_read
@@ -153,17 +207,51 @@ class AudioStreamer:
         for i in range(count):
             r = (read_idx + i) % capacity
             self.listener._ring_timestamps[r] = now - self.lookahead_seconds + (i / 60.0)
+        self.listener.last_env_time = now
 
-    def advance_ingest_frame(self, sync_offset_seconds: float = 0.0) -> None:
-        actual_pos = self.get_actual_speaker_sample()
-        ingest_sample = actual_pos + self.lookahead_samples + int(sync_offset_seconds * self.sample_rate)
-        s_start = max(0, ingest_sample - 2048)
-        s_end = ingest_sample + 2048
-        chunk = np.zeros(4096, dtype=np.float32)
-        if s_start < self.total_samples:
-            sl = self.mono_data[s_start:min(s_end, self.total_samples)]
-            chunk[:len(sl)] = sl
-        self.listener.process_raw_audio(chunk)
+    def advance_ingest_frame(
+        self,
+        sync_offset_seconds: float = 0.0,
+        on_frame_step: Optional[Callable[[], None]] = None
+    ) -> int:
+        """
+        Advances ingestion in exact 735-sample increments to catch up with actual speaker playback.
+        Invokes on_frame_step() on each 60 FPS sub-frame to guarantee no beat triggers or events are dropped.
+        Returns the number of 60 FPS frames processed.
+        """
+        actual_speaker = self.get_actual_speaker_sample()
+        target_ingest = (
+            actual_speaker
+            + self.lookahead_samples
+            + int(sync_offset_seconds * self.sample_rate)
+        )
+
+        # Handle seeking or massive pause catchup (> 2.0s behind)
+        if self.ingest_sample_pos > target_ingest + 10 * self.hop_samples:
+            self.ingest_sample_pos = target_ingest
+        elif target_ingest - self.ingest_sample_pos > 120 * self.hop_samples:
+            self.ingest_sample_pos = target_ingest - 4 * self.hop_samples
+
+        frames_stepped = 0
+        max_frames_per_tick = 6
+        while (
+            self.ingest_sample_pos + self.hop_samples <= target_ingest
+            and frames_stepped < max_frames_per_tick
+        ):
+            chunk_center = self.ingest_sample_pos
+            s_start = max(0, chunk_center - 2048)
+            s_end = min(self.total_samples, chunk_center + 2048)
+            chunk = np.zeros(4096, dtype=np.float32)
+            if s_start < self.total_samples and s_end > s_start:
+                chunk[:s_end - s_start] = self.mono_data[s_start:s_end]
+            self.listener.process_raw_audio(chunk)
+            self.listener.update(fixed_dt=1/60.0)
+            self.ingest_sample_pos += self.hop_samples
+            frames_stepped += 1
+            if on_frame_step is not None:
+                on_frame_step()
+
+        return frames_stepped
 
 
 # =====================================================================
@@ -195,7 +283,7 @@ class MusicStudioApp:
     CHROMA_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     BAND_NAMES = ["Sub-Bass", "Bass", "Low-Mid", "Mid", "High-Mid", "Presence", "Brilliance", "Air"]
 
-    def __init__(self, song_path: str, nb_leds: int = 80):
+    def __init__(self, song_path: str, nb_leds: int = 80, model_name: str = "MultiBandOnsetAudioAnalyzer"):
         pygame.init()
         pygame.font.init()
 
@@ -228,19 +316,23 @@ class MusicStudioApp:
             if self.song_list:
                 song_path = self.song_list[0]
 
-        # Production Listener initialization
+        # Rhythm Model Resolution & Dynamic Band Configuration
+        self.model_class = load_studio_model_class(model_name, _REPO_ROOT)
+        self.model_name = self.model_class.__name__
+        self.nb_bands = int(getattr(self.model_class, "NB_AUDIO_BANDS", 8))
+
         dummy_infos = {
             "sensi": 1.0,
             "luminosite": 1.0,
             "fakeDelay": 5.0,
             "latency": 0.0,
             "useMicrophone": True,
-            "nb_of_fft_band": 8,
+            "nb_of_fft_band": self.nb_bands,
             "nb_of_chroma": 12,
             "sample_rate": 44100,
             "buffer_size": 4096
         }
-        self.listener = Listener(dummy_infos)
+        self.listener = Listener(dummy_infos, analyzer_class=self.model_class)
         # Zero out microphone ADC delay for local file playback
         self.listener.dynamic_audio_latency = 0.0
 
@@ -261,32 +353,42 @@ class MusicStudioApp:
         self.last_drop_time = 0.0
         self.last_song_change_time = 0.0
 
-        # Rolling history buffers for plotting
+        # Text rendering cache (avoids 4000+ surface allocations per sec)
+        self._text_cache: Dict[Tuple[int, str, Tuple[int, int, int]], pygame.Surface] = {}
+
+        # Rolling history buffers for plotting (time-synchronized at speaker playback)
         self.history_size = 240
         self.history_novelty = np.zeros(self.history_size)
         self.history_lm = np.zeros(self.history_size)
         self.history_gm = np.zeros(self.history_size)
         self.history_cursor = 0
 
-        # Past ODF buffer (shows past 1.0s before speaker time)
-        self.past_odf_len = 60
-        self.past_odf = np.zeros(self.past_odf_len)
-
         # Virtual LED strip buffer
         self.led_rgb = np.zeros((self.nb_leds, 3), dtype=np.uint8)
 
-        # Tuning drawer state
+        # Tuning drawer state with dynamic property bindings
         self.tuning_open = False
         self.tuning_params = [
-            {"name": "sensi", "label": "Audio Sensitivity", "obj": self.listener, "attr": "sensi", "min": 0.1, "max": 3.0, "step": 0.05, "fmt": "{:.2f}"},
-            {"name": "mod_conf", "label": "Moderate Lock Conf", "obj": self.listener.analyzer.config, "attr": "moderate_confidence_threshold", "min": 0.05, "max": 0.50, "step": 0.01, "fmt": "{:.2f}"},
-            {"name": "high_conf", "label": "High Lock Conf", "obj": self.listener.analyzer.config, "attr": "high_confidence_threshold", "min": 0.10, "max": 0.60, "step": 0.01, "fmt": "{:.2f}"},
-            {"name": "strong_peak", "label": "Strong Peak Mult", "obj": self.listener.analyzer.config, "attr": "strong_peak_multiplier", "min": 1.0, "max": 3.5, "step": 0.1, "fmt": "{:.1f}"},
-            {"name": "real_beat_ratio", "label": "Real Beat Ratio", "obj": self.listener.analyzer.config, "attr": "real_beat_baseline_ratio", "min": 0.1, "max": 1.5, "step": 0.05, "fmt": "{:.2f}"},
-            {"name": "novelty_th", "label": "Song Novelty Drop Th", "obj": self.listener.analyzer.config, "attr": "song_novelty_asserved_th", "min": 0.4, "max": 1.2, "step": 0.02, "fmt": "{:.2f}"},
-            {"name": "silence_th", "label": "Silence Power Floor", "obj": self.listener.analyzer.config, "attr": "silence_power_threshold", "min": 1.0, "max": 20.0, "step": 0.5, "fmt": "{:.1f}"},
+            {"name": "sensi", "label": "Audio Sensitivity", "get": lambda: self.listener.sensi, "set": lambda v: setattr(self.listener, "sensi", v), "min": 0.1, "max": 3.0, "step": 0.05, "fmt": "{:.2f}"},
+            {"name": "mod_conf", "label": "Moderate Lock Conf", "get": lambda: self.listener.analyzer.config.moderate_confidence_threshold, "set": lambda v: setattr(self.listener.analyzer.config, "moderate_confidence_threshold", v), "min": 0.05, "max": 0.50, "step": 0.01, "fmt": "{:.2f}"},
+            {"name": "high_conf", "label": "High Lock Conf", "get": lambda: self.listener.analyzer.config.high_confidence_threshold, "set": lambda v: setattr(self.listener.analyzer.config, "high_confidence_threshold", v), "min": 0.10, "max": 0.60, "step": 0.01, "fmt": "{:.2f}"},
+            {"name": "strong_peak", "label": "Strong Peak Mult", "get": lambda: self.listener.analyzer.config.strong_peak_multiplier, "set": lambda v: setattr(self.listener.analyzer.config, "strong_peak_multiplier", v), "min": 1.0, "max": 3.5, "step": 0.1, "fmt": "{:.1f}"},
+            {"name": "real_beat_ratio", "label": "Real Beat Ratio", "get": lambda: self.listener.analyzer.config.real_beat_baseline_ratio, "set": lambda v: setattr(self.listener.analyzer.config, "real_beat_baseline_ratio", v), "min": 0.1, "max": 1.5, "step": 0.05, "fmt": "{:.2f}"},
+            {"name": "novelty_th", "label": "Song Novelty Drop Th", "get": lambda: self.listener.analyzer.config.song_novelty_asserved_th, "set": lambda v: setattr(self.listener.analyzer.config, "song_novelty_asserved_th", v), "min": 0.4, "max": 1.2, "step": 0.02, "fmt": "{:.2f}"},
+            {"name": "silence_th", "label": "Silence Power Floor", "get": lambda: self.listener.analyzer.config.silence_power_threshold, "set": lambda v: setattr(self.listener.analyzer.config, "silence_power_threshold", v), "min": 1.0, "max": 20.0, "step": 0.5, "fmt": "{:.1f}"},
         ]
         self.tuning_selected_idx = 0
+
+    def get_text(self, font: pygame.font.Font, text: str, color: Tuple[int, int, int]) -> pygame.Surface:
+        """Cached font renderer avoiding heap thrashing at 60 FPS."""
+        key = (id(font), text, color)
+        surf = self._text_cache.get(key)
+        if surf is None:
+            if len(self._text_cache) > 2000:
+                self._text_cache.clear()
+            surf = font.render(text, True, color)
+            self._text_cache[key] = surf
+        return surf
 
     # =================================================================
     # CONFIG & PLAYLIST MANAGEMENT
@@ -316,6 +418,8 @@ class MusicStudioApp:
 
         was_playing = self.streamer.is_playing
         self.streamer.stop_stream()
+        if hasattr(self.listener.analyzer, 'reset'):
+            self.listener.analyzer.reset()
         self.streamer = AudioStreamer(new_path, self.listener)
         self.streamer.prime_analyzer(self.sync_offset_ms / 1000.0)
         if was_playing:
@@ -397,7 +501,8 @@ class MusicStudioApp:
                         elif event.key == pygame.K_d:
                             # Reset default RhythmConfig
                             self.listener.analyzer.config = RhythmConfig()
-                            self.listener.analyzer.novelty_detector.config = self.listener.analyzer.config
+                            if hasattr(self.listener.analyzer, 'novelty_detector'):
+                                self.listener.analyzer.novelty_detector.config = self.listener.analyzer.config
                             self.listener.sensi = 1.0
                             self.set_status("Reset DSP parameters to default", self.ACCENT_GREEN)
 
@@ -409,46 +514,14 @@ class MusicStudioApp:
                         target_sec = progress * self.streamer.total_duration
                         self.streamer.seek(target_sec, self.sync_offset_ms / 1000.0)
 
-            # Audio Ingestion & Analysis step
+            # Audio Ingestion & Analysis step (Strict 735-Sample Ingestion Accumulator)
             if self.streamer.is_playing:
-                self.streamer.advance_ingest_frame(self.sync_offset_ms / 1000.0)
-                self.listener.update()
-
-                # Shift past ODF buffer
-                speaker_offset = int(self.listener.analyzer.lookahead_seconds * self.listener.analyzer.odf_fps)
-                odf_buf = self.listener.analyzer.odf_buffer
-                speaker_idx = max(0, min(len(odf_buf) - 1, (len(odf_buf) - 1) - speaker_offset))
-                current_speaker_odf = odf_buf[speaker_idx]
-                self.past_odf[:-1] = self.past_odf[1:]
-                self.past_odf[-1] = current_speaker_odf
-
-                # Capture beat triggers
-                if self.listener.is_beat:
-                    self.last_beat_visual_time = time.time()
-                    tag = self.listener.beat_tag
-                    self.last_beat_visual_tag = tag
-                    self.last_beat_was_real = self.listener.is_real_beat
-                    if tag == "Bass/Kick":
-                        self.last_beat_visual_color = self.ACCENT_RED
-                    elif tag == "Snare/Mid":
-                        self.last_beat_visual_color = self.ACCENT_GREEN
-                    else:
-                        self.last_beat_visual_color = self.ACCENT_BLUE
-
-                # Capture structural triggers
-                if self.listener.is_verse_chorus_change:
-                    self.last_drop_time = time.time()
-                if self.listener.is_song_change:
-                    self.last_song_change_time = time.time()
-
-                # Record rolling structural history
-                self.history_novelty[self.history_cursor] = self.listener.combined_novelty
-                self.history_lm[self.history_cursor] = self.listener.analyzer.novelty_detector.novelty_lm
-                self.history_gm[self.history_cursor] = self.listener.analyzer.novelty_detector.novelty_gm
-                self.history_cursor = (self.history_cursor + 1) % self.history_size
-
-                # Update virtual reference LED strip
-                self._update_reference_leds()
+                frames_stepped = self.streamer.advance_ingest_frame(
+                    self.sync_offset_ms / 1000.0,
+                    on_frame_step=self._on_audio_frame
+                )
+                if frames_stepped > 0:
+                    self._update_reference_leds()
 
             # Render Frame
             self.screen.fill(self.BG_COLOR)
@@ -470,13 +543,35 @@ class MusicStudioApp:
         self.streamer.stop_stream()
         pygame.quit()
 
+    def _on_audio_frame(self) -> None:
+        """Called every 735-sample ingestion step for sample-accurate trigger handling."""
+        if self.listener.is_beat:
+            self.last_beat_visual_time = time.time()
+            tag = self.listener.beat_tag
+            self.last_beat_visual_tag = tag
+            self.last_beat_was_real = self.listener.is_real_beat
+            if tag == "Bass/Kick":
+                self.last_beat_visual_color = self.ACCENT_RED
+            elif tag == "Snare/Mid":
+                self.last_beat_visual_color = self.ACCENT_GREEN
+            else:
+                self.last_beat_visual_color = self.ACCENT_BLUE
+
+        if self.listener.is_verse_chorus_change:
+            self.last_drop_time = time.time()
+        if self.listener.is_song_change:
+            self.last_song_change_time = time.time()
+
+        self.history_novelty[self.history_cursor] = self.listener.combined_novelty
+        self.history_lm[self.history_cursor] = self.listener.novelty_lm
+        self.history_gm[self.history_cursor] = self.listener.novelty_gm
+        self.history_cursor = (self.history_cursor + 1) % self.history_size
+
     def _adjust_param(self, direction: int) -> None:
         p = self.tuning_params[self.tuning_selected_idx]
-        obj = p["obj"]
-        attr = p["attr"]
-        cur_val = getattr(obj, attr)
+        cur_val = p["get"]()
         new_val = float(np.clip(cur_val + direction * p["step"], p["min"], p["max"]))
-        setattr(obj, attr, new_val)
+        p["set"](new_val)
         self.set_status(f"{p['label']}: {p['fmt'].format(new_val)}", self.ACCENT_GOLD)
 
     def _update_reference_leds(self) -> None:
@@ -534,15 +629,16 @@ class MusicStudioApp:
     # =================================================================
 
     def _draw_header(self) -> None:
-        title_surf = self.font_title.render("VIALACTÉE MUSIC STUDIO", True, self.ACCENT_CYAN)
+        title_surf = self.get_text(self.font_title, "VIALACTÉE MUSIC STUDIO", self.ACCENT_CYAN)
         self.screen.blit(title_surf, (40, 15))
 
-        sub_surf = self.font_small.render("Predictive Flywheel & Real-Time DSP Analysis Lab", True, self.TEXT_DIM)
+        model_info = f"Model: {self.model_name} [{self.nb_bands} bands]"
+        sub_surf = self.get_text(self.font_small, f"Predictive Flywheel & Real-Time DSP Lab │ {model_info}", self.TEXT_DIM)
         self.screen.blit(sub_surf, (title_surf.get_width() + 55, 18))
 
         # Track name
         song_name = os.path.basename(self.streamer.file_path)
-        track_surf = self.font_main.render(f"Track [{self.song_index + 1}/{len(self.song_list)}]: {song_name}", True, self.TEXT_MAIN)
+        track_surf = self.get_text(self.font_main, f"Track [{self.song_index + 1}/{len(self.song_list)}]: {song_name}", self.TEXT_MAIN)
         self.screen.blit(track_surf, (self.width - track_surf.get_width() - 40, 16))
 
         # Interactive Progress Scrubber
@@ -565,18 +661,18 @@ class MusicStudioApp:
         cur_min, cur_sec = divmod(int(cur_time), 60)
         tot_min, tot_sec = divmod(int(tot_time), 60)
         time_str = f"{cur_min:02d}:{cur_sec:02d} / {tot_min:02d}:{tot_sec:02d}"
-        time_surf = self.font_small.render(time_str, True, self.TEXT_DIM)
+        time_surf = self.get_text(self.font_small, time_str, self.TEXT_DIM)
         self.screen.blit(time_surf, (bar_x, bar_y + 12))
 
         # A/V Sync readout
         sync_color = self.ACCENT_CYAN if self.sync_offset_ms != 0 else self.TEXT_DIM
         sync_label = f"A/V Sync: {self.sync_offset_ms:+.0f} ms (K / L to tune)"
-        sync_surf = self.font_small.render(sync_label, True, sync_color)
+        sync_surf = self.get_text(self.font_small, sync_label, sync_color)
         self.screen.blit(sync_surf, (bar_x + time_surf.get_width() + 25, bar_y + 12))
 
         # Toast notification
         if time.time() - self.status_msg_time < 3.0:
-            msg_surf = self.font_main.render(self.status_msg, True, self.status_color)
+            msg_surf = self.get_text(self.font_main, self.status_msg, self.status_color)
             self.screen.blit(msg_surf, (self.width - msg_surf.get_width() - 40, bar_y + 10))
 
     def _draw_reference_led_strip(self) -> None:
@@ -612,10 +708,10 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, self.PANEL_BG, (px, py, pw, ph), border_radius=8)
         pygame.draw.rect(self.screen, self.PANEL_BORDER, (px, py, pw, ph), width=1, border_radius=8)
 
-        head_surf = self.font_main.render("PREDICTIVE ONSET DETECTION (ODF) & 5.0-SECOND LOOKAHEAD OSCILLOSCOPE", True, self.ACCENT_CYAN)
+        head_surf = self.get_text(self.font_main, "PREDICTIVE ONSET DETECTION (ODF) & 5.0-SECOND LOOKAHEAD OSCILLOSCOPE", self.ACCENT_CYAN)
         self.screen.blit(head_surf, (px + 16, py + 10))
 
-        sub_surf = self.font_small.render("Future audio chunks streamed 5.0s ahead of speaker playback time — Wave travels RIGHT (Future) to LEFT (Speaker Now)", True, self.TEXT_DIM)
+        sub_surf = self.get_text(self.font_small, "Future audio chunks streamed 5.0s ahead of speaker playback time — Wave travels RIGHT (Future) to LEFT (Speaker Now)", self.TEXT_DIM)
         self.screen.blit(sub_surf, (px + 16, py + 30))
 
         # Scope display area
@@ -626,31 +722,32 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, (12, 14, 19), (gx, gy, gw, gh), border_radius=6)
         pygame.draw.rect(self.screen, (26, 32, 44), (gx, gy, gw, gh), width=1, border_radius=6)
 
-        # Speaker cursor sits at ~15% from left (representing T_speaker)
-        # Left 15% represents past 1.0s (60 frames). Right 85% represents future 5.0s (300 frames).
-        cursor_ratio = 0.15
+        odf_buf = self.listener.analyzer.odf_buffer
+        total_len = len(odf_buf)
+        if total_len < 2:
+            return
+
+        lookahead_frames = int(self.listener.analyzer.lookahead_seconds * self.listener.analyzer.odf_fps)
+        speaker_idx = max(0, min(total_len - 1, total_len - 1 - lookahead_frames))
+        cursor_ratio = float(speaker_idx) / float(max(1, total_len - 1))
         cursor_x = gx + int(gw * cursor_ratio)
 
         # Grid lines
         pygame.draw.line(self.screen, (22, 28, 38), (gx, gy + gh // 2), (gx + gw, gy + gh // 2), 1)
         for s in range(1, 6):
-            sec_x = cursor_x + int((gw - int(gw * cursor_ratio)) * (s / 5.0))
-            if sec_x < gx + gw:
+            sec_frame = speaker_idx + int(s * self.listener.analyzer.odf_fps)
+            if sec_frame < total_len:
+                sec_x = gx + int(gw * (sec_frame / float(max(1, total_len - 1))))
                 pygame.draw.line(self.screen, (22, 28, 38), (sec_x, gy), (sec_x, gy + gh), 1)
-                t_lbl = self.font_small.render(f"+{s}s", True, self.TEXT_MUTED)
+                t_lbl = self.get_text(self.font_small, f"+{s}s", self.TEXT_MUTED)
                 self.screen.blit(t_lbl, (sec_x - t_lbl.get_width() // 2, gy + 4))
 
         # Speaker Line (NOW)
         pygame.draw.line(self.screen, self.ACCENT_GOLD, (cursor_x, gy), (cursor_x, gy + gh), 2)
-        speaker_lbl = self.font_small.render("▼ SPEAKER NOW", True, self.ACCENT_GOLD)
+        speaker_lbl = self.get_text(self.font_small, "▼ SPEAKER NOW", self.ACCENT_GOLD)
         self.screen.blit(speaker_lbl, (cursor_x - speaker_lbl.get_width() // 2, gy - 14))
 
-        # Concatenate past ODF and future ODF buffer
-        odf_buf = self.listener.analyzer.odf_buffer
-        total_stream = np.concatenate((self.past_odf, odf_buf))
-        total_len = len(total_stream)
-
-        max_val = max(15.0, float(np.max(total_stream)))
+        max_val = max(15.0, float(np.max(odf_buf)))
         scale_y = (gh - 16) / max_val
 
         # Draw Baseline and Strong Peak threshold lines
@@ -668,21 +765,13 @@ class MusicStudioApp:
         # Plot ODF curve
         points = []
         for i in range(total_len):
-            if i < self.past_odf_len:
-                # Past section (0 to cursor_x)
-                x = gx + int(int(gw * cursor_ratio) * (i / float(self.past_odf_len)))
-            else:
-                # Future section (cursor_x to end)
-                future_idx = i - self.past_odf_len
-                x = cursor_x + int((gw - int(gw * cursor_ratio)) * (future_idx / float(len(odf_buf))))
-
-            val = total_stream[i]
+            x = gx + int(gw * (i / float(max(1, total_len - 1))))
+            val = odf_buf[i]
             y = int(gy + gh - 8 - val * scale_y)
             y = max(gy + 4, min(gy + gh - 4, y))
             points.append((x, y))
 
         if len(points) > 1:
-            # Draw glow line
             pygame.draw.lines(self.screen, (0, 180, 210), False, points, 2)
 
         # Overlay Pearson Template Pulse Wave for estimated BPM
@@ -693,21 +782,22 @@ class MusicStudioApp:
             cur_phase = self.listener.beat_phase
             phase_offset = cur_phase * tau_frames
 
-            for i in range(len(odf_buf)):
-                future_x = cursor_x + int((gw - int(gw * cursor_ratio)) * (i / float(len(odf_buf))))
-                phi = ((i + phase_offset) % tau_frames) / tau_frames
+            for i in range(total_len):
+                x = gx + int(gw * (i / float(max(1, total_len - 1))))
+                delta_frames = i - speaker_idx
+                phi = ((delta_frames + phase_offset) % tau_frames) / tau_frames
                 dist = min(phi, 1.0 - phi)
                 pulse = max(0.0, 1.0 - (dist / 0.1)) if dist < 0.1 else 0.0
 
                 py_val = int(gy + gh - 8 - pulse * (gh * 0.4))
-                template_pts.append((future_x, py_val))
+                template_pts.append((x, py_val))
 
             if len(template_pts) > 1:
                 pygame.draw.lines(self.screen, (170, 0, 255), False, template_pts, 1)
 
         # Legend tags
-        leg_odf = self.font_small.render("● Spectral Flux (ODF)", True, self.ACCENT_CYAN)
-        leg_tpl = self.font_small.render("--- Oracle Template Pulse", True, self.ACCENT_PURPLE)
+        leg_odf = self.get_text(self.font_small, "● Spectral Flux (ODF)", self.ACCENT_CYAN)
+        leg_tpl = self.get_text(self.font_small, "--- Oracle Template Pulse", self.ACCENT_PURPLE)
         self.screen.blit(leg_odf, (gx + gw - leg_odf.get_width() - 180, gy + 8))
         self.screen.blit(leg_tpl, (gx + gw - leg_tpl.get_width() - 10, gy + 8))
 
@@ -725,7 +815,7 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, self.PANEL_BORDER, (px, py, pw, ph), width=1, border_radius=8)
 
         # Header
-        head_surf = self.font_main.render("ANTICIPATION FLYWHEEL & BEAT TRACKER", True, self.ACCENT_CYAN)
+        head_surf = self.get_text(self.font_main, "ANTICIPATION FLYWHEEL & BEAT TRACKER", self.ACCENT_CYAN)
         self.screen.blit(head_surf, (px + 16, py + 12))
 
         # Circular Flywheel Gauge
@@ -759,7 +849,7 @@ class MusicStudioApp:
 
         # Center Status Text
         stat_txt = "LOCKED" if is_locked else "COASTING"
-        stat_surf = self.font_mono.render(stat_txt, True, ring_color)
+        stat_surf = self.get_text(self.font_mono, stat_txt, ring_color)
         self.screen.blit(stat_surf, (cx - stat_surf.get_width() // 2, cy + radius + 12))
 
         # Readout details on right side of gauge
@@ -768,15 +858,15 @@ class MusicStudioApp:
 
         # BPM
         bpm_val = self.listener.bpm
-        bpm_surf = self.font_big_num.render(f"{bpm_val:.1f}", True, self.TEXT_MAIN)
+        bpm_surf = self.get_text(self.font_big_num, f"{bpm_val:.1f}", self.TEXT_MAIN)
         self.screen.blit(bpm_surf, (rx, ry))
-        bpm_lbl = self.font_small.render("BPM", True, self.TEXT_DIM)
+        bpm_lbl = self.get_text(self.font_small, "BPM", self.TEXT_DIM)
         self.screen.blit(bpm_lbl, (rx + bpm_surf.get_width() + 8, ry + 12))
 
         # Pearson Confidence
         conf = float(np.clip(self.listener.beat_confidence, 0.0, 1.0))
         ry += 42
-        conf_lbl = self.font_small.render(f"Pearson Conf: {conf * 100:.0f}%", True, self.TEXT_DIM)
+        conf_lbl = self.get_text(self.font_small, f"Pearson Conf: {conf * 100:.0f}%", self.TEXT_DIM)
         self.screen.blit(conf_lbl, (rx, ry))
 
         bar_w = pw - (rx - px) - 20
@@ -796,14 +886,14 @@ class MusicStudioApp:
         ry += 36
         lbt_class = bpm_to_class(bpm_val)
         class_str = f"Octave Class: {lbt_class:.3f}"
-        class_surf = self.font_small.render(class_str, True, self.TEXT_DIM)
+        class_surf = self.get_text(self.font_small, class_str, self.TEXT_DIM)
         self.screen.blit(class_surf, (rx, ry))
 
         # Harmonic Candidates
         ry += 18
         base_b = 60.0 * (2.0 ** lbt_class)
         harm_str = f"Harmonics: {base_b*0.5:.0f} | {base_b:.0f} | {base_b*1.5:.0f}"
-        harm_surf = self.font_small.render(harm_str, True, self.TEXT_MUTED)
+        harm_surf = self.get_text(self.font_small, harm_str, self.TEXT_MUTED)
         self.screen.blit(harm_surf, (rx, ry))
 
         # High-Impact Beat Strobe Flash Box (Bottom of Panel 2)
@@ -823,12 +913,12 @@ class MusicStudioApp:
             pygame.draw.rect(self.screen, col, strobe_rect, width=2, border_radius=6)
 
             tag_txt = f"{'● REAL BEAT' if self.last_beat_was_real else '◐ DROPPED BEAT'} — {self.last_beat_visual_tag.upper()}"
-            t_surf = self.font_title.render(tag_txt, True, (255, 255, 255))
+            t_surf = self.get_text(self.font_title, tag_txt, (255, 255, 255))
             self.screen.blit(t_surf, (strobe_rect.centerx - t_surf.get_width() // 2, strobe_rect.centery - t_surf.get_height() // 2))
         else:
             pygame.draw.rect(self.screen, (14, 16, 22), strobe_rect, border_radius=6)
             pygame.draw.rect(self.screen, (28, 34, 46), strobe_rect, width=1, border_radius=6)
-            idle_surf = self.font_mono.render("WAITING FOR BEAT IMPULSE", True, (70, 80, 95))
+            idle_surf = self.get_text(self.font_mono, "WAITING FOR BEAT IMPULSE", (70, 80, 95))
             self.screen.blit(idle_surf, (strobe_rect.centerx - idle_surf.get_width() // 2, strobe_rect.centery - idle_surf.get_height() // 2))
 
     # =================================================================
@@ -844,7 +934,14 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, self.PANEL_BG, (px, py, pw, ph), border_radius=8)
         pygame.draw.rect(self.screen, self.PANEL_BORDER, (px, py, pw, ph), width=1, border_radius=8)
 
-        head_surf = self.font_main.render("8-BAND FREQUENCY DYNAMICS & SPECTRAL PEAKS", True, self.ACCENT_CYAN)
+        raw_fft = self.listener.fft_band_values
+        smooth_fft = self.listener.smoothed_fft_band_values
+        asserved_fft = self.listener.asserved_fft_band
+        band_peaks = self.listener.band_peak
+        band_flux = self.listener.band_flux
+
+        num_bands = len(smooth_fft) if len(smooth_fft) > 0 else self.nb_bands
+        head_surf = self.get_text(self.font_main, f"{num_bands}-BAND FREQUENCY DYNAMICS & SPECTRAL PEAKS", self.ACCENT_CYAN)
         self.screen.blit(head_surf, (px + 16, py + 12))
 
         # Equalizer Bars Area
@@ -853,50 +950,50 @@ class MusicStudioApp:
         gw = pw - 32
         gh = 175
 
-        col_w = (gw - 28) / 8.0
-
-        raw_fft = self.listener.fft_band_values
-        smooth_fft = self.listener.smoothed_fft_band_values
-        asserved_fft = self.listener.asserved_fft_band
-        band_peaks = self.listener.band_peak
-        band_flux = self.listener.band_flux
+        spacing = 4 if num_bands <= 8 else (2 if num_bands <= 16 else 1)
+        col_w = max(2.0, (gw - spacing * (num_bands - 1)) / float(num_bands))
 
         max_raw = max(50.0, float(np.max(smooth_fft)) if len(smooth_fft) > 0 else 50.0)
 
-        for i in range(8):
-            bx = int(gx + i * (col_w + 4))
-            bw = int(col_w)
+        for i in range(num_bands):
+            bx = int(gx + i * (col_w + spacing))
+            bw = max(2, int(col_w))
 
             # Background slot
-            pygame.draw.rect(self.screen, (14, 16, 22), (bx, gy, bw, gh), border_radius=4)
+            pygame.draw.rect(self.screen, (14, 16, 22), (bx, gy, bw, gh), border_radius=3 if num_bands <= 16 else 1)
 
             # Peak LED indicator at top of each column
             has_peak = len(band_peaks) > i and band_peaks[i] > 0
             led_col = self.ACCENT_RED if has_peak else (40, 48, 64)
-            pygame.draw.rect(self.screen, led_col, (bx + 2, gy + 4, bw - 4, 6), border_radius=2)
+            led_h = 4 if num_bands > 16 else 6
+            pygame.draw.rect(self.screen, led_col, (bx + 1, gy + 4, max(1, bw - 2), led_h), border_radius=1)
 
             # Raw energy ghost bar
             r_val = raw_fft[i] if i < len(raw_fft) else 0.0
             r_h = min(gh - 20, int((r_val / max_raw) * (gh - 20)))
             if r_h > 0:
-                pygame.draw.rect(self.screen, (30, 45, 60), (bx + 2, gy + gh - 6 - r_h, bw - 4, r_h), border_radius=2)
+                pygame.draw.rect(self.screen, (30, 45, 60), (bx + 1, gy + gh - 6 - r_h, max(1, bw - 2), r_h), border_radius=1)
 
             # Smoothed energy solid bar
             s_val = smooth_fft[i] if i < len(smooth_fft) else 0.0
             s_h = min(gh - 20, int((s_val / max_raw) * (gh - 20)))
             if s_h > 0:
-                # Color gradient from cyan/blue to green/yellow
-                bar_color = self.ACCENT_CYAN if i < 2 else (self.ACCENT_GREEN if i < 5 else self.ACCENT_GOLD)
-                pygame.draw.rect(self.screen, bar_color, (bx + 4, gy + gh - 6 - s_h, bw - 8, s_h), border_radius=2)
+                # Continuous color gradient from cyan/blue to green/yellow
+                frac = i / float(max(1, num_bands - 1))
+                bar_color = self.ACCENT_CYAN if frac < 0.25 else (self.ACCENT_GREEN if frac < 0.65 else self.ACCENT_GOLD)
+                pad = 2 if bw >= 12 else 0
+                pygame.draw.rect(self.screen, bar_color, (bx + pad, gy + gh - 6 - s_h, max(1, bw - 2 * pad), s_h), border_radius=1)
 
             # Asserved floating peak cap
             a_val = asserved_fft[i] if i < len(asserved_fft) else 0.0
             a_y = gy + gh - 6 - int(a_val * (gh - 24))
-            pygame.draw.rect(self.screen, (255, 255, 255), (bx + 3, a_y, bw - 6, 2))
+            pygame.draw.rect(self.screen, (255, 255, 255), (bx + 1, a_y, max(1, bw - 2), 2))
 
             # Band short label
-            b_lbl = self.font_small.render(f"B{i}", True, self.TEXT_DIM)
-            self.screen.blit(b_lbl, (bx + bw // 2 - b_lbl.get_width() // 2, gy + gh + 4))
+            show_label = (num_bands <= 8) or (num_bands <= 16 and i % 2 == 0) or (num_bands > 16 and (i % 4 == 0 or i == num_bands - 1))
+            if show_label:
+                b_lbl = self.get_text(self.font_small, f"B{i}" if num_bands <= 8 else f"{i}", self.TEXT_DIM)
+                self.screen.blit(b_lbl, (bx + bw // 2 - b_lbl.get_width() // 2, gy + gh + 4))
 
         # Total Power Asservation footer within panel 3
         tp_y = py + 242
@@ -908,7 +1005,7 @@ class MusicStudioApp:
         if p_fill > 0:
             pygame.draw.rect(self.screen, self.ACCENT_PURPLE, (tp_rect.x, tp_rect.y, p_fill, tp_rect.height), border_radius=4)
 
-        p_lbl = self.font_small.render(f"Total Power Asserved: {tot_p * 100:.0f}%", True, self.TEXT_MAIN)
+        p_lbl = self.get_text(self.font_small, f"Total Power Asserved: {tot_p * 100:.0f}%", self.TEXT_MAIN)
         self.screen.blit(p_lbl, (tp_rect.x + 10, tp_rect.y + 6))
 
     # =================================================================
@@ -924,7 +1021,7 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, self.PANEL_BG, (px, py, pw, ph), border_radius=8)
         pygame.draw.rect(self.screen, self.PANEL_BORDER, (px, py, pw, ph), width=1, border_radius=8)
 
-        head_surf = self.font_main.render("12-TONE CHROMAGRAM & HARMONY", True, self.ACCENT_CYAN)
+        head_surf = self.get_text(self.font_main, "12-TONE CHROMAGRAM & HARMONY", self.ACCENT_CYAN)
         self.screen.blit(head_surf, (px + 16, py + 12))
 
         chroma = self.listener.smoothed_chroma_values
@@ -933,7 +1030,7 @@ class MusicStudioApp:
         dom_note = self.CHROMA_NAMES[dom_pitch]
 
         # Dominant pitch badge
-        badge_surf = self.font_mono.render(f"KEY: {dom_note}", True, self.ACCENT_GOLD)
+        badge_surf = self.get_text(self.font_mono, f"KEY: {dom_note}", self.ACCENT_GOLD)
         self.screen.blit(badge_surf, (px + pw - badge_surf.get_width() - 16, py + 12))
 
         # Draw 12 vertical chroma bars
@@ -962,13 +1059,13 @@ class MusicStudioApp:
 
             # Note label
             lbl_color = self.ACCENT_GOLD if (i == dom_pitch) else self.TEXT_DIM
-            n_lbl = self.font_small.render(self.CHROMA_NAMES[i], True, lbl_color)
+            n_lbl = self.get_text(self.font_small, self.CHROMA_NAMES[i], lbl_color)
             self.screen.blit(n_lbl, (bx + bw // 2 - n_lbl.get_width() // 2, gy + gh + 4))
 
         # Circular note summary
         summary_y = py + 242
         note_text = f"Dominant Pitch Class: {dom_note} (Bin {dom_pitch})"
-        s_surf = self.font_small.render(note_text, True, self.TEXT_MAIN)
+        s_surf = self.get_text(self.font_small, note_text, self.TEXT_MAIN)
         self.screen.blit(s_surf, (px + 16, summary_y + 4))
 
     # =================================================================
@@ -985,7 +1082,7 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, self.PANEL_BORDER, (px, py, pw, ph), width=1, border_radius=8)
 
         # Header & Badges
-        head_surf = self.font_main.render("STRUCTURAL NOVELTY, MACRO TENSION & DROP DETECTION", True, self.ACCENT_CYAN)
+        head_surf = self.get_text(self.font_main, "STRUCTURAL NOVELTY, MACRO TENSION & DROP DETECTION", self.ACCENT_CYAN)
         self.screen.blit(head_surf, (px + 16, py + 12))
 
         # Event Badges
@@ -995,7 +1092,7 @@ class MusicStudioApp:
         t_since_drop = time.time() - self.last_drop_time
         if t_since_drop < 1.5:
             d_alpha = 1.0 - (t_since_drop / 1.5)
-            d_surf = self.font_mono.render("★ VERSE / CHORUS DROP", True, self.ACCENT_PURPLE)
+            d_surf = self.get_text(self.font_mono, "★ VERSE / CHORUS DROP", self.ACCENT_PURPLE)
             pygame.draw.rect(self.screen, (60, 20, 90), (bx, py + 10, d_surf.get_width() + 16, 22), border_radius=4)
             pygame.draw.rect(self.screen, self.ACCENT_PURPLE, (bx, py + 10, d_surf.get_width() + 16, 22), width=1, border_radius=4)
             self.screen.blit(d_surf, (bx + 8, py + 13))
@@ -1004,7 +1101,7 @@ class MusicStudioApp:
         # Song Cut / Transition Badge
         t_since_song = time.time() - self.last_song_change_time
         if t_since_song < 2.0:
-            s_surf = self.font_mono.render("⚡ SONG TRANSITION", True, self.ACCENT_ORANGE)
+            s_surf = self.get_text(self.font_mono, "⚡ SONG TRANSITION", self.ACCENT_ORANGE)
             pygame.draw.rect(self.screen, (90, 50, 20), (bx, py + 10, s_surf.get_width() + 16, 22), border_radius=4)
             pygame.draw.rect(self.screen, self.ACCENT_ORANGE, (bx, py + 10, s_surf.get_width() + 16, 22), width=1, border_radius=4)
             self.screen.blit(s_surf, (bx + 8, py + 13))
@@ -1050,9 +1147,9 @@ class MusicStudioApp:
             pygame.draw.lines(self.screen, self.ACCENT_CYAN, False, nov_pts, 2)
 
         # Legend
-        leg_nov = self.font_small.render("● Combined Novelty (STM vs LTM)", True, self.ACCENT_CYAN)
-        leg_lm = self.font_small.render("--- Local Max (LM)", True, self.ACCENT_ORANGE)
-        leg_gm = self.font_small.render("--- Global Max (GM Macro Threshold)", True, self.ACCENT_PURPLE)
+        leg_nov = self.get_text(self.font_small, "● Combined Novelty (STM vs LTM)", self.ACCENT_CYAN)
+        leg_lm = self.get_text(self.font_small, "--- Local Max (LM)", self.ACCENT_ORANGE)
+        leg_gm = self.get_text(self.font_small, "--- Global Max (GM Macro Threshold)", self.ACCENT_PURPLE)
 
         self.screen.blit(leg_nov, (gx + 12, gy + 8))
         self.screen.blit(leg_lm, (gx + 12, gy + 24))
@@ -1064,7 +1161,8 @@ class MusicStudioApp:
 
         # Asserved Novelty Meter
         asserv_nov = float(self.listener.asserved_novelty)
-        self.screen.blit(self.font_small.render(f"Asserved Novelty: {asserv_nov * 100:.0f}%", True, self.TEXT_MAIN), (rx, ry))
+        an_lbl = self.get_text(self.font_small, f"Asserved Novelty: {asserv_nov * 100:.0f}%", self.TEXT_MAIN)
+        self.screen.blit(an_lbl, (rx, ry))
         ry += 18
         an_rect = pygame.Rect(rx, ry, 280, 16)
         pygame.draw.rect(self.screen, (14, 16, 22), an_rect, border_radius=4)
@@ -1077,25 +1175,32 @@ class MusicStudioApp:
         th_val = self.listener.analyzer.config.song_novelty_asserved_th
         th_x = rx + int(an_rect.width * th_val)
         pygame.draw.line(self.screen, self.ACCENT_RED, (th_x, ry - 2), (th_x, ry + 18), 2)
-        th_lbl = self.font_small.render(f"Drop Th: {th_val:.2f}", True, self.TEXT_MUTED)
+        th_lbl = self.get_text(self.font_small, f"Drop Th: {th_val:.2f}", self.TEXT_MUTED)
         self.screen.blit(th_lbl, (th_x - 30, ry + 20))
 
         # Memory Envelope Readouts
         ry += 48
-        detector = self.listener.analyzer.novelty_detector
-        stm_lbl = self.font_small.render(f"STM Power: {detector.stm_power:.2f}", True, self.TEXT_DIM)
-        ltm_lbl = self.font_small.render(f"LTM Power: {detector.ltm_power:.2f}", True, self.TEXT_DIM)
+        detector = getattr(self.listener.analyzer, 'novelty_detector', None)
+        stm_power = getattr(detector, 'stm_power', 0.0)
+        ltm_power = getattr(detector, 'ltm_power', 0.0)
+        novelty_lm = self.listener.novelty_lm
+        novelty_gm = self.listener.novelty_gm
+        sil_frames = getattr(detector, 'silence_frames', 0)
+        sil_th = getattr(detector, 'silence_threshold_frames', 1)
+
+        stm_lbl = self.get_text(self.font_small, f"STM Power: {stm_power:.2f}", self.TEXT_DIM)
+        ltm_lbl = self.get_text(self.font_small, f"LTM Power: {ltm_power:.2f}", self.TEXT_DIM)
         self.screen.blit(stm_lbl, (rx, ry))
         self.screen.blit(ltm_lbl, (rx + 140, ry))
 
         ry += 22
-        lm_lbl = self.font_small.render(f"Novelty LM: {detector.novelty_lm:.3f}", True, self.ACCENT_ORANGE)
-        gm_lbl = self.font_small.render(f"Novelty GM: {detector.novelty_gm:.3f}", True, self.ACCENT_PURPLE)
+        lm_lbl = self.get_text(self.font_small, f"Novelty LM: {novelty_lm:.3f}", self.ACCENT_ORANGE)
+        gm_lbl = self.get_text(self.font_small, f"Novelty GM: {novelty_gm:.3f}", self.ACCENT_PURPLE)
         self.screen.blit(lm_lbl, (rx, ry))
         self.screen.blit(gm_lbl, (rx + 140, ry))
 
         ry += 24
-        sil_lbl = self.font_small.render(f"Silence Frames: {detector.silence_frames} / {detector.silence_threshold_frames}", True, self.TEXT_MUTED)
+        sil_lbl = self.get_text(self.font_small, f"Silence Frames: {sil_frames} / {sil_th}", self.TEXT_MUTED)
         self.screen.blit(sil_lbl, (rx, ry))
 
     # =================================================================
@@ -1116,17 +1221,17 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, self.ACCENT_GOLD, (dx, dy, dw, dh), width=2, border_radius=8)
 
         # Header
-        t_head = self.font_main.render("LIVE DSP PARAMETER TUNER [T]", True, self.ACCENT_GOLD)
+        t_head = self.get_text(self.font_main, "LIVE DSP PARAMETER TUNER [T]", self.ACCENT_GOLD)
         self.screen.blit(t_head, (dx + 16, dy + 16))
 
-        t_sub = self.font_small.render("Use [↑/↓] to select, [←/→] to adjust, [D] default", True, self.TEXT_DIM)
+        t_sub = self.get_text(self.font_small, "Use [↑/↓] to select, [←/→] to adjust, [D] default", self.TEXT_DIM)
         self.screen.blit(t_sub, (dx + 16, dy + 38))
 
         # Parameters List
         py = dy + 68
         for i, p in enumerate(self.tuning_params):
             is_sel = (i == self.tuning_selected_idx)
-            val = getattr(p["obj"], p["attr"])
+            val = p["get"]()
 
             row_rect = pygame.Rect(dx + 12, py, dw - 24, 40)
             if is_sel:
@@ -1134,8 +1239,8 @@ class MusicStudioApp:
                 pygame.draw.rect(self.screen, self.ACCENT_CYAN, row_rect, width=1, border_radius=4)
 
             name_color = self.ACCENT_CYAN if is_sel else self.TEXT_MAIN
-            lbl_surf = self.font_small.render(p["label"], True, name_color)
-            val_surf = self.font_mono.render(p["fmt"].format(val), True, self.ACCENT_GOLD if is_sel else self.TEXT_MAIN)
+            lbl_surf = self.get_text(self.font_small, p["label"], name_color)
+            val_surf = self.get_text(self.font_mono, p["fmt"].format(val), self.ACCENT_GOLD if is_sel else self.TEXT_MAIN)
 
             self.screen.blit(lbl_surf, (dx + 20, py + 6))
             self.screen.blit(val_surf, (dx + dw - val_surf.get_width() - 25, py + 6))
@@ -1167,7 +1272,7 @@ class MusicStudioApp:
             "[Esc] Exit"
         ]
         total_str = "    │    ".join(shortcuts)
-        f_surf = self.font_small.render(total_str, True, self.TEXT_DIM)
+        f_surf = self.get_text(self.font_small, total_str, self.TEXT_DIM)
         self.screen.blit(f_surf, (self.width // 2 - f_surf.get_width() // 2, footer_y))
 
 
@@ -1179,6 +1284,12 @@ def main():
     parser = argparse.ArgumentParser(description="Vialactée Music Studio - Real-Time DSP & Music Analysis Laboratory")
     parser.add_argument("--song", "-s", type=str, default=None, help="Path to MP3 or WAV file")
     parser.add_argument("--leds", "-l", type=int, default=80, help="Number of LEDs in reference segment (default: 80)")
+    parser.add_argument(
+        "--model", "-m",
+        type=str,
+        default="MultiBandOnsetAudioAnalyzer",
+        help="Rhythm analyzer model class (e.g. MultiBandOnsetAudioAnalyzer, AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
+    )
     args = parser.parse_args()
 
     song_path = args.song
@@ -1194,8 +1305,24 @@ def main():
         print(f"Error: No audio song found at '{song_path}'. Please provide --song <path>.")
         sys.exit(1)
 
-    app = MusicStudioApp(song_path=song_path, nb_leds=args.leds)
-    app.run()
+    is_win = (sys.platform == "win32")
+    if is_win:
+        try:
+            import ctypes
+            ctypes.windll.winmm.timeBeginPeriod(1)
+        except Exception:
+            pass
+
+    try:
+        app = MusicStudioApp(song_path=song_path, nb_leds=args.leds, model_name=args.model)
+        app.run()
+    finally:
+        if is_win:
+            try:
+                import ctypes
+                ctypes.windll.winmm.timeEndPeriod(1)
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

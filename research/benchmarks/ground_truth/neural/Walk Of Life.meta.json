@@ -1,0 +1,11 @@
+{
+  "track": "Walk Of Life",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Walk Of Life.mp3",
+  "duration_sec": 249.96,
+  "total_beats": 715,
+  "total_downbeats": 179,
+  "estimated_bpm": 176.47,
+  "interval_jitter_ms": 18.15,
+  "compute_time_sec": 4.42,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

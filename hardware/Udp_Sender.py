@@ -22,6 +22,9 @@ class Udp_Sender(HardwareInterface):
         self.data = np.zeros((nb_of_leds, 3), dtype=np.uint8)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._analyzer = None
+        self._last_analyzer_send = 0.0
+        self._last_segment_heartbeats = {}  # {segment_name: monotonic_timestamp}
+        self._cached_segment_modes = {}     # {segment_name: (mode_name, target_mode_name)}
 
     def set_analyzer(self, analyzer):
         """Store a reference to the AudioAnalyzer so show() can stream its state to the simulator."""
@@ -59,26 +62,62 @@ class Udp_Sender(HardwareInterface):
             self._send_analyzer_state()
 
     def _send_analyzer_state(self):
-        """Send a compact JSON snapshot of the analyzer state on the metadata port."""
-        a = self._analyzer
-        payload = {
-            "type": "analyzer_state",
-            "bpm": round(a.bpm, 1),
-            "phase": round(a.speaker_phase, 3),
-            "status": a.flywheel_status,
-            "confidence": round(a.confidence_score, 3),
-            "beat_tag": a.current_beat_tag,
-            "is_beat": bool(a.is_beat),
-            "is_real_beat": bool(a.is_real_beat),
-            "is_dropped_beat": bool(a.is_dropped_beat),
-            "flux_baseline": round(a.rolling_flux_baseline, 1),
-            "asserved_novelty": round(a.asserved_novelty, 3),
-            "combined_novelty": round(a.combined_novelty, 3),
-            "is_song_change": bool(a.is_song_change),
-            "is_verse_chorus_change": bool(a.is_verse_chorus_change),
-            "silence_frames": int(a.silence_frames),
-        }
+        """Send analyzer telemetry, throttled to 10 Hz directly at the network boundary."""
+        now = time.monotonic()
+        if (now - self._last_analyzer_send) < 0.1:  # 10 Hz throttle
+            return
+        self._last_analyzer_send = now
+
         try:
+            a = self._analyzer
+            bpm_val = getattr(a, "bpm", 0.0)
+            bpm = round(float(bpm_val), 1) if bpm_val is not None else 0.0
+
+            phase_val = getattr(a, "speaker_phase", getattr(a, "beat_phase", 0.0))
+            phase = round(float(phase_val), 3) if phase_val is not None else 0.0
+
+            status = str(getattr(a, "flywheel_status", "coasting"))
+
+            conf_val = getattr(a, "confidence_score", getattr(a, "beat_confidence", 1.0))
+            confidence = round(float(conf_val), 3) if conf_val is not None else 0.0
+
+            beat_tag = str(getattr(a, "current_beat_tag", ""))
+            is_beat = bool(getattr(a, "is_beat", False))
+            is_real_beat = bool(getattr(a, "is_real_beat", False))
+            is_dropped_beat = bool(getattr(a, "is_dropped_beat", False))
+
+            flux_val = getattr(a, "rolling_flux_baseline", 0.0)
+            flux_baseline = round(float(flux_val), 1) if flux_val is not None else 0.0
+
+            nov_val = getattr(a, "asserved_novelty", 0.0)
+            asserved_novelty = round(float(nov_val), 3) if nov_val is not None else 0.0
+
+            comb_val = getattr(a, "combined_novelty", 0.0)
+            combined_novelty = round(float(comb_val), 3) if comb_val is not None else 0.0
+
+            is_song_change = bool(getattr(a, "is_song_change", False))
+            is_verse_chorus_change = bool(getattr(a, "is_verse_chorus_change", False))
+
+            silence_val = getattr(a, "silence_frames", 0)
+            silence_frames = int(silence_val) if silence_val is not None else 0
+
+            payload = {
+                "type": "analyzer_state",
+                "bpm": bpm,
+                "phase": phase,
+                "status": status,
+                "confidence": confidence,
+                "beat_tag": beat_tag,
+                "is_beat": is_beat,
+                "is_real_beat": is_real_beat,
+                "is_dropped_beat": is_dropped_beat,
+                "flux_baseline": flux_baseline,
+                "asserved_novelty": asserved_novelty,
+                "combined_novelty": combined_novelty,
+                "is_song_change": is_song_change,
+                "is_verse_chorus_change": is_verse_chorus_change,
+                "silence_frames": silence_frames,
+            }
             self.sock.sendto(
                 json.dumps(payload).encode("utf-8"),
                 (self.ip, SEGMENT_METADATA_PORT),
@@ -88,12 +127,23 @@ class Udp_Sender(HardwareInterface):
 
     def set_segment_mode(self, segment_name, mode_name, target_mode_name=None):
         """
-        Ship a small JSON UDP packet describing the active mode of a segment so
-        the Fake_ESP32 simulator can render it as a label. Sent on every frame
-        so the simulator self-recovers if it boots after the main process or
-        misses a packet. Real ESP32 hardware will simply receive packets on a
-        port it does not listen to, which is harmless.
+        Directly throttles the existing interface invoked by Segment.py.
+        Transmits on mode transition or 1 Hz per-segment heartbeat.
         """
+        now = time.monotonic()
+        curr_state = (mode_name, target_mode_name)
+        prev_state = self._cached_segment_modes.get(segment_name)
+        last_hb = self._last_segment_heartbeats.get(segment_name, 0.0)
+
+        is_change = (prev_state != curr_state)
+        is_heartbeat = (now - last_hb) >= 1.0
+
+        if not (is_change or is_heartbeat):
+            return
+
+        self._cached_segment_modes[segment_name] = curr_state
+        self._last_segment_heartbeats[segment_name] = now
+
         payload = {
             "type": "segment_mode",
             "name": segment_name,

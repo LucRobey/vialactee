@@ -1,0 +1,42 @@
+# 🏆 Vialactée Music Analyzer Leaderboard
+
+| Date | Run ID | Suite | Model Name | Commit | F1@50ms | CMLt | AMLt | Upbeat Gap | Avg Jitter | CPU/frame |
+| :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 2026-09-05 | `RUN_20260905_161342_AudioAnalyzer_oracle_baseline` | `synthetic` | **AudioAnalyzer** | `8f4c1cb` | **86.0%** | 85.6% | 85.6% | 0.00 | 25.9ms | 3.33ms |
+| 2026-09-05 | `RUN_20260905_164050_AudioAnalyzer_AudioAnalyzer_fixes_applied` | `synthetic` | **AudioAnalyzer** | `8f4c1cb` | **92.0%** | 91.6% | 91.6% | 0.00 | 17.6ms | 1.90ms |
+| 2026-09-05 | `RUN_20260905_205610_AudioAnalyzer_official_neural_core_baseline` | `neural-core` | **AudioAnalyzer** | `f529c14` | **21.0%** | 19.0% | 28.3% | 0.09 | 62.5ms | 1.59ms |
+| 2026-09-05 | `RUN_20260905_224556_PhaseInertiaAudioAnalyzer_cycle003_synth` | `synthetic` | **PhaseInertiaAudioAnalyzer** | `f529c14` | **92.0%** | 91.6% | 91.6% | 0.00 | 17.5ms | 1.62ms |
+| 2026-09-05 | `RUN_20260905_224556_PhaseInertiaAudioAnalyzer_cycle003_synth` | `synthetic` | **PhaseInertiaAudioAnalyzer** | `f529c14` | **92.0%** | 91.6% | 91.6% | 0.00 | 17.5ms | 1.62ms |
+| 2026-09-05 | `RUN_20260905_225331_PhaseInertiaAudioAnalyzer_cycle003_candidate` | `neural-core` | **PhaseInertiaAudioAnalyzer** | `f529c14` | **19.9%** | 18.2% | 27.7% | 0.09 | 64.0ms | 2.93ms |
+| 2026-09-05 | `RUN_20260905_232932_TimbreAdaptiveAudioAnalyzer_cycle004_synth` | `synthetic` | **TimbreAdaptiveAudioAnalyzer** | `f529c14` | **92.0%** | 91.5% | 91.5% | 0.00 | 17.6ms | 1.81ms |
+| 2026-09-05 | `RUN_20260905_233258_TimbreAdaptiveAudioAnalyzer_cycle004_candidate` | `neural-core` | **TimbreAdaptiveAudioAnalyzer** | `f529c14` | **17.7%** | 16.3% | 26.7% | 0.10 | 62.4ms | 1.42ms |
+| 2026-09-05 | `RUN_20260905_233648_TimbreAdaptiveAudioAnalyzer_cycle004_synth_v2` | `synthetic` | **TimbreAdaptiveAudioAnalyzer** | `f529c14` | **92.0%** | 91.5% | 91.5% | 0.00 | 17.6ms | 2.72ms |
+| 2026-09-05 | `RUN_20260905_234120_TimbreAdaptiveAudioAnalyzer_cycle004_candidate_v2` | `neural-core` | **TimbreAdaptiveAudioAnalyzer** | `f529c14` | **17.8%** | 16.2% | 27.0% | 0.11 | 62.4ms | 1.87ms |
+| 2026-09-05 | `RUN_20260905_235315_AudioAnalyzer_official_electro_rock_pop_baseline` | `neural-core` | **AudioAnalyzer** | `f529c14` | **41.1%** | 36.5% | 48.6% | 0.12 | 49.9ms | 2.44ms |
+| 2026-09-06 | `RUN_20260906_003421_DualResonatorAudioAnalyzer_cycle005_synth` | `synthetic` | **DualResonatorAudioAnalyzer** | `f529c14` | **91.9%** | 93.0% | 93.0% | 0.00 | 24.0ms | 0.21ms |
+| 2026-09-06 | `RUN_20260906_003518_DualResonatorAudioAnalyzer_cycle005_candidate` | `neural-core` | **DualResonatorAudioAnalyzer** | `f529c14` | **30.3%** | 27.1% | 40.6% | 0.13 | 71.1ms | 0.20ms |
+| 2026-09-06 | `RUN_20260906_005731_SparseImpulseAudioAnalyzer_cycle006_synth` | `synthetic` | **SparseImpulseAudioAnalyzer** | `f529c14` | **76.0%** | 89.7% | 89.7% | 0.00 | 32.7ms | 0.18ms |
+| 2026-09-06 | `RUN_20260906_011028_SparseImpulseAudioAnalyzer_cycle006_synth` | `synthetic` | **SparseImpulseAudioAnalyzer** | `f529c14` | **90.8%** | 91.3% | 91.3% | 0.00 | 19.4ms | 0.26ms |
+| 2026-09-06 | `RUN_20260906_011142_SparseImpulseAudioAnalyzer_cycle006_candidate` | `neural-core` | **SparseImpulseAudioAnalyzer** | `f529c14` | **34.1%** | 29.1% | 40.2% | 0.11 | 66.5ms | 0.30ms |
+| 2026-09-06 | `RUN_20260906_112627_SparseImpulseAudioAnalyzer_cycle007_synth` | `synthetic` | **SparseImpulseAudioAnalyzer** | `f529c14` | **95.4%** | 95.7% | 95.7% | 0.00 | 13.1ms | 0.71ms |
+| 2026-09-06 | `RUN_20260906_112904_SparseImpulseAudioAnalyzer_cycle007_candidate` | `neural-core` | **SparseImpulseAudioAnalyzer** | `f529c14` | **41.2%** | 34.9% | 50.9% | 0.16 | 49.8ms | 0.83ms |
+| 2026-09-06 | `RUN_20260906_114949_DualFlywheelAudioAnalyzer_cycle009_synth` | `synthetic` | **DualFlywheelAudioAnalyzer** | `f529c14` | **83.9%** | 72.3% | 83.7% | 0.11 | 19.9ms | 0.47ms |
+| 2026-09-06 | `RUN_20260906_115402_DualFlywheelAudioAnalyzer_cycle009_synth` | `synthetic` | **DualFlywheelAudioAnalyzer** | `f529c14` | **95.3%** | 95.5% | 95.5% | 0.00 | 14.0ms | 0.55ms |
+| 2026-09-06 | `RUN_20260906_132839_MultiBandOnsetAudioAnalyzer_cycle008_synth_32bands` | `synthetic` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **96.0%** | 95.8% | 95.8% | 0.00 | 9.9ms | 0.42ms |
+| 2026-09-06 | `RUN_20260906_132857_MultiBandOnsetAudioAnalyzer_cycle008_synth_24bands` | `synthetic` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **95.6%** | 95.5% | 95.5% | 0.00 | 10.8ms | 0.43ms |
+| 2026-09-06 | `RUN_20260906_132912_MultiBandOnsetAudioAnalyzer_cycle008_synth_16bands` | `synthetic` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **95.4%** | 95.9% | 95.9% | 0.00 | 11.5ms | 0.39ms |
+| 2026-09-06 | `RUN_20260906_133127_MultiBandOnsetAudioAnalyzer_cycle008_candidate_32bands` | `neural-core` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **43.1%** | 37.2% | 54.6% | 0.17 | 47.2ms | 0.53ms |
+| 2026-09-06 | `RUN_20260906_133332_MultiBandOnsetAudioAnalyzer_cycle008_candidate_24bands` | `neural-core` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **43.2%** | 36.7% | 54.4% | 0.18 | 47.2ms | 0.50ms |
+| 2026-09-06 | `RUN_20260906_133507_MultiBandOnsetAudioAnalyzer_cycle008_candidate_16bands` | `neural-core` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **45.1%** | 38.3% | 56.0% | 0.18 | 45.4ms | 0.47ms |
+| 2026-09-06 | `RUN_20260906_142535_CostasLoopAudioAnalyzer_cycle010_synth` | `synthetic` | **CostasLoopAudioAnalyzer** | `f529c14` | **95.4%** | 95.5% | 95.5% | 0.00 | 12.2ms | 0.39ms |
+| 2026-09-06 | `RUN_20260906_142745_CostasLoopAudioAnalyzer_cycle010_candidate` | `neural-core` | **CostasLoopAudioAnalyzer** | `f529c14` | **44.7%** | 37.8% | 55.3% | 0.18 | 47.2ms | 0.66ms |
+| 2026-09-07 | `RUN_20260907_230137_MultiBandOnsetAudioAnalyzer` | `neural-core` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **55.3%** | 54.9% | 59.5% | 0.05 | 46.1ms | 0.25ms |
+| 2026-09-07 | `RUN_20260907_230155_MultiBandOnsetAudioAnalyzer` | `synthetic` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **96.0%** | 95.8% | 95.8% | 0.00 | 9.9ms | 0.23ms |
+| 2026-09-15 | `RUN_20260915_202630_MultiBandOnsetAudioAnalyzer` | `neural-core` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **67.3%** | 52.9% | 71.8% | 0.19 | 39.8ms | 0.26ms |
+| 2026-09-15 | `RUN_20260915_204042_MultiBandOnsetAudioAnalyzer` | `neural-core` | **MultiBandOnsetAudioAnalyzer** | `f529c14` | **74.4%** | 59.9% | 78.8% | 0.19 | 34.0ms | 0.49ms |
+| 2026-09-22 | `RUN_20260922_221024_DyadicMetricalAudioAnalyzer_cycle012_synth` | `synthetic` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **95.9%** | 95.2% | 95.2% | 0.00 | 9.9ms | 0.21ms |
+| 2026-09-22 | `RUN_20260922_221136_DyadicMetricalAudioAnalyzer_cycle012_candidate` | `neural-core` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **68.9%** | 50.4% | 55.2% | 0.05 | 41.5ms | 0.28ms |
+| 2026-09-22 | `RUN_20260922_223130_DyadicMetricalAudioAnalyzer_cycle012_synth` | `synthetic` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **96.0%** | 95.8% | 95.8% | 0.00 | 9.9ms | 0.56ms |
+| 2026-09-22 | `RUN_20260922_223430_DyadicMetricalAudioAnalyzer_cycle012_candidate` | `neural-core` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **76.5%** | 65.6% | 75.0% | 0.09 | 34.3ms | 0.70ms |
+| 2026-09-22 | `RUN_20260922_232634_DyadicMetricalAudioAnalyzer_cycle012_synth_v2` | `synthetic` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **96.0%** | 95.8% | 95.8% | 0.00 | 9.9ms | 0.20ms |
+| 2026-09-22 | `RUN_20260922_232749_DyadicMetricalAudioAnalyzer_cycle012_candidate_v2` | `neural-core` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **79.2%** | 72.4% | 72.4% | 0.00 | 34.2ms | 0.29ms |

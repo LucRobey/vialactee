@@ -6,13 +6,29 @@ import numpy as np
 
 from core.AudioIngestion import AudioIngestion
 from core.AudioAnalyzer import AudioAnalyzer
+from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 
 logger = logging.getLogger(__name__)
 
 class Listener:
-    def __init__(self, infos: Dict[str, Any]) -> None:
+    def __init__(self, infos: Dict[str, Any], analyzer_class: Optional[Any] = None) -> None:
         self.ingestion = AudioIngestion(infos)
-        self.analyzer = AudioAnalyzer(self.ingestion, infos)
+        
+        # Resolve analyzer class: explicit parameter > infos["analyzer_class"] > infos["analyzer_model"] > MultiBandOnsetAudioAnalyzer
+        resolved_class = analyzer_class or infos.get("analyzer_class")
+        if resolved_class is None:
+            model_name = infos.get("analyzer_model", "MultiBandOnsetAudioAnalyzer")
+            if model_name == "AudioAnalyzer":
+                resolved_class = AudioAnalyzer
+            else:
+                resolved_class = MultiBandOnsetAudioAnalyzer
+        elif isinstance(resolved_class, str):
+            if resolved_class == "AudioAnalyzer":
+                resolved_class = AudioAnalyzer
+            else:
+                resolved_class = MultiBandOnsetAudioAnalyzer
+
+        self.analyzer = resolved_class(self.ingestion, infos)
 
         # Ring buffer dimensions
         lookahead = getattr(self.analyzer, 'lookahead_seconds', 5.0)
@@ -37,6 +53,8 @@ class Listener:
         self._ring_is_verse_chorus_change = np.zeros(self._ring_capacity, dtype=bool)
         self._ring_asserved_novelty = np.zeros(self._ring_capacity, dtype=np.float64)
         self._ring_combined_novelty = np.zeros(self._ring_capacity, dtype=np.float64)
+        self._ring_novelty_lm = np.zeros(self._ring_capacity, dtype=np.float64)
+        self._ring_novelty_gm = np.zeros(self._ring_capacity, dtype=np.float64)
 
         self._ring_write = 0  # Next write position
         self._ring_read = 0   # Next read position
@@ -58,13 +76,15 @@ class Listener:
         self._delayed_is_verse_chorus_change = False
         self._delayed_asserved_novelty = 0.0
         self._delayed_combined_novelty = 0.0
+        self._delayed_novelty_lm = 0.0
+        self._delayed_novelty_gm = 0.0
 
     async def update_forever(self) -> None:
         while True:
             self.update()
             await asyncio.sleep(1/60)
 
-    def update(self) -> None:
+    def update(self, fixed_dt: Optional[float] = None) -> None:
         self._delayed_is_song_change = False
         self._delayed_is_verse_chorus_change = False
 
@@ -72,9 +92,13 @@ class Listener:
             self.last_env_time = time.time()
         
         current_time = time.time()
-        self.dt = current_time - self.last_env_time
+        if fixed_dt is not None:
+            self.dt = fixed_dt
+            self.fps_ratio = max(0.001, fixed_dt * 60.0)
+        else:
+            self.dt = current_time - self.last_env_time
+            self.fps_ratio = max(0.001, self.dt * 60.0)
         self.last_env_time = current_time
-        self.fps_ratio = max(0.001, self.dt * 60.0)
 
         if self.ingestion.useMicrophone:
             if self.ingestion.isSilenceCalibrating:
@@ -107,12 +131,20 @@ class Listener:
         self._ring_band_means[w, :] = self.ingestion.band_means
         self._ring_smoothed_total_power[w] = self.ingestion.smoothed_total_power
         self._ring_asserved_total_power[w] = self.ingestion.asserved_total_power
-        self._ring_band_peak[w, :] = self.analyzer.band_peak if hasattr(self.analyzer, 'band_peak') else 0.0
-        self._ring_band_flux[w, :] = self.analyzer.band_flux if hasattr(self.analyzer, 'band_flux') else 0.0
+        nb_fft = self.ingestion.nb_of_fft_band
+        if hasattr(self.analyzer, 'band_peak') and self.analyzer.band_peak is not None:
+            active_p = min(len(self.analyzer.band_peak), nb_fft)
+            self._ring_band_peak[w, :active_p] = self.analyzer.band_peak[:active_p]
+        if hasattr(self.analyzer, 'band_flux') and self.analyzer.band_flux is not None:
+            active_f = min(len(self.analyzer.band_flux), nb_fft)
+            self._ring_band_flux[w, :active_f] = self.analyzer.band_flux[:active_f]
         self._ring_is_song_change[w] = getattr(self.analyzer, 'is_song_change', False)
         self._ring_is_verse_chorus_change[w] = getattr(self.analyzer, 'is_verse_chorus_change', False)
         self._ring_asserved_novelty[w] = getattr(self.analyzer, 'asserved_novelty', 0.0)
         self._ring_combined_novelty[w] = getattr(self.analyzer, 'combined_novelty', 0.0)
+        nov_det = getattr(self.analyzer, 'novelty_detector', None)
+        self._ring_novelty_lm[w] = float(getattr(nov_det, 'novelty_lm', 0.0))
+        self._ring_novelty_gm[w] = float(getattr(nov_det, 'novelty_gm', 0.0))
 
         self._ring_write = (w + 1) % self._ring_capacity
         if self._ring_count < self._ring_capacity:
@@ -163,6 +195,8 @@ class Listener:
             self._delayed_is_verse_chorus_change = any_verse_chorus_change
             self._delayed_asserved_novelty = float(self._ring_asserved_novelty[best_idx])
             self._delayed_combined_novelty = float(self._ring_combined_novelty[best_idx])
+            self._delayed_novelty_lm = float(self._ring_novelty_lm[best_idx])
+            self._delayed_novelty_gm = float(self._ring_novelty_gm[best_idx])
 
     # ==========================================
     # FACADE PROPERTIES FOR MODES AND CONNECTORS
@@ -288,6 +322,12 @@ class Listener:
 
     @property
     def live_combined_novelty(self): return getattr(self.analyzer, 'combined_novelty', 0.0)
+    
+    @property
+    def novelty_lm(self): return self._delayed_novelty_lm
+
+    @property
+    def novelty_gm(self): return self._delayed_novelty_gm
 
     @property
     def bpm(self): return self.analyzer.bpm

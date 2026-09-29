@@ -1,0 +1,11 @@
+{
+  "track": "Tears Dry On Their Own",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Tears Dry On Their Own.mp3",
+  "duration_sec": 185.19,
+  "total_beats": 374,
+  "total_downbeats": 94,
+  "estimated_bpm": 120.0,
+  "interval_jitter_ms": 19.5,
+  "compute_time_sec": 3.93,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

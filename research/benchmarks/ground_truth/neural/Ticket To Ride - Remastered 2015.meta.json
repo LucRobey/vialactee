@@ -1,0 +1,11 @@
+{
+  "track": "Ticket To Ride - Remastered 2015",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Ticket To Ride - Remastered 2015.mp3",
+  "duration_sec": 190.12,
+  "total_beats": 195,
+  "total_downbeats": 97,
+  "estimated_bpm": 61.22,
+  "interval_jitter_ms": 41.77,
+  "compute_time_sec": 3.86,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

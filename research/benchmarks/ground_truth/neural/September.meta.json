@@ -1,0 +1,11 @@
+{
+  "track": "September",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\September.mp3",
+  "duration_sec": 429.61,
+  "total_beats": 904,
+  "total_downbeats": 226,
+  "estimated_bpm": 125.0,
+  "interval_jitter_ms": 23.1,
+  "compute_time_sec": 7.42,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

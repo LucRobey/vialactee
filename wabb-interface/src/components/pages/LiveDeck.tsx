@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { FitBoard } from '../layout/FitBoard';
 import { GridSpot } from '../layout/GridSpot';
@@ -67,6 +67,36 @@ export const LiveDeck = () => {
   const [configurationError, setConfigurationError] = useState<string | null>(null);
   const bridgeStatus = useBridgeStatus();
 
+  const isDraggingRef = useRef<{ lum: boolean; sens: boolean; autoTime: boolean }>({
+    lum: false,
+    sens: false,
+    autoTime: false,
+  });
+  const dragReleaseTimerRef = useRef<{ lum: number | null; sens: number | null; autoTime: number | null }>({
+    lum: null,
+    sens: null,
+    autoTime: null,
+  });
+  const throttleTimerRef = useRef<{ lum: number | null; sens: number | null; autoTime: number | null }>({
+    lum: null,
+    sens: null,
+    autoTime: null,
+  });
+
+  const sendThrottledSlider = useCallback((
+    action: 'set_luminosity' | 'set_sensibility' | 'set_auto_transition_time',
+    key: 'lum' | 'sens' | 'autoTime',
+    value: number
+  ) => {
+    if (throttleTimerRef.current[key] !== null) {
+      window.clearTimeout(throttleTimerRef.current[key]!);
+    }
+    throttleTimerRef.current[key] = window.setTimeout(() => {
+      sendInstruction({ page: 'live_deck', action, payload: { value } });
+      throttleTimerRef.current[key] = null;
+    }, 60);
+  }, []);
+
   const transitions = ['CUT', 'FADE IN/OUT', 'CROSSFADE'];
   const presetColors = ['bg-blue', 'bg-orange', 'bg-green', 'bg-purple', 'bg-yellow', 'bg-red', 'bg-cyan', 'bg-magenta'];
   const availableConfigurations = currentPlaylist ? configurationsByPlaylist[currentPlaylist] ?? EMPTY_CONFIGURATIONS : EMPTY_CONFIGURATIONS;
@@ -95,9 +125,15 @@ export const LiveDeck = () => {
 
   useEffect(() => {
     return subscribeModeMasterState((state) => {
-      setLumValue(state.luminosity);
-      setSensValue(state.sensibility);
-      setAutoTimeValue(state.autoTransitionTime);
+      if (!isDraggingRef.current.lum) {
+        setLumValue(state.luminosity);
+      }
+      if (!isDraggingRef.current.sens) {
+        setSensValue(state.sensibility);
+      }
+      if (!isDraggingRef.current.autoTime) {
+        setAutoTimeValue(state.autoTransitionTime);
+      }
       setIsHold(state.transitionLocked);
       setSelectedTransition(state.selectedTransition);
 
@@ -203,10 +239,24 @@ export const LiveDeck = () => {
                         min="1"
                         max="100"
                         value={lumValue}
+                        onPointerDown={() => {
+                          isDraggingRef.current.lum = true;
+                          if (dragReleaseTimerRef.current.lum !== null) {
+                            window.clearTimeout(dragReleaseTimerRef.current.lum);
+                            dragReleaseTimerRef.current.lum = null;
+                          }
+                        }}
+                        onPointerUp={() => {
+                          dragReleaseTimerRef.current.lum = window.setTimeout(() => {
+                            isDraggingRef.current.lum = false;
+                            dragReleaseTimerRef.current.lum = null;
+                          }, 400);
+                        }}
                         onChange={e => {
                           const value = Number(e.target.value);
                           setLumValue(value);
-                          sendInstruction({ page: 'live_deck', action: 'set_luminosity', payload: { value } });
+                          isDraggingRef.current.lum = true;
+                          sendThrottledSlider('set_luminosity', 'lum', value);
                         }}
                       />
                     </div>
@@ -251,10 +301,24 @@ export const LiveDeck = () => {
                         min="1"
                         max="100"
                         value={sensValue}
+                        onPointerDown={() => {
+                          isDraggingRef.current.sens = true;
+                          if (dragReleaseTimerRef.current.sens !== null) {
+                            window.clearTimeout(dragReleaseTimerRef.current.sens);
+                            dragReleaseTimerRef.current.sens = null;
+                          }
+                        }}
+                        onPointerUp={() => {
+                          dragReleaseTimerRef.current.sens = window.setTimeout(() => {
+                            isDraggingRef.current.sens = false;
+                            dragReleaseTimerRef.current.sens = null;
+                          }, 400);
+                        }}
                         onChange={e => {
                           const value = Number(e.target.value);
                           setSensValue(value);
-                          sendInstruction({ page: 'live_deck', action: 'set_sensibility', payload: { value } });
+                          isDraggingRef.current.sens = true;
+                          sendThrottledSlider('set_sensibility', 'sens', value);
                         }}
                       />
                     </div>
@@ -299,10 +363,24 @@ export const LiveDeck = () => {
                         min="5"
                         max="300"
                         value={autoTimeValue}
+                        onPointerDown={() => {
+                          isDraggingRef.current.autoTime = true;
+                          if (dragReleaseTimerRef.current.autoTime !== null) {
+                            window.clearTimeout(dragReleaseTimerRef.current.autoTime);
+                            dragReleaseTimerRef.current.autoTime = null;
+                          }
+                        }}
+                        onPointerUp={() => {
+                          dragReleaseTimerRef.current.autoTime = window.setTimeout(() => {
+                            isDraggingRef.current.autoTime = false;
+                            dragReleaseTimerRef.current.autoTime = null;
+                          }, 400);
+                        }}
                         onChange={e => {
                           const value = Number(e.target.value);
                           setAutoTimeValue(value);
-                          sendInstruction({ page: 'live_deck', action: 'set_auto_transition_time', payload: { value } });
+                          isDraggingRef.current.autoTime = true;
+                          sendThrottledSlider('set_auto_transition_time', 'autoTime', value);
                         }}
                       />
                     </div>

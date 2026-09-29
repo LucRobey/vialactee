@@ -1,0 +1,11 @@
+{
+  "track": "Foule sentimentale",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Foule sentimentale.mp3",
+  "duration_sec": 324.91,
+  "total_beats": 593,
+  "total_downbeats": 148,
+  "estimated_bpm": 111.11,
+  "interval_jitter_ms": 11.82,
+  "compute_time_sec": 16.4,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

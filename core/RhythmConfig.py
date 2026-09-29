@@ -50,3 +50,6 @@ class RhythmConfig:
     # --- Beat Validation & Dropped Beat ---
     real_beat_baseline_ratio: float = 0.5
     real_beat_energy_floor: float = 5.0
+
+    # --- Multi-Band Analysis Resolution ---
+    nb_bands: int = 8

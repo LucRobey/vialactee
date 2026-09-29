@@ -11,7 +11,8 @@ class AudioIngestion:
         self.dynamic_audio_latency = 0.069
         self.luminosite = max(0.0, min(1.0, float(infos.get("luminosity", 100)) / 100.0))
         self.sensi = max(0.0, float(infos.get("sensibility", 100)) / 100.0)
-        self.nb_of_fft_band = 8
+        self.nb_of_fft_band = int(infos.get("nb_of_fft_band", 8))
+        self.nb_multiband = int(infos.get("nb_multiband", 32))
 
         self.build_asserved_fft_lists()
         self.build_asserved_total_power()
@@ -23,30 +24,33 @@ class AudioIngestion:
         self.hanning_window = np.hanning(self.buffer_size)
         
         fft_size = self.buffer_size // 2 + 1
-        self.weight_matrix = np.zeros((self.nb_of_fft_band, fft_size))
-        
-        def hz_to_mel(f): return 2595 * np.log10(1 + f / 700.0)
-        def mel_to_hz(m): return 700 * (10**(m / 2595.0) - 1)
-        
-        lower_mel = hz_to_mel(20)
-        upper_mel = hz_to_mel(20000)
-        mel_points = np.linspace(lower_mel, upper_mel, self.nb_of_fft_band + 2)
-        hz_points = mel_to_hz(mel_points)
-        bin_points = np.floor((self.buffer_size + 1) * hz_points / self.sample_rate).astype(int)
-        
-        for i in range(self.nb_of_fft_band):
-            start = min(bin_points[i], fft_size - 1)
-            mid = min(bin_points[i + 1], fft_size - 1)
-            end = min(bin_points[i + 2], fft_size - 1)
-            
-            if mid > start:
-                self.weight_matrix[i, start:mid] = np.linspace(0, 1, mid - start, endpoint=False)
-            if end > mid:
-                self.weight_matrix[i, mid:end] = np.linspace(1, 0, end - mid, endpoint=False)
-            
-            band_sum = np.sum(self.weight_matrix[i, :])
-            if band_sum > 0:
-                self.weight_matrix[i, :] /= band_sum
+
+        def build_mel_matrix(num_bands: int) -> np.ndarray:
+            mat = np.zeros((num_bands, fft_size))
+            def hz_to_mel(f): return 2595 * np.log10(1 + f / 700.0)
+            def mel_to_hz(m): return 700 * (10**(m / 2595.0) - 1)
+            lower_mel = hz_to_mel(20)
+            upper_mel = hz_to_mel(20000)
+            mel_points = np.linspace(lower_mel, upper_mel, num_bands + 2)
+            hz_points = mel_to_hz(mel_points)
+            bin_points = np.floor((self.buffer_size + 1) * hz_points / self.sample_rate).astype(int)
+            for i in range(num_bands):
+                start = min(bin_points[i], fft_size - 1)
+                mid = min(bin_points[i + 1], fft_size - 1)
+                end = min(bin_points[i + 2], fft_size - 1)
+                if mid > start:
+                    mat[i, start:mid] = np.linspace(0, 1, mid - start, endpoint=False)
+                if end > mid:
+                    mat[i, mid:end] = np.linspace(1, 0, end - mid, endpoint=False)
+                band_sum = np.sum(mat[i, :])
+                if band_sum > 0:
+                    mat[i, :] /= band_sum
+            return mat
+
+        # 8-band Mel filterbank (for visual modes and ring buffer)
+        self.weight_matrix = build_mel_matrix(self.nb_of_fft_band)
+        # 32-band high-resolution Mel filterbank (for MultiBandOnsetAudioAnalyzer)
+        self.multiband_weight_matrix = build_mel_matrix(self.nb_multiband)
 
         self.chroma_matrix = np.zeros((self.nb_of_chroma, fft_size))
         bin_freqs = np.fft.rfftfreq(self.buffer_size, 1 / self.sample_rate)
@@ -69,8 +73,9 @@ class AudioIngestion:
         """Initialize the FFT band and chromagram analysis arrays."""
         self.nb_of_chroma = 12
 
-        # FFT band arrays (nb_of_fft_band = 8)
+        # FFT band arrays (nb_of_fft_band = 8 for visual modes, nb_multiband = 32 for rhythm analyzer)
         self.fft_band_values = np.zeros(self.nb_of_fft_band)
+        self.multiband_fft_values = np.zeros(self.nb_multiband)
         self.smoothed_fft_band_values = np.zeros(self.nb_of_fft_band)
         self.band_means = np.zeros(self.nb_of_fft_band)
         self.band_mean_distances = np.zeros(self.nb_of_fft_band)
@@ -192,14 +197,21 @@ class AudioIngestion:
     def apply_fake_fft(self, fps_ratio: float) -> None:
         self.fft_band_values += np.random.randint(-10, 11, size=self.nb_of_fft_band)
         self.fft_band_values = np.where(self.fft_band_values <= 0, 20, self.fft_band_values)
+        self.multiband_fft_values += np.random.randint(-10, 11, size=self.nb_multiband)
+        self.multiband_fft_values = np.where(self.multiband_fft_values <= 0, 20, self.multiband_fft_values)
         
     def process_raw_audio(self, audio_data: np.ndarray) -> None:
         windowed_data = audio_data * self.hanning_window
         fft_result = np.abs(np.fft.rfft(windowed_data))
         scale = 150.0 / (self.buffer_size / 1024.0)
         
+        # 8-band Mel projection for chandelier lighting modes
         mel_bands = np.dot(self.weight_matrix, fft_result) * scale
         self.fft_band_values[:] = mel_bands.astype(int)
+
+        # 32-band high-resolution Mel projection for MultiBandOnsetAudioAnalyzer
+        multiband_mel = np.dot(self.multiband_weight_matrix, fft_result) * scale
+        self.multiband_fft_values[:] = multiband_mel
 
         chroma_bands = np.dot(self.chroma_matrix, fft_result) * scale
         self.chroma_values[:] = chroma_bands

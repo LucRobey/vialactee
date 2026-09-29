@@ -1,0 +1,11 @@
+{
+  "track": "Les copains d'abord",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Les copains d'abord.mp3",
+  "duration_sec": 241.22,
+  "total_beats": 649,
+  "total_downbeats": 162,
+  "estimated_bpm": 166.67,
+  "interval_jitter_ms": 18.51,
+  "compute_time_sec": 4.6,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

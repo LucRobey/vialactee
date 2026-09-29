@@ -1,0 +1,11 @@
+{
+  "track": "Hotel California - 2013 Remaster",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Hotel California - 2013 Remaster.mp3",
+  "duration_sec": 391.38,
+  "total_beats": 480,
+  "total_downbeats": 120,
+  "estimated_bpm": 73.17,
+  "interval_jitter_ms": 18.57,
+  "compute_time_sec": 7.89,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

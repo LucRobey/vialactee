@@ -1,0 +1,11 @@
+{
+  "track": "Louise (Feat Edgar)",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Louise (Feat Edgar).mp3",
+  "duration_sec": 357.06,
+  "total_beats": 728,
+  "total_downbeats": 182,
+  "estimated_bpm": 125.0,
+  "interval_jitter_ms": 12.34,
+  "compute_time_sec": 7.77,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

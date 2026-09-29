@@ -1,0 +1,11 @@
+{
+  "track": "Sugar (feat. Francesco Yates)",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Sugar (feat. Francesco Yates).mp3",
+  "duration_sec": 438.1,
+  "total_beats": 896,
+  "total_downbeats": 448,
+  "estimated_bpm": 125.0,
+  "interval_jitter_ms": 17.49,
+  "compute_time_sec": 6.35,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

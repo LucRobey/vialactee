@@ -509,12 +509,12 @@ class AudioAnalyzer(BaseAudioAnalyzer):
             ingest_phase = (judge_phase_idx % tau_val) / tau_val
 
             # Back-project to Speaker Time T_speaker
-            total_delay = (
+            net_delay = (
                 self.lookahead_seconds
-                + self.ingestion.dynamic_audio_latency
-                + self.hardware_latency
+                - getattr(self.ingestion, 'dynamic_audio_latency', 0.0)
+                - self.hardware_latency
             )
-            latency_phase = (self.bpm / 60.0) * total_delay
+            latency_phase = (self.bpm / 60.0) * net_delay
             target_speaker_phase = (ingest_phase - latency_phase) % 1.0
 
             phase_err = (target_speaker_phase - self.speaker_phase + 0.5) % 1.0 - 0.5

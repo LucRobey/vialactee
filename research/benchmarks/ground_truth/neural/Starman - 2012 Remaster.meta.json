@@ -1,0 +1,11 @@
+{
+  "track": "Starman - 2012 Remaster",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Starman - 2012 Remaster.mp3",
+  "duration_sec": 254.29,
+  "total_beats": 427,
+  "total_downbeats": 107,
+  "estimated_bpm": 100.0,
+  "interval_jitter_ms": 22.45,
+  "compute_time_sec": 5.22,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

@@ -1,0 +1,11 @@
+{
+  "track": "Here Comes The Sun - Remastered",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Here Comes The Sun - Remastered.mp3",
+  "duration_sec": 185.75,
+  "total_beats": 397,
+  "total_downbeats": 100,
+  "estimated_bpm": 130.43,
+  "interval_jitter_ms": 19.9,
+  "compute_time_sec": 3.73,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

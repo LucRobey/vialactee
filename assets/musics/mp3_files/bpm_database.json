@@ -19,10 +19,6 @@
     "bpm": 132.0,
     "source": "verified"
   },
-  "Chan Chan": {
-    "bpm": 161.5,
-    "source": "librosa_estimate"
-  },
   "Chanson pour l'auvergnat": {
     "bpm": 103.4,
     "source": "librosa_estimate"

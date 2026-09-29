@@ -1,4 +1,4 @@
-﻿# Vialactée Agent Context (AGENT.md)
+# Vialactée Agent Context (AGENT.md)
 
 This document contains the structural overview, recent changes, and outstanding architecture decisions for the Vialactée project. Use this context to quickly onboard AI agents to the codebase.
 
@@ -10,9 +10,11 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
 
 * `Main.py`: Entry point, parses configs, sets up hardware via `HardwareFactory`, and starts background asyncio loops.
 * `core/`: The main orchestration, transition, and DSP engine:
-  * `Listener.py`: Facade bridging audio ingestion, lookahead delay buffer, and mode properties.
-  * `AudioIngestion.py`: Vectorized FFT, Mel filterbank (8 bands), Chromagram (12 notes), and ADSR smoothing.
-  * `AudioAnalyzer.py`: Anticipation Flywheel ("Oracle") engine with precomputed Pearson template bank and speaker-time back-projection.
+  * `Listener.py`: Facade bridging audio ingestion, lookahead delay buffer, dynamic model selection (`analyzer_model`), and mode properties.
+  * `AudioIngestion.py`: Vectorized FFT, dual-resolution Mel filterbanks (8 bands for modes, 32 bands for multi-band rhythm analysis), Chromagram (12 notes), and ADSR smoothing.
+  * `MultiBandOnsetAudioAnalyzer.py`: Production 32-band onset derivative rhythm engine with 4 instrument separation streams and kick-conditioned anti-phase disambiguation.
+  * `comb_kernels.py`: Standalone compiled dense phase bank builder for sub-millisecond continuous tempo sweeps.
+  * `AudioAnalyzer.py`: Legacy single-ODF Anticipation Flywheel ("Oracle") baseline engine.
   * `StructuralNoveltyDetector.py`: Dual STM/LTM timbre and energy novelty analysis for track drop and verse/chorus detection.
   * `RhythmConfig.py`: Central dataclass for rhythm, confidence, and tempo search parameters.
   * `BeatGridQuantizer.py`: High-precision beat-grid quantization and musical subdivision calculations.
@@ -59,9 +61,10 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
 
 | Feature | Description |
 |---|---|
-| **Vectorized DSP Engine** | Replaced traditional Python indexing with compiled `numpy` matrices in `AudioIngestion.py`. Computes Spectral Flux, Mel filterbanks, and ADSR envelopes natively. |
+| **Vectorized DSP Engine** | Replaced traditional Python indexing with compiled `numpy` matrices in `AudioIngestion.py`. Computes Spectral Flux, dual-resolution Mel filterbanks (8/32 bands), and ADSR envelopes natively. |
 | **12-dimensional Chromagram** | Real-time pitch harmonic analysis mapping acoustic energy to chromatic notes for synesthesia modes. |
 | **Anticipation Flywheel ("Oracle")** | Look-ahead Pearson template bank matching beats in advance and back-projecting phase to speaker time ($T_{\text{speaker}}$). |
+| **Multi-Band Separation & Anti-Phase Disambiguation** | 32-band onset derivative streams ($y_{\text{kick}}, y_{\text{snare}}, y_{\text{hat}}, y_{\text{mid}}$) in `MultiBandOnsetAudioAnalyzer` with kick-conditioned phase arbitration ($K_{\text{anti}} > 1.25 K_1$), eliminating 180° upbeat traps. |
 | **Circular Logarithmic Tempo Consensus** | Logarithmic tempo class octave folding ($f(\text{BPM}) = \log_2(\text{BPM}/60) \pmod 1$) with Gaussian human prior weighting. |
 
 ---
@@ -86,3 +89,4 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
 16. **Anticipation Flywheel ("Oracle") Beat Tracking Engine**: Upgraded rhythm architecture to $O(1)$ pre-computed Pearson template correlation with circular logarithmic tempo-class arithmetic.
 17. **Unified Single Source of Truth for Segments & Dynamic Hardware Profiles (`full` vs `small`)**: Unified physical geometry and Web App UI layout into `config/segments_full.json` and `config/segments_small.json`, resolved dynamically at runtime.
 18. **Dynamic Segment Geometry Reconstruction in Pygame Visualizer (`Fake_leds.py`)**: Visualizer reconstructs segment positions, colors, and vertical bottom-up wiring directly from the active segment JSON file.
+19. **Production Multi-Band Rhythm Engine (`MultiBandOnsetAudioAnalyzer.py`) & Dual-Resolution Mel Ingestion**: Promoted `MultiBandOnsetAudioAnalyzer` to core production engine with 32 Mel bands, 4 instrument streams ($y_{\text{kick}}$, $y_{\text{snare}}$, $y_{\text{hat}}$, $y_{\text{mid}}$), and kick-conditioned anti-phase disambiguation solving 180° upbeat traps (`PHASE_INVERSION_UPBEAT`), supported by standalone compiled `comb_kernels.py` and dual-resolution filterbanks in `AudioIngestion.py`.

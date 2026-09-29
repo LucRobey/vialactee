@@ -1,0 +1,11 @@
+{
+  "track": "Life on Mars_ - 2015 Remaster",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Life on Mars_ - 2015 Remaster.mp3",
+  "duration_sec": 235.99,
+  "total_beats": 455,
+  "total_downbeats": 114,
+  "estimated_bpm": 120.0,
+  "interval_jitter_ms": 53.74,
+  "compute_time_sec": 4.54,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_breakdown_dropout_1",
+    "song": "synthetic_breakdown_dropout",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 41.44,
+    "phase_bias_ms": 9.41,
+    "diagnostic": "Phase jitter standard deviation is 41.4ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_click_140bpm_1",
+    "song": "synthetic_click_140bpm",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 39.5,
+    "phase_bias_ms": -22.34,
+    "diagnostic": "Phase jitter standard deviation is 39.5ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_click_85bpm_1",
+    "song": "synthetic_click_85bpm",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 56.54,
+    "phase_bias_ms": -42.96,
+    "diagnostic": "Phase jitter standard deviation is 56.5ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_step_tempo_1",
+    "song": "synthetic_step_tempo",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 34.05,
+    "phase_bias_ms": -11.71,
+    "diagnostic": "Phase jitter standard deviation is 34.0ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_syncopated_reggae_1",
+    "song": "synthetic_syncopated_reggae",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 37.16,
+    "phase_bias_ms": -56.97,
+    "diagnostic": "Phase jitter standard deviation is 37.2ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_tempo_drift_accel_1",
+    "song": "synthetic_tempo_drift_accel",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 31.22,
+    "phase_bias_ms": 12.82,
+    "diagnostic": "Phase jitter standard deviation is 31.2ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  }
+]

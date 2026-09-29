@@ -23,5 +23,12 @@ Use this skill whenever you are modifying the web remote control interface, WebS
 * **LIVE Swaps**: Changing a mode or toggling a direction in real-time must send WebSocket actions (`select_segment_mode` / `toggle_segment_direction`). `Mode_master` modifies its runtime copies (`modes`/`way`) without mutating loaded configuration definitions on disk.
 * **PERSIST**: Saving a playlist or layout permanently is done strictly via `POST /api/configurations` which persists to the active profile's configuration file via `resolve_configurations_file_path()`. Do not write arbitrary JSON mutations outside this endpoint.
 
-### 4. Protocol Reference
+### 4. Design System & UI Invariants ("Tactile Dark Lego")
+* **Design System Reference**: Always consult [`wabb-interface/DESIGN_SYSTEM.md`](../../wabb-interface/DESIGN_SYSTEM.md) before authoring or modifying UI components.
+* **Aesthetic Vibe**: "Tactile Dark Mode Lego meets Heavy Diagnostic Machinery" — matte dark baseplates (`#12151c`), 30px studs, chamfered borders, hazard headers, and neon OLED glows (`#00f0ff`, `#ffaa00`, `#00ff66`, `#ff3344`).
+* **Lego Math Engine**: Grid coordinates must use `STUD_SIZE = 30px` with `TOLERANCE = 4px`. Never place board elements with arbitrary pixel positioning.
+* **Input Rate Limiting & Drag Isolation**: All interactive sliders MUST implement dragging isolation (`isDraggingRef`, pointer events, throttled ~60ms dispatch, post-release cooldown) so incoming 30Hz snapshots never jitter or snap the slider away from the user.
+* **Code Quality Mandate**: Code must adhere strictly to React 19 rules and pass `npm run lint` with 0 warnings/errors.
+
+### 5. Protocol Reference
 * Consult [api_protocol.md](./references/api_protocol.md) for endpoint specifications, payload shapes, and action names.

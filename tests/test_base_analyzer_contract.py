@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 from core.BaseAudioAnalyzer import BaseAudioAnalyzer
 from core.AudioAnalyzer import AudioAnalyzer
+from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 from core.AudioIngestion import AudioIngestion
 from core.RhythmConfig import RhythmConfig
 
@@ -66,6 +67,38 @@ class TestBaseAudioAnalyzerContract(unittest.TestCase):
 
         meta = analyzer.get_model_metadata()
         self.assertEqual(meta["model_class"], "AudioAnalyzer")
+        self.assertIn("config", meta)
+
+    def test_multiband_analyzer_inherits_and_conforms(self):
+        analyzer = MultiBandOnsetAudioAnalyzer(self.ingestion, self.infos)
+        self.assertIsInstance(analyzer, BaseAudioAnalyzer)
+
+        # Core execution
+        self.assertEqual(analyzer.lookahead_seconds, 5.0)
+        self.assertEqual(analyzer.hardware_latency, 0.0)
+
+        # Core rhythm
+        self.assertEqual(analyzer.bpm, 120.0)
+        self.assertEqual(analyzer.beat_phase, 0.0)
+        self.assertFalse(analyzer.is_beat)
+        self.assertFalse(analyzer.is_real_beat)
+        self.assertEqual(analyzer.beat_count, 0)
+        self.assertIsInstance(analyzer.flywheel_status, str)
+
+        # Telemetry & Metadata
+        telemetry = analyzer.capture_frame_telemetry()
+        self.assertIn("bpm", telemetry)
+        self.assertIn("beat_phase", telemetry)
+        self.assertIn("confidence", telemetry)
+        self.assertIn("status", telemetry)
+
+        # Hardware & Simulator Parity Properties
+        self.assertEqual(analyzer.silence_frames, 0)
+        self.assertIsInstance(analyzer.song_changes_times, list)
+        self.assertIsInstance(analyzer.structural_changes_times, list)
+
+        meta = analyzer.get_model_metadata()
+        self.assertEqual(meta["model_class"], "MultiBandOnsetAudioAnalyzer")
         self.assertIn("config", meta)
 
     def test_minimal_subclass_defaults(self):

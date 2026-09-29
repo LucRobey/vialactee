@@ -276,12 +276,8 @@ class Mode_master:
     def _persist_configurations_store(self) -> bool:
         self._preset_repo.configurations = self.configurations
         self._preset_repo.playlists = self.playlists
-        try:
-            loop = asyncio.get_running_loop()
-            loop.run_in_executor(None, self._preset_repo._persist_configurations_store_sync)
-            return True
-        except RuntimeError:
-            return self._preset_repo._persist_configurations_store_sync()
+        self._preset_repo.persist_configurations_debounced()
+        return True
 
     def _persist_active_configuration_mode_settings(self) -> bool:
         playlist_name = self.activ_configuration.get("playlist")
@@ -582,11 +578,11 @@ class Mode_master:
 
     def _persist_app_config_value(self, key: str, value: Any) -> None:
         self.infos[key] = value
-        try:
-            loop = asyncio.get_running_loop()
-            loop.run_in_executor(None, self._preset_repo._persist_app_config_value_sync, key, value)
-        except RuntimeError:
-            self._preset_repo._persist_app_config_value_sync(key, value)
+        self._preset_repo.persist_app_config_debounced(key, value)
+
+    def flush_sync(self) -> None:
+        """Flushes any pending snapshots in PresetRepository synchronously."""
+        self._preset_repo.flush_sync()
 
     async def process_instruction(self, instruction: Dict[str, Any]) -> Dict[str, Any]:
         """

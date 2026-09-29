@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import time
+import threading
 from typing import Any, Dict, List, Optional
 
 
@@ -22,6 +23,7 @@ class SystemStatus:
         self._last_host_probe = 0.0
         self._last_esp32_probe = 0.0
         self._last_bluetooth_probe = 0.0
+        self._esp32_probe_in_progress = False
 
         self._cached_host_probe: Dict[str, Any] = {
             "cpuTempC": None,
@@ -108,9 +110,10 @@ class SystemStatus:
             self._cached_host_probe = self._probe_host_metrics()
             self._last_host_probe = now
 
-        if now - self._last_esp32_probe >= 3.0:
-            self._cached_esp32_probe = self._probe_esp32_status()
+        if now - self._last_esp32_probe >= 3.0 and not self._esp32_probe_in_progress:
             self._last_esp32_probe = now
+            self._esp32_probe_in_progress = True
+            threading.Thread(target=self._async_probe_esp32, daemon=True).start()
 
         if now - self._last_bluetooth_probe >= 5.0:
             self._cached_bluetooth_probe = self._probe_bluetooth_status()
@@ -351,6 +354,15 @@ class SystemStatus:
             return result.returncode == 0
         except Exception:
             return False
+
+    def _async_probe_esp32(self) -> None:
+        try:
+            result = self._probe_esp32_status()
+            self._cached_esp32_probe = result
+        except Exception:
+            pass
+        finally:
+            self._esp32_probe_in_progress = False
 
     def _probe_bluetooth_status(self) -> Dict[str, Any]:
         if not self._is_linux() or shutil.which("bluetoothctl") is None:

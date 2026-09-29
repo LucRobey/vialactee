@@ -1,0 +1,205 @@
+[
+  {
+    "episode_id": "EP_PHASE_INV_Another One Bites The Dust - Remastered 2011_1",
+    "song": "Another One Bites The Dust - Remastered 2011",
+    "failure_type": "PHASE_INVERSION_UPBEAT",
+    "time_window": [
+      36.95,
+      44.6
+    ],
+    "event_duration_sec": 1.65,
+    "inverted_beats_count": 4,
+    "detected_bpm": 110.0,
+    "mean_confidence": 0.27,
+    "diagnostic": "Tracker locked 180\u00b0 out-of-phase on the upbeat for 4 consecutive beats. AMLt is high but CMLt is low (Upbeat Gap: 0.21)."
+  },
+  {
+    "episode_id": "EP_PHASE_INV_Another One Bites The Dust - Remastered 2011_2",
+    "song": "Another One Bites The Dust - Remastered 2011",
+    "failure_type": "PHASE_INVERSION_UPBEAT",
+    "time_window": [
+      45.18,
+      68.18
+    ],
+    "event_duration_sec": 17.0,
+    "inverted_beats_count": 32,
+    "detected_bpm": 109.6,
+    "mean_confidence": 0.292,
+    "diagnostic": "Tracker locked 180\u00b0 out-of-phase on the upbeat for 32 consecutive beats. AMLt is high but CMLt is low (Upbeat Gap: 0.21)."
+  },
+  {
+    "episode_id": "EP_PHASE_INV_Another One Bites The Dust - Remastered 2011_3",
+    "song": "Another One Bites The Dust - Remastered 2011",
+    "failure_type": "PHASE_INVERSION_UPBEAT",
+    "time_window": [
+      63.3,
+      72.5
+    ],
+    "event_duration_sec": 3.2,
+    "inverted_beats_count": 7,
+    "detected_bpm": 110.2,
+    "mean_confidence": 0.27,
+    "diagnostic": "Tracker locked 180\u00b0 out-of-phase on the upbeat for 7 consecutive beats. AMLt is high but CMLt is low (Upbeat Gap: 0.21)."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Another One Bites The Dust - Remastered 2011_1",
+    "song": "Another One Bites The Dust - Remastered 2011",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 43.38,
+    "phase_bias_ms": 7.72,
+    "diagnostic": "Phase jitter standard deviation is 43.4ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_GHOST_BURST_Bohemian Rhapsody - Remastered 2011_1",
+    "song": "Bohemian Rhapsody - Remastered 2011",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      39.0,
+      343.1
+    ],
+    "ghost_beats_count": 8,
+    "diagnostic": "Detected 8 ghost beats emitted during low-energy interval (flux < 7.10). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Bohemian Rhapsody - Remastered 2011_1",
+    "song": "Bohemian Rhapsody - Remastered 2011",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 46.13,
+    "phase_bias_ms": 10.17,
+    "diagnostic": "Phase jitter standard deviation is 46.1ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Boogie Wonderland_1",
+    "song": "Boogie Wonderland",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 78.45,
+    "phase_bias_ms": 43.33,
+    "diagnostic": "Phase jitter standard deviation is 78.5ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_GHOST_BURST_Chanson pour l'auvergnat_1",
+    "song": "Chanson pour l'auvergnat",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      8.8,
+      120.8
+    ],
+    "ghost_beats_count": 6,
+    "diagnostic": "Detected 6 ghost beats emitted during low-energy interval (flux < 6.22). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Chanson pour l'auvergnat_1",
+    "song": "Chanson pour l'auvergnat",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 73.16,
+    "phase_bias_ms": 3.51,
+    "diagnostic": "Phase jitter standard deviation is 73.2ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_GHOST_BURST_Feeling Good_1",
+    "song": "Feeling Good",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      48.0,
+      167.9
+    ],
+    "ghost_beats_count": 4,
+    "diagnostic": "Detected 4 ghost beats emitted during low-energy interval (flux < 11.87). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Feeling Good_1",
+    "song": "Feeling Good",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 89.36,
+    "phase_bias_ms": -13.11,
+    "diagnostic": "Phase jitter standard deviation is 89.4ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_GHOST_BURST_Nightcall_1",
+    "song": "Nightcall",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      62.9,
+      215.8
+    ],
+    "ghost_beats_count": 17,
+    "diagnostic": "Detected 17 ghost beats emitted during low-energy interval (flux < 22.76). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Nightcall_1",
+    "song": "Nightcall",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 88.49,
+    "phase_bias_ms": -8.38,
+    "diagnostic": "Phase jitter standard deviation is 88.5ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Pumped Up Kicks_1",
+    "song": "Pumped Up Kicks",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 31.01,
+    "phase_bias_ms": 69.0,
+    "diagnostic": "Phase jitter standard deviation is 31.0ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_GHOST_BURST_Roxanne - Remastered 2003_1",
+    "song": "Roxanne - Remastered 2003",
+    "failure_type": "GHOST_BEAT_BURST",
+    "time_window": [
+      16.5,
+      126.9
+    ],
+    "ghost_beats_count": 5,
+    "diagnostic": "Detected 5 ghost beats emitted during low-energy interval (flux < 10.80). Tracker should coast with is_real_beat=False."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_Roxanne - Remastered 2003_1",
+    "song": "Roxanne - Remastered 2003",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 93.19,
+    "phase_bias_ms": 20.51,
+    "diagnostic": "Phase jitter standard deviation is 93.2ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_PHASE_INV_Stayin' Alive - From _Saturday Night Fever_ Soundtrack_1",
+    "song": "Stayin' Alive - From _Saturday Night Fever_ Soundtrack",
+    "failure_type": "PHASE_INVERSION_UPBEAT",
+    "time_window": [
+      0.0,
+      64.08
+    ],
+    "event_duration_sec": 60.33,
+    "inverted_beats_count": 105,
+    "detected_bpm": 103.8,
+    "mean_confidence": 0.331,
+    "diagnostic": "Tracker locked 180\u00b0 out-of-phase on the upbeat for 105 consecutive beats. AMLt is high but CMLt is low (Upbeat Gap: 0.49)."
+  },
+  {
+    "episode_id": "EP_PHASE_INV_Stayin' Alive - From _Saturday Night Fever_ Soundtrack_2",
+    "song": "Stayin' Alive - From _Saturday Night Fever_ Soundtrack",
+    "failure_type": "PHASE_INVERSION_UPBEAT",
+    "time_window": [
+      61.57,
+      195.03
+    ],
+    "event_duration_sec": 127.47,
+    "inverted_beats_count": 219,
+    "detected_bpm": 103.6,
+    "mean_confidence": 0.343,
+    "diagnostic": "Tracker locked 180\u00b0 out-of-phase on the upbeat for 219 consecutive beats. AMLt is high but CMLt is low (Upbeat Gap: 0.49)."
+  },
+  {
+    "episode_id": "EP_PHASE_INV_Stayin' Alive - From _Saturday Night Fever_ Soundtrack_3",
+    "song": "Stayin' Alive - From _Saturday Night Fever_ Soundtrack",
+    "failure_type": "PHASE_INVERSION_UPBEAT",
+    "time_window": [
+      192.5,
+      285.42
+    ],
+    "event_duration_sec": 86.92,
+    "inverted_beats_count": 150,
+    "detected_bpm": 103.6,
+    "mean_confidence": 0.338,
+    "diagnostic": "Tracker locked 180\u00b0 out-of-phase on the upbeat for 150 consecutive beats. AMLt is high but CMLt is low (Upbeat Gap: 0.49)."
+  }
+]

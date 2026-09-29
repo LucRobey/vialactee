@@ -1,0 +1,18 @@
+{
+  "track": "Nightcall",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialactée\\vialactee\\assets\\musics\\mp3_files\\Nightcall.mp3",
+  "duration_sec": 516.86,
+  "total_beats": 780,
+  "total_downbeats": 390,
+  "estimated_bpm": 90.91,
+  "interval_jitter_ms": 25.48,
+  "compute_time_sec": 7.37,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
+  "salience_data": {
+    "mean_salience": 0.669,
+    "high_salience_ratio": 0.649,
+    "low_salience_ratio": 0.148,
+    "has_salience_curve": true,
+    "salience_npz": "Nightcall.salience.npz"
+  }
+}

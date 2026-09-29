@@ -1,0 +1,66 @@
+[
+  {
+    "song": "synthetic_breakdown_dropout",
+    "failure_type": "MODEL_CRASH",
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "duration": 0.0,
+    "diagnostic": "Exception: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\nTraceback (most recent call last):\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\run_benchmark.py\", line 448, in main\n    res = run_benchmark_on_track(model_class, audio_path, beats_path, config=config)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\engine\\evaluator.py\", line 237, in run_benchmark_on_track\n    analyzer.update(current_time, dt, fps_ratio=1.0)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 205, in update\n    self._run_resonator_sweep(dt, is_strong_peak)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 357, in _run_resonator_sweep\n    np.dot(self.W, y_lookahead, out=self.Z)\nValueError: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\n"
+  },
+  {
+    "song": "synthetic_click_120bpm",
+    "failure_type": "MODEL_CRASH",
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "duration": 0.0,
+    "diagnostic": "Exception: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\nTraceback (most recent call last):\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\run_benchmark.py\", line 448, in main\n    res = run_benchmark_on_track(model_class, audio_path, beats_path, config=config)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\engine\\evaluator.py\", line 237, in run_benchmark_on_track\n    analyzer.update(current_time, dt, fps_ratio=1.0)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 205, in update\n    self._run_resonator_sweep(dt, is_strong_peak)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 357, in _run_resonator_sweep\n    np.dot(self.W, y_lookahead, out=self.Z)\nValueError: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\n"
+  },
+  {
+    "song": "synthetic_click_140bpm",
+    "failure_type": "MODEL_CRASH",
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "duration": 0.0,
+    "diagnostic": "Exception: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\nTraceback (most recent call last):\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\run_benchmark.py\", line 448, in main\n    res = run_benchmark_on_track(model_class, audio_path, beats_path, config=config)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\engine\\evaluator.py\", line 237, in run_benchmark_on_track\n    analyzer.update(current_time, dt, fps_ratio=1.0)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 205, in update\n    self._run_resonator_sweep(dt, is_strong_peak)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 357, in _run_resonator_sweep\n    np.dot(self.W, y_lookahead, out=self.Z)\nValueError: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\n"
+  },
+  {
+    "song": "synthetic_click_85bpm",
+    "failure_type": "MODEL_CRASH",
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "duration": 0.0,
+    "diagnostic": "Exception: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\nTraceback (most recent call last):\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\run_benchmark.py\", line 448, in main\n    res = run_benchmark_on_track(model_class, audio_path, beats_path, config=config)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\engine\\evaluator.py\", line 237, in run_benchmark_on_track\n    analyzer.update(current_time, dt, fps_ratio=1.0)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 205, in update\n    self._run_resonator_sweep(dt, is_strong_peak)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 357, in _run_resonator_sweep\n    np.dot(self.W, y_lookahead, out=self.Z)\nValueError: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\n"
+  },
+  {
+    "song": "synthetic_polyrhythm_3_against_2",
+    "failure_type": "MODEL_CRASH",
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "duration": 0.0,
+    "diagnostic": "Exception: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\nTraceback (most recent call last):\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\run_benchmark.py\", line 448, in main\n    res = run_benchmark_on_track(model_class, audio_path, beats_path, config=config)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\engine\\evaluator.py\", line 237, in run_benchmark_on_track\n    analyzer.update(current_time, dt, fps_ratio=1.0)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 205, in update\n    self._run_resonator_sweep(dt, is_strong_peak)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 357, in _run_resonator_sweep\n    np.dot(self.W, y_lookahead, out=self.Z)\nValueError: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\n"
+  },
+  {
+    "song": "synthetic_step_tempo",
+    "failure_type": "MODEL_CRASH",
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "duration": 0.0,
+    "diagnostic": "Exception: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\nTraceback (most recent call last):\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\run_benchmark.py\", line 448, in main\n    res = run_benchmark_on_track(model_class, audio_path, beats_path, config=config)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\engine\\evaluator.py\", line 237, in run_benchmark_on_track\n    analyzer.update(current_time, dt, fps_ratio=1.0)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 205, in update\n    self._run_resonator_sweep(dt, is_strong_peak)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 357, in _run_resonator_sweep\n    np.dot(self.W, y_lookahead, out=self.Z)\nValueError: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\n"
+  },
+  {
+    "song": "synthetic_syncopated_reggae",
+    "failure_type": "MODEL_CRASH",
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "duration": 0.0,
+    "diagnostic": "Exception: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\nTraceback (most recent call last):\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\run_benchmark.py\", line 448, in main\n    res = run_benchmark_on_track(model_class, audio_path, beats_path, config=config)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\engine\\evaluator.py\", line 237, in run_benchmark_on_track\n    analyzer.update(current_time, dt, fps_ratio=1.0)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 205, in update\n    self._run_resonator_sweep(dt, is_strong_peak)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 357, in _run_resonator_sweep\n    np.dot(self.W, y_lookahead, out=self.Z)\nValueError: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\n"
+  },
+  {
+    "song": "synthetic_tempo_drift_accel",
+    "failure_type": "MODEL_CRASH",
+    "start_time": 0.0,
+    "end_time": 0.0,
+    "duration": 0.0,
+    "diagnostic": "Exception: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\nTraceback (most recent call last):\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\run_benchmark.py\", line 448, in main\n    res = run_benchmark_on_track(model_class, audio_path, beats_path, config=config)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\benchmarks\\engine\\evaluator.py\", line 237, in run_benchmark_on_track\n    analyzer.update(current_time, dt, fps_ratio=1.0)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 205, in update\n    self._run_resonator_sweep(dt, is_strong_peak)\n  File \"C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\research\\experiments\\models\\DualResonatorAudioAnalyzer.py\", line 357, in _run_resonator_sweep\n    np.dot(self.W, y_lookahead, out=self.Z)\nValueError: shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)\n"
+  }
+]

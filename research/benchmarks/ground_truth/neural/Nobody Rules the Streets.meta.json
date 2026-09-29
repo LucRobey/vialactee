@@ -1,0 +1,11 @@
+{
+  "track": "Nobody Rules the Streets",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Nobody Rules the Streets.mp3",
+  "duration_sec": 535.0,
+  "total_beats": 1142,
+  "total_downbeats": 286,
+  "estimated_bpm": 130.43,
+  "interval_jitter_ms": 20.72,
+  "compute_time_sec": 6.97,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

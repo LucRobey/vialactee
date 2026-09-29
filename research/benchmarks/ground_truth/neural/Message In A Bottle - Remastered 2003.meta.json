@@ -1,0 +1,11 @@
+{
+  "track": "Message In A Bottle - Remastered 2003",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Message In A Bottle - Remastered 2003.mp3",
+  "duration_sec": 290.28,
+  "total_beats": 731,
+  "total_downbeats": 183,
+  "estimated_bpm": 150.0,
+  "interval_jitter_ms": 18.92,
+  "compute_time_sec": 5.36,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

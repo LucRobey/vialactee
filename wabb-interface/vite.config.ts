@@ -54,9 +54,10 @@ const configurationApiPlugin = () => ({
     server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
       const configPath = getConfigurationsPath();
       const segmentsPath = getSegmentsPath();
+      const pathname = (req.url || '').split('?')[0];
 
       // GET /api/configurations
-      if (req.url === '/api/configurations' && req.method === 'GET') {
+      if (pathname === '/api/configurations' && req.method === 'GET') {
         try {
           const data = fs.readFileSync(configPath, 'utf-8');
           res.setHeader('Content-Type', 'application/json');
@@ -69,7 +70,7 @@ const configurationApiPlugin = () => ({
       }
 
       // GET /api/topology
-      if (req.url === '/api/topology' && req.method === 'GET') {
+      if (pathname === '/api/topology' && req.method === 'GET') {
         try {
           const raw = fs.readFileSync(segmentsPath, 'utf-8');
           const data = JSON.parse(raw);
@@ -97,7 +98,7 @@ const configurationApiPlugin = () => ({
       }
 
       // POST /api/configurations
-      if (req.url === '/api/configurations' && req.method === 'POST') {
+      if (pathname === '/api/configurations' && req.method === 'POST') {
         let body = '';
         req.on('data', (chunk: Buffer) => {
           body += chunk.toString();

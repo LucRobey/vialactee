@@ -1,0 +1,18 @@
+{
+  "track": "Roadgame",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialactée\\vialactee\\assets\\musics\\mp3_files\\Roadgame.mp3",
+  "duration_sec": 224.36,
+  "total_beats": 449,
+  "total_downbeats": 113,
+  "estimated_bpm": 120.0,
+  "interval_jitter_ms": 34.27,
+  "compute_time_sec": 4.04,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
+  "salience_data": {
+    "mean_salience": 0.792,
+    "high_salience_ratio": 0.837,
+    "low_salience_ratio": 0.088,
+    "has_salience_curve": true,
+    "salience_npz": "Roadgame.salience.npz"
+  }
+}

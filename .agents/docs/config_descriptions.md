@@ -62,6 +62,7 @@ The root configuration file governing server launch, audio ingestion, hardware d
 | `luminosity` | int | `50` | `0` to `100` | `AudioIngestion`, `Mode_master` | Master brightness percentage. Persisted across sessions when altered via Web UI. |
 | `sensibility` | int | `50` | `1` to `100` | `AudioIngestion`, `Mode_master` | Audio sensitivity gain percentage. Lower = less reactive, higher = triggers on quiet sounds. |
 | `auto_transition_time` | int | `80` | $\ge 10$ (seconds) | `Mode_master`, `Transition_Director` | Interval between automatic playlist preset transitions. |
+| `analyzer_model` | string | `"MultiBandOnsetAudioAnalyzer"` | `"MultiBandOnsetAudioAnalyzer"`, `"AudioAnalyzer"` | `Listener`, `Mode_master`, `mode_studio`, `music_studio` | Active rhythm tracking model instantiated by `Listener`. `"MultiBandOnsetAudioAnalyzer"` provides 32-band onset derivatives and anti-phase disambiguation; `"AudioAnalyzer"` provides the single-ODF baseline. |
 | `log_level` | string | `"INFO"` | `"DEBUG"`, `"INFO"`, `"WARNING"`, `"ERROR"` | `Main.py` | Logger verbosity level for console and `vialactee.log` rotating file handler. |
 | `latency` | float | `0.0` | Seconds (float) | `AudioAnalyzer` | Hardware output latency offset added to phase calculation ($T_{\text{speaker}}$). |
 | `decay_base` | float | `0.98` | Float in $(0.90, 0.999)$ | `AudioAnalyzer` | Exponential decay rate applied to ODF peaks and running beat trust. |

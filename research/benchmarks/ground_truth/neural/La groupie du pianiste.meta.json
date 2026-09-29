@@ -1,0 +1,11 @@
+{
+  "track": "La groupie du pianiste",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\La groupie du pianiste.mp3",
+  "duration_sec": 280.73,
+  "total_beats": 481,
+  "total_downbeats": 120,
+  "estimated_bpm": 103.45,
+  "interval_jitter_ms": 19.54,
+  "compute_time_sec": 5.0,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

@@ -74,6 +74,41 @@
       "name": "Coloured Middle Wave",
       "module": "Coloured_middle_wave_mode",
       "class": "Coloured_middle_wave_mode"
+    },
+    {
+      "name": "Rhythm Breather",
+      "module": "Rhythm_breather_mode",
+      "class": "Rhythm_breather_mode"
+    },
+    {
+      "name": "Beat Runner",
+      "module": "Beat_runner_mode",
+      "class": "Beat_runner_mode"
+    },
+    {
+      "name": "Impact Shockwave",
+      "module": "Impact_shockwave_mode",
+      "class": "Impact_shockwave_mode"
+    },
+    {
+      "name": "Static Wave",
+      "module": "Static_wave_mode",
+      "class": "Static_wave_mode"
+    },
+    {
+      "name": "Power Bar",
+      "module": "Power_bar_mode",
+      "class": "Power_bar_mode"
+    },
+    {
+      "name": "Extending Waves",
+      "module": "Extending_waves_mode",
+      "class": "Extending_waves_mode"
+    },
+    {
+      "name": "Magnetic Ball",
+      "module": "Magnetic_ball_mode",
+      "class": "Magnetic_ball_mode"
     }
   ]
 }

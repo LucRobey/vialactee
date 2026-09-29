@@ -1,0 +1,11 @@
+{
+  "track": "Rebel Rebel - 2016 Remaster",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Rebel Rebel - 2016 Remaster.mp3",
+  "duration_sec": 274.75,
+  "total_beats": 565,
+  "total_downbeats": 142,
+  "estimated_bpm": 125.0,
+  "interval_jitter_ms": 13.53,
+  "compute_time_sec": 4.74,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

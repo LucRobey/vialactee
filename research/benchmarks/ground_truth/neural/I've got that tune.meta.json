@@ -1,0 +1,11 @@
+{
+  "track": "I've got that tune",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\I've got that tune.mp3",
+  "duration_sec": 269.99,
+  "total_beats": 474,
+  "total_downbeats": 118,
+  "estimated_bpm": 90.91,
+  "interval_jitter_ms": 152.92,
+  "compute_time_sec": 5.21,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

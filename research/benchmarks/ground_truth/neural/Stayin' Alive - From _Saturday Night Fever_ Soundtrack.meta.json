@@ -1,0 +1,18 @@
+{
+  "track": "Stayin' Alive - From _Saturday Night Fever_ Soundtrack",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialactée\\vialactee\\assets\\musics\\mp3_files\\Stayin' Alive - From _Saturday Night Fever_ Soundtrack.mp3",
+  "duration_sec": 570.75,
+  "total_beats": 967,
+  "total_downbeats": 242,
+  "estimated_bpm": 103.45,
+  "interval_jitter_ms": 36.86,
+  "compute_time_sec": 9.66,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
+  "salience_data": {
+    "mean_salience": 0.731,
+    "high_salience_ratio": 0.741,
+    "low_salience_ratio": 0.148,
+    "has_salience_curve": true,
+    "salience_npz": "Stayin' Alive - From _Saturday Night Fever_ Soundtrack.salience.npz"
+  }
+}

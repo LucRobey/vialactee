@@ -19,6 +19,7 @@ from core.AudioAnalyzer import (
     evaluate_specific_bpms,
 )
 from core.AudioIngestion import AudioIngestion
+from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 from core.Listener import Listener
 
 
@@ -137,8 +138,9 @@ class TestAudioAnalyzerIntegration(unittest.TestCase):
             "onRaspberry": False,
             "fakeDelay": 5.0,
             "latency": 0.0,
+            "analyzer_model": "AudioAnalyzer",
         }
-        self.listener = Listener(self.infos)
+        self.listener = Listener(self.infos, analyzer_class=AudioAnalyzer)
         self.analyzer = self.listener.analyzer
 
     def test_initialization(self):
@@ -194,6 +196,65 @@ class TestAudioAnalyzerIntegration(unittest.TestCase):
             self.analyzer.detect_band_peaks(current_time, dt, fps_ratio)
             
         self.assertGreater(self.analyzer.beat_count, initial_beats)
+
+
+class TestMultiBandOnsetAudioAnalyzerIntegration(unittest.TestCase):
+    def setUp(self):
+        self.infos = {
+            "startServer": False,
+            "useMicrophone": False,
+            "HARDWARE_MODE": "simulation",
+            "onRaspberry": False,
+            "fakeDelay": 5.0,
+            "latency": 0.0,
+            "analyzer_model": "MultiBandOnsetAudioAnalyzer",
+        }
+        self.listener = Listener(self.infos)
+        self.analyzer = self.listener.analyzer
+
+    def test_initialization(self):
+        self.assertIsInstance(self.analyzer, MultiBandOnsetAudioAnalyzer)
+        self.assertEqual(self.analyzer.nb_bands, 32)
+        self.assertAlmostEqual(self.analyzer.bpm, 120.0)
+        self.assertEqual(self.analyzer.beat_count, 0)
+        self.assertAlmostEqual(self.analyzer.speaker_phase, 0.0)
+        self.assertFalse(self.listener.is_beat)
+        self.assertIsNotNone(self.analyzer.novelty_detector)
+        self.assertIsNotNone(self.analyzer.config)
+
+    def test_delegation_properties(self):
+        self.assertFalse(self.analyzer.is_song_change)
+        self.assertFalse(self.analyzer.is_verse_chorus_change)
+        self.assertAlmostEqual(self.analyzer.asserved_novelty, 0.0)
+        self.assertEqual(self.analyzer.silence_frames, 0)
+        self.assertIsInstance(self.analyzer.song_changes_times, list)
+        self.assertIsInstance(self.analyzer.structural_changes_times, list)
+
+    def test_dual_resolution_ingestion_parity(self):
+        # AudioIngestion should expose both 8-band for visual modes and 32-band for MultiBand analyzer
+        self.assertEqual(len(self.listener.ingestion.fft_band_values), 8)
+        self.assertEqual(len(self.listener.ingestion.multiband_fft_values), 32)
+        self.assertEqual(len(self.listener.fft_band_values), 8)
+
+    def test_synthetic_pulse_tracking(self):
+        fps = 60.0
+        dt = 1.0 / fps
+        fps_ratio = 1.0
+        
+        for frame in range(400):
+            current_time = frame * dt
+            if frame % 30 == 0:
+                self.listener.ingestion.multiband_fft_values.fill(0.0)
+                self.listener.ingestion.multiband_fft_values[0:3] = [200.0, 150.0, 100.0]
+            else:
+                self.listener.ingestion.multiband_fft_values.fill(0.0)
+                self.listener.ingestion.multiband_fft_values[0:3] = [2.0, 1.0, 0.5]
+                
+            self.analyzer.detect_band_peaks(current_time, dt, fps_ratio)
+            
+        self.assertGreater(self.analyzer.confidence_score, 0.20)
+        self.assertAlmostEqual(self.analyzer.bpm, 120.0, delta=5.0)
+        self.assertGreater(self.analyzer.beat_count, 5)
 
 
 if __name__ == '__main__':

@@ -31,30 +31,30 @@ The user was dissatisfied with past exploratory research in `playground/` becaus
 - **[`core/AudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/AudioAnalyzer.py)**: Production model refactored to inherit from `BaseAudioAnalyzer`. 100% backwards-compatible with `core/Listener.py` (all 22 unit tests pass).
 
 ### B. Immutable Benchmark & Scorecard Engine
-- **[`benchmarks/engine/evaluator.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/benchmarks/engine/evaluator.py)**:
+- **[`research/benchmarks/engine/evaluator.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/engine/evaluator.py)**:
   - 60 FPS headless simulation loop.
   - Computes standardized MIR metrics via `mir_eval`: `F1@50ms` (visual perception threshold), `F1@70ms`, `CMLt`, `AMLt`, `UpbeatGap` ($AMLt - CMLt$), Phase Bias, Phase Jitter, and CPU time per frame.
   - Supports pre-cached `.npz` float32 audio arrays in `assets/musics/mp3_files/librosa/` to bypass slow Windows MP3 decoding.
-- **[`benchmarks/engine/episode_slicer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/benchmarks/engine/episode_slicer.py)**:
+- **[`research/benchmarks/engine/episode_slicer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/engine/episode_slicer.py)**:
   - Slices 5–10s anomaly windows into structured JSON (`failure_episodes.json`) for AI agents:
     - `PHASE_INVERSION_UPBEAT` (180° offbeat traps).
     - `GHOST_BEAT_BURST` (hallucinating beats during silence instead of coasting).
     - `HIGH_PHASE_JITTER` (unstable phase snapping).
-- **[`benchmarks/run_benchmark.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/benchmarks/run_benchmark.py)**: CLI runner with formatted terminal scorecard.
-- **[`benchmarks/compare_runs.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/benchmarks/compare_runs.py)**: Delta comparator between baseline and candidate runs.
+- **[`research/benchmarks/run_benchmark.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/run_benchmark.py)**: CLI runner with formatted terminal scorecard.
+- **[`research/benchmarks/compare_runs.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/compare_runs.py)**: Delta comparator between baseline and candidate runs.
 
 ### C. Visual Diagnostics Suite
-- **[`benchmarks/plot_diagnostics.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/benchmarks/plot_diagnostics.py)**:
+- **[`research/benchmarks/plot_diagnostics.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/plot_diagnostics.py)**:
   - Multi-panel visual generator rendering:
     1. Audio Waveform with True Beats (green solid lines) vs Model Beats (magenta dashed lines).
     2. Spectral Flux (ODF) spikes.
     3. Continuous Flywheel Phase $\phi(t) \in [0, 1)$ sawtooth ramp.
     4. Estimated BPM over time with shaded Failure Episode highlight zones.
-  - Outputs high-res figures to `experiments/plots/` (e.g. `synthetic_step_tempo_diagnostic.png`, `Palladium_diagnostic.png`).
+  - Outputs high-res figures to `research/experiments/plots/` (e.g. `synthetic_step_tempo_diagnostic.png`, `Palladium_diagnostic.png`).
 
 ### D. Experiment Ledger & Leaderboard
-- **[`experiments/LEADERBOARD.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/experiments/LEADERBOARD.md)**: Persistent markdown table tracking Git commit, model name, F1@50ms, CMLt, AMLt, Jitter, and latency.
-- **[`experiments/runs/`](file:///c:/Users/Users/Desktop/vialactée/vialactee/experiments/runs/)**: Versioned run folders containing `manifest.json`, `scorecard.json`, `failure_episodes.json`, and `telemetry.npz`.
+- **[`research/experiments/LEADERBOARD.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/LEADERBOARD.md)**: Persistent markdown table tracking Git commit, model name, F1@50ms, CMLt, AMLt, Jitter, and latency.
+- **[`research/experiments/runs/`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/runs/)**: Versioned run folders containing `manifest.json`, `scorecard.json`, `failure_episodes.json`, and `telemetry.npz`.
 
 ---
 
@@ -63,8 +63,8 @@ The user was dissatisfied with past exploratory research in `playground/` becaus
 The ground truth hierarchy is strictly separated into 3 tiers:
 
 ### Tier 1: Synthetic "Clean Room" Tracks (Active & Verified)
-- **Location:** `benchmarks/ground_truth/synthetic_cache/` (8 WAVs + 8 `.beats.txt`)
-- **Origin:** Generated from scratch by `benchmarks/ground_truth/synthetic/generator.py`.
+- **Location:** `research/benchmarks/ground_truth/synthetic_cache/` (8 WAVs + 8 `.beats.txt`)
+- **Origin:** Generated from scratch by `research/benchmarks/ground_truth/synthetic/generator.py`.
 - **Nature:** 100% mathematical certainty. Beat timestamps are known down to 0.0001s.
 - **Scenarios covered:**
   - `synthetic_click_120bpm`, `synthetic_click_85bpm`, `synthetic_click_140bpm` (constant metronomes).
@@ -75,8 +75,8 @@ The ground truth hierarchy is strictly separated into 3 tiers:
   - `synthetic_polyrhythm_3_against_2` (triplets against quarter notes).
 
 ### Tier 2: Neural Deep Learning Ground Truth (Active & Verified Across User Library)
-- **Location:** `benchmarks/ground_truth/neural/` (contains `.beats.txt`, `.downbeats.txt`, and `.meta.json`)
-- **Generator:** `benchmarks/ground_truth/extract_neural_reference.py`
+- **Location:** `research/benchmarks/ground_truth/neural/` (contains `.beats.txt`, `.downbeats.txt`, and `.meta.json`)
+- **Generator:** `research/benchmarks/ground_truth/extract_neural_reference.py`
 - **Engine:** **BeatNet 1.1.1** (Heydari et al., ISMIR 2021) — 1D/2D CRNN acoustic model + Dynamic Bayesian Network (DBN) inference.
 - **Windows / No-MSVC Acceleration:**
   - Standard `madmom` fails on Windows without MSVC C++. We patched `madmom-0.16.1` using an AST-validated transpiler to convert Cython (`hmm.pyx`, `comb_filters.pyx`, `beats_crf.pyx`) into pure Python, accelerating the Viterbi search loop via `@numba.jit(nopython=True, fastmath=True)`.
@@ -89,14 +89,14 @@ The ground truth hierarchy is strictly separated into 3 tiers:
   - Exposed genuine tracking failure episodes in `AudioAnalyzer`, such as 180° upbeat phase locking on Queen's *Another One Bites The Dust* (Upbeat Gap: 0.21) and ghost beats during quiet sections.
 
 ### Tier 3: Standard Academic Datasets (Ballroom Benchmark Fully Integrated)
-- **Location:** `benchmarks/ground_truth/academic/loader.py` and `benchmarks/ground_truth/academic/data/ballroom/`
+- **Location:** `research/benchmarks/ground_truth/academic/loader.py` and `research/benchmarks/ground_truth/academic/data/ballroom/`
 - **Origin:** University Pompeu Fabra (MTG) & CPJKU ground-truth annotations (Krebs, Böck et al.) via `mirdata`.
 - **Dataset Chosen:** **Ballroom** (698 tracks, 8 ballroom dance styles: Cha-cha-cha, Jive, Quickstep, Rumba, Samba, Tango, Viennese Waltz, Slow Waltz).
 - **Status:**
   - All 698 track beat annotations and metadata index downloaded into local cache.
-  - Sample exported references in `benchmarks/ground_truth/academic/ballroom/`.
+  - Sample exported references in `research/benchmarks/ground_truth/academic/ballroom/`.
   - To download full audio archive (~1.35GB audio WAVs):
-    `python -m benchmarks.ground_truth.academic.loader --dataset ballroom --download-audio`
+    `python -m research.benchmarks.ground_truth.academic.loader --dataset ballroom --download-audio`
 
 ---
 
@@ -153,11 +153,11 @@ Benchmark failure slicing revealed three critical flaws that were resolved:
 The user previously asked about the ground truth data. Here are the immediate options to discuss with the user:
 
 1. **Option A: Download Tier 3 Academic MIR Dataset (Recommended for literature benchmarks)**
-   - Run `python -m benchmarks.ground_truth.academic.loader --dataset ballroom --download`.
+   - Run `python -m research.benchmarks.ground_truth.academic.loader --dataset ballroom --download-audio`.
    - Run benchmark on Ballroom tracks to measure against published international algorithms.
-2. **Option B: Develop Next-Gen Experimental Models (`experiments/models/`)**
+2. **Option B: Develop Next-Gen Experimental Models (`research/experiments/models/`)**
    - Create alternative tracking architectures (e.g. Multi-band Onset Weighting, Kalman Filter Phase Tracker, Dual-Band Judge).
-   - Evaluate against synthetic and natural suites using `python -m benchmarks.run_benchmark --model <Name> --save-run`.
-   - Use `python -m benchmarks.compare_runs` to verify improvement over the 92.0% baseline.
+   - Evaluate against synthetic and natural suites using `python -m research.benchmarks.run_benchmark --model <Name> --save-run`.
+   - Use `python -m research.benchmarks.compare_runs` to verify improvement over the 92.0% baseline.
 3. **Option C: Acoustic / Live Track Non-Quantized Ground Truth**
    - For tracks with human tempo drift (*Bohemian Rhapsody*, live concerts), create a tool or human annotation protocol to mark non-quantized beats.

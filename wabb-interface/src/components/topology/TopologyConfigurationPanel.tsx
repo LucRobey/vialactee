@@ -1,4 +1,3 @@
-import type { ChangeEvent } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { GridSpot } from '../layout/GridSpot';
 import { CONFIGURATOR_OFFSET_C, CONFIGURATOR_OFFSET_R } from '../../constants/topologyData';
@@ -25,7 +24,7 @@ export const TopologyConfigurationPanel = ({
   selectedConfigName: string;
   configName: string;
   isSaving: boolean;
-  onConfigSelect: (event: ChangeEvent<HTMLSelectElement>) => void;
+  onConfigSelect: (selectedName: string) => void;
   onConfigNameChange: (value: string) => void;
   onRenameConfiguration: () => void;
   onDeleteConfiguration: () => void;
@@ -71,7 +70,7 @@ export const TopologyConfigurationPanel = ({
           <>
             <select
               value={effectiveSelectedConfigName}
-              onChange={onConfigSelect}
+              onChange={(event) => onConfigSelect(event.target.value)}
               disabled={isSaving}
               style={{
                 background: '#050505',
@@ -258,7 +257,7 @@ export const TopologyConfigurationPanel = ({
           return (
             <div
               key={cfg.name}
-              onClick={() => !isSaving && onConfigSelect({ target: { value: cfg.name } } as any)}
+              onClick={() => !isSaving && onConfigSelect(cfg.name)}
               style={{
                 padding: '4px 8px',
                 backgroundColor: isSelected ? '#1a1a1a' : 'transparent',

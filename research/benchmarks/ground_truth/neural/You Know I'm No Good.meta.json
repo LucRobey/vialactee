@@ -1,0 +1,11 @@
+{
+  "track": "You Know I'm No Good",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\You Know I'm No Good.mp3",
+  "duration_sec": 256.96,
+  "total_beats": 440,
+  "total_downbeats": 110,
+  "estimated_bpm": 103.45,
+  "interval_jitter_ms": 16.51,
+  "compute_time_sec": 6.1,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

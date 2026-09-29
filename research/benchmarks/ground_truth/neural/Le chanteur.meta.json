@@ -1,0 +1,11 @@
+{
+  "track": "Le chanteur",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Le chanteur.mp3",
+  "duration_sec": 234.99,
+  "total_beats": 487,
+  "total_downbeats": 122,
+  "estimated_bpm": 125.0,
+  "interval_jitter_ms": 13.47,
+  "compute_time_sec": 4.69,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

@@ -1,0 +1,11 @@
+{
+  "track": "Piece of My Heart - Live at The Grande Ballroom, Detroit, MI - March 1968",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Piece of My Heart - Live at The Grande Ballroom, Detroit, MI - March 1968.mp3",
+  "duration_sec": 246.51,
+  "total_beats": 598,
+  "total_downbeats": 150,
+  "estimated_bpm": 157.89,
+  "interval_jitter_ms": 126.63,
+  "compute_time_sec": 4.57,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

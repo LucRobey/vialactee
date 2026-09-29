@@ -127,7 +127,14 @@ function App() {
         </div>
       ) : null}
       <div className="page-container">
-        {tabs[activeTab].component}
+        {tabs.map((tab, index) => (
+          <div
+            key={tab.name}
+            style={{ display: activeTab === index ? 'block' : 'none' }}
+          >
+            {tab.component}
+          </div>
+        ))}
       </div>
     </>
   )

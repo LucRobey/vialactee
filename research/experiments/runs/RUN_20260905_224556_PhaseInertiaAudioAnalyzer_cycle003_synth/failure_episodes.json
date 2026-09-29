@@ -1,0 +1,10 @@
+[
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_step_tempo_1",
+    "song": "synthetic_step_tempo",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 58.0,
+    "phase_bias_ms": -1.34,
+    "diagnostic": "Phase jitter standard deviation is 58.0ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  }
+]

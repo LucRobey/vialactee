@@ -20,6 +20,16 @@ class Connector:
         self.last_instruction = None
         self.last_state_json = None
 
+    def resolve_web_dir(self):
+        project_root = os.path.dirname(os.path.dirname(__file__))
+        wabb_dist = os.path.join(project_root, "wabb-interface", "dist")
+        if os.path.exists(os.path.join(wabb_dist, "index.html")):
+            return wabb_dist
+        legacy_web = os.path.join(project_root, "web")
+        if os.path.exists(legacy_web):
+            return legacy_web
+        return None
+
     async def start_server(self):
         """Start the aiohttp web server with websocket instruction endpoint."""
         app = web.Application()
@@ -29,8 +39,11 @@ class Connector:
         app.router.add_get("/api/topology", self.handle_get_topology)
         app.router.add_get("/ws", self.websocket_handler)
 
-        web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
-        if os.path.exists(web_dir):
+        web_dir = self.resolve_web_dir()
+        if web_dir:
+            assets_dir = os.path.join(web_dir, "assets")
+            if os.path.exists(assets_dir):
+                app.router.add_static("/assets/", path=assets_dir, name="assets")
             app.router.add_static("/static/", path=web_dir, name="static")
 
         runner = web.AppRunner(app)
@@ -45,11 +58,12 @@ class Connector:
             await runner.cleanup()
 
     async def handle_index(self, request):
-        web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
-        index_path = os.path.join(web_dir, "index.html")
-        if os.path.exists(index_path):
-            return web.FileResponse(index_path)
-        return web.Response(text="Web interface not found. Please create web/index.html", status=404)
+        web_dir = self.resolve_web_dir()
+        if web_dir:
+            index_path = os.path.join(web_dir, "index.html")
+            if os.path.exists(index_path):
+                return web.FileResponse(index_path)
+        return web.Response(text="Web interface not found. Please build wabb-interface (npm run build).", status=404)
 
     def configurations_file_path(self):
         infos = getattr(self.mode_master, "infos", None)

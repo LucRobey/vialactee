@@ -9,11 +9,14 @@ This directory contains developer utilities, standalone visualizer studios, and 
 A standalone developer visualizer that runs **100% bit-for-bit identical audio analysis** to the physical chandelier hardware, while letting you author, preview, and hot-reload modes in real time.
 
 ```bash
-# Basic launch (defaults to Palladium.mp3 and Static_wave_mode with 80 LEDs)
+# Basic launch (defaults to Palladium.mp3, MultiBandOnsetAudioAnalyzer, and Static_wave_mode with 80 LEDs)
 python tools/mode_studio.py
 
 # Launch with a specific song and mode
 python tools/mode_studio.py --song assets/musics/mp3_files/Nightcall.mp3 --mode Bary_rainbow_mode
+
+# Compare against the legacy single-ODF baseline
+python tools/mode_studio.py --model AudioAnalyzer
 
 # Launch with custom LED length
 python tools/mode_studio.py --leds 120
@@ -22,8 +25,8 @@ python tools/mode_studio.py --leds 120
 ### Key Capabilities
 
 1. **Hardware-Parity Music Analyzer:**
-   - Instantiates the exact production [`Listener`](../core/Listener.py), [`AudioAnalyzer`](../core/AudioAnalyzer.py) (Anticipation Flywheel "Oracle"), and [`AudioIngestion`](../core/AudioIngestion.py) classes.
-   - Zero mocks or approximations: runs the real $O(1)$ Pearson template bank, logarithmic tempo classes, and phase back-projection.
+   - Instantiates the exact production [`Listener`](../core/Listener.py), [`MultiBandOnsetAudioAnalyzer`](../core/MultiBandOnsetAudioAnalyzer.py) (default), and [`AudioIngestion`](../core/AudioIngestion.py) classes. Supports `--model AudioAnalyzer` for legacy comparisons.
+   - Zero mocks or approximations: runs the real 32-band onset derivative streams, kick anti-phase disambiguation, dense Pearson template bank, and phase back-projection.
    - Slices audio chunks at 44.1 kHz with a 5.0-second lookahead pre-roll so audio heard in your headphones/speakers aligns to the millisecond with the visual downbeats.
 
 2. **Instant Hot-Reload (`[R]` Key):**
@@ -62,11 +65,15 @@ python tools/mode_studio.py --leds 120
 A standalone interactive laboratory dedicated to **inspecting, testing, evaluating, and fine-tuning the music analysis algorithms themselves** with bit-for-bit hardware parity.
 
 ```bash
-# Basic launch (defaults to Palladium.mp3 with 80 reference LEDs)
+# Basic launch (defaults to Palladium.mp3 with 80 reference LEDs, MultiBandOnsetAudioAnalyzer)
 python tools/music_studio.py
 
 # Launch with a specific track
 python tools/music_studio.py --song assets/musics/mp3_files/Nightcall.mp3
+
+# Launch with a specific model for algorithm research/comparison
+python tools/music_studio.py --model MultiBandOnsetAudioAnalyzer
+python tools/music_studio.py --model AudioAnalyzer
 ```
 
 ### Deep Analysis Instruments & Panels
@@ -79,6 +86,7 @@ python tools/music_studio.py --song assets/musics/mp3_files/Nightcall.mp3
 
 2. **Anticipation Flywheel & Beat Tracker Core:**
    - **Continuous Phase Dial:** 360-degree mechanical flywheel needle tracking `beat_phase` ($0.0 \to 1.0$).
+   - **Multi-Band & Anti-Phase Engine:** Runs `MultiBandOnsetAudioAnalyzer` with kick downbeat verification and mid-melodic squelch.
    - **Lock / Coasting Ring:** Glowing Emerald Green when `LOCKED` ($\ge 15\%$ Pearson confidence) and Amber/Orange when `COASTING` through drum breakdowns.
    - **High-Impact Beat Flash:** Flashes on downbeats with frequency classification:
      - 🔴 **Bass/Kick** (< 150 Hz)

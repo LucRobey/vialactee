@@ -112,92 +112,133 @@ type StatusListener = (status: SocketStatus) => void;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
-const isModeMasterSegmentState = (value: unknown): value is ModeMasterSegmentState => (
-  isRecord(value)
-  && typeof value.id === 'string'
-  && typeof value.name === 'string'
-  && typeof value.mode === 'string'
-  && (value.direction === 'UP' || value.direction === 'DOWN')
-  && typeof value.blocked === 'boolean'
-  && (typeof value.targetMode === 'string' || value.targetMode === null)
-  && typeof value.inTransition === 'boolean'
-);
+export const normalizeModeMasterState = (value: unknown): ModeMasterState | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
 
-const isModeSettingDescriptor = (value: unknown): value is ModeSettingDescriptor => (
-  isRecord(value)
-  && typeof value.key === 'string'
-  && typeof value.label === 'string'
-  && (value.control === 'switch' || value.control === 'slider' || value.control === 'list')
-  && (value.valueType === 'boolean' || value.valueType === 'number' || value.valueType === 'string')
-);
+  const systemRaw = isRecord(value.system) ? value.system : {};
+  const actionsRaw = isRecord(systemRaw.actions) ? systemRaw.actions : {};
+  const restartPythonRaw = isRecord(actionsRaw.restartPython) ? actionsRaw.restartPython : {};
+  const rebootRaspberryRaw = isRecord(actionsRaw.rebootRaspberry) ? actionsRaw.rebootRaspberry : {};
+  const lastActionRaw = isRecord(actionsRaw.lastAction) ? actionsRaw.lastAction : null;
 
-const isModeSettingsCatalogEntry = (value: unknown): value is ModeSettingsCatalogEntry => (
-  isRecord(value)
-  && typeof value.mode === 'string'
-  && typeof value.label === 'string'
-  && Array.isArray(value.settings)
-  && value.settings.every(isModeSettingDescriptor)
-);
+  const system: SystemStatus = {
+    cpuTempC: typeof systemRaw.cpuTempC === 'number' ? systemRaw.cpuTempC : null,
+    ramUsagePercent: typeof systemRaw.ramUsagePercent === 'number' ? systemRaw.ramUsagePercent : null,
+    diskUsagePercent: typeof systemRaw.diskUsagePercent === 'number' ? systemRaw.diskUsagePercent : null,
+    pythonLoopFps: typeof systemRaw.pythonLoopFps === 'number' ? systemRaw.pythonLoopFps : null,
+    pythonLoopHealthy: Boolean(systemRaw.pythonLoopHealthy),
+    pythonLoopLastTickMs: typeof systemRaw.pythonLoopLastTickMs === 'number' ? systemRaw.pythonLoopLastTickMs : null,
+    simulationMode: Boolean(systemRaw.simulationMode),
+    hardwareModeConfigured: typeof systemRaw.hardwareModeConfigured === 'string' ? systemRaw.hardwareModeConfigured : 'auto',
+    hardwareModeResolved: typeof systemRaw.hardwareModeResolved === 'string' ? systemRaw.hardwareModeResolved : 'unknown',
+    esp32Status: (['simulation', 'reachable', 'unreachable', 'direct_gpio', 'unknown'].includes(systemRaw.esp32Status as string)
+      ? systemRaw.esp32Status
+      : 'unknown') as SystemStatus['esp32Status'],
+    esp32Target: typeof systemRaw.esp32Target === 'string' ? systemRaw.esp32Target : null,
+    phoneBluetoothStatus: (['connected', 'disconnected', 'unknown'].includes(systemRaw.phoneBluetoothStatus as string)
+      ? systemRaw.phoneBluetoothStatus
+      : 'unknown') as SystemStatus['phoneBluetoothStatus'],
+    phoneBluetoothDeviceName: typeof systemRaw.phoneBluetoothDeviceName === 'string' ? systemRaw.phoneBluetoothDeviceName : null,
+    webClientCount: typeof systemRaw.webClientCount === 'number' ? systemRaw.webClientCount : 0,
+    useMicrophone: systemRaw.useMicrophone !== false,
+    audioStreamHealthy: Boolean(systemRaw.audioStreamHealthy),
+    audioStreamState: typeof systemRaw.audioStreamState === 'string' ? systemRaw.audioStreamState : 'unknown',
+    lastAudioSampleAgeMs: typeof systemRaw.lastAudioSampleAgeMs === 'number' ? systemRaw.lastAudioSampleAgeMs : null,
+    dynamicAudioLatencyMs: typeof systemRaw.dynamicAudioLatencyMs === 'number' ? systemRaw.dynamicAudioLatencyMs : null,
+    uptimeSeconds: typeof systemRaw.uptimeSeconds === 'number' ? systemRaw.uptimeSeconds : 0,
+    hostname: typeof systemRaw.hostname === 'string' ? systemRaw.hostname : 'unknown-host',
+    platform: typeof systemRaw.platform === 'string' ? systemRaw.platform : 'unknown',
+    actions: {
+      restartPython: {
+        available: Boolean(restartPythonRaw.available),
+        reason: typeof restartPythonRaw.reason === 'string' ? restartPythonRaw.reason : null,
+      },
+      rebootRaspberry: {
+        available: Boolean(rebootRaspberryRaw.available),
+        reason: typeof rebootRaspberryRaw.reason === 'string' ? rebootRaspberryRaw.reason : null,
+      },
+      lastAction: lastActionRaw && typeof lastActionRaw.action === 'string'
+        ? {
+            action: lastActionRaw.action,
+            state: (['pending', 'success', 'error'].includes(lastActionRaw.state as string) ? lastActionRaw.state : 'pending') as SystemActionFeedback['state'],
+            message: typeof lastActionRaw.message === 'string' ? lastActionRaw.message : '',
+            timestampMs: typeof lastActionRaw.timestampMs === 'number' ? lastActionRaw.timestampMs : Date.now(),
+          }
+        : null,
+    },
+  };
 
-const isSystemActionCapability = (value: unknown): value is SystemActionCapability => (
-  isRecord(value)
-  && typeof value.available === 'boolean'
-  && (typeof value.reason === 'string' || value.reason === null)
-);
+  const segments: ModeMasterSegmentState[] = Array.isArray(value.segments)
+    ? value.segments.filter(isRecord).map(seg => ({
+        id: String(seg.id ?? ''),
+        name: String(seg.name ?? ''),
+        mode: String(seg.mode ?? 'Rainbow'),
+        direction: (seg.direction === 'DOWN' ? 'DOWN' : 'UP') as 'UP' | 'DOWN',
+        blocked: Boolean(seg.blocked),
+        targetMode: typeof seg.targetMode === 'string' ? seg.targetMode : null,
+        inTransition: Boolean(seg.inTransition),
+      }))
+    : [];
 
-const isSystemActionFeedback = (value: unknown): value is SystemActionFeedback => (
-  isRecord(value)
-  && typeof value.action === 'string'
-  && (value.state === 'pending' || value.state === 'success' || value.state === 'error')
-  && typeof value.message === 'string'
-  && typeof value.timestampMs === 'number'
-);
+  const catalog: ModeSettingsCatalogEntry[] = Array.isArray(value.modeSettingsCatalog)
+    ? value.modeSettingsCatalog.filter(isRecord).map(cat => ({
+        mode: String(cat.mode ?? ''),
+        label: String(cat.label ?? ''),
+        settings: Array.isArray(cat.settings)
+          ? cat.settings.filter(isRecord).map(s => ({
+              key: String(s.key ?? ''),
+              label: String(s.label ?? ''),
+              control: (['switch', 'slider', 'list'].includes(s.control as string) ? s.control : 'slider') as ModeSettingDescriptor['control'],
+              valueType: (['boolean', 'number', 'string'].includes(s.valueType as string) ? s.valueType : 'number') as ModeSettingDescriptor['valueType'],
+              default: (s.default ?? 0) as ModeSettingValue,
+              min: typeof s.min === 'number' ? s.min : undefined,
+              max: typeof s.max === 'number' ? s.max : undefined,
+              step: typeof s.step === 'number' ? s.step : undefined,
+              integer: typeof s.integer === 'boolean' ? s.integer : undefined,
+              unit: typeof s.unit === 'string' ? s.unit : undefined,
+              options: Array.isArray(s.options)
+                ? s.options.filter(isRecord).map(opt => ({
+                    label: String(opt.label ?? ''),
+                    value: (opt.value ?? '') as ModeSettingValue,
+                  }))
+                : undefined,
+            }))
+          : [],
+      }))
+    : [];
 
-const isSystemStatus = (value: unknown): value is SystemStatus => (
-  isRecord(value)
-  && typeof value.pythonLoopHealthy === 'boolean'
-  && typeof value.simulationMode === 'boolean'
-  && typeof value.hardwareModeConfigured === 'string'
-  && typeof value.hardwareModeResolved === 'string'
-  && typeof value.webClientCount === 'number'
-  && typeof value.useMicrophone === 'boolean'
-  && typeof value.audioStreamHealthy === 'boolean'
-  && typeof value.audioStreamState === 'string'
-  && typeof value.uptimeSeconds === 'number'
-  && typeof value.hostname === 'string'
-  && typeof value.platform === 'string'
-  && isRecord(value.actions)
-  && isSystemActionCapability(value.actions.restartPython)
-  && isSystemActionCapability(value.actions.rebootRaspberry)
-  && (value.actions.lastAction === null || isSystemActionFeedback(value.actions.lastAction))
-);
+  const modeSettings: Record<string, Record<string, ModeSettingValue>> = {};
+  if (isRecord(value.modeSettings)) {
+    Object.entries(value.modeSettings).forEach(([m, s]) => {
+      if (isRecord(s)) {
+        modeSettings[m] = { ...s } as Record<string, ModeSettingValue>;
+      }
+    });
+  }
 
-const isModeMasterState = (value: unknown): value is ModeMasterState => (
-  isRecord(value)
-  && (value.hardwareProfile === undefined || typeof value.hardwareProfile === 'string')
-  && (typeof value.activePlaylist === 'string' || value.activePlaylist === null)
-  && Array.isArray(value.enabledPlaylists)
-  && value.enabledPlaylists.every(item => typeof item === 'string')
-  && (typeof value.activeConfiguration === 'string' || value.activeConfiguration === null)
-  && (typeof value.queuedConfiguration === 'string' || value.queuedConfiguration === null)
-  && typeof value.selectedTransition === 'string'
-  && typeof value.transitionLocked === 'boolean'
-  && (typeof value.transitionState === 'string' || value.transitionState === null)
-  && typeof value.transitionProgress === 'number'
-  && typeof value.luminosity === 'number'
-  && typeof value.sensibility === 'number'
-  && typeof value.autoTransitionTime === 'number'
-  && Array.isArray(value.playlists)
-  && value.playlists.every(item => typeof item === 'string')
-  && Array.isArray(value.availableModes)
-  && value.availableModes.every(item => typeof item === 'string')
-  && Array.isArray(value.segments)
-  && value.segments.every(isModeMasterSegmentState)
-  && Array.isArray(value.modeSettingsCatalog)
-  && value.modeSettingsCatalog.every(isModeSettingsCatalogEntry)
-  && isRecord(value.modeSettings)
-  && isSystemStatus(value.system)
-);
+  return {
+    hardwareProfile: typeof value.hardwareProfile === 'string' ? value.hardwareProfile : undefined,
+    activePlaylist: typeof value.activePlaylist === 'string' ? value.activePlaylist : null,
+    enabledPlaylists: Array.isArray(value.enabledPlaylists) ? value.enabledPlaylists.filter((p): p is string => typeof p === 'string') : [],
+    activeConfiguration: typeof value.activeConfiguration === 'string' ? value.activeConfiguration : null,
+    queuedConfiguration: typeof value.queuedConfiguration === 'string' ? value.queuedConfiguration : null,
+    selectedTransition: typeof value.selectedTransition === 'string' ? value.selectedTransition : 'CUT',
+    transitionLocked: Boolean(value.transitionLocked),
+    transitionState: typeof value.transitionState === 'string' ? value.transitionState : null,
+    transitionProgress: typeof value.transitionProgress === 'number' ? value.transitionProgress : 0,
+    luminosity: typeof value.luminosity === 'number' ? value.luminosity : 60,
+    sensibility: typeof value.sensibility === 'number' ? value.sensibility : 70,
+    autoTransitionTime: typeof value.autoTransitionTime === 'number' ? value.autoTransitionTime : 20,
+    playlists: Array.isArray(value.playlists) ? value.playlists.filter((p): p is string => typeof p === 'string') : [],
+    availableModes: Array.isArray(value.availableModes) ? value.availableModes.filter((m): m is string => typeof m === 'string') : [],
+    segments,
+    modeSettingsCatalog: catalog,
+    modeSettings,
+    system,
+  };
+};
 
 const buildBridgeUrl = () => {
   const envUrl = import.meta.env.VITE_WABB_WS_URL;
@@ -289,12 +330,12 @@ class ControlBridge {
         return;
       }
 
-      if (!isModeMasterState(message.payload)) {
+      const state = normalizeModeMasterState(message.payload);
+      if (!state) {
         console.warn('Invalid mode master state payload received from websocket');
         return;
       }
 
-      const state = message.payload;
       this.latestState = state;
       this.stateListeners.forEach(listener => listener(state));
     } catch (error) {

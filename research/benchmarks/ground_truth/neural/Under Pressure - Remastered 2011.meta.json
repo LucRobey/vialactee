@@ -1,0 +1,18 @@
+{
+  "track": "Under Pressure - Remastered 2011",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialactée\\vialactee\\assets\\musics\\mp3_files\\Under Pressure - Remastered 2011.mp3",
+  "duration_sec": 248.45,
+  "total_beats": 455,
+  "total_downbeats": 114,
+  "estimated_bpm": 115.38,
+  "interval_jitter_ms": 16.6,
+  "compute_time_sec": 4.23,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
+  "salience_data": {
+    "mean_salience": 0.726,
+    "high_salience_ratio": 0.733,
+    "low_salience_ratio": 0.144,
+    "has_salience_curve": true,
+    "salience_npz": "Under Pressure - Remastered 2011.salience.npz"
+  }
+}

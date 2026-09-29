@@ -1,0 +1,11 @@
+{
+  "track": "J'ai dix ans",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\J'ai dix ans.mp3",
+  "duration_sec": 182.87,
+  "total_beats": 283,
+  "total_downbeats": 71,
+  "estimated_bpm": 93.75,
+  "interval_jitter_ms": 17.0,
+  "compute_time_sec": 3.46,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

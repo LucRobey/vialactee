@@ -1,0 +1,11 @@
+{
+  "track": "Heroes - 2017 Remaster",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Heroes - 2017 Remaster.mp3",
+  "duration_sec": 371.41,
+  "total_beats": 688,
+  "total_downbeats": 172,
+  "estimated_bpm": 111.11,
+  "interval_jitter_ms": 11.96,
+  "compute_time_sec": 7.35,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

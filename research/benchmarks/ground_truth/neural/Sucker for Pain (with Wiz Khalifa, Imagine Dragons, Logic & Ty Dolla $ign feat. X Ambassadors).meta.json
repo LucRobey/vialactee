@@ -1,0 +1,11 @@
+{
+  "track": "Sucker for Pain (with Wiz Khalifa, Imagine Dragons, Logic & Ty Dolla $ign feat. X Ambassadors)",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Sucker for Pain (with Wiz Khalifa, Imagine Dragons, Logic & Ty Dolla $ign feat. X Ambassadors).mp3",
+  "duration_sec": 243.5,
+  "total_beats": 413,
+  "total_downbeats": 103,
+  "estimated_bpm": 85.71,
+  "interval_jitter_ms": 167.79,
+  "compute_time_sec": 5.01,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

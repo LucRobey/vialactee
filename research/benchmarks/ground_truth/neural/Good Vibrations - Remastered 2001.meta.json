@@ -1,0 +1,11 @@
+{
+  "track": "Good Vibrations - Remastered 2001",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Good Vibrations - Remastered 2001.mp3",
+  "duration_sec": 218.94,
+  "total_beats": 528,
+  "total_downbeats": 132,
+  "estimated_bpm": 150.0,
+  "interval_jitter_ms": 25.34,
+  "compute_time_sec": 4.8,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

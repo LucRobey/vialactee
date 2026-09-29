@@ -1,0 +1,98 @@
+{
+  "synthetic_breakdown_dropout": {
+    "f1_50ms": 0.0,
+    "f1_70ms": 0.0,
+    "cmlt": 0.0,
+    "amlt": 0.0,
+    "upbeat_gap": 1.0,
+    "mean_phase_bias_ms": 0.0,
+    "phase_jitter_ms": 999.0,
+    "avg_frame_time_ms": 0.0,
+    "error": "shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)",
+    "crashed": true
+  },
+  "synthetic_click_120bpm": {
+    "f1_50ms": 0.0,
+    "f1_70ms": 0.0,
+    "cmlt": 0.0,
+    "amlt": 0.0,
+    "upbeat_gap": 1.0,
+    "mean_phase_bias_ms": 0.0,
+    "phase_jitter_ms": 999.0,
+    "avg_frame_time_ms": 0.0,
+    "error": "shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)",
+    "crashed": true
+  },
+  "synthetic_click_140bpm": {
+    "f1_50ms": 0.0,
+    "f1_70ms": 0.0,
+    "cmlt": 0.0,
+    "amlt": 0.0,
+    "upbeat_gap": 1.0,
+    "mean_phase_bias_ms": 0.0,
+    "phase_jitter_ms": 999.0,
+    "avg_frame_time_ms": 0.0,
+    "error": "shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)",
+    "crashed": true
+  },
+  "synthetic_click_85bpm": {
+    "f1_50ms": 0.0,
+    "f1_70ms": 0.0,
+    "cmlt": 0.0,
+    "amlt": 0.0,
+    "upbeat_gap": 1.0,
+    "mean_phase_bias_ms": 0.0,
+    "phase_jitter_ms": 999.0,
+    "avg_frame_time_ms": 0.0,
+    "error": "shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)",
+    "crashed": true
+  },
+  "synthetic_polyrhythm_3_against_2": {
+    "f1_50ms": 0.0,
+    "f1_70ms": 0.0,
+    "cmlt": 0.0,
+    "amlt": 0.0,
+    "upbeat_gap": 1.0,
+    "mean_phase_bias_ms": 0.0,
+    "phase_jitter_ms": 999.0,
+    "avg_frame_time_ms": 0.0,
+    "error": "shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)",
+    "crashed": true
+  },
+  "synthetic_step_tempo": {
+    "f1_50ms": 0.0,
+    "f1_70ms": 0.0,
+    "cmlt": 0.0,
+    "amlt": 0.0,
+    "upbeat_gap": 1.0,
+    "mean_phase_bias_ms": 0.0,
+    "phase_jitter_ms": 999.0,
+    "avg_frame_time_ms": 0.0,
+    "error": "shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)",
+    "crashed": true
+  },
+  "synthetic_syncopated_reggae": {
+    "f1_50ms": 0.0,
+    "f1_70ms": 0.0,
+    "cmlt": 0.0,
+    "amlt": 0.0,
+    "upbeat_gap": 1.0,
+    "mean_phase_bias_ms": 0.0,
+    "phase_jitter_ms": 999.0,
+    "avg_frame_time_ms": 0.0,
+    "error": "shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)",
+    "crashed": true
+  },
+  "synthetic_tempo_drift_accel": {
+    "f1_50ms": 0.0,
+    "f1_70ms": 0.0,
+    "cmlt": 0.0,
+    "amlt": 0.0,
+    "upbeat_gap": 1.0,
+    "mean_phase_bias_ms": 0.0,
+    "phase_jitter_ms": 999.0,
+    "avg_frame_time_ms": 0.0,
+    "error": "shapes (141,0) and (360,) not aligned: 0 (dim 1) != 360 (dim 0)",
+    "crashed": true
+  }
+}

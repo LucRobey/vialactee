@@ -1,0 +1,18 @@
+[
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_polyrhythm_3_against_2_1",
+    "song": "synthetic_polyrhythm_3_against_2",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 29.66,
+    "phase_bias_ms": -2.69,
+    "diagnostic": "Phase jitter standard deviation is 29.7ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_step_tempo_1",
+    "song": "synthetic_step_tempo",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 36.72,
+    "phase_bias_ms": 11.45,
+    "diagnostic": "Phase jitter standard deviation is 36.7ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  }
+]

@@ -4,9 +4,9 @@
       {
         "name": "Rainbow Triad",
         "modes": {
-          "Segment s1": "Rainbow",
-          "Segment s2": "Shining Stars",
-          "Segment s3": "Rainbow"
+          "Segment s1": "Impact Shockwave",
+          "Segment s2": "Beat Runner",
+          "Segment s3": "Impact Shockwave"
         },
         "way": {
           "Segment s1": "UP",
@@ -24,9 +24,9 @@
       {
         "name": "Pulse",
         "modes": {
-          "Segment s1": "Rainbow",
-          "Segment s2": "Shining Stars",
-          "Segment s3": "Rainbow"
+          "Segment s1": "Impact Shockwave",
+          "Segment s2": "Beat Runner",
+          "Segment s3": "Impact Shockwave"
         },
         "way": {
           "Segment s1": "UP",

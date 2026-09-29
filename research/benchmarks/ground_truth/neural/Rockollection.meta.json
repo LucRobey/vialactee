@@ -1,0 +1,11 @@
+{
+  "track": "Rockollection",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Rockollection.mp3",
+  "duration_sec": 250.75,
+  "total_beats": 540,
+  "total_downbeats": 135,
+  "estimated_bpm": 130.43,
+  "interval_jitter_ms": 28.56,
+  "compute_time_sec": 11.13,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { LEGO_MATH } from '../../utils/legoMath';
 import { FitBoard } from '../layout/FitBoard';
 import { NoticeBanner } from '../common/NoticeBanner';
@@ -97,7 +97,6 @@ export const TopologyEditor = ({
   }, []);
 
   useEffect(() => {
-    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       if (noticeTimerRef.current !== null) {
@@ -234,7 +233,7 @@ export const TopologyEditor = ({
 
       return { ...seg, mode, direction };
     }));
-  }, [apiPlaylists, editorMode, syncPlaylistsFromModeMaster]);
+  }, [apiPlaylists, editorMode, syncPlaylistsFromModeMaster, configurationStoreLoader]);
 
   const lastAppliedConfigRef = useRef<string>('');
 
@@ -406,12 +405,11 @@ export const TopologyEditor = ({
     });
   };
 
-  const handleConfigSelect = (event: ChangeEvent<HTMLSelectElement>) => {
+  const handleConfigSelect = (selectedName: string) => {
     if (!playlist) {
       return;
     }
 
-    const selectedName = event.target.value;
     setConfigName(selectedName);
     setSelectedConfigName(selectedName);
     applyStoredConfigurationToSegments(playlist, selectedName);
@@ -647,11 +645,8 @@ export const TopologyEditor = ({
     }
   };
 
-  const fittedBoardWidth = BOARD_WIDTH * 0.8;
-  const fittedBoardHeight = BOARD_HEIGHT * 0.8;
-
   return (
-    <FitBoard width={fittedBoardWidth} height={fittedBoardHeight}>
+    <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
       <div style={{
         position: 'relative',
         width: `${BASE_BOARD_WIDTH}px`,

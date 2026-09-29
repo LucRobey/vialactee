@@ -1,0 +1,70 @@
+[
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_breakdown_dropout_1",
+    "song": "synthetic_breakdown_dropout",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 26.43,
+    "phase_bias_ms": 77.87,
+    "diagnostic": "Phase jitter standard deviation is 26.4ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_click_140bpm_1",
+    "song": "synthetic_click_140bpm",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 79.65,
+    "phase_bias_ms": 16.72,
+    "diagnostic": "Phase jitter standard deviation is 79.7ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_click_85bpm_1",
+    "song": "synthetic_click_85bpm",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 83.74,
+    "phase_bias_ms": 12.7,
+    "diagnostic": "Phase jitter standard deviation is 83.7ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_step_tempo_1",
+    "song": "synthetic_step_tempo",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 54.1,
+    "phase_bias_ms": 35.56,
+    "diagnostic": "Phase jitter standard deviation is 54.1ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_PHASE_INV_synthetic_tempo_drift_accel_1",
+    "song": "synthetic_tempo_drift_accel",
+    "failure_type": "PHASE_INVERSION_UPBEAT",
+    "time_window": [
+      9.05,
+      18.05
+    ],
+    "event_duration_sec": 3.0,
+    "inverted_beats_count": 7,
+    "detected_bpm": 120.0,
+    "mean_confidence": 0.172,
+    "diagnostic": "Tracker locked 180\u00b0 out-of-phase on the upbeat for 7 consecutive beats. AMLt is high but CMLt is low (Upbeat Gap: 0.27)."
+  },
+  {
+    "episode_id": "EP_PHASE_INV_synthetic_tempo_drift_accel_2",
+    "song": "synthetic_tempo_drift_accel",
+    "failure_type": "PHASE_INVERSION_UPBEAT",
+    "time_window": [
+      16.55,
+      26.05
+    ],
+    "event_duration_sec": 3.5,
+    "inverted_beats_count": 8,
+    "detected_bpm": 120.0,
+    "mean_confidence": 0.18,
+    "diagnostic": "Tracker locked 180\u00b0 out-of-phase on the upbeat for 8 consecutive beats. AMLt is high but CMLt is low (Upbeat Gap: 0.27)."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_tempo_drift_accel_1",
+    "song": "synthetic_tempo_drift_accel",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 89.26,
+    "phase_bias_ms": -11.0,
+    "diagnostic": "Phase jitter standard deviation is 89.3ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  }
+]

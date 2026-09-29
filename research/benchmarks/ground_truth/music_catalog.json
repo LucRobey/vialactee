@@ -1,0 +1,492 @@
+{
+  "01-Plastic-People": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Plastic People"
+  },
+  "Another One Bites The Dust - Remastered 2011": {
+    "genre": "Disco / Funk",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Queen"
+  },
+  "Bohemian Rhapsody - Remastered 2011": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Queen"
+  },
+  "Bonnie And Clyde": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Serge Gainsbourg & Brigitte Bardot"
+  },
+  "Boogie Wonderland": {
+    "genre": "Disco / Funk",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "fast_syncopated_brass",
+    "artist": "Earth, Wind & Fire"
+  },
+  "Chanson pour l'auvergnat": {
+    "genre": "Chanson Française / Acoustic",
+    "meter": "3/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_acoustic",
+    "artist": "Georges Brassens"
+  },
+  "Come Together - Remastered": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_acoustic",
+    "artist": "The Beatles"
+  },
+  "Django": {
+    "genre": "Jazz / Gypsy",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "acoustic_syncopation",
+    "artist": "Django Reinhardt"
+  },
+  "Djon maya maï (feat. Victor Démé)": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Synapson feat. Victor Démé"
+  },
+  "Don't You Know - Radio Edit": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Kungs"
+  },
+  "Elle a les yeux revolver": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Marc Lavoine"
+  },
+  "Feeling Good": {
+    "genre": "Soul / R&B",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Nina Simone"
+  },
+  "Five Years - 2012 Remaster": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "David Bowie"
+  },
+  "Flashback": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Laurent Garnier"
+  },
+  "Foule sentimentale": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_acoustic",
+    "artist": "Alain Souchon"
+  },
+  "Genesis": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Justice"
+  },
+  "Girl, You'll Be a Woman Soon": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_acoustic",
+    "artist": "Urge Overkill"
+  },
+  "Good Vibrations - Remastered 2001": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "The Beach Boys"
+  },
+  "Help! - Remastered 2015": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "fast_syncopated_brass",
+    "artist": "The Beatles"
+  },
+  "Here Comes The Sun - Remastered": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "acoustic_syncopation",
+    "artist": "The Beatles"
+  },
+  "Heroes - 2017 Remaster": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "David Bowie"
+  },
+  "Hooked On A Feeling": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Blue Swede"
+  },
+  "Hotel California - 2013 Remaster": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Eagles"
+  },
+  "I've got that tune": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Chinese Man"
+  },
+  "Il jouait du piano debout - Remasterisé en 2004": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "France Gall"
+  },
+  "J'ai dix ans": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_acoustic",
+    "artist": "Alain Souchon"
+  },
+  "J'aime les filles": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Jacques Dutronc"
+  },
+  "Je l'aime à mourir - Remastered": {
+    "genre": "Chanson Française / Acoustic",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_acoustic",
+    "artist": "Francis Cabrel"
+  },
+  "L'envie": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Johnny Hallyday"
+  },
+  "La groupie du pianiste": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Michel Berger"
+  },
+  "Le chanteur": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Daniel Balavoine"
+  },
+  "Les copains d'abord": {
+    "genre": "Chanson Française / Acoustic",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_acoustic",
+    "artist": "Georges Brassens"
+  },
+  "Life on Mars_ - 2015 Remaster": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "David Bowie"
+  },
+  "Louise (Feat Edgar)": {
+    "genre": "Chanson Française / Acoustic",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Gérard Berliner"
+  },
+  "Me Gustas Tu": {
+    "genre": "Latin / World",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Manu Chao"
+  },
+  "Message In A Bottle - Remastered 2003": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "The Police"
+  },
+  "Minor Swing": {
+    "genre": "Jazz / Gypsy",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "acoustic_syncopation",
+    "artist": "Django Reinhardt"
+  },
+  "Mon fils ma bataille": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Daniel Balavoine"
+  },
+  "Money For Nothing": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Dire Straits"
+  },
+  "Money For Nothing_1": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Dire Straits"
+  },
+  "Mr Bobby": {
+    "genre": "Latin / World",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Manu Chao"
+  },
+  "Nightcall": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Kavinsky"
+  },
+  "Nobody Rules the Streets": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Brodinski"
+  },
+  "Palladium": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Brigitte"
+  },
+  "Piece of My Heart - Live at The Grande Ballroom, Detroit, MI - March 1968": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "expressive_tempo_drift",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Big Brother & The Holding Company, Janis Joplin"
+  },
+  "Power": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Kanye West"
+  },
+  "Pumped Up Kicks": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Foster The People"
+  },
+  "Rebel Rebel - 2016 Remaster": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "David Bowie"
+  },
+  "Roadgame": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Kavinsky"
+  },
+  "Rockollection": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Laurent Voulzy"
+  },
+  "Romeo And Juliet": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_acoustic",
+    "artist": "Dire Straits"
+  },
+  "Roxanne - Remastered 2003": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "The Police"
+  },
+  "Résiste - Remasterisé en 2004": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "France Gall"
+  },
+  "September": {
+    "genre": "Disco / Funk",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "fast_syncopated_brass",
+    "artist": "Earth, Wind & Fire"
+  },
+  "Starman - 2012 Remaster": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "David Bowie"
+  },
+  "Stayin' Alive - From _Saturday Night Fever_ Soundtrack": {
+    "genre": "Disco / Funk",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Bee Gees"
+  },
+  "Sucker for Pain (with Wiz Khalifa, Imagine Dragons, Logic & Ty Dolla  feat. X Ambassadors)": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Lil Wayne, Wiz Khalifa, Imagine Dragons"
+  },
+  "Sugar (feat. Francesco Yates)": {
+    "genre": "Electronic / Synthwave",
+    "meter": "4/4",
+    "tempo_character": "quantized_grid",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Robin Schulz feat. Francesco Yates"
+  },
+  "Sultans Of Swing": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Dire Straits"
+  },
+  "Sweet Child O' Mine": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Guns N' Roses"
+  },
+  "Tears Dry On Their Own": {
+    "genre": "Soul / R&B",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Amy Winehouse"
+  },
+  "Ticket To Ride - Remastered 2015": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "The Beatles"
+  },
+  "Time - 2013 Remaster": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Pink Floyd"
+  },
+  "Tous les cris les S.O.S_": {
+    "genre": "Chanson Française / Pop",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Daniel Balavoine"
+  },
+  "Under Pressure - Remastered 2011": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Queen & David Bowie"
+  },
+  "Walk Of Life": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "four_on_the_floor",
+    "artist": "Dire Straits"
+  },
+  "Walking On The Moon": {
+    "genre": "Classic / Hard Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "The Police"
+  },
+  "What's Up_": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "4 Non Blondes"
+  },
+  "Where Is My Mind_": {
+    "genre": "Pop / Pop-Rock",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "sparse_breakdown",
+    "artist": "Pixies"
+  },
+  "You Know I'm No Good": {
+    "genre": "Soul / R&B",
+    "meter": "4/4",
+    "tempo_character": "studio_click_steady",
+    "rhythm_phenomena": "upbeat_trap_risk",
+    "artist": "Amy Winehouse"
+  }
+}

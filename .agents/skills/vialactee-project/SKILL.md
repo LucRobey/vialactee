@@ -19,6 +19,9 @@ Use this skill as the primary architectural authority for the Vialactée music-r
 * `connectors/`: Asynchronous integrations (`Connector.py` aiohttp server exposing `/ws`, `/api/topology`, `/api/configurations`, plus `Local_Microphone.py`).
 * `wabb-interface/`: React-based remote control web interface.
 * `data/`: Active profile preset stores: `configurations_full.json` (full profile) and `configurations_small.json` (small profile).
+* `research/`: Offline MIR laboratory, synthetic/neural/academic benchmark harnesses, and experimental algorithm ledger.
+* `work_history/`: Permanent chronological session logs (`work_history/README.md`, `work_history/TEMPLATE.md`) to maintain persistent engineering context and avoid agent amnesia.
+* `docs/`: Deployment, remote access (`docs/connect.md`), and historical handoff documentation.
 
 ---
 
@@ -48,6 +51,12 @@ Preserve existing aliased import conventions:
 import core.Mode_master as Mode_master
 import hardware.Fake_leds as Fake_leds
 ```
+
+### 6. Agent Work History Protocol
+Every engineering or research session that creates, deletes, or modifies files or configurations must:
+1. Create a dated markdown log in `work_history/` (following `work_history/TEMPLATE.md`).
+2. Add an entry to the chronological table in `work_history/README.md`.
+3. Document exact verification steps, test pass counts, and any open follow-ups.
 
 ---
 

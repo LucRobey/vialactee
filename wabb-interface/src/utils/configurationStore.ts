@@ -1,5 +1,4 @@
 import type { ModeSettingValue } from './controlBridge';
-import configurationsJsonRaw from '../../../data/configurations.json?raw';
 
 export type ModeSettingsMap = Record<string, Record<string, ModeSettingValue>>;
 
@@ -57,9 +56,6 @@ const loadConfigurationStoreFrom = async (sourceUrl: string): Promise<Configurat
 
 export const loadConfigurationStore = async (): Promise<ConfigurationStore> =>
   loadConfigurationStoreFrom('/api/configurations');
-
-export const loadConfigurationFileStore = async (): Promise<ConfigurationStore> =>
-  Promise.resolve(normalizeConfigurationStore(JSON.parse(configurationsJsonRaw) as Partial<ConfigurationStore>));
 
 export const saveConfigurationStore = async (store: ConfigurationStore): Promise<void> => {
   const response = await fetch('/api/configurations', {

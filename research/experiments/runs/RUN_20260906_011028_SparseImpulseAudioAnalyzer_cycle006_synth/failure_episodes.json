@@ -1,0 +1,26 @@
+[
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_breakdown_dropout_1",
+    "song": "synthetic_breakdown_dropout",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 31.46,
+    "phase_bias_ms": 3.76,
+    "diagnostic": "Phase jitter standard deviation is 31.5ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_click_85bpm_1",
+    "song": "synthetic_click_85bpm",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 34.57,
+    "phase_bias_ms": -11.71,
+    "diagnostic": "Phase jitter standard deviation is 34.6ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  },
+  {
+    "episode_id": "EP_HIGH_JITTER_synthetic_step_tempo_1",
+    "song": "synthetic_step_tempo",
+    "failure_type": "HIGH_PHASE_JITTER",
+    "phase_jitter_ms": 28.7,
+    "phase_bias_ms": -11.45,
+    "diagnostic": "Phase jitter standard deviation is 28.7ms (exceeds 25ms threshold). The flywheel soft-snap or phase back-projection is over-correcting."
+  }
+]

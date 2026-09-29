@@ -5,11 +5,12 @@ tests/test_benchmark_engine.py - Verifies the immutable benchmark evaluation eng
 import os
 import unittest
 import numpy as np
+import pytest
 
 from core.AudioAnalyzer import AudioAnalyzer
-from benchmarks.ground_truth.synthetic.generator import generate_click_120bpm
-from benchmarks.engine.evaluator import run_benchmark_on_track, compute_scorecard
-from benchmarks.engine.episode_slicer import extract_failure_episodes
+from research.benchmarks.ground_truth.synthetic.generator import generate_click_120bpm
+from research.benchmarks.engine.evaluator import run_benchmark_on_track, compute_scorecard
+from research.benchmarks.engine.episode_slicer import extract_failure_episodes
 
 
 class TestBenchmarkEngine(unittest.TestCase):
@@ -82,7 +83,7 @@ class TestBenchmarkEngine(unittest.TestCase):
         self.assertEqual(episodes[0]["failure_type"], "PHASE_INVERSION_UPBEAT")
 
     def test_discover_neural_and_synthetic_tracks(self):
-        from benchmarks.run_benchmark import discover_tracks
+        from research.benchmarks.run_benchmark import discover_tracks
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         
         synth_tracks = discover_tracks("synthetic", repo_root)
@@ -94,8 +95,9 @@ class TestBenchmarkEngine(unittest.TestCase):
             self.assertTrue(os.path.exists(audio_p))
             self.assertTrue(os.path.exists(beats_p))
 
+    @pytest.mark.benchmark
     def test_academic_loader_ballroom_annotations(self):
-        from benchmarks.ground_truth.academic.loader import load_academic_tracks
+        from research.benchmarks.ground_truth.academic.loader import load_academic_tracks
         tracks = load_academic_tracks("ballroom", limit=5, require_audio=False)
         self.assertEqual(len(tracks), 5)
         for track_id, audio_path, beats in tracks:

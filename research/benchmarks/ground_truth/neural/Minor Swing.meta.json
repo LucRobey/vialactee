@@ -1,0 +1,11 @@
+{
+  "track": "Minor Swing",
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Minor Swing.mp3",
+  "duration_sec": 196.63,
+  "total_beats": 327,
+  "total_downbeats": 164,
+  "estimated_bpm": 100.0,
+  "interval_jitter_ms": 29.0,
+  "compute_time_sec": 3.26,
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+}
