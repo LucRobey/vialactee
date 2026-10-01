@@ -2,6 +2,8 @@ import asyncio
 import json
 import logging
 import os
+import time
+from typing import Optional
 from aiohttp import web
 from core.Webapp_instruction_logger import WebappInstructionLogger
 from config.Configuration_manager import resolve_configurations_file_path, resolve_segments_file_path
@@ -19,6 +21,9 @@ class Connector:
         self.webapp_instruction_logger = WebappInstructionLogger()
         self.last_instruction = None
         self.last_state_json = None
+        self._was_in_transition: bool = False
+        self._last_transition_broadcast: float = 0.0
+        self._telemetry_task: Optional[asyncio.Task] = None
 
     def resolve_web_dir(self):
         project_root = os.path.dirname(os.path.dirname(__file__))
@@ -51,10 +56,12 @@ class Connector:
         site = web.TCPSite(runner, self.HOST, self.PORT)
         await site.start()
         logger.info(f"Web Server started on http://{self.HOST}:{self.PORT}")
+        self.start_telemetry_loop()
 
         try:
             await asyncio.Event().wait()
         finally:
+            self.stop_telemetry_loop()
             await runner.cleanup()
 
     async def handle_index(self, request):
@@ -206,6 +213,61 @@ class Connector:
 
         for ws in stale_websockets:
             self.active_websockets.discard(ws)
+
+    def start_telemetry_loop(self) -> Optional[asyncio.Task]:
+        """Start the 1.0 Hz baseline heartbeat if not already running."""
+        if self._telemetry_task is None or self._telemetry_task.done():
+            self._telemetry_task = asyncio.create_task(self._telemetry_loop())
+        return self._telemetry_task
+
+    def stop_telemetry_loop(self) -> None:
+        """Stop the 1.0 Hz baseline heartbeat."""
+        if self._telemetry_task and not self._telemetry_task.done():
+            self._telemetry_task.cancel()
+            self._telemetry_task = None
+
+    async def _telemetry_loop(self) -> None:
+        """1.0 Hz baseline heartbeat for active clients."""
+        while True:
+            try:
+                await asyncio.sleep(1.0)
+                if len(self.active_websockets) > 0 and self.mode_master is not None:
+                    await self.broadcast_state_if_changed(self.mode_master.get_state_snapshot())
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"(Connector) Telemetry loop error: {e}")
+
+    async def on_frame_tick(self, mode_master=None) -> None:
+        """Hot-path frame hook. 0.0 ms cost if no clients connected."""
+        if len(self.active_websockets) == 0:
+            return
+
+        mm = mode_master if mode_master is not None else self.mode_master
+        if mm is None:
+            return
+
+        td = getattr(mm, "transition_director", None)
+        in_trans = getattr(td, "is_in_transition", False) if td else False
+        now = time.monotonic()
+
+        # Edge-detect transition start or completion for instant UI sync
+        if in_trans != self._was_in_transition:
+            self._was_in_transition = in_trans
+            try:
+                mm._state_dirty = True
+            except Exception:
+                pass
+
+        is_trans_tick = in_trans and (now - self._last_transition_broadcast >= 0.1)
+        if getattr(mm, "_state_dirty", False) or is_trans_tick:
+            try:
+                mm._state_dirty = False
+            except Exception:
+                pass
+            if is_trans_tick:
+                self._last_transition_broadcast = now
+            await self.broadcast_state_if_changed(mm.get_state_snapshot(), force=is_trans_tick)
 
     def parse_instruction(self, raw_message):
         """Parse controlBridge instruction JSON payload."""

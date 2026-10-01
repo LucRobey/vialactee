@@ -82,6 +82,11 @@ class Transition_Director:
         except Exception as e:
             self.logger.error(f"(TD) Failed to load segments configuration: {e}")
 
+    @property
+    def is_in_transition(self) -> bool:
+        """True if currently interpolating between dual mode buffers."""
+        return self.state == "TRANSITION_DUAL"
+
     def start_transition(self, transition_config: Optional[Dict[str, Any]]) -> None:
         """ Start tracking a new global transition. """
         if transition_config is None:

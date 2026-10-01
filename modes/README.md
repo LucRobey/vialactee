@@ -6,8 +6,8 @@ The `modes` directory contains the creative visual algorithms for the chandelier
 
 - **`Mode.py`**: The base class for all visual effects. It provides shared utility functions, vectorized numpy matrix operations (`self.rgb_list`), decay smoothing (`self.smooth_segment_vectorized`), and enforces the execution contract with `Mode_master`.
 - **[`MODE_RULES.md`](./MODE_RULES.md)**: **Mandatory rules and architectural guidelines** for rhythm reactivity, graceful confidence degradation, real-beat gating (`is_real_beat`), and acoustic volume fallbacks when the beat tracker is uncertain.
-- **Active Modes**: Registered in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json) (15 modes mounted at runtime and switchable from the web interface).
-- **Dormant / Experimental Modes**: Implemented modes in `modes/` that are unmounted from `config/modes.json` (e.g., `Extending_waves_mode.py`, `Magnetic_ball_mode.py`, `Power_bar_mode.py`, `Static_wave_mode.py`, `Alcool_randomer.py`).
+- **Active Modes**: Registered in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json) (22 modes mounted at runtime and switchable from the web interface).
+- **Unmounted Game Modes**: Implemented modes in `modes/` that are unmounted from `config/modes.json` (`Alcool_randomer.py`).
 
 ---
 
@@ -36,13 +36,15 @@ Modes can declare interactive controls for the Web UI by implementing `get_setti
 def get_settings_schema(self):
     return [
         {
-            "id": "chaser_speed",
-            "label": "Chaser Speed",
-            "type": "slider",
-            "min": 0.5,
-            "max": 10.0,
-            "step": 0.1,
-            "default": 2.0
+            "key": "speed",
+            "label": "Travel Speed",
+            "control": "slider",
+            "valueType": "number",
+            "min": 0.2,
+            "max": 8.0,
+            "step": 0.2,
+            "default": 2.0,
+            "attr": "speed",
         }
     ]
 ```

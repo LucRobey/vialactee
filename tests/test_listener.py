@@ -30,6 +30,9 @@ class TestListener(unittest.TestCase):
         self.assertEqual(len(self.listener.fft_band_values), 8)
         self.assertEqual(len(self.listener.chroma_values), 12)
         self.assertEqual(len(self.listener.asserved_fft_band), 8)
+        self.assertEqual(len(self.listener.band_flux), 8)
+        self.assertFalse(hasattr(self.listener, "band_peak"))
+        self.assertFalse(hasattr(self.listener, "_ring_band_peak"))
 
         # Boolean flags
         self.assertFalse(self.listener.is_beat)
@@ -45,6 +48,10 @@ class TestListener(unittest.TestCase):
         self.assertAlmostEqual(self.listener.combined_novelty, 0.0)
         self.assertAlmostEqual(self.listener.live_asserved_novelty, 0.0)
         self.assertAlmostEqual(self.listener.live_combined_novelty, 0.0)
+
+        # Salience properties
+        self.assertAlmostEqual(self.listener.rhythm_salience, 0.0)
+        self.assertAlmostEqual(self.listener.live_rhythm_salience, 0.0)
 
         # Status & tags
         self.assertIn(self.listener.beat_tag, ["Bass/Kick", "Snare/Mid", "Hi-hat/Cymbal"])
@@ -154,6 +161,22 @@ class TestListener(unittest.TestCase):
         self.assertTrue(self.listener.is_verse_chorus_change)
         self.assertAlmostEqual(self.listener.asserved_novelty, 0.88)
         self.assertAlmostEqual(self.listener.combined_novelty, 0.95)
+
+    def test_listener_rhythm_salience_and_reset(self):
+        """Verify delayed rhythm_salience, unbuffered live_rhythm_salience, and reset."""
+        self.listener._delayed_rhythm_salience = 0.75
+        self.listener._ring_rhythm_salience[0] = 0.75
+        self.assertAlmostEqual(self.listener.rhythm_salience, 0.75)
+
+        # live_rhythm_salience comes directly from analyzer
+        self.listener.analyzer._live_rhythm_salience = 0.88
+        self.assertAlmostEqual(self.listener.live_rhythm_salience, 0.88)
+
+        # Calling reset clears delayed and ring buffer states
+        self.listener.reset()
+        self.assertAlmostEqual(self.listener.rhythm_salience, 0.0)
+        self.assertTrue(np.all(self.listener._ring_rhythm_salience == 0.0))
+        self.assertAlmostEqual(self.listener.live_rhythm_salience, 0.0)
 
 
 if __name__ == '__main__':

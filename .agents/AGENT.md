@@ -37,7 +37,7 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
   * `Fake_ESP32.py`: Headless UDP listener subprocess rendering frames into `Fake_leds.py`.
   * `Fake_leds.py`: Pygame graphical simulator reconstructing chandelier layout from active segment JSON.
   * `Rpi_NeoPixels.py`: Legacy direct GPIO driver for Raspberry Pi.
-* `modes/`: Visual effect library (15 active mounted modes in `config/modes.json`, 5 dormant/experimental modes).
+* `modes/`: Visual effect library (22 active mounted modes in `config/modes.json`, 1 unmounted game mode: `Alcool_randomer.py`).
 * `wabb-interface/`: React + Vite frontend remote control (Live Deck, Topology, Configurator, Mode Settings, System Setup).
 * `data/`: Profile-specific preset stores (`configurations_full.json` and `configurations_small.json`).
 

@@ -21,7 +21,7 @@ Use this skill as the primary architectural authority for the Vialactée music-r
 * `data/`: Active profile preset stores: `configurations_full.json` (full profile) and `configurations_small.json` (small profile).
 * `research/`: Offline MIR laboratory, synthetic/neural/academic benchmark harnesses, and experimental algorithm ledger.
 * `work_history/`: Permanent chronological session logs (`work_history/README.md`, `work_history/TEMPLATE.md`) to maintain persistent engineering context and avoid agent amnesia.
-* `docs/`: Deployment, remote access (`docs/connect.md`), and historical handoff documentation.
+* `docs/`: Master documentation root (The 9 Golden Axioms in `docs/axioms/`, Architecture Specs in `docs/architecture/`, Catalogs in `docs/reference/`, Manuals in `docs/manuals/`).
 
 ---
 

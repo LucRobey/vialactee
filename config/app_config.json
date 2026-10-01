@@ -15,8 +15,8 @@
     "profiler": {
         "interval_seconds": 5.0,
         "format": "dashboard",
-        "target_fps": 60,
-        "alert_threshold_ms": 18.0,
+        "target_fps": 30,
+        "alert_threshold_ms": 20.0,
         "track_slowest_mode": true
     }
 }

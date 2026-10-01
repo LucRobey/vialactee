@@ -95,52 +95,65 @@ Here is a breakdown of the core directories in this project:
 - **`/hardware`**: Hardware abstractions. Dynamically provisions channels via `HardwareFactory._get_channel_specs()`, streaming UDP frames via `Udp_Sender` to either `Fake_ESP32` (Pygame visualizer) or physical ESP32 controllers, with `Rpi_NeoPixels` as a legacy direct GPIO fallback.
 - **`/wabb-interface`**: A React-based web application serving as the remote controller. Loads segment layout dynamically from `/api/topology`, and playlists/configurations from the active profile via `/api/configurations`.
 - **`/research`**: The offline MIR laboratory. Houses immutable evaluation benchmark suites (`run_benchmark.py`, synthetic stress tests, BeatNet neural references, Ballroom academic dataset) and the iterative experiment ledger (`LEADERBOARD.md`, candidate models in `research/experiments/models/`). Kept strictly separate from the live embedded Raspberry Pi runtime.
-- **`/.agents`**: Core context, architectural rules, and technical specifications designed for AI agents working on the codebase.
+- **`/.agents`**: Core context, constitution, and specialized skills (`.agents/skills/`) for AI agents working on the codebase.
 - **`/work_history`**: Permanent chronological audit trail and memory ledger where agents and developers log sessions using `TEMPLATE.md` to prevent agent amnesia. Master index is kept in `work_history/README.md`.
-- **`/docs`**: General project and deployment documentation, including Web App network connection setup (`docs/connect.md`) and historical agent handoffs.
+- **`/docs`**: Canonical system documentation root organized under the 5-Tier Authority Matrix. Contains Golden Axioms (`docs/axioms/`), Architecture Specs (`docs/architecture/`), Reference Catalogs (`docs/reference/`), and Operations Manuals (`docs/manuals/`).
 
 ---
 
-## 3. Task-Based Navigation Map
+## 3. The 9 Golden Axioms (Tier 0 Core)
+
+All code and architecture changes must strictly obey the [9 Untouchable Golden Axioms](docs/axioms/README.md):
+- [AXIOM-01: Real-Time Frame Budget (30 FPS / 20ms compute)](docs/axioms/AXIOM-01_FRAME_BUDGET.md)
+- [AXIOM-02: Zero Dynamic Heap Allocations in Render Loop](docs/axioms/AXIOM-02_ZERO_ALLOCATION.md)
+- [AXIOM-03: Physical Chandelier Geometry & Vertical Invariant](docs/axioms/AXIOM-03_HARDWARE_GEOMETRY.md)
+- [AXIOM-04: Network Protocols & UDP MTU Bounds (<= 1202 B)](docs/axioms/AXIOM-04_NETWORK_PROTOCOLS.md)
+- [AXIOM-05: Predictive Lookahead & Speaker Back-Projection (< 50ms sync)](docs/axioms/AXIOM-05_LOOKAHEAD_SYNC.md)
+- [AXIOM-06: Perceptual Invariance & Real-Beat Gating](docs/axioms/AXIOM-06_PERCEPTUAL_RHYTHM.md)
+- [AXIOM-07: Code Governance & The 500-Line Ratchet](docs/axioms/AXIOM-07_CODE_GOVERNANCE.md)
+- [AXIOM-08: Scientific Clean-Room Zero-Regression Gate](docs/axioms/AXIOM-08_RESEARCH_REGRESSION.md)
+- [AXIOM-09: Scoped DSP Math & Processing Invariance](docs/axioms/AXIOM-09_PLATFORM_AGNOSTIC_DSP.md)
+
+---
+
+## 4. Task-Based Navigation Map
 
 Do not guess how the architecture works. Depending on the task you have been given, **you must read the corresponding files** before writing code:
 
 - **If you are modifying or creating a Visual Mode (LED animation):**
-
-  - 👉 Read `modes/README.md` and `modes/modes_description.md`, and review an existing mode to understand the `run()` loop and numpy matrix structure.
+  - 👉 Read [`docs/manuals/mode_authoring_guide.md`](docs/manuals/mode_authoring_guide.md), [`docs/reference/modes_catalog.md`](docs/reference/modes_catalog.md), `modes/README.md`, and `modes/MODE_RULES.md`. Review an existing mode to understand the `render()` loop and numpy matrix structure.
+- **If you are working on Audio Ingestion or DSP Math:**
+  - 👉 Read [`docs/architecture/audio_pipeline.md`](docs/architecture/audio_pipeline.md). Understand the Mel filterbanks, Chromagram extraction, and the non-causal 5-second ring buffer.
 - **If you are working on Beat Detection or Rhythm Tracking:**
-
-  - 👉 Read `.agents/docs/rhythm_tracker_architecture.md` and `.agents/docs/bpm_trust_architecture.md`. Understand the Anticipation Flywheel ("Oracle") before touching DSP code.
+  - 👉 Read [`docs/architecture/rhythm_engine.md`](docs/architecture/rhythm_engine.md) and [`docs/axioms/AXIOM-05_LOOKAHEAD_SYNC.md`](docs/axioms/AXIOM-05_LOOKAHEAD_SYNC.md). Understand the Anticipation Flywheel ("Oracle") and $T_{\text{speaker}}$ back-projection before touching DSP code.
 - **If you are working on Music Events (Drops, Verse/Chorus detection):**
-
-  - 👉 Read `.agents/docs/music_events_architecture.md` (and companion `.agents/docs/music_events_architecture_potential_ideas.md`).
+  - 👉 Read [`docs/architecture/structural_novelty.md`](docs/architecture/structural_novelty.md).
 - **If you are working on Transitions between modes:**
-
-  - 👉 Read `.agents/docs/transition_architecture.md` (and companion `.agents/docs/transition_architecture_potential_ideas.md`).
-- **If you are touching the Main Orchestrator or Async loops:**
-
-  - 👉 Read `.agents/AGENT.md` to understand our `asyncio` constraints and frame-independent math requirements.
+  - 👉 Read [`docs/architecture/transition_director.md`](docs/architecture/transition_director.md) and [`core/Transition_Engine.py`](core/Transition_Engine.py).
+- **If you are touching Hardware, Network, or Output Drivers:**
+  - 👉 Read [`docs/architecture/hardware_abstraction.md`](docs/architecture/hardware_abstraction.md) and [`docs/axioms/AXIOM-04_NETWORK_PROTOCOLS.md`](docs/axioms/AXIOM-04_NETWORK_PROTOCOLS.md).
 - **If you are modifying Web App playlists, configurations, Mode Settings, Live Deck, or Topology state:**
-
-  - 👉 Read `wabb-interface/README.md`, `wabb-interface/design rules/topology.md`, `connectors/README.md`, and `core/precisions/mode_master.md`. The active configuration store (`data/configurations_full.json` or `data/configurations_small.json`) is the source of truth for presets, and `GET /api/topology` provides dynamic segment geometry and cables. Preserve the `/ws` state snapshot flow (`hardwareProfile`, `mode_master_state`). Topology **LIVE** uses instructions for runtime segment mode/direction only; persisting presets uses `POST /api/configurations` from **MODIFY** or **BUILD** only. Per-mode tuning belongs to configuration-scoped `modeSettings` and flows through `Mode_master` over `/ws`.
+  - 👉 Read [`docs/architecture/api_and_wire_protocol.md`](docs/architecture/api_and_wire_protocol.md), [`docs/reference/configuration_schemas.md`](docs/reference/configuration_schemas.md), and `wabb-interface/README.md`.
+- **If you are deploying or configuring the Raspberry Pi 4:**
+  - 👉 Read [`docs/manuals/raspberry_pi_deployment.md`](docs/manuals/raspberry_pi_deployment.md).
 
 ---
 
-## 4. Rules of Engagement (Pre & Post Task)
+## 5. Rules of Engagement (Pre & Post Task)
 
 ### 🛑 BEFORE Doing a Task:
-
-1. **Locate the Context:** Find the relevant `.md` file from the navigation map above and read it.
-2. **Check Configuration:** Never hardcode paths, pins, or IPs. Check `config/app_config.json` to see if a variable already exists.
-3. **Verify Dependencies:** Understand that this project must run on both Windows (Pygame simulator) and Raspberry Pi (NeoPixels / ESP32). Ensure your imports do not break the `HardwareFactory.py` abstraction.
+1. **Consult Golden Axioms:** Ensure your planned design does not violate any of the 9 Golden Axioms.
+2. **Locate the Context:** Find the relevant specification from the navigation map above and read it.
+3. **Check Configuration:** Never hardcode paths, pins, or IPs. Check `config/app_config.json` to see if a variable already exists. Resolve paths dynamically via `config/Configuration_manager.py`.
+4. **Verify Dependencies:** Understand that this project runs on both Windows (Pygame simulator) and Raspberry Pi (NeoPixels / ESP32). Ensure imports preserve the `HardwareFactory.py` abstraction.
 
 ### ✅ AFTER Doing a Task:
-
 1. **Self-Correction & Linting:**
    - Did you use blocking synchronous code (`time.sleep`)? If so, remove it and use `asyncio.sleep` or delta-time math.
    - Are your calculations frame-independent (using `fps_ratio`)?
-2. **Update Documentation:** If you changed how a core algorithm works, added a new feature, or changed a configuration schema, **you must update the relevant `.md` file in `.agents/docs/`**.
-3. **Simulator Check:** If possible, confirm that the code will execute properly under the `Fake_leds` Pygame simulator.
-4. If you made temporary python files, remember to delete them or move them to the `playground/` directory.
-5. **Mandatory Work History Logging:** Every engineering or research session that modifies code or project configuration **must create or update a dated entry in `work_history/`** following [`work_history/TEMPLATE.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/work_history/TEMPLATE.md) and add it to the chronological table in [`work_history/README.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/work_history/README.md).
+   - Did your changes stay within the 500-line code governance cap (`AXIOM-07`)?
+2. **Update Documentation:** If you changed an algorithm, API, or configuration schema, **you must update the corresponding specification in `docs/`**.
+3. **Simulator Check:** If possible, confirm that the code executes properly under the `Fake_leds` Pygame simulator.
+4. **Fast Governance Tests:** Run `python -m pytest tests/test_code_governance.py` to confirm code health.
+5. **Mandatory Work History Logging:** Every engineering or research session that modifies code or project configuration **must create or update a dated entry in `work_history/`** following [`work_history/TEMPLATE.md`](work_history/TEMPLATE.md) and add it to the chronological table in [`work_history/README.md`](work_history/README.md).
 

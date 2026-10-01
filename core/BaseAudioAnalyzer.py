@@ -42,7 +42,6 @@ class BaseAudioAnalyzer(ABC):
         # 2. Spectral & Transient Dynamics Defaults
         nb_bands = getattr(self.ingestion, 'nb_of_fft_band', 8)
         self.band_flux: np.ndarray = np.zeros(nb_bands)
-        self.band_peak: np.ndarray = np.zeros(nb_bands, dtype=int)
         self.spectral_centroid: float = 0.5
 
         # 3. Macro-Structure & Form Defaults
@@ -105,6 +104,16 @@ class BaseAudioAnalyzer(ABC):
     @beat_confidence.setter
     def beat_confidence(self, val: float) -> None:
         self._beat_confidence = float(val)
+
+    @property
+    def rhythm_salience(self) -> float:
+        """Normalized rhythmic salience [0.0, 1.0] at speaker playback time."""
+        return float(np.clip(self.beat_confidence, 0.0, 1.0))
+
+    @property
+    def live_rhythm_salience(self) -> float:
+        """Instantaneous rhythmic salience [0.0, 1.0] at lookahead time."""
+        return float(np.clip(self.beat_confidence, 0.0, 1.0))
 
     # Aliases for backwards compatibility
     @property

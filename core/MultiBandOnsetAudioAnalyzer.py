@@ -61,23 +61,13 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         self.btrack_fps: float = self.odf_fps
 
         # Configure Multi-Band Resolution (16, 24, 32 bands)
-        if hasattr(self.ingestion, 'multiband_fft_values'):
-            nb_from_ingestion = len(self.ingestion.multiband_fft_values)
-        else:
-            nb_from_ingestion = getattr(self.ingestion, 'nb_of_fft_band', 32)
-
+        nb_from_ingestion = len(self.ingestion.multiband_fft_values) if hasattr(self.ingestion, 'multiband_fft_values') else getattr(self.ingestion, 'nb_of_fft_band', 32)
         cfg_bands = getattr(self.config, 'nb_bands', 8)
-        if cfg_bands != 8:
-            self.nb_bands: int = cfg_bands
-        else:
-            self.nb_bands = nb_from_ingestion if nb_from_ingestion != 8 else self.NB_AUDIO_BANDS
+        self.nb_bands: int = cfg_bands if cfg_bands != 8 else (nb_from_ingestion if nb_from_ingestion != 8 else self.NB_AUDIO_BANDS)
 
         # Match novelty detector bands to the timbre feature vector (band_proportion)
         detector_bands = len(self.ingestion.band_proportion) if hasattr(self.ingestion, 'band_proportion') and len(self.ingestion.band_proportion) > 0 else self.nb_bands
-        self.novelty_detector = StructuralNoveltyDetector(
-            nb_fft_bands=detector_bands,
-            config=self.config
-        )
+        self.novelty_detector = StructuralNoveltyDetector(nb_fft_bands=detector_bands, config=self.config)
 
         # 1. Multi-Band State Buffers (Zero Allocation)
         self.prev_fft_band_values = np.zeros(self.nb_bands, dtype=np.float64)
@@ -89,7 +79,6 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         # Adaptive peak sensitivity buffers
         self.peak_sensitivity = np.ones(self.nb_bands, dtype=np.float64) * 1.8
         self.peak_times = np.zeros(self.nb_bands, dtype=np.float64)
-        self.band_peak = np.zeros(self.nb_bands, dtype=int)
 
         # Instrument Routing Table based on band resolution
         self._setup_instrument_routing()
@@ -101,11 +90,21 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         self.h_count: int = 0
         self.dynamic_squelch = np.ones(self.nb_bands, dtype=np.float64)
 
+        # Rhythmic Salience Scratch Buffers (Zero Allocation)
+        self._drum_flux_history = np.zeros(180, dtype=np.float64)
+        self._drum_flux_idx: int = 0
+        self._real_beat_history = np.zeros(8, dtype=np.float64)
+        self._real_beat_idx: int = 0
+        self._live_rhythm_salience: float = 0.0
+        self.phi_drum: float = 0.0
+
         # 2. ODF Buffer Configuration (M=300 samples, 5.0s lookahead)
         self.M: int = 300
         self.odf_buffer_size: int = max(360, int((self.lookahead_seconds + 1.0) * self.odf_fps))
         self.odf_buffer: np.ndarray = np.zeros(self.odf_buffer_size, dtype=np.float64)
         self.kick_odf_buffer: np.ndarray = np.zeros(self.odf_buffer_size, dtype=np.float64)
+        self.band_flux_buffer: np.ndarray = np.zeros((self.odf_buffer_size, self.nb_bands), dtype=np.float64)
+        self.band_flux_write_idx: int = 0
         self.rolling_flux_baseline: float = 0.0
 
         # Causal exponential decay curve (applied ONCE to lookahead buffer)
@@ -145,13 +144,7 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         self.p_scores_buffers: Dict[int, np.ndarray] = {}
 
         for b in range(int(self.bpm_min), int(self.bpm_max) + 1):
-            T_norm = build_dense_phase_bank(
-                bpm=float(b),
-                fps=self.odf_fps,
-                buffer_len=self.M,
-                pulse_shape="triangular",
-                duty_cycle=0.10
-            )
+            T_norm = build_dense_phase_bank(bpm=float(b), fps=self.odf_fps, buffer_len=self.M, pulse_shape="triangular", duty_cycle=0.10)
             self.templates[b] = T_norm
             self.p_scores_buffers[b] = np.zeros(T_norm.shape[0], dtype=np.float64)
 
@@ -165,6 +158,7 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
 
         self.beat_count: int = 0
         self.last_beat_time: float = -100.0
+        self._frames_processed: int = 0
 
         self.is_beat: bool = False
         self.is_real_beat: bool = False
@@ -174,52 +168,31 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
     def _setup_instrument_routing(self) -> None:
         """Sets up frequency band indices and weights tailored to the band resolution."""
         if self.nb_bands >= 32:
-            self.kick_bands = [0, 1, 2]
-            self.kick_weights = [2.0, 1.8, 1.2]
-            self.snare_bands = [4, 5, 14, 15, 16]
-            self.snare_weights = [1.2, 1.2, 0.8, 0.8, 0.8]
-            self.mid_bands = list(range(6, 14))
-            self.hat_bands = list(range(22, min(self.nb_bands, 32)))
+            self.kick_bands, self.kick_weights = [0, 1, 2], [2.0, 1.8, 1.2]
+            self.snare_bands, self.snare_weights = [4, 5, 14, 15, 16], [1.2, 1.2, 0.8, 0.8, 0.8]
+            self.mid_bands, self.hat_bands = list(range(6, 14)), list(range(22, min(self.nb_bands, 32)))
         elif self.nb_bands >= 24:
-            self.kick_bands = [0, 1, 2]
-            self.kick_weights = [2.0, 1.6, 1.0]
-            self.snare_bands = [3, 4, 11, 12, 13]
-            self.snare_weights = [1.2, 1.2, 0.8, 0.8, 0.8]
-            self.mid_bands = list(range(5, 11))
-            self.hat_bands = list(range(16, min(self.nb_bands, 24)))
+            self.kick_bands, self.kick_weights = [0, 1, 2], [2.0, 1.6, 1.0]
+            self.snare_bands, self.snare_weights = [3, 4, 11, 12, 13], [1.2, 1.2, 0.8, 0.8, 0.8]
+            self.mid_bands, self.hat_bands = list(range(5, 11)), list(range(16, min(self.nb_bands, 24)))
         elif self.nb_bands >= 16:
-            self.kick_bands = [0, 1]
-            self.kick_weights = [2.0, 1.5]
-            self.snare_bands = [2, 3, 7, 8]
-            self.snare_weights = [1.2, 1.2, 0.8, 0.8]
-            self.mid_bands = [4, 5, 6]
-            self.hat_bands = list(range(11, min(self.nb_bands, 16)))
+            self.kick_bands, self.kick_weights = [0, 1], [2.0, 1.5]
+            self.snare_bands, self.snare_weights = [2, 3, 7, 8], [1.2, 1.2, 0.8, 0.8]
+            self.mid_bands, self.hat_bands = [4, 5, 6], list(range(11, min(self.nb_bands, 16)))
         else:
-            # 8-band fallback
-            self.kick_bands = [0, 1]
-            self.kick_weights = [2.0, 1.8]
-            self.snare_bands = [2, 3]
-            self.snare_weights = [1.2, 1.0]
-            self.mid_bands = [4, 5]
-            self.hat_bands = [6, 7]
+            self.kick_bands, self.kick_weights = [0, 1], [2.0, 1.8]
+            self.snare_bands, self.snare_weights = [2, 3], [1.2, 1.0]
+            self.mid_bands, self.hat_bands = [4, 5], [6, 7]
+        self.snare_mid_bands = self.snare_bands + self.mid_bands
 
     def reset(self) -> None:
         """Resets all runtime state, buffers, and accumulators."""
-        self.prev_fft_band_values.fill(0.0)
-        self.diff_buffer.fill(0.0)
-        self.dE.fill(0.0)
-        self.band_flux.fill(0.0)
-        self.smoothed_flux.fill(0.0)
+        for buf in (self.prev_fft_band_values, self.diff_buffer, self.dE, self.band_flux, self.smoothed_flux, self.peak_times, self.band_flux_history, self.odf_buffer, self.kick_odf_buffer, self.band_flux_buffer, self._drum_flux_history, self._real_beat_history):
+            buf.fill(0.0)
         self.peak_sensitivity.fill(1.8)
-        self.peak_times.fill(0.0)
-        self.band_peak.fill(0)
-        self.band_flux_history.fill(0.0)
-        self.h_idx = 0
-        self.h_count = 0
         self.dynamic_squelch.fill(1.0)
-        self.odf_buffer.fill(0.0)
-        self.kick_odf_buffer.fill(0.0)
-        self.rolling_flux_baseline = 0.0
+        self.h_idx = self.h_count = self.band_flux_write_idx = self._drum_flux_idx = self._real_beat_idx = self._frames_processed = 0
+        self.rolling_flux_baseline = self._live_rhythm_salience = self.phi_drum = 0.0
 
         self.speaker_phase = 0.0
         self.bpm = 120.0
@@ -265,6 +238,7 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         self.is_beat = False
         self.is_real_beat = False
         self.is_dropped_beat = False
+        self._frames_processed += 1
 
         # 1. Multi-Band Spectral Flux & Derivative Calculation
         is_strong_peak = self._ingest_multiband_derivative_odf(current_time, fps_ratio)
@@ -274,6 +248,9 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
 
         # 3. Continuous Speaker Flywheel Advancement & Physical Beat Validation
         self._advance_speaker_flywheel(current_time, dt)
+
+        # 4. Real-time Rhythmic Salience Computation
+        self._compute_rhythm_salience(fps_ratio)
 
     def update(self, current_time: float, dt: float, fps_ratio: float) -> None:
         """Primary per-frame 60 FPS processing step with zero dynamic heap allocations."""
@@ -319,23 +296,21 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         dE = self.dE
         y_kick = 0.0
         for b, w in zip(self.kick_bands, self.kick_weights):
-            if b < active_len:
-                y_kick += w * dE[b]
-
+            if b < active_len: y_kick += w * dE[b]
         y_snare = 0.0
         for b, w in zip(self.snare_bands, self.snare_weights):
-            if b < active_len:
-                y_snare += w * dE[b]
-
+            if b < active_len: y_snare += w * dE[b]
         y_mid = 0.0
         for b in self.mid_bands:
-            if b < active_len:
-                y_mid += 0.20 * self.dynamic_squelch[b] * dE[b]
-
+            if b < active_len: y_mid += 0.20 * self.dynamic_squelch[b] * dE[b]
         y_hat = 0.0
         for b in self.hat_bands:
-            if b < active_len:
-                y_hat += 0.30 * dE[b]
+            if b < active_len: y_hat += 0.30 * dE[b]
+
+        # Drum flux tracking for real-time rhythmic salience
+        self.phi_drum = float(y_kick + y_snare)
+        self._drum_flux_history[self._drum_flux_idx] = self.phi_drum
+        self._drum_flux_idx = (self._drum_flux_idx + 1) % 180
 
         # Contrastive novelty function: subtract excess hi-hat sizzle
         penalty = 0.35 * max(0.0, y_hat - y_kick)
@@ -347,6 +322,12 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
 
         self.kick_odf_buffer[:-1] = self.kick_odf_buffer[1:]
         self.kick_odf_buffer[-1] = y_kick
+
+        # Ingest multi-band flux into circular ring buffer for speaker-time beat classification
+        np.copyto(self.band_flux_buffer[self.band_flux_write_idx, :active_len], self.dE[:active_len])
+        if active_len < self.nb_bands:
+            self.band_flux_buffer[self.band_flux_write_idx, active_len:].fill(0.0)
+        self.band_flux_write_idx = (self.band_flux_write_idx + 1) % self.odf_buffer_size
 
         decay = self.config.rolling_flux_decay
         self.rolling_flux_baseline = decay * self.rolling_flux_baseline + (1.0 - decay) * y_metric
@@ -519,33 +500,57 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
                 # Validate physical presence at speaker playback time window
                 speaker_offset = int(self.lookahead_seconds * self.odf_fps)
                 speaker_center = max(0, min(self.odf_buffer_size - 1, (self.odf_buffer_size - 1) - speaker_offset))
-                w_start = max(0, speaker_center - 3)
-                w_end = min(self.odf_buffer_size, speaker_center + 4)
+                w_start = max(0, speaker_center - 6)
+                w_end = min(self.odf_buffer_size, speaker_center + 7)
                 local_energy = float(np.max(self.odf_buffer[w_start:w_end]))
 
-                if (
-                    local_energy > (self.config.real_beat_baseline_ratio * self.rolling_flux_baseline)
-                    and local_energy >= self.config.real_beat_energy_floor
-                ):
-                    self.is_real_beat = True
-                    self.is_dropped_beat = False
+                if (local_energy > (self.config.real_beat_baseline_ratio * self.rolling_flux_baseline) and local_energy >= self.config.real_beat_energy_floor):
+                    self.is_real_beat, self.is_dropped_beat = True, False
                 else:
-                    self.is_real_beat = False
-                    self.is_dropped_beat = True
+                    self.is_real_beat, self.is_dropped_beat = False, True
 
-                # Transient Frequency-Band Classification
-                if len(self.band_flux) >= 8:
-                    b_val = float(np.sum(self.band_flux[self.kick_bands]))
-                    m_val = float(np.sum(self.band_flux[self.snare_bands]))
-                    h_val = float(np.sum(self.band_flux[self.hat_bands]))
-                    if b_val >= m_val and b_val >= h_val:
-                        self.current_beat_tag = "Bass/Kick"
-                    elif m_val >= b_val and m_val >= h_val:
-                        self.current_beat_tag = "Snare/Mid"
-                    else:
-                        self.current_beat_tag = "Hi-hat/Cymbal"
+                is_real = (self.flywheel_status == "locked") and (self.is_real_beat or (self._frames_processed < speaker_offset and float(np.max(self.odf_buffer[-30:])) >= self.config.real_beat_energy_floor))
+                self._real_beat_history[self._real_beat_idx] = 1.0 if is_real else 0.0
+                self._real_beat_idx = (self._real_beat_idx + 1) % 8
+
+                # Transient Frequency-Band Classification across speaker playback window (T_speaker)
+                if self.nb_bands >= 8:
+                    b_val = m_val = h_val = 0.0
+                    for k in range(w_start, w_end):
+                        flux = self.band_flux_buffer[(self.band_flux_write_idx + k) % self.odf_buffer_size]
+                        for b in self.kick_bands:
+                            if b < len(flux): b_val += flux[b]
+                        for b in self.snare_mid_bands:
+                            if b < len(flux): m_val += flux[b]
+                        for b in self.hat_bands:
+                            if b < len(flux): h_val += flux[b]
+                    self.current_beat_tag = "Bass/Kick" if (b_val >= m_val and b_val >= h_val) else ("Snare/Mid" if m_val >= h_val else "Hi-hat/Cymbal")
                 else:
                     self.current_beat_tag = "Bass/Kick"
+
+    def _compute_rhythm_salience(self, fps_ratio: float) -> None:
+        """Calculates real-time rhythmic salience using the 4 acoustic pillars."""
+        idx = self._drum_flux_idx
+        phi_peak = float(np.max(self._drum_flux_history[idx - 30 : idx])) if idx >= 30 else (float(max(np.max(self._drum_flux_history[:idx]), np.max(self._drum_flux_history[idx - 30:]))) if idx > 0 else float(self.phi_drum))
+        p_total = float(getattr(self.ingestion, 'smoothed_total_power', 0.0))
+        if p_total <= 0.0 and hasattr(self.ingestion, 'fft_band_values'):
+            p_total = float(np.sum(self.ingestion.fft_band_values))
+        denom = phi_peak + 0.4 * p_total
+        rho_trans = float(phi_peak / denom) if denom > 1e-6 else 0.0
+
+        max_flux = float(np.max(self._drum_flux_history))
+        mean_flux = float(np.mean(self._drum_flux_history))
+        c_norm = float(np.clip((max_flux / mean_flux - 3.0) / 7.0, 0.0, 1.0)) if (max_flux >= 15.0 and mean_flux > 1e-6) else 0.0
+
+        gamma_conf = float(np.clip(self.confidence_score, 0.0, 1.0))
+        d_pulse = float(np.mean(self._real_beat_history))
+
+        raw_salience = float(np.clip(0.30 * rho_trans + 0.25 * c_norm + 0.25 * gamma_conf + 0.20 * d_pulse, 0.0, 1.0))
+        if raw_salience > self._live_rhythm_salience:
+            self._live_rhythm_salience += min(1.0, 0.45 * fps_ratio) * (raw_salience - self._live_rhythm_salience)
+        else:
+            self._live_rhythm_salience += min(1.0, 0.008 * fps_ratio) * (raw_salience - self._live_rhythm_salience)
+        self._live_rhythm_salience = float(np.clip(self._live_rhythm_salience, 0.0, 1.0))
 
     def capture_frame_telemetry(self) -> Dict[str, Any]:
         """Captures rich per-frame telemetry for MIR benchmark evaluation."""
@@ -562,6 +567,7 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
             "custom_flux": float(self.odf_buffer[-1]) if len(self.odf_buffer) > 0 else 0.0,
             "asserved_novelty": float(self.novelty_detector.asserved_novelty),
             "combined_novelty": float(self.novelty_detector.combined_novelty),
+            "rhythm_salience": float(self._live_rhythm_salience),
         }
 
     # ==========================================
@@ -569,53 +575,44 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
     # ==========================================
 
     @property
-    def beat_phase(self) -> float:
-        return float(self.speaker_phase)
+    def beat_phase(self) -> float: return float(self.speaker_phase)
 
     @property
-    def beat_confidence(self) -> float:
-        return float(self.confidence_score)
+    def beat_confidence(self) -> float: return float(self.confidence_score)
 
     @property
-    def standalone_phase(self) -> float:
-        return float(self.speaker_phase)
+    def standalone_phase(self) -> float: return float(self.speaker_phase)
 
     @property
-    def standalone_bpm(self) -> float:
-        return float(self.bpm)
+    def standalone_bpm(self) -> float: return float(self.bpm)
 
     @property
-    def is_song_change(self) -> bool:
-        return self.novelty_detector.is_song_change
+    def live_rhythm_salience(self) -> float: return float(self._live_rhythm_salience)
 
+    @property
+    def rhythm_salience(self) -> float: return float(self._live_rhythm_salience)
+
+    @property
+    def is_song_change(self) -> bool: return self.novelty_detector.is_song_change
     @is_song_change.setter
-    def is_song_change(self, val: bool) -> None:
-        self.novelty_detector.is_song_change = val
+    def is_song_change(self, val: bool) -> None: self.novelty_detector.is_song_change = val
 
     @property
-    def is_verse_chorus_change(self) -> bool:
-        return self.novelty_detector.is_verse_chorus_change
-
+    def is_verse_chorus_change(self) -> bool: return self.novelty_detector.is_verse_chorus_change
     @is_verse_chorus_change.setter
-    def is_verse_chorus_change(self, val: bool) -> None:
-        self.novelty_detector.is_verse_chorus_change = val
+    def is_verse_chorus_change(self, val: bool) -> None: self.novelty_detector.is_verse_chorus_change = val
 
     @property
-    def asserved_novelty(self) -> float:
-        return self.novelty_detector.asserved_novelty
+    def asserved_novelty(self) -> float: return self.novelty_detector.asserved_novelty
 
     @property
-    def combined_novelty(self) -> float:
-        return self.novelty_detector.combined_novelty
+    def combined_novelty(self) -> float: return self.novelty_detector.combined_novelty
 
     @property
-    def silence_frames(self) -> int:
-        return self.novelty_detector.silence_frames
+    def silence_frames(self) -> int: return self.novelty_detector.silence_frames
 
     @property
-    def song_changes_times(self) -> List[float]:
-        return self.novelty_detector.song_changes_times
+    def song_changes_times(self) -> List[float]: return self.novelty_detector.song_changes_times
 
     @property
-    def structural_changes_times(self) -> List[float]:
-        return self.novelty_detector.structural_changes_times
+    def structural_changes_times(self) -> List[float]: return self.novelty_detector.structural_changes_times

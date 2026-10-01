@@ -268,7 +268,6 @@ class AudioAnalyzer(BaseAudioAnalyzer):
         # Onset & Peak Detection buffers
         self.peak_sensitivity = np.ones(self.ingestion.nb_of_fft_band) * 1.8
         self.peak_times = np.zeros(self.ingestion.nb_of_fft_band)
-        self.band_peak = np.zeros(self.ingestion.nb_of_fft_band, dtype=int)
         self.band_flux = np.zeros(self.ingestion.nb_of_fft_band)
         self.prev_fft_band_values = np.zeros(self.ingestion.nb_of_fft_band)
         self.smoothed_flux = np.zeros(self.ingestion.nb_of_fft_band)
@@ -276,6 +275,7 @@ class AudioAnalyzer(BaseAudioAnalyzer):
 
         # Vocals tracking (stub / planned)
         self.vocals_present = False
+
 
     # ==========================================
     # LIFECYCLE & EXECUTION IMPLEMENTATION
@@ -301,7 +301,6 @@ class AudioAnalyzer(BaseAudioAnalyzer):
 
         self.peak_sensitivity = np.ones(self.ingestion.nb_of_fft_band) * 1.8
         self.peak_times.fill(0.0)
-        self.band_peak.fill(0)
         self.band_flux.fill(0.0)
         self.prev_fft_band_values.fill(0.0)
         self.smoothed_flux.fill(0.0)
@@ -364,40 +363,35 @@ class AudioAnalyzer(BaseAudioAnalyzer):
 
     # --- Structural Novelty Delegation Properties ---
     @property
-    def is_song_change(self) -> bool:
-        return self.novelty_detector.is_song_change
-
+    def is_song_change(self) -> bool: return self.novelty_detector.is_song_change
     @is_song_change.setter
-    def is_song_change(self, val: bool) -> None:
-        self.novelty_detector.is_song_change = val
+    def is_song_change(self, val: bool) -> None: self.novelty_detector.is_song_change = val
 
     @property
-    def is_verse_chorus_change(self) -> bool:
-        return self.novelty_detector.is_verse_chorus_change
-
+    def is_verse_chorus_change(self) -> bool: return self.novelty_detector.is_verse_chorus_change
     @is_verse_chorus_change.setter
-    def is_verse_chorus_change(self, val: bool) -> None:
-        self.novelty_detector.is_verse_chorus_change = val
+    def is_verse_chorus_change(self, val: bool) -> None: self.novelty_detector.is_verse_chorus_change = val
 
     @property
-    def asserved_novelty(self) -> float:
-        return self.novelty_detector.asserved_novelty
+    def asserved_novelty(self) -> float: return self.novelty_detector.asserved_novelty
 
     @property
-    def combined_novelty(self) -> float:
-        return self.novelty_detector.combined_novelty
+    def combined_novelty(self) -> float: return self.novelty_detector.combined_novelty
 
     @property
-    def silence_frames(self) -> int:
-        return self.novelty_detector.silence_frames
+    def silence_frames(self) -> int: return self.novelty_detector.silence_frames
 
     @property
-    def song_changes_times(self) -> List[float]:
-        return self.novelty_detector.song_changes_times
+    def song_changes_times(self) -> List[float]: return self.novelty_detector.song_changes_times
 
     @property
-    def structural_changes_times(self) -> List[float]:
-        return self.novelty_detector.structural_changes_times
+    def structural_changes_times(self) -> List[float]: return self.novelty_detector.structural_changes_times
+
+    @property
+    def rhythm_salience(self) -> float: return float(np.clip(self.confidence_score, 0.0, 1.0))
+
+    @property
+    def live_rhythm_salience(self) -> float: return float(np.clip(self.confidence_score, 0.0, 1.0))
 
     # ==========================================
     # STRUCTURAL NOVELTY DELEGATION
@@ -442,7 +436,6 @@ class AudioAnalyzer(BaseAudioAnalyzer):
         is_peak = (flux > variance_threshold) & (
             current_time > self.peak_times + self.config.delta_time_peak
         )
-        self.band_peak = is_peak.astype(int)
         self.peak_times = np.where(is_peak, current_time, self.peak_times)
 
         self.peak_sensitivity = np.where(

@@ -47,7 +47,6 @@ class Listener:
         self._ring_band_means = np.zeros((self._ring_capacity, nb_fft), dtype=np.float64)
         self._ring_smoothed_total_power = np.zeros(self._ring_capacity, dtype=np.float64)
         self._ring_asserved_total_power = np.zeros(self._ring_capacity, dtype=np.float64)
-        self._ring_band_peak = np.zeros((self._ring_capacity, nb_fft), dtype=np.float64)
         self._ring_band_flux = np.zeros((self._ring_capacity, nb_fft), dtype=np.float64)
         self._ring_is_song_change = np.zeros(self._ring_capacity, dtype=bool)
         self._ring_is_verse_chorus_change = np.zeros(self._ring_capacity, dtype=bool)
@@ -55,6 +54,7 @@ class Listener:
         self._ring_combined_novelty = np.zeros(self._ring_capacity, dtype=np.float64)
         self._ring_novelty_lm = np.zeros(self._ring_capacity, dtype=np.float64)
         self._ring_novelty_gm = np.zeros(self._ring_capacity, dtype=np.float64)
+        self._ring_rhythm_salience = np.zeros(self._ring_capacity, dtype=np.float64)
 
         self._ring_write = 0  # Next write position
         self._ring_read = 0   # Next read position
@@ -70,7 +70,6 @@ class Listener:
         self._delayed_band_means = np.zeros(nb_fft)
         self._delayed_smoothed_total_power = 0.0
         self._delayed_asserved_total_power = 0.0
-        self._delayed_band_peak = np.zeros(nb_fft)
         self._delayed_band_flux = np.zeros(nb_fft)
         self._delayed_is_song_change = False
         self._delayed_is_verse_chorus_change = False
@@ -78,6 +77,38 @@ class Listener:
         self._delayed_combined_novelty = 0.0
         self._delayed_novelty_lm = 0.0
         self._delayed_novelty_gm = 0.0
+        self._delayed_rhythm_salience = 0.0
+
+    def reset(self) -> None:
+        """Resets all ring buffers, read/write pointers, delayed state, and underlying analyzer."""
+        self._ring_write = 0
+        self._ring_read = 0
+        self._ring_count = 0
+        for buf in (self._ring_timestamps, self._ring_fft_band, self._ring_chroma, self._ring_smoothed_fft,
+                    self._ring_smoothed_chroma, self._ring_asserved_fft, self._ring_band_proportion,
+                    self._ring_band_means, self._ring_smoothed_total_power, self._ring_asserved_total_power,
+                    self._ring_band_flux, self._ring_is_song_change, self._ring_is_verse_chorus_change,
+                    self._ring_asserved_novelty, self._ring_combined_novelty, self._ring_novelty_lm,
+                    self._ring_novelty_gm, self._ring_rhythm_salience):
+            buf.fill(0)
+
+        for d_buf in (self._delayed_fft_band_values, self._delayed_chroma_values, self._delayed_smoothed_fft_band_values,
+                      self._delayed_smoothed_chroma_values, self._delayed_asserved_fft_band, self._delayed_band_proportion,
+                      self._delayed_band_means, self._delayed_band_flux):
+            d_buf.fill(0)
+
+        self._delayed_smoothed_total_power = 0.0
+        self._delayed_asserved_total_power = 0.0
+        self._delayed_is_song_change = False
+        self._delayed_is_verse_chorus_change = False
+        self._delayed_asserved_novelty = 0.0
+        self._delayed_combined_novelty = 0.0
+        self._delayed_novelty_lm = 0.0
+        self._delayed_novelty_gm = 0.0
+        self._delayed_rhythm_salience = 0.0
+
+        if hasattr(self.analyzer, 'reset'):
+            self.analyzer.reset()
 
     async def update_forever(self) -> None:
         while True:
@@ -120,38 +151,7 @@ class Listener:
             self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
 
         # ---- WRITE into ring buffer (zero allocation) ----
-        w = self._ring_write
-        self._ring_timestamps[w] = current_time
-        self._ring_fft_band[w, :] = self.ingestion.fft_band_values
-        self._ring_chroma[w, :] = self.ingestion.chroma_values
-        self._ring_smoothed_fft[w, :] = self.ingestion.smoothed_fft_band_values
-        self._ring_smoothed_chroma[w, :] = self.ingestion.smoothed_chroma_values
-        self._ring_asserved_fft[w, :] = self.ingestion.asserved_fft_band
-        self._ring_band_proportion[w, :] = self.ingestion.band_proportion
-        self._ring_band_means[w, :] = self.ingestion.band_means
-        self._ring_smoothed_total_power[w] = self.ingestion.smoothed_total_power
-        self._ring_asserved_total_power[w] = self.ingestion.asserved_total_power
-        nb_fft = self.ingestion.nb_of_fft_band
-        if hasattr(self.analyzer, 'band_peak') and self.analyzer.band_peak is not None:
-            active_p = min(len(self.analyzer.band_peak), nb_fft)
-            self._ring_band_peak[w, :active_p] = self.analyzer.band_peak[:active_p]
-        if hasattr(self.analyzer, 'band_flux') and self.analyzer.band_flux is not None:
-            active_f = min(len(self.analyzer.band_flux), nb_fft)
-            self._ring_band_flux[w, :active_f] = self.analyzer.band_flux[:active_f]
-        self._ring_is_song_change[w] = getattr(self.analyzer, 'is_song_change', False)
-        self._ring_is_verse_chorus_change[w] = getattr(self.analyzer, 'is_verse_chorus_change', False)
-        self._ring_asserved_novelty[w] = getattr(self.analyzer, 'asserved_novelty', 0.0)
-        self._ring_combined_novelty[w] = getattr(self.analyzer, 'combined_novelty', 0.0)
-        nov_det = getattr(self.analyzer, 'novelty_detector', None)
-        self._ring_novelty_lm[w] = float(getattr(nov_det, 'novelty_lm', 0.0))
-        self._ring_novelty_gm[w] = float(getattr(nov_det, 'novelty_gm', 0.0))
-
-        self._ring_write = (w + 1) % self._ring_capacity
-        if self._ring_count < self._ring_capacity:
-            self._ring_count += 1
-        else:
-            # Buffer full — advance read pointer (oldest entry overwritten)
-            self._ring_read = (self._ring_read + 1) % self._ring_capacity
+        self._update_ring_buffers(current_time)
 
         # ---- READ expired entries from ring buffer ----
         lookahead = self.analyzer.lookahead_seconds
@@ -189,7 +189,6 @@ class Listener:
             self._delayed_band_means = self._ring_band_means[best_idx].copy()
             self._delayed_smoothed_total_power = float(self._ring_smoothed_total_power[best_idx])
             self._delayed_asserved_total_power = float(self._ring_asserved_total_power[best_idx])
-            self._delayed_band_peak = self._ring_band_peak[best_idx].copy()
             self._delayed_band_flux = self._ring_band_flux[best_idx].copy()
             self._delayed_is_song_change = any_song_change
             self._delayed_is_verse_chorus_change = any_verse_chorus_change
@@ -197,6 +196,39 @@ class Listener:
             self._delayed_combined_novelty = float(self._ring_combined_novelty[best_idx])
             self._delayed_novelty_lm = float(self._ring_novelty_lm[best_idx])
             self._delayed_novelty_gm = float(self._ring_novelty_gm[best_idx])
+            self._delayed_rhythm_salience = float(self._ring_rhythm_salience[best_idx])
+
+    def _update_ring_buffers(self, current_time: float) -> None:
+        """Writes current audio and analysis metrics into pre-allocated circular ring arrays."""
+        w = self._ring_write
+        self._ring_timestamps[w] = current_time
+        self._ring_fft_band[w, :] = self.ingestion.fft_band_values
+        self._ring_chroma[w, :] = self.ingestion.chroma_values
+        self._ring_smoothed_fft[w, :] = self.ingestion.smoothed_fft_band_values
+        self._ring_smoothed_chroma[w, :] = self.ingestion.smoothed_chroma_values
+        self._ring_asserved_fft[w, :] = self.ingestion.asserved_fft_band
+        self._ring_band_proportion[w, :] = self.ingestion.band_proportion
+        self._ring_band_means[w, :] = self.ingestion.band_means
+        self._ring_smoothed_total_power[w] = self.ingestion.smoothed_total_power
+        self._ring_asserved_total_power[w] = self.ingestion.asserved_total_power
+        nb_fft = self.ingestion.nb_of_fft_band
+        if hasattr(self.analyzer, 'band_flux') and self.analyzer.band_flux is not None:
+            active_f = min(len(self.analyzer.band_flux), nb_fft)
+            self._ring_band_flux[w, :active_f] = self.analyzer.band_flux[:active_f]
+        self._ring_is_song_change[w] = getattr(self.analyzer, 'is_song_change', False)
+        self._ring_is_verse_chorus_change[w] = getattr(self.analyzer, 'is_verse_chorus_change', False)
+        self._ring_asserved_novelty[w] = getattr(self.analyzer, 'asserved_novelty', 0.0)
+        self._ring_combined_novelty[w] = getattr(self.analyzer, 'combined_novelty', 0.0)
+        nov_det = getattr(self.analyzer, 'novelty_detector', None)
+        self._ring_novelty_lm[w] = float(getattr(nov_det, 'novelty_lm', 0.0))
+        self._ring_novelty_gm[w] = float(getattr(nov_det, 'novelty_gm', 0.0))
+        self._ring_rhythm_salience[w] = float(getattr(self.analyzer, 'live_rhythm_salience', 1.0))
+
+        self._ring_write = (w + 1) % self._ring_capacity
+        if self._ring_count < self._ring_capacity:
+            self._ring_count += 1
+        else:
+            self._ring_read = (self._ring_read + 1) % self._ring_capacity
 
     # ==========================================
     # FACADE PROPERTIES FOR MODES AND CONNECTORS
@@ -270,9 +302,6 @@ class Listener:
 
     # 2. Analyzer properties
     @property
-    def band_peak(self): return self._delayed_band_peak
-
-    @property
     def band_flux(self): return self._delayed_band_flux
 
     @property
@@ -337,6 +366,12 @@ class Listener:
 
     @property
     def standalone_phase(self): return self.analyzer.standalone_phase
+
+    @property
+    def rhythm_salience(self): return float(self._delayed_rhythm_salience)
+
+    @property
+    def live_rhythm_salience(self): return float(getattr(self.analyzer, 'live_rhythm_salience', 1.0))
 
     def process_raw_audio(self, audio_data: np.ndarray) -> None:
         self.ingestion.process_raw_audio(audio_data)

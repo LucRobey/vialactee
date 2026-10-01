@@ -24,7 +24,7 @@ The user was dissatisfied with past exploratory research in `playground/` becaus
 - **[`core/BaseAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)**: Universal abstract base class defining 6 functional domains:
   1. *Execution & Clocking*: `update()`, `reset()`, `lookahead_seconds`, `hardware_latency`.
   2. *Rhythm & Metronome*: `bpm`, `beat_phase`, `is_beat`, `is_real_beat`, `is_dropped_beat`, `beat_confidence`, `flywheel_status`, `is_downbeat`.
-  3. *Spectral Dynamics*: `band_flux`, `band_peak`, `spectral_centroid`.
+  3. *Spectral Dynamics*: `band_flux`, `spectral_centroid` (`band_peak` removed).
   4. *Macro-Structure*: `is_song_change`, `is_verse_chorus_change`, `asserved_novelty`, `combined_novelty`.
   5. *Semantics*: `current_beat_tag`, `vocals_present`, `musical_key`.
   6. *AI Telemetry Hook*: `capture_frame_telemetry()`, `get_model_metadata()`.

@@ -256,6 +256,213 @@ class TestMultiBandOnsetAudioAnalyzerIntegration(unittest.TestCase):
         self.assertAlmostEqual(self.analyzer.bpm, 120.0, delta=5.0)
         self.assertGreater(self.analyzer.beat_count, 5)
 
+    def test_beat_tag_speaker_time_synchronization(self):
+        fps = 60.0
+        dt = 1.0 / fps
+        fps_ratio = 1.0
+
+        # Frame 0: Distinctive Kick transient at lookahead ingestion
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.listener.ingestion.multiband_fft_values[0:3] = [200.0, 150.0, 100.0]
+        self.analyzer.detect_band_peaks(0.0, dt, fps_ratio)
+
+        # Advance 299 frames of silence (total 300 frames = 5.0s lookahead delay)
+        for frame in range(1, 300):
+            self.listener.ingestion.multiband_fft_values.fill(0.0)
+            self.analyzer.detect_band_peaks(frame * dt, dt, fps_ratio)
+
+        # Frame 300: The Kick from Frame 0 reaches the speakers (T_speaker)
+        # Simultaneously, inject a conflicting massive Hi-hat burst at microphone time (T_lookahead)
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.listener.ingestion.multiband_fft_values[22:30] = 500.0
+
+        # Force flywheel beat trigger at this frame
+        self.analyzer.speaker_phase = 0.999
+        self.analyzer.last_beat_time = -100.0
+        self.analyzer.detect_band_peaks(300.0 * dt, dt, fps_ratio)
+
+        self.assertTrue(self.analyzer.is_beat)
+        # Unbuffered lookahead flux has massive hi-hat energy:
+        self.assertGreater(float(np.sum(self.analyzer.band_flux[self.analyzer.hat_bands])), 1000.0)
+        # But speaker beat_tag must evaluate to Bass/Kick at T_speaker:
+        self.assertEqual(self.analyzer.current_beat_tag, "Bass/Kick")
+        self.assertEqual(self.listener.beat_tag, "Bass/Kick")
+
+    def test_band_flux_buffer_reset(self):
+        self.analyzer.band_flux_buffer.fill(123.45)
+        self.analyzer.band_flux_write_idx = 42
+        self.analyzer.reset()
+        self.assertEqual(self.analyzer.band_flux_write_idx, 0)
+        self.assertTrue(np.all(self.analyzer.band_flux_buffer == 0.0))
+
+    def test_beat_tag_speaker_time_snare_and_mid(self):
+        fps = 60.0
+        dt = 1.0 / fps
+        fps_ratio = 1.0
+
+        # Mid-range instrument transient (e.g. synths/guitars in bands 8-12)
+        self.analyzer.reset()
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.listener.ingestion.multiband_fft_values[8:12] = 300.0
+        self.analyzer.detect_band_peaks(0.0, dt, fps_ratio)
+
+        for frame in range(1, 300):
+            self.listener.ingestion.multiband_fft_values.fill(0.0)
+            self.analyzer.detect_band_peaks(frame * dt, dt, fps_ratio)
+
+        # Lookahead has kick, but speaker has mid
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.listener.ingestion.multiband_fft_values[0:3] = 500.0
+
+        self.analyzer.speaker_phase = 0.999
+        self.analyzer.last_beat_time = -100.0
+        self.analyzer.detect_band_peaks(300.0 * dt, dt, fps_ratio)
+
+        self.assertTrue(self.analyzer.is_beat)
+        self.assertEqual(self.analyzer.current_beat_tag, "Snare/Mid")
+        self.assertEqual(self.listener.beat_tag, "Snare/Mid")
+
+    def test_beat_tag_speaker_time_hihat_with_jitter(self):
+        fps = 60.0
+        dt = 1.0 / fps
+        fps_ratio = 1.0
+
+        # Hi-hat transient with 1 frame jitter (frame 1 instead of frame 0)
+        self.analyzer.reset()
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.analyzer.detect_band_peaks(0.0, dt, fps_ratio)
+
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.listener.ingestion.multiband_fft_values[22:30] = 500.0
+        self.analyzer.detect_band_peaks(1.0 * dt, dt, fps_ratio)
+
+        for frame in range(2, 300):
+            self.listener.ingestion.multiband_fft_values.fill(0.0)
+            self.analyzer.detect_band_peaks(frame * dt, dt, fps_ratio)
+
+        # Lookahead has kick, but speaker has hi-hat with sub-frame timing offset
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.listener.ingestion.multiband_fft_values[0:3] = 500.0
+
+        self.analyzer.speaker_phase = 0.999
+        self.analyzer.last_beat_time = -100.0
+        self.analyzer.detect_band_peaks(300.0 * dt, dt, fps_ratio)
+
+        self.assertTrue(self.analyzer.is_beat)
+        self.assertEqual(self.analyzer.current_beat_tag, "Hi-hat/Cymbal")
+        self.assertEqual(self.listener.beat_tag, "Hi-hat/Cymbal")
+
+    def test_rhythm_salience_drum_groove_high(self):
+        fps = 60.0
+        dt = 1.0 / fps
+        fps_ratio = 1.0
+        self.analyzer.reset()
+
+        # Feed 360 frames of a rhythmic drum groove (120 BPM = transient every 30 frames)
+        for frame in range(360):
+            current_time = frame * dt
+            if frame % 30 == 0:
+                self.listener.ingestion.multiband_fft_values.fill(0.0)
+                self.listener.ingestion.multiband_fft_values[0:3] = [250.0, 180.0, 120.0]
+                self.listener.ingestion.smoothed_total_power = 300.0
+            else:
+                self.listener.ingestion.multiband_fft_values.fill(0.0)
+                self.listener.ingestion.multiband_fft_values[0:3] = [1.0, 0.5, 0.2]
+                self.listener.ingestion.smoothed_total_power = 20.0
+
+            self.analyzer.detect_band_peaks(current_time, dt, fps_ratio)
+
+        self.assertGreater(self.analyzer.live_rhythm_salience, 0.60)
+        self.assertGreater(self.analyzer.rhythm_salience, 0.60)
+
+    def test_rhythm_salience_ambient_pad_low(self):
+        fps = 60.0
+        dt = 1.0 / fps
+        fps_ratio = 1.0
+        self.analyzer.reset()
+
+        # Feed 300 frames of constant sustained ambient chords (zero onset flux after initial frame)
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.listener.ingestion.multiband_fft_values[6:14] = 80.0
+        self.listener.ingestion.smoothed_total_power = 200.0
+        self.analyzer.detect_band_peaks(0.0, dt, fps_ratio)
+
+        for frame in range(1, 300):
+            current_time = frame * dt
+            # Constant energy = dE = 0
+            self.listener.ingestion.multiband_fft_values[6:14] = 80.0
+            self.listener.ingestion.smoothed_total_power = 200.0
+            self.analyzer.detect_band_peaks(current_time, dt, fps_ratio)
+
+        self.assertLess(self.analyzer.live_rhythm_salience, 0.25)
+
+    def test_rhythm_salience_silence_and_noise_low(self):
+        fps = 60.0
+        dt = 1.0 / fps
+        fps_ratio = 1.0
+
+        # Case A: Silence
+        self.analyzer.reset()
+        self.listener.ingestion.multiband_fft_values.fill(0.0)
+        self.listener.ingestion.smoothed_total_power = 0.0
+        for frame in range(180):
+            self.analyzer.detect_band_peaks(frame * dt, dt, fps_ratio)
+        self.assertLess(self.analyzer.live_rhythm_salience, 0.05)
+
+        # Case B: Stationary unmetered noise
+        self.analyzer.reset()
+        rng = np.random.RandomState(42)
+        initial_noise = rng.uniform(8.0, 10.0, size=32)
+        self.analyzer.prev_fft_band_values[:] = initial_noise
+        for frame in range(180):
+            self.listener.ingestion.multiband_fft_values[:] = rng.uniform(8.0, 10.0, size=32)
+            self.listener.ingestion.smoothed_total_power = 100.0
+            self.analyzer.detect_band_peaks(frame * dt, dt, fps_ratio)
+        self.assertLess(self.analyzer.live_rhythm_salience, 0.25)
+
+    def test_rhythm_salience_lookahead_leads_speaker(self):
+        fps = 60.0
+        dt = 1.0 / fps
+        self.listener.reset()
+
+        import unittest.mock
+
+        t_sim = [1000.0]
+        def mock_time():
+            t_sim[0] += dt
+            return t_sim[0]
+
+        with unittest.mock.patch('time.time', side_effect=mock_time):
+            # Step 1: Ingest 60 frames (1.0 second) of a strong rhythmic drum groove
+            for frame in range(60):
+                if frame % 30 == 0:
+                    self.listener.ingestion.multiband_fft_values.fill(0.0)
+                    self.listener.ingestion.multiband_fft_values[0:3] = [300.0, 200.0, 150.0]
+                    self.listener.ingestion.smoothed_total_power = 350.0
+                else:
+                    self.listener.ingestion.multiband_fft_values.fill(0.0)
+                    self.listener.ingestion.smoothed_total_power = 10.0
+                self.listener.update(fixed_dt=dt)
+
+            # Lookahead salience snaps up fast (~50ms) to > 0.60
+            self.assertGreater(self.listener.live_rhythm_salience, 0.60)
+            # Delayed speaker salience is still 0.0 because 1.0s < 5.0s lookahead delay
+            self.assertLess(self.listener.rhythm_salience, 0.25)
+
+            # Step 2: Continue feeding groove past the 5.0s lookahead threshold (total 360 frames = 6.0s)
+            for frame in range(60, 360):
+                if frame % 30 == 0:
+                    self.listener.ingestion.multiband_fft_values.fill(0.0)
+                    self.listener.ingestion.multiband_fft_values[0:3] = [300.0, 200.0, 150.0]
+                    self.listener.ingestion.smoothed_total_power = 350.0
+                else:
+                    self.listener.ingestion.multiband_fft_values.fill(0.0)
+                    self.listener.ingestion.smoothed_total_power = 10.0
+                self.listener.update(fixed_dt=dt)
+
+            # Now the groove has arrived at the speaker playback time
+            self.assertGreater(self.listener.rhythm_salience, 0.60)
+
 
 if __name__ == '__main__':
     unittest.main()

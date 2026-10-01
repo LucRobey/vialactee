@@ -937,11 +937,10 @@ class MusicStudioApp:
         raw_fft = self.listener.fft_band_values
         smooth_fft = self.listener.smoothed_fft_band_values
         asserved_fft = self.listener.asserved_fft_band
-        band_peaks = self.listener.band_peak
         band_flux = self.listener.band_flux
 
         num_bands = len(smooth_fft) if len(smooth_fft) > 0 else self.nb_bands
-        head_surf = self.get_text(self.font_main, f"{num_bands}-BAND FREQUENCY DYNAMICS & SPECTRAL PEAKS", self.ACCENT_CYAN)
+        head_surf = self.get_text(self.font_main, f"{num_bands}-BAND FREQUENCY DYNAMICS & TRANSIENT FLUX", self.ACCENT_CYAN)
         self.screen.blit(head_surf, (px + 16, py + 12))
 
         # Equalizer Bars Area
@@ -962,8 +961,8 @@ class MusicStudioApp:
             # Background slot
             pygame.draw.rect(self.screen, (14, 16, 22), (bx, gy, bw, gh), border_radius=3 if num_bands <= 16 else 1)
 
-            # Peak LED indicator at top of each column
-            has_peak = len(band_peaks) > i and band_peaks[i] > 0
+            # Transient flux LED indicator at top of each column
+            has_peak = len(band_flux) > i and band_flux[i] > 5.0
             led_col = self.ACCENT_RED if has_peak else (40, 48, 64)
             led_h = 4 if num_bands > 16 else 6
             pygame.draw.rect(self.screen, led_col, (bx + 1, gy + 4, max(1, bw - 2), led_h), border_radius=1)

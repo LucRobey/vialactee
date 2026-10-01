@@ -17,12 +17,6 @@ from core.PresetRepository import PresetRepository
 from config.Configuration_manager import resolve_configurations_file_path, resolve_segments_file_path
 
 
-
-from contextlib import contextmanager
-
-
-
-
 class Mode_master:
     """
     Master controller for all visual segments, modes, and configurations.
@@ -45,6 +39,8 @@ class Mode_master:
         self.listener = listener
         self.onRaspberry = infos.get("onRaspberry", False)
         self.leds_list = leds
+        self._is_rpi_hardware: bool = len(self.leds_list) > 0 and "Rpi_NeoPixels" in type(self.leds_list[0]).__name__
+        self._state_dirty: bool = True
         self.logger = logging.getLogger("Mode_master")
         self.profiler = Profiler.Profiler(infos.get("printCpuFpsInfo", False), self.logger, config=infos.get("profiler", {}))
         self.current_time = time.time()
@@ -380,10 +376,8 @@ class Mode_master:
         with self.profiler.measure("listener"):
             self.listener.update()
 
-        is_rpi_hardware = len(self.leds_list) > 0 and "Rpi_NeoPixels" in str(type(self.leds_list[0]))
-        
         with self.profiler.measure("hardware_show"):
-            if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or is_rpi_hardware:
+            if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or self._is_rpi_hardware:
                 loop = asyncio.get_running_loop()
                 for led_strip in self.leds_list:
                     await loop.run_in_executor(None, led_strip.show)
@@ -412,18 +406,13 @@ class Mode_master:
         if slowest_seg is not None:
             self.profiler.record_slowest_mode(slowest_seg, slowest_mode_name, slowest_seg_time)
 
-        #==============================================
         self.current_time = time.time()
-        
         with self.profiler.measure("transitions"):
             await self.transition_director.update(self.current_time)
-
         with self.profiler.measure("connector"):
             if self.appli_connector is not None:
-                await self.appli_connector.broadcast_state_if_changed(self.get_state_snapshot())
-                
+                await self.appli_connector.on_frame_tick(self)
         self.profiler.tick()
-
 
     def load_configurations(self) -> None:
         """
@@ -436,6 +425,7 @@ class Mode_master:
         self.blocked_playlists = self._preset_repo.blocked_playlists
         self.shuffle_bag = self._preset_repo.shuffle_bag
         self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists")
+
     def update_segments_modes(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
         Apply the active configuration to all relevant segments.
@@ -460,8 +450,7 @@ class Mode_master:
                 way = active_way.get(segment.name)
                 if way is not None:
                     segment.change_way(way)
-
- 
+        self._state_dirty = True
 
     def initiate_configuration(self) -> None:
         """
@@ -470,8 +459,6 @@ class Mode_master:
         #On initialise en prenant une conf au pif dans une playlist au pif
         self.activ_configuration = self._detach_configuration_modes(self.pick_a_random_conf())
         self.update_segments_modes()
-
-        
 
     def initiate_segments(self) -> None:
         """
@@ -486,16 +473,13 @@ class Mode_master:
                 offset += seg_infos["size"]
                 self.segments_list.append(new_segment)
                 self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
-                
         file_path = resolve_segments_file_path(self.infos)
         with open(file_path, "r", encoding='utf-8') as f:
             data = json.load(f)
-            
         for i, leds in enumerate(self.leds_list):
             key = f"segs_{i+1}"
             if key in data:
                 add_segments(data[key], leds)
-
 
     async def change_configuration(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -579,6 +563,7 @@ class Mode_master:
     def _persist_app_config_value(self, key: str, value: Any) -> None:
         self.infos[key] = value
         self._preset_repo.persist_app_config_debounced(key, value)
+        self._state_dirty = True
 
     def flush_sync(self) -> None:
         """Flushes any pending snapshots in PresetRepository synchronously."""
@@ -591,7 +576,10 @@ class Mode_master:
         All handler logic has been extracted into core/CommandRouter.py as
         individually registered async handlers.
         """
-        return await command_router.dispatch(self, instruction)
+        result = await command_router.dispatch(self, instruction)
+        if result.get("applied", False):
+            self._state_dirty = True
+        return result
 
     def pick_a_random_conf(self) -> Dict[str, Any]:
         """
@@ -609,5 +597,3 @@ class Mode_master:
         self.shuffle_bag = self._preset_repo.shuffle_bag
         self.logger.debug(f"(MM)   pick_a_random_conf() :     conf = {new_conf}")
         return new_conf
-
-            

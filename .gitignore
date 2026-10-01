@@ -4,6 +4,7 @@ vialactee.log
 debug-*.log
 .cursor/*.log
 playground/
+archive/playground/
 .pytest_cache/
 scratch/
 

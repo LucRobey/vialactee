@@ -13,6 +13,7 @@ from research.benchmarks.engine.evaluator import run_benchmark_on_track, compute
 from research.benchmarks.engine.episode_slicer import extract_failure_episodes
 
 
+@pytest.mark.benchmark
 class TestBenchmarkEngine(unittest.TestCase):
 
     @classmethod

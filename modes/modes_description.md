@@ -28,18 +28,18 @@ Modes registered in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact
 | **Impact_shockwave_mode** | Horizontal / Omnidirectional | Center-outward expanding ripple waves whose propagation speed is dynamically scaled to BPM. Spawns high-intensity kinetic shockwaves on verified acoustic hits, while completely suppressing violent flashes on phantom / coasting beats during silent breakdowns. |
 | **Rhythm_breather_mode** | Omnidirectional (Both) | Continuous phase-locked breathing visual. When rhythm is locked, it pumps with a tight, punchy percussive envelope; when beat confidence drops or during breakdowns, it gracefully dissolves into a gentle, fluid sinusoidal glow driven by total acoustic volume. |
 | **Synesthesia_mode** | Omnidirectional (Both) | The entire LED segment displays a uniform, harmonically driven hue computed from real-time chromagram pitch analysis (12-note chromatic scale mapped to the color wheel). Chords blend constituent note hues, while master brightness pulses with power. |
+| **Static_wave_mode** | Horizontal | Symmetrical central pulse band whose thickness breathes in and out strictly to bass transients, framed by bright white outer caps with interior color modulated by overall audio power. |
+| **Power_bar_mode** | Vertical | Classic audio VU peak meter. A solid colored column rises vertically with instantaneous power. A persistent peak-hold white dot floats at the maximum crest and descends slowly under gravity. |
+| **Extending_waves_mode** | Horizontal | On each detected beat, a new colored wavefront is injected at the strip center and travels outward towards both edges like ripples in water. Wave speed and luminosity scale with audio power. |
+| **Magnetic_ball_mode** | Horizontal | A physics-simulated ball modeled with mass, spring tension toward center, and friction. Audio transients deliver kinetic impulses that kick the ball toward the boundaries, where it bounces elastically. Ball radius expands with audio power. |
 
 ---
 
-## Dormant / Experimental Modes (Unmounted)
+## Unmounted Game Modes
 
 > [!NOTE]
-> The following modes exist in `modes/` as self-contained implementations inheriting from `Mode.Mode`, but are **not currently mounted** in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json). They can be run in standalone tests or mounted into custom playlists.
+> The following mode exists in `modes/` as a self-contained game/arcade implementation inheriting from `Mode.Mode`, but is **not mounted by default** in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json). It can be mounted into custom playlists or run in standalone scripts.
 
 | Mode Name | Orientation | Visual Description |
 | :--- | :--- | :--- |
 | **Alcool_randomer** | Omnidirectional (Both) | An arcade-style shot roulette wheel. A bright cursor accelerates along the strip through three distinct phases (ramp-up, constant cruise, deceleration) before stopping at a randomized LED position to select an outcome. Configurable via `shot_base_speed`, `shot_max_speed`, and `shot_fade_ratio`. |
-| **Extending_waves_mode** | Horizontal | On each detected beat, a new colored wavefront is injected at the strip center and travels outward towards both edges like ripples in water. Wave speed and luminosity scale with audio power. |
-| **Magnetic_ball_mode** | Horizontal | A physics-simulated ball modeled with mass, spring tension toward center, and friction. Audio transients deliver kinetic impulses that kick the ball toward the boundaries, where it bounces elastically. Ball radius expands with audio power. |
-| **Power_bar_mode** | Vertical | Classic audio VU peak meter. A solid colored column rises vertically with instantaneous power. A persistent peak-hold white dot floats at the maximum crest and descends slowly under gravity. |
-| **Static_wave_mode** | Horizontal | Symmetrical central pulse band whose thickness breathes in and out strictly to bass transients, framed by bright white outer caps with interior color modulated by overall audio power. |

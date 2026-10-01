@@ -43,4 +43,4 @@ When `Mode_master` finishes computing the colors for a frame, it passes each cha
 If `HARDWARE_MODE` is `"simulation"`, `HardwareFactory` spawns the `Fake_ESP32` subprocess which receives local UDP packets across all active channels and renders them in Pygame. This perfectly simulates the Raspberry Pi -> Wi-Fi -> ESP32 architecture on a single machine, decoupling visual rendering from the main `asyncio` audio-processing loop. Live audio analyzer state is streamed on sideband port `9003` to power the in-simulator HUD without stalling the main loop.
 
 > [!NOTE]
-> [See ../.agents/docs/hardware_pipeline.md for the full system diagram]
+> [See ../docs/architecture/hardware_abstraction.md for the full system diagram]

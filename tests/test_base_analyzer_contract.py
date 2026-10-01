@@ -57,6 +57,9 @@ class TestBaseAudioAnalyzerContract(unittest.TestCase):
         self.assertFalse(analyzer.is_real_beat)
         self.assertEqual(analyzer.beat_count, 0)
         self.assertIsInstance(analyzer.flywheel_status, str)
+        self.assertFalse(hasattr(analyzer, "band_peak"))
+        self.assertAlmostEqual(analyzer.rhythm_salience, 0.0)
+        self.assertAlmostEqual(analyzer.live_rhythm_salience, 0.0)
 
         # Telemetry & Metadata
         telemetry = analyzer.capture_frame_telemetry()
@@ -84,6 +87,9 @@ class TestBaseAudioAnalyzerContract(unittest.TestCase):
         self.assertFalse(analyzer.is_real_beat)
         self.assertEqual(analyzer.beat_count, 0)
         self.assertIsInstance(analyzer.flywheel_status, str)
+        self.assertFalse(hasattr(analyzer, "band_peak"))
+        self.assertAlmostEqual(analyzer.rhythm_salience, 0.0)
+        self.assertAlmostEqual(analyzer.live_rhythm_salience, 0.0)
 
         # Telemetry & Metadata
         telemetry = analyzer.capture_frame_telemetry()
@@ -119,6 +125,10 @@ class TestBaseAudioAnalyzerContract(unittest.TestCase):
         self.assertFalse(minimal.is_verse_chorus_change)
         self.assertEqual(minimal.asserved_novelty, 0.0)
         self.assertEqual(minimal.combined_novelty, 0.0)
+        self.assertAlmostEqual(minimal.rhythm_salience, 1.0)
+        self.assertAlmostEqual(minimal.live_rhythm_salience, 1.0)
+        self.assertTrue(hasattr(minimal, "band_flux"))
+        self.assertFalse(hasattr(minimal, "band_peak"))
 
         # Run update and reset
         minimal.update(current_time=1.0, dt=1.0 / 60.0, fps_ratio=1.0)

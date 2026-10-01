@@ -1,9 +1,15 @@
 # Agent Navigation Guide
 
-## 🤖 Directives for Future AI Agents
-Welcome to the *Vialactée* lighting orchestration system! If you are an AI reading this file, you have been summoned to help build, debug, or expand the Python-based reactive lighting architecture. 
+> [!NOTE] **Authority Migration Notice (Tier 0 & Tier 1 Documentation)**  
+> In accordance with the 5-Tier Document Authority Matrix, canonical specifications have been organized into the root [`docs/`](../../docs/README.md) hierarchy:  
+> - **Tier 0 (Untouchable Golden Axioms):** [`docs/axioms/`](../../docs/axioms/README.md)  
+> - **Tier 1 (Canonical Architecture):** [`docs/architecture/`](../../docs/architecture/system_overview.md) & [`docs/reference/`](../../docs/reference/configuration_schemas.md)  
+> - **Tier 2 (Manuals & Guides):** [`docs/manuals/`](../../docs/manuals/mode_authoring_guide.md)  
+> 
+> Files within `.agents/docs/` are preserved for historical continuity and agent context. For authoritative system contracts and invariants, always consult [`docs/`](../../docs/README.md).
 
-This `.agents/docs/` folder contains the canonical "Brain Trust" of the project's logic. Before proposing structural changes to the codebase, please review the relevant markdown files below to ensure your code aligns with our established mathematical frameworks.
+## 🤖 Directives for Future AI Agents
+Welcome to the *Vialactée* lighting orchestration system! If you are an AI reading this file, you have been summoned to help build, debug, or expand the Python-based reactive lighting architecture.
 
 ---
 

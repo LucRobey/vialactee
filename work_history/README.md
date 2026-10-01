@@ -31,6 +31,8 @@ Whenever an agent performs work on this repository:
 
 | Date | Session File | Agent / Author | Topic / Goal | Status |
 | :--- | :--- | :--- | :--- | :--- |
+| **2026-10-02** | [`2026-10-02_rhythmic_salience_contract_and_modes.md`](2026-10-02_rhythmic_salience_contract_and_modes.md) | Antigravity | Real-time `rhythm_salience` engine (4 pillars), Audio Analyzer contract, `beat_tag` speaker delay fix, `band_peak` removal, `Shining_stars_mode` migration | **COMPLETED** |
+| **2026-09-29** | [`2026-09-29_architectural_reorganization_and_axioms_governance.md`](2026-09-29_architectural_reorganization_and_axioms_governance.md) | Antigravity | Architectural Reorg v2.2: 9 Golden Axioms, 5-Tier docs, headless telemetry decoupling, ratchet headroom reclaim, fast governance CI | **COMPLETED** |
 | **2026-09-28** | [`2026-09-28_master_production_plan_implementation.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/work_history/2026-09-28_master_production_plan_implementation.md) | Antigravity | Master Production Plan v2.0 execution: headless testing, network throttling, 4 modes, full-scope atomic debouncing, code governance | **COMPLETED** |
 | **2026-09-23** | [`2026-09-23_project_cleanup_and_work_history.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/work_history/2026-09-23_project_cleanup_and_work_history.md) | Gemini 3.8 Flash | Project diagnostic, root cleanup, `.gitignore` resolution, and establishing `work_history/` | **COMPLETED** |
 | *2026-09-05* | `docs/AGENT_HANDOFF.md` | Prior Agent | Audio DSP benchmark engine, synthetic suite (F1 92.0%), and BeatNet neural references | *HISTORICAL* |
