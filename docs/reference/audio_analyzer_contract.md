@@ -82,6 +82,7 @@ The audio analysis pipeline processes incoming audio in real time while supporti
 | Property on `self.listener` | Type / Range | Timing | Stability | What It Represents | How It Is Measured (DSP Mechanism) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`asserved_total_power`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$ via ring** | **Very High** | Dynamic-range normalized total volume. Invariant to master volume. | Sum of all FFT power bins, smoothed via exponential filter, then divided by an adaptive Global Max envelope follower (`global_max = max(gm * 0.999, power)`). **Primary volume metric for ambient breathing & brightness.** |
+| **`live_asserved_total_power`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{lookahead}}$**<br>(+5.0s future) | **Very High** | Lookahead dynamic-range normalized total volume. | Ingested at input buffer time prior to 5.0s ring buffer delay. |
 | **`smoothed_total_power`** | `float`<br>$[0.0, \sim 2000.0]$ | **$T_{\text{speaker}}$ via ring** | **High** (unnormalized) | Exponentially smoothed raw total audio power. | Computed as $P_t = P_{t-1} + (1.0 - 0.5^{\text{fps\_ratio}}) \cdot (\sum \text{FFT} - P_{t-1})$. Tracks true physical loudness changes. |
 | **`asserved_fft_band`** | `np.ndarray (8,)`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$ via ring** | **Very High** | Dynamically normalized 8-band Mel spectrum. Invariant to input gain. | Each band power is mapped against running statistics ($\mu_b \pm 2\sigma_b$) and clamped to $[0.0, 1.0]$. **Primary input for graphic equalizers and spatial frequency bars.** |
 | **`band_proportion`** | `np.ndarray (8,)`<br>$[0.0, 1.0]$ ($\sum=1$) | **$T_{\text{speaker}}$ via ring** | **Very High** | Normalized timbral fingerprint vector. Pure spectral distribution. | Instantaneous vector normalization: $p_b = \frac{E_b}{\sum_{j=0}^7 E_j + 10^{-6}}$. Completely invariant to total loudness. **Primary input for timbral color shifts and barycentric palettes.** |
@@ -122,18 +123,30 @@ Accessible directly via `self.listener.context` ([`core/MusicalContextEngine.py`
 
 | Property on `self.listener.context` | Type / Range | Timing | Stability | What It Represents | How It Is Measured (DSP Mechanism) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`current_regime`** | `MusicalRegime`<br>(Enum / `str`) | **Hybrid** | **Maximum** | The active musical regime:<br>• `DEEP_AMBIENT`<br>• `FLOATING_PULSE`<br>• `THE_POCKET`<br>• `CHAOTIC_FILL`<br>• `PRE_DROP_BUILDUP`<br>• `STRUCTURAL_CHANGE` | 2D Schmitt trigger state machine consuming speaker-aligned `rhythm_salience` and `beat_trust`, guarded by 1.0s minimum dwell time and pre-drop differential gradient $\Delta R \ge +0.40$. |
-| **`previous_regime`** | `MusicalRegime` | **Event-based** | **Maximum** | Regime active prior to the latest state transition. | Preserved across regime changes to facilitate seamless crossfading. |
-| **`regime_blend`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$** | **High** | Crossfade transition progress.<br>• $0.0 =$ Just entered new regime<br>• $1.0 =$ Fully transitioned | Linearly ramps from $0.0 \to 1.0$ over 0.5s (`transition_time`) upon entering a new regime. |
-| **`drop_countdown`** | `float`<br>$[0.0, \sim 5.0]$s | **$T_{\text{lookahead}}$** | **High** | Seconds remaining until impending drop hits speakers during `PRE_DROP_BUILDUP`. | Armed at `lookahead_seconds` when $\Delta R \ge 0.40$; decrements by $dt$ until drop impact ($0.0$). |
+| **`scene`** | `MusicalScene`<br>(Enum / `str`) | **Hybrid** | **Maximum** | The active macro scene:<br>• `CHILL`<br>• `GROOVE`<br>• `BUILDUP`<br>• `DROP_IMPACT` | 4-scene state machine consuming speaker-aligned `rhythm_salience`, `beat_trust`, and `asserved_total_power`, guarded by 1.0s minimum dwell time, silence guard, and predictive drop detection. |
+| **`previous_scene`** | `MusicalScene` | **Event-based** | **Maximum** | Scene active prior to the latest state transition. | Preserved across scene changes to facilitate seamless crossfading. |
+| **`scene_blend`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$** | **High** | Crossfade transition progress.<br>• $0.0 =$ Just entered new scene<br>• $1.0 =$ Fully transitioned | Linearly ramps from $0.0 \to 1.0$ over 0.5s (`transition_time`) upon entering a new scene. |
+| **`is_locked`** | `bool` | **Current** | **High** | True when beat trust $T \ge 0.50$ (release $< 0.35$). | Schmitt trigger confidence metric for metric traveling waves. |
+| **`is_syncopated`** | `bool` | **Current** | **High** | True when $S \ge 0.45 \land T < 0.35$. | High salience without metric lock (drum fills, breakcore, polyrhythmic syncopation). |
+| **`is_real_beat`** | `bool` | **Current** | **High** | True when `is_beat` is True and $P \ge 0.20$. | Confirmed physical acoustic transient hit. |
+| **`is_silent`** | `bool` | **Current** | **High** | True if power is below silence floor threshold ($P < 0.05$). | Acoustic silence flag driving the Silence Guard. |
+| **`is_drop_impact`** | `bool` | **1-frame pulse** | **High** | High for exactly 1 frame when the drop lands at speakers. | Impact trigger for blinding white flashes and shockwaves. |
+| **`is_drop_imminent`** | `bool` | **Current** | **High** | True when $T_{\text{countdown}} \le 0.40$s during buildup. | Pre-drop blackout/flash warning flag. |
+| **`is_structural_cut`** | `bool` | **Current** | **High** | True for 1.2s upon `is_song_change` or `is_verse_chorus_change`. | Sectional boundary marker for palette resets. |
+| **`drop_countdown`** | `float`<br>$[0.0, \sim 5.0]$s | **$T_{\text{lookahead}}$** | **High** | Seconds remaining until impending drop hits speakers during `BUILDUP`. | Armed at `lookahead_seconds` when triple-trigger fires; decrements by $dt$ until drop impact ($0.0$). |
 | **`salience_gradient`** | `float`<br>$[-1.0, 1.0]$ | **Differential** | **High** | Lookahead salience minus delayed salience ($\Delta R$). | Quantifies incoming rhythmic energy build. |
-| **`power`** | `float`<br>$[0.0, \sim 1.0]$ | **$T_{\text{speaker}}$** | **High** | Speaker-aligned asserved total acoustic power. | Facade to `asserved_total_power` consumed by the engine for ambient energy scaling. |
-| **`novelty`** | `float`<br>$[0.0, \sim 1.0]$ | **$T_{\text{speaker}}$** | **High** | Speaker-aligned asserved spectral novelty. | Facade to `asserved_novelty` consumed by the engine for macro-structural change detection. |
-| **`is_ambient`** | `bool` | **Current** | **Maximum** | True if in `DEEP_AMBIENT` or `FLOATING_PULSE`. | Convenient boolean for ambient volume-breathing modes. |
-| **`is_rhythmic`** | `bool` | **Current** | **Maximum** | True if in `THE_POCKET` or `CHAOTIC_FILL`. | Convenient boolean for percussive modes. |
-| **`is_buildup`** | `bool` | **Current** | **Maximum** | True if in `PRE_DROP_BUILDUP`. | Convenient boolean for drop-anticipation tension builds. |
-| **`is_in_pocket`** | `bool` | **Current** | **Maximum** | True if in `THE_POCKET`. | Convenient boolean for full drum groove animations. |
-| **`is_structural_change`** | `bool` | **Current** | **Maximum** | True if in `STRUCTURAL_CHANGE`. | Convenient boolean for sectional reset animations. |
+| **`power_gradient`** | `float`<br>$[-1.0, 1.0]$ | **Differential** | **High** | Lookahead power minus delayed power ($\Delta P$). | Quantifies incoming acoustic power and volume surge. |
+| **`energy`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$** | **High** | Fused master visual drive. | Mathematical combination: $0.50 \cdot P + 0.30 \cdot S + 0.20 \cdot (S \cdot T)$. Master brightness/speed driver. |
+| **`tension`** | `float`<br>$[0.0, 1.0]$ | **Hybrid** | **High** | Anticipation, buildup, and novelty tension curve. | Fuses drop countdown progress with structural novelty and gradient anticipation. |
+| **`drop_progress`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{lookahead}}$** | **High** | Smooth buildup countdown curve ($0.0 \to 1.0$). | Normalized countdown progression during `BUILDUP`. |
+| **`spectral_tilt`** | `float`<br>$[-1.0, 1.0]$ | **$T_{\text{speaker}}$** | **High** | Bass vs treble spectral balance across 8 bands. | $-1.0 =$ pure bass, $+1.0 =$ pure treble, $0.0 =$ balanced/silence. |
+| **`vertical_center`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$** | **High** | Spectral center of gravity across 8 bands. | $0.0 =$ bottom strip, $1.0 =$ top strip, $0.5 =$ neutral center. |
+| **`current_regime`** | `MusicalScene` | **Hybrid** | **Maximum** | Legacy alias to `scene`. | Complete backward compatibility with legacy regime branching. |
+| **`is_ambient`** | `bool` | **Current** | **Maximum** | True if in `CHILL`. | Convenient boolean for ambient volume-breathing modes. |
+| **`is_rhythmic`** | `bool` | **Current** | **Maximum** | True if in `GROOVE` or `DROP_IMPACT`. | Convenient boolean for percussive modes. |
+| **`is_buildup`** | `bool` | **Current** | **Maximum** | True if in `BUILDUP`. | Convenient boolean for drop-anticipation tension builds. |
+| **`is_in_pocket`** | `bool` | **Current** | **Maximum** | True if in `GROOVE` and `is_locked`. | Convenient boolean for full drum groove animations. |
+| **`is_structural_change`** | `bool` | **Current** | **Maximum** | Legacy alias to `is_structural_cut`. | Convenient boolean for sectional reset animations. |
 
 ---
 

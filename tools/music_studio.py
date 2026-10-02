@@ -34,7 +34,7 @@ from core.Listener import Listener
 from core.RhythmConfig import RhythmConfig
 from core.BaseAudioAnalyzer import BaseAudioAnalyzer
 from core.AudioAnalyzer import AudioAnalyzer, bpm_to_class
-from core.MusicalContextEngine import MusicalRegime
+from core.MusicalContextEngine import MusicalScene, MusicalRegime
 
 
 def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]:
@@ -284,32 +284,30 @@ class MusicStudioApp:
     ACCENT_GOLD = (255, 214, 0)
     ACCENT_MAGENTA = (255, 40, 130)
 
-    REGIME_COLORS = {
-        MusicalRegime.DEEP_AMBIENT: (70, 130, 240),      # Slate Blue
-        MusicalRegime.FLOATING_PULSE: (0, 220, 255),     # Cyan
-        MusicalRegime.THE_POCKET: (40, 240, 120),        # Emerald Green
-        MusicalRegime.CHAOTIC_FILL: (255, 145, 0),       # Orange / Amber
-        MusicalRegime.PRE_DROP_BUILDUP: (255, 40, 130),  # Vivid Crimson / Magenta
-        MusicalRegime.STRUCTURAL_CHANGE: (180, 80, 255), # Violet / Purple
+    SCENE_COLORS = {
+        MusicalScene.CHILL: (70, 130, 240),       # Slate Blue / Cyan
+        MusicalScene.GROOVE: (40, 240, 120),      # Emerald Green
+        MusicalScene.BUILDUP: (255, 40, 130),     # Vivid Crimson
+        MusicalScene.DROP_IMPACT: (255, 230, 80), # Blinding White/Gold
     }
 
-    REGIME_BG_COLORS = {
-        MusicalRegime.DEEP_AMBIENT: (18, 28, 55),
-        MusicalRegime.FLOATING_PULSE: (12, 45, 60),
-        MusicalRegime.THE_POCKET: (16, 55, 32),
-        MusicalRegime.CHAOTIC_FILL: (60, 35, 12),
-        MusicalRegime.PRE_DROP_BUILDUP: (65, 15, 35),
-        MusicalRegime.STRUCTURAL_CHANGE: (50, 20, 70),
+    SCENE_BG_COLORS = {
+        MusicalScene.CHILL: (18, 28, 55),
+        MusicalScene.GROOVE: (16, 55, 32),
+        MusicalScene.BUILDUP: (65, 15, 35),
+        MusicalScene.DROP_IMPACT: (70, 60, 20),
     }
 
-    REGIME_ICONS = {
-        MusicalRegime.DEEP_AMBIENT: "≋",
-        MusicalRegime.FLOATING_PULSE: "◌",
-        MusicalRegime.THE_POCKET: "●",
-        MusicalRegime.CHAOTIC_FILL: "⚡",
-        MusicalRegime.PRE_DROP_BUILDUP: "▲",
-        MusicalRegime.STRUCTURAL_CHANGE: "✦",
+    SCENE_ICONS = {
+        MusicalScene.CHILL: "≋",
+        MusicalScene.GROOVE: "●",
+        MusicalScene.BUILDUP: "▲",
+        MusicalScene.DROP_IMPACT: "💥",
     }
+
+    REGIME_COLORS = SCENE_COLORS
+    REGIME_BG_COLORS = SCENE_BG_COLORS
+    REGIME_ICONS = SCENE_ICONS
 
     CHROMA_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     BAND_NAMES = ["Sub-Bass", "Bass", "Low-Mid", "Mid", "High-Mid", "Presence", "Brilliance", "Air"]
@@ -1329,7 +1327,7 @@ class MusicStudioApp:
         # Event Badges in Header
         bx = px + head_surf.get_width() + 25
 
-        # Canonical Musical Regime Badge
+        # Canonical Musical Scene Badge
         reg_badge_txt = f"{reg_icon} {getattr(curr_reg, 'value', str(curr_reg))}"
         reg_badge_surf = self.get_text(self.font_mono, reg_badge_txt, (255, 255, 255))
         reg_badge_w = reg_badge_surf.get_width() + 18
@@ -1337,17 +1335,41 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, reg_bg, reg_badge_rect, border_radius=4)
         pygame.draw.rect(self.screen, reg_col, reg_badge_rect, width=1, border_radius=4)
         self.screen.blit(reg_badge_surf, (bx + 9, py + 12))
-        bx += reg_badge_w + 14
+        bx += reg_badge_w + 10
+
+        # Tier 3 Badges: [LOCKED], [SYNCOPATED], [SILENT], [IMMINENT], [IMPACT]
+        b_locked = bool(getattr(context, 'is_locked', False))
+        b_synco = bool(getattr(context, 'is_syncopated', False))
+        b_silent = bool(getattr(context, 'is_silent', False))
+        b_imminent = bool(getattr(context, 'is_drop_imminent', False))
+        b_impact = bool(getattr(context, 'is_drop_impact', False) or curr_reg == MusicalScene.DROP_IMPACT)
+
+        tier3_list = [
+            ("LOCKED", b_locked, (40, 240, 120), (16, 50, 28)),
+            ("SYNCOPATED", b_synco, (255, 160, 20), (55, 35, 12)),
+            ("SILENT", b_silent, (70, 130, 240), (20, 28, 55)),
+            ("IMMINENT", b_imminent, (255, 40, 130), (60, 15, 30)),
+            ("IMPACT", b_impact, (255, 230, 80), (65, 55, 18)),
+        ]
+        for t_name, t_val, t_fg, t_bg in tier3_list:
+            if t_val:
+                t_surf = self.get_text(self.font_tiny, f"[{t_name}]", t_fg)
+                tw = t_surf.get_width() + 10
+                t_rect = pygame.Rect(bx, py + 9, tw, 22)
+                pygame.draw.rect(self.screen, t_bg, t_rect, border_radius=4)
+                pygame.draw.rect(self.screen, t_fg, t_rect, width=1, border_radius=4)
+                self.screen.blit(t_surf, (bx + 5, py + 13))
+                bx += tw + 6
 
         # Pre-drop countdown alert in header
-        if curr_reg == MusicalRegime.PRE_DROP_BUILDUP or countdown > 0.0:
+        if curr_reg == MusicalScene.BUILDUP or countdown > 0.0:
             c_surf = self.get_text(self.font_mono, f"⚠️ DROP IN {countdown:.2f}s", (255, 255, 255))
             c_w = c_surf.get_width() + 16
             c_rect = pygame.Rect(bx, py + 9, c_w, 22)
             pygame.draw.rect(self.screen, (70, 15, 35), c_rect, border_radius=4)
             pygame.draw.rect(self.screen, self.ACCENT_MAGENTA, c_rect, width=1, border_radius=4)
             self.screen.blit(c_surf, (bx + 8, py + 12))
-            bx += c_w + 14
+            bx += c_w + 10
 
         # Verse / Chorus Drop Badge
         t_since_drop = time.time() - self.last_drop_time
@@ -1638,14 +1660,15 @@ class MusicStudioApp:
         pygame.draw.rect(self.screen, (20, 24, 34), (grid_x, y_s_high, grid_w, max(1, y_s_low - y_s_high)))
 
         # Active Quadrant Highlight
-        if curr_reg == MusicalRegime.CHAOTIC_FILL:
-            pygame.draw.rect(self.screen, (50, 30, 12), (grid_x, grid_y, max(1, x_t_low - grid_x), max(1, y_s_high - grid_y)))
-        elif curr_reg == MusicalRegime.THE_POCKET:
-            pygame.draw.rect(self.screen, (14, 45, 26), (x_t_high, grid_y, max(1, grid_x + grid_w - x_t_high), max(1, y_s_high - grid_y)))
-        elif curr_reg == MusicalRegime.DEEP_AMBIENT:
+        b_synco_flag = bool(getattr(context, 'is_syncopated', False))
+        b_locked_flag = bool(getattr(context, 'is_locked', False))
+        if curr_reg == MusicalScene.GROOVE:
+            if b_synco_flag:
+                pygame.draw.rect(self.screen, (50, 30, 12), (grid_x, grid_y, max(1, x_t_low - grid_x), max(1, y_s_high - grid_y)))
+            else:
+                pygame.draw.rect(self.screen, (14, 45, 26), (x_t_high, grid_y, max(1, grid_x + grid_w - x_t_high), max(1, y_s_high - grid_y)))
+        elif curr_reg == MusicalScene.CHILL:
             pygame.draw.rect(self.screen, (16, 24, 45), (grid_x, y_s_low, max(1, x_t_low - grid_x), max(1, grid_y + grid_h - y_s_low)))
-        elif curr_reg == MusicalRegime.FLOATING_PULSE:
-            pygame.draw.rect(self.screen, (10, 38, 50), (x_t_high, y_s_low, max(1, grid_x + grid_w - x_t_high), max(1, grid_y + grid_h - y_s_low)))
 
         # Threshold lines
         pygame.draw.line(self.screen, (40, 48, 65), (x_t_low, grid_y), (x_t_low, grid_y + grid_h), 1)
@@ -1654,24 +1677,20 @@ class MusicStudioApp:
         pygame.draw.line(self.screen, (40, 48, 65), (grid_x, y_s_high), (grid_x + grid_w, y_s_high), 1)
 
         # Quadrant Labels
-        # Top-Left: CHAOTIC FILL
-        cf_col = self.REGIME_COLORS[MusicalRegime.CHAOTIC_FILL] if curr_reg == MusicalRegime.CHAOTIC_FILL else self.TEXT_MUTED
-        cf_surf = self.get_text(self.font_tiny, "CHAOTIC FILL", cf_col)
+        # Top-Left: GROOVE (SYNCO)
+        cf_surf = self.get_text(self.font_tiny, "GROOVE (SYNCO)", (255, 160, 20) if (curr_reg == MusicalScene.GROOVE and b_synco_flag) else self.TEXT_MUTED)
         self.screen.blit(cf_surf, (grid_x + 6, grid_y + 4))
 
-        # Top-Right: THE POCKET
-        poc_col = self.REGIME_COLORS[MusicalRegime.THE_POCKET] if curr_reg == MusicalRegime.THE_POCKET else self.TEXT_MUTED
-        poc_surf = self.get_text(self.font_tiny, "THE POCKET", poc_col)
+        # Top-Right: GROOVE (LOCKED)
+        poc_surf = self.get_text(self.font_tiny, "GROOVE (LOCKED)", self.ACCENT_GREEN if (curr_reg == MusicalScene.GROOVE and b_locked_flag) else self.TEXT_MUTED)
         self.screen.blit(poc_surf, (x_t_high + 6, grid_y + 4))
 
-        # Bottom-Left: DEEP AMBIENT
-        amb_col = self.REGIME_COLORS[MusicalRegime.DEEP_AMBIENT] if curr_reg == MusicalRegime.DEEP_AMBIENT else self.TEXT_MUTED
-        amb_surf = self.get_text(self.font_tiny, "DEEP AMBIENT", amb_col)
+        # Bottom-Left: CHILL
+        amb_surf = self.get_text(self.font_tiny, "CHILL", self.ACCENT_BLUE if curr_reg == MusicalScene.CHILL else self.TEXT_MUTED)
         self.screen.blit(amb_surf, (grid_x + 6, y_s_low + 4))
 
-        # Bottom-Right: FLOATING PULSE
-        fp_col = self.REGIME_COLORS[MusicalRegime.FLOATING_PULSE] if curr_reg == MusicalRegime.FLOATING_PULSE else self.TEXT_MUTED
-        fp_surf = self.get_text(self.font_tiny, "FLOATING PULSE", fp_col)
+        # Bottom-Right: GROOVE (PULSE)
+        fp_surf = self.get_text(self.font_tiny, "GROOVE (PULSE)", self.ACCENT_GREEN if (curr_reg == MusicalScene.GROOVE and not b_synco_flag) else self.TEXT_MUTED)
         self.screen.blit(fp_surf, (x_t_high + 6, y_s_low + 4))
 
         # Center Hysteresis Label
@@ -1699,8 +1718,8 @@ class MusicStudioApp:
         coord_y = pt_y - 11 if pt_y - 11 > grid_y else pt_y + 4
         self.screen.blit(coord_surf, (coord_x, coord_y))
 
-        # Override Alert Banner for PRE_DROP_BUILDUP or STRUCTURAL_CHANGE
-        if curr_reg in (MusicalRegime.PRE_DROP_BUILDUP, MusicalRegime.STRUCTURAL_CHANGE):
+        # Override Alert Banner for BUILDUP or DROP_IMPACT
+        if curr_reg in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT):
             banner_w = grid_w - 24
             banner_h = 22
             banner_x = grid_x + 12
@@ -1711,7 +1730,7 @@ class MusicStudioApp:
             pygame.draw.rect(self.screen, b_border, (banner_x, banner_y, banner_w, banner_h), width=1, border_radius=4)
 
             b_msg = f"OVERRIDE: {getattr(curr_reg, 'value', str(curr_reg))}"
-            if curr_reg == MusicalRegime.PRE_DROP_BUILDUP and countdown > 0.0:
+            if curr_reg == MusicalScene.BUILDUP and countdown > 0.0:
                 b_msg += f" ({countdown:.2f}s)"
             ov_surf = self.get_text(self.font_tiny, b_msg, b_border)
             self.screen.blit(ov_surf, (banner_x + banner_w // 2 - ov_surf.get_width() // 2, banner_y + banner_h // 2 - ov_surf.get_height() // 2))

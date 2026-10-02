@@ -284,6 +284,11 @@ class Listener:
     def asserved_total_power(self): return self._delayed_asserved_total_power
 
     @property
+    def live_asserved_total_power(self) -> float:
+        val = getattr(self.ingestion, 'asserved_total_power', 0.0) if self.ingestion is not None else 0.0
+        return float(val) if val is not None else 0.0
+
+    @property
     def dynamic_audio_latency(self): return self.ingestion.dynamic_audio_latency
     @dynamic_audio_latency.setter
     def dynamic_audio_latency(self, val): self.ingestion.dynamic_audio_latency = val
@@ -401,6 +406,11 @@ class Listener:
     @property
     def salience_gradient(self) -> float:
         return float(self.context.salience_gradient)
+
+    @property
+    def power_gradient(self) -> float:
+        val = getattr(self.context, 'power_gradient', 0.0) if self.context is not None else 0.0
+        return float(val) if val is not None else 0.0
 
     def process_raw_audio(self, audio_data: np.ndarray) -> None:
         self.ingestion.process_raw_audio(audio_data)

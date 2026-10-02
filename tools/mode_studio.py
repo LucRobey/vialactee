@@ -34,7 +34,7 @@ import pygame
 from core.Listener import Listener
 from core.BaseAudioAnalyzer import BaseAudioAnalyzer
 from core.AudioAnalyzer import AudioAnalyzer, bpm_to_class
-from core.MusicalContextEngine import MusicalRegime
+from core.MusicalContextEngine import MusicalScene, MusicalRegime
 from modes.Mode import Mode
 
 
@@ -391,32 +391,30 @@ class StudioApp:
     ACCENT_GOLD = (255, 215, 0)
     ACCENT_BLUE = (70, 130, 240)
 
-    REGIME_COLORS = {
-        MusicalRegime.DEEP_AMBIENT: (70, 130, 240),
-        MusicalRegime.FLOATING_PULSE: (0, 220, 255),
-        MusicalRegime.THE_POCKET: (40, 240, 120),
-        MusicalRegime.CHAOTIC_FILL: (255, 160, 20),
-        MusicalRegime.PRE_DROP_BUILDUP: (255, 40, 130),
-        MusicalRegime.STRUCTURAL_CHANGE: (180, 80, 255),
+    SCENE_COLORS = {
+        MusicalScene.CHILL: (70, 130, 240),       # Slate Blue / Cyan
+        MusicalScene.GROOVE: (40, 240, 120),      # Emerald Green
+        MusicalScene.BUILDUP: (255, 40, 130),     # Vivid Crimson
+        MusicalScene.DROP_IMPACT: (255, 230, 80), # Blinding White/Gold
     }
 
-    REGIME_BG_COLORS = {
-        MusicalRegime.DEEP_AMBIENT: (18, 28, 55),
-        MusicalRegime.FLOATING_PULSE: (12, 45, 60),
-        MusicalRegime.THE_POCKET: (16, 55, 32),
-        MusicalRegime.CHAOTIC_FILL: (60, 35, 12),
-        MusicalRegime.PRE_DROP_BUILDUP: (65, 15, 35),
-        MusicalRegime.STRUCTURAL_CHANGE: (50, 20, 70),
+    SCENE_BG_COLORS = {
+        MusicalScene.CHILL: (18, 28, 55),
+        MusicalScene.GROOVE: (16, 55, 32),
+        MusicalScene.BUILDUP: (65, 15, 35),
+        MusicalScene.DROP_IMPACT: (70, 60, 20),
     }
 
-    REGIME_ICONS = {
-        MusicalRegime.DEEP_AMBIENT: "≋",
-        MusicalRegime.FLOATING_PULSE: "◌",
-        MusicalRegime.THE_POCKET: "●",
-        MusicalRegime.CHAOTIC_FILL: "⚡",
-        MusicalRegime.PRE_DROP_BUILDUP: "▲",
-        MusicalRegime.STRUCTURAL_CHANGE: "✦",
+    SCENE_ICONS = {
+        MusicalScene.CHILL: "≋",
+        MusicalScene.GROOVE: "●",
+        MusicalScene.BUILDUP: "▲",
+        MusicalScene.DROP_IMPACT: "💥",
     }
+
+    REGIME_COLORS = SCENE_COLORS
+    REGIME_BG_COLORS = SCENE_BG_COLORS
+    REGIME_ICONS = SCENE_ICONS
 
     def __init__(self, song_path: str, initial_mode_name: Optional[str] = None, nb_leds: int = 80, model_name: str = "MultiBandOnsetAudioAnalyzer"):
         pygame.init()
@@ -862,10 +860,10 @@ class StudioApp:
             self.screen.blit(no_ctx, (x + 16, y + 46))
             return
 
-        curr_reg = context.current_regime
-        prev_reg = context.previous_regime
-        blend = float(context.regime_blend)
-        dwell = float(context.regime_dwell_time)
+        curr_reg = getattr(context, 'scene', context.current_regime)
+        prev_reg = getattr(context, 'previous_scene', context.previous_regime)
+        blend = float(getattr(context, 'scene_blend', context.regime_blend))
+        dwell = float(getattr(context, 'scene_dwell_time', context.regime_dwell_time))
         countdown = float(context.drop_countdown)
 
         reg_col = self.REGIME_COLORS.get(curr_reg, self.TEXT_MAIN)
@@ -873,35 +871,34 @@ class StudioApp:
         reg_icon = self.REGIME_ICONS.get(curr_reg, "●")
         reg_name = getattr(curr_reg, 'value', str(curr_reg))
 
-        # 1. Primary Regime Badge
+        # 1. Primary Scene Badge
         badge_rect = pygame.Rect(x + 16, y + 42, w - 32, 42)
         pygame.draw.rect(self.screen, reg_bg, badge_rect, border_radius=8)
         pygame.draw.rect(self.screen, reg_col, badge_rect, width=2, border_radius=8)
 
-        # Pulse glow if in PRE_DROP_BUILDUP (cached surface, zero heap allocation)
-        if curr_reg == MusicalRegime.PRE_DROP_BUILDUP:
+        # Pulse glow if in BUILDUP or DROP_IMPACT
+        if curr_reg in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT):
             glow_w = w - 32
             glow_h = 42
             if self._pulse_glow_surf is None or self._pulse_glow_surf.get_size() != (glow_w, glow_h):
                 self._pulse_glow_surf = pygame.Surface((glow_w, glow_h), pygame.SRCALPHA)
             pulse_alpha = int(128 + 127 * math.sin(time.time() * 8.0))
-            self._pulse_glow_surf.fill((255, 40, 130, pulse_alpha // 3))
+            glow_rgb = (255, 230, 80) if curr_reg == MusicalScene.DROP_IMPACT else (255, 40, 130)
+            self._pulse_glow_surf.fill((*glow_rgb, pulse_alpha // 3))
             self.screen.blit(self._pulse_glow_surf, badge_rect.topleft)
 
         badge_txt = f"{reg_icon} {reg_name}"
         badge_surf = self.get_text(self.font_main, badge_txt, (255, 255, 255))
         self.screen.blit(badge_surf, (badge_rect.centerx - badge_surf.get_width() // 2, badge_rect.centery - badge_surf.get_height() // 2))
 
-        # Regime Description
+        # Scene Description
         desc_map = {
-            MusicalRegime.THE_POCKET: "Solid groove • High S & T",
-            MusicalRegime.DEEP_AMBIENT: "Atmospheric drift • Low S & T",
-            MusicalRegime.FLOATING_PULSE: "Metric pulse • Low S, High T",
-            MusicalRegime.CHAOTIC_FILL: "Aperiodic fill • High S, Low T",
-            MusicalRegime.PRE_DROP_BUILDUP: "Salience spike • Drop imminent!",
-            MusicalRegime.STRUCTURAL_CHANGE: "Section / song boundary cut",
+            MusicalScene.CHILL: "Atmospheric / Resting • Low S & P",
+            MusicalScene.GROOVE: "Locked Groove / Rhythm • High S or T",
+            MusicalScene.BUILDUP: "Drop Buildup / Tension • Ramp armed",
+            MusicalScene.DROP_IMPACT: "Climax Drop Impact • Shockwave land",
         }
-        desc_txt = desc_map.get(curr_reg, "Active musical context state")
+        desc_txt = desc_map.get(curr_reg, "Active musical context scene")
         desc_surf = self.get_text(self.font_tiny, desc_txt, self.TEXT_DIM)
         self.screen.blit(desc_surf, (x + 16, y + 88))
 
@@ -924,76 +921,77 @@ class StudioApp:
         if fill_w > 0:
             pygame.draw.rect(self.screen, pct_col, (x + 16, cy, fill_w, bar_h), border_radius=3)
 
-        # 3. Dwell Time & Stability Gate (Compact formatting avoids horizontal text overlap)
+        # 3. Dwell Time & Stability Gate
         cy += 14
         dwell_min = getattr(context, 'min_dwell_time', 1.0)
-        is_locked = dwell < dwell_min
-        dwell_txt = f"Dwell: {dwell:.1f}s [{'🔒' if is_locked else '✓'}]"
-        dwell_col = self.ACCENT_ORANGE if is_locked else self.ACCENT_GREEN
+        is_dwell_locked = dwell < dwell_min and curr_reg not in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT)
+        dwell_txt = f"Dwell: {dwell:.1f}s [{'🔒' if is_dwell_locked else '✓'}]"
+        dwell_col = self.ACCENT_ORANGE if is_dwell_locked else self.ACCENT_GREEN
         dwell_surf = self.get_text(self.font_tiny, dwell_txt, dwell_col)
         self.screen.blit(dwell_surf, (x + 16, cy))
 
         if blend < 1.0:
-            reg_short = {
-                MusicalRegime.THE_POCKET: "POCKET",
-                MusicalRegime.DEEP_AMBIENT: "AMBIENT",
-                MusicalRegime.FLOATING_PULSE: "PULSE",
-                MusicalRegime.CHAOTIC_FILL: "FILL",
-                MusicalRegime.PRE_DROP_BUILDUP: "BUILDUP",
-                MusicalRegime.STRUCTURAL_CHANGE: "STRUCT",
-            }
-            from_name = reg_short.get(prev_reg, getattr(prev_reg, 'value', str(prev_reg)))
+            from_name = getattr(prev_reg, 'value', str(prev_reg))
             from_surf = self.get_text(self.font_tiny, f"From: {from_name}", self.TEXT_MUTED)
             self.screen.blit(from_surf, (x + w - from_surf.get_width() - 16, cy))
 
-        # 4. Drop Countdown Alert Box or Semantic Flags
+        # 4. Tier 3 Micro Physical Badges Display
         cy += 20
-        if curr_reg == MusicalRegime.PRE_DROP_BUILDUP or countdown > 0.0:
-            drop_box = pygame.Rect(x + 16, cy, w - 32, 54)
-            pygame.draw.rect(self.screen, (60, 15, 30), drop_box, border_radius=6)
-            pygame.draw.rect(self.screen, self.ACCENT_MAGENTA, drop_box, width=2, border_radius=6)
+        badges_h = 58
+        badges_box = pygame.Rect(x + 16, cy, w - 32, badges_h)
+        pygame.draw.rect(self.screen, (14, 16, 22), badges_box, border_radius=6)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, badges_box, width=1, border_radius=6)
 
-            c_lbl = self.get_text(self.font_tiny, "⚠️ INCOMING DROP COUNTDOWN", self.ACCENT_MAGENTA)
-            self.screen.blit(c_lbl, (drop_box.centerx - c_lbl.get_width() // 2, drop_box.y + 6))
+        # Tier 3 status flags
+        b_locked = bool(getattr(context, 'is_locked', False))
+        b_synco = bool(getattr(context, 'is_syncopated', False))
+        b_silent = bool(getattr(context, 'is_silent', False))
+        b_imminent = bool(getattr(context, 'is_drop_imminent', False))
+        b_impact = bool(getattr(context, 'is_drop_impact', False) or curr_reg == MusicalScene.DROP_IMPACT)
 
-            c_num = self.get_text(self.font_main, f"{countdown:.2f} s", (255, 255, 255))
-            self.screen.blit(c_num, (drop_box.centerx - c_num.get_width() // 2, drop_box.y + 22))
+        # Row 1: [LOCKED] [SYNCOPATED] [SILENT]
+        rw1_y = cy + 6
+        bw3 = (w - 32 - 16) // 3
+        badge_defs_row1 = [
+            ("LOCKED", b_locked, (40, 240, 120), (16, 50, 28)),
+            ("SYNCOPATED", b_synco, (255, 160, 20), (55, 35, 12)),
+            ("SILENT", b_silent, (70, 130, 240), (20, 28, 55)),
+        ]
+        for i, (b_name, b_val, b_fg, b_bg_act) in enumerate(badge_defs_row1):
+            bx_cur = x + 16 + 4 + i * (bw3 + 4)
+            b_rect = pygame.Rect(bx_cur, rw1_y, bw3, 20)
+            if b_val:
+                pygame.draw.rect(self.screen, b_bg_act, b_rect, border_radius=4)
+                pygame.draw.rect(self.screen, b_fg, b_rect, width=1, border_radius=4)
+                txt_s = self.get_text(self.font_tiny, f"[{b_name}]", b_fg)
+            else:
+                pygame.draw.rect(self.screen, (18, 20, 28), b_rect, border_radius=4)
+                txt_s = self.get_text(self.font_tiny, b_name, (80, 90, 110))
+            self.screen.blit(txt_s, (b_rect.centerx - txt_s.get_width() // 2, b_rect.centery - txt_s.get_height() // 2))
 
-            # Shrinking countdown bar
-            lookahead = getattr(self.listener.analyzer, 'lookahead_seconds', 5.0)
-            c_ratio = min(1.0, max(0.0, countdown / max(0.1, lookahead)))
-            c_bar_w = int((w - 48) * c_ratio)
-            pygame.draw.rect(self.screen, (20, 24, 34), (x + 24, drop_box.bottom - 8, w - 48, 4), border_radius=2)
-            if c_bar_w > 0:
-                pygame.draw.rect(self.screen, self.ACCENT_MAGENTA, (x + 24, drop_box.bottom - 8, c_bar_w, 4), border_radius=2)
-            box_bottom = drop_box.bottom
-        else:
-            # Semantic Flags Display
-            flags_box = pygame.Rect(x + 16, cy, w - 32, 54)
-            pygame.draw.rect(self.screen, (14, 16, 22), flags_box, border_radius=6)
-            pygame.draw.rect(self.screen, self.PANEL_BORDER, flags_box, width=1, border_radius=6)
+        # Row 2: [IMMINENT] [IMPACT]
+        rw2_y = cy + 30
+        bw2 = (w - 32 - 12) // 2
+        badge_defs_row2 = [
+            (f"IMMINENT ({countdown:.1f}s)" if countdown > 0 else "IMMINENT", b_imminent, (255, 40, 130), (60, 15, 30)),
+            ("IMPACT 💥" if b_impact else "IMPACT", b_impact, (255, 230, 80), (65, 55, 18)),
+        ]
+        for i, (b_name, b_val, b_fg, b_bg_act) in enumerate(badge_defs_row2):
+            bx_cur = x + 16 + 4 + i * (bw2 + 4)
+            b_rect = pygame.Rect(bx_cur, rw2_y, bw2, 20)
+            if b_val:
+                pygame.draw.rect(self.screen, b_bg_act, b_rect, border_radius=4)
+                pygame.draw.rect(self.screen, b_fg, b_rect, width=1, border_radius=4)
+                txt_s = self.get_text(self.font_tiny, f"[{b_name}]", b_fg)
+            else:
+                pygame.draw.rect(self.screen, (18, 20, 28), b_rect, border_radius=4)
+                txt_s = self.get_text(self.font_tiny, b_name, (80, 90, 110))
+            self.screen.blit(txt_s, (b_rect.centerx - txt_s.get_width() // 2, b_rect.centery - txt_s.get_height() // 2))
 
-            self.screen.blit(self.get_text(self.font_tiny, "SEMANTIC CONTEXT FLAGS", self.TEXT_DIM), (x + 22, cy + 5))
-
-            f1 = "● RHYTHMIC" if context.is_rhythmic else "○ AMBIENT"
-            c1 = self.ACCENT_GREEN if context.is_rhythmic else self.ACCENT_CYAN
-            self.screen.blit(self.get_text(self.font_tiny, f1, c1), (x + 22, cy + 20))
-
-            f2 = "● IN POCKET" if context.is_in_pocket else "○ OFF POCKET"
-            c2 = self.ACCENT_GREEN if context.is_in_pocket else self.TEXT_DIM
-            self.screen.blit(self.get_text(self.font_tiny, f2, c2), (x + 22, cy + 34))
-
-            f3 = "● BUILDUP" if context.is_buildup else "○ STEADY"
-            c3 = self.ACCENT_MAGENTA if context.is_buildup else self.TEXT_MUTED
-            self.screen.blit(self.get_text(self.font_tiny, f3, c3), (x + 120, cy + 20))
-
-            f4 = "● STRUCT CUT" if context.is_structural_change else "○ NO CUT"
-            c4 = self.ACCENT_PURPLE if context.is_structural_change else self.TEXT_MUTED
-            self.screen.blit(self.get_text(self.font_tiny, f4, c4), (x + 120, cy + 34))
-            box_bottom = flags_box.bottom
+        box_bottom = badges_box.bottom
 
         # -------------------------------------------------------------
-        # 5. 2x2 Canonical Regime State Matrix (T x S) Phase Plane Mini-Grid
+        # 5. Canonical Scene Matrix (T x S) Phase Plane Mini-Grid
         # -------------------------------------------------------------
         grid_x = x + 16
         grid_y = box_bottom + 8
@@ -1022,14 +1020,13 @@ class StudioApp:
         pygame.draw.rect(self.screen, (20, 24, 34), (grid_x, y_s_high, grid_w, max(1, y_s_low - y_s_high)))
 
         # Active Quadrant Highlight
-        if curr_reg == MusicalRegime.CHAOTIC_FILL:
-            pygame.draw.rect(self.screen, (50, 30, 12), (grid_x, grid_y, max(1, x_t_low - grid_x), max(1, y_s_high - grid_y)))
-        elif curr_reg == MusicalRegime.THE_POCKET:
-            pygame.draw.rect(self.screen, (14, 45, 26), (x_t_high, grid_y, max(1, grid_x + grid_w - x_t_high), max(1, y_s_high - grid_y)))
-        elif curr_reg == MusicalRegime.DEEP_AMBIENT:
+        if curr_reg == MusicalScene.GROOVE:
+            if b_synco:
+                pygame.draw.rect(self.screen, (50, 30, 12), (grid_x, grid_y, max(1, x_t_low - grid_x), max(1, y_s_high - grid_y)))
+            else:
+                pygame.draw.rect(self.screen, (14, 45, 26), (x_t_high, grid_y, max(1, grid_x + grid_w - x_t_high), max(1, y_s_high - grid_y)))
+        elif curr_reg == MusicalScene.CHILL:
             pygame.draw.rect(self.screen, (16, 24, 45), (grid_x, y_s_low, max(1, x_t_low - grid_x), max(1, grid_y + grid_h - y_s_low)))
-        elif curr_reg == MusicalRegime.FLOATING_PULSE:
-            pygame.draw.rect(self.screen, (10, 38, 50), (x_t_high, y_s_low, max(1, grid_x + grid_w - x_t_high), max(1, grid_y + grid_h - y_s_low)))
 
         # Threshold lines
         pygame.draw.line(self.screen, (40, 48, 65), (x_t_low, grid_y), (x_t_low, grid_y + grid_h), 1)
@@ -1037,21 +1034,17 @@ class StudioApp:
         pygame.draw.line(self.screen, (40, 48, 65), (grid_x, y_s_low), (grid_x + grid_w, y_s_low), 1)
         pygame.draw.line(self.screen, (40, 48, 65), (grid_x, y_s_high), (grid_x + grid_w, y_s_high), 1)
 
-        # Quadrant labels (tiny font)
-        cf_col = self.REGIME_COLORS[MusicalRegime.CHAOTIC_FILL] if curr_reg == MusicalRegime.CHAOTIC_FILL else self.TEXT_MUTED
-        cf_surf = self.get_text(self.font_tiny, "FILL", cf_col)
+        # Quadrant labels
+        cf_surf = self.get_text(self.font_tiny, "GROOVE (SYNCO)", (255, 160, 20) if (curr_reg == MusicalScene.GROOVE and b_synco) else self.TEXT_MUTED)
         self.screen.blit(cf_surf, (grid_x + 5, grid_y + 4))
 
-        poc_col = self.REGIME_COLORS[MusicalRegime.THE_POCKET] if curr_reg == MusicalRegime.THE_POCKET else self.TEXT_MUTED
-        poc_surf = self.get_text(self.font_tiny, "POCKET", poc_col)
+        poc_surf = self.get_text(self.font_tiny, "GROOVE (LOCKED)", self.ACCENT_GREEN if (curr_reg == MusicalScene.GROOVE and b_locked) else self.TEXT_MUTED)
         self.screen.blit(poc_surf, (x_t_high + 5, grid_y + 4))
 
-        amb_col = self.REGIME_COLORS[MusicalRegime.DEEP_AMBIENT] if curr_reg == MusicalRegime.DEEP_AMBIENT else self.TEXT_MUTED
-        amb_surf = self.get_text(self.font_tiny, "AMBIENT", amb_col)
+        amb_surf = self.get_text(self.font_tiny, "CHILL", self.ACCENT_BLUE if curr_reg == MusicalScene.CHILL else self.TEXT_MUTED)
         self.screen.blit(amb_surf, (grid_x + 5, y_s_low + 4))
 
-        fp_col = self.REGIME_COLORS[MusicalRegime.FLOATING_PULSE] if curr_reg == MusicalRegime.FLOATING_PULSE else self.TEXT_MUTED
-        fp_surf = self.get_text(self.font_tiny, "PULSE", fp_col)
+        fp_surf = self.get_text(self.font_tiny, "GROOVE (PULSE)", self.ACCENT_GREEN if (curr_reg == MusicalScene.GROOVE and not b_synco) else self.TEXT_MUTED)
         self.screen.blit(fp_surf, (x_t_high + 5, y_s_low + 4))
 
         # Center Hysteresis Label
@@ -1077,8 +1070,8 @@ class StudioApp:
         coord_y = pt_y - 11 if pt_y - 11 > grid_y else pt_y + 3
         self.screen.blit(coord_surf, (coord_x, coord_y))
 
-        # Override Alert Banner for PRE_DROP_BUILDUP or STRUCTURAL_CHANGE
-        if curr_reg in (MusicalRegime.PRE_DROP_BUILDUP, MusicalRegime.STRUCTURAL_CHANGE):
+        # Override Alert Banner for BUILDUP or DROP_IMPACT
+        if curr_reg in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT):
             banner_w = grid_w - 20
             banner_h = 20
             banner_x = grid_x + 10
@@ -1089,7 +1082,7 @@ class StudioApp:
             pygame.draw.rect(self.screen, b_border, (banner_x, banner_y, banner_w, banner_h), width=1, border_radius=4)
 
             b_msg = f"OVERRIDE: {reg_name}"
-            if curr_reg == MusicalRegime.PRE_DROP_BUILDUP and countdown > 0.0:
+            if curr_reg == MusicalScene.BUILDUP and countdown > 0.0:
                 b_msg += f" ({countdown:.2f}s)"
             ov_surf = self.get_text(self.font_tiny, b_msg, b_border)
             self.screen.blit(ov_surf, (banner_x + banner_w // 2 - ov_surf.get_width() // 2, banner_y + banner_h // 2 - ov_surf.get_height() // 2))
