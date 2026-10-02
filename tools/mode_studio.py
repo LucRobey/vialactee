@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+import math
 import glob
 import inspect
 import importlib
@@ -32,7 +33,8 @@ import pygame
 
 from core.Listener import Listener
 from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.AudioAnalyzer import AudioAnalyzer
+from core.AudioAnalyzer import AudioAnalyzer, bpm_to_class
+from core.MusicalContextEngine import MusicalRegime
 from modes.Mode import Mode
 
 
@@ -190,7 +192,9 @@ class AudioStreamer:
         """Seek to a specific song timestamp and re-prime the 5s lookahead buffer."""
         target_sample = int(np.clip(target_seconds * self.sample_rate, 0, max(0, self.total_samples - 1024)))
         self.speaker_sample_pos = target_sample
-        if hasattr(self.listener.analyzer, 'reset'):
+        if hasattr(self.listener, 'reset'):
+            self.listener.reset()
+        elif hasattr(self.listener.analyzer, 'reset'):
             self.listener.analyzer.reset()
         self.prime_analyzer(sync_offset_seconds)
 
@@ -377,18 +381,49 @@ class StudioApp:
     PANEL_BORDER = (42, 48, 65)
     TEXT_MAIN = (230, 235, 245)
     TEXT_DIM = (130, 140, 160)
+    TEXT_MUTED = (90, 100, 120)
     ACCENT_CYAN = (0, 220, 255)
     ACCENT_GREEN = (40, 240, 120)
     ACCENT_ORANGE = (255, 160, 20)
     ACCENT_RED = (255, 60, 80)
     ACCENT_PURPLE = (180, 80, 255)
+    ACCENT_MAGENTA = (255, 40, 130)
+    ACCENT_GOLD = (255, 215, 0)
+    ACCENT_BLUE = (70, 130, 240)
+
+    REGIME_COLORS = {
+        MusicalRegime.DEEP_AMBIENT: (70, 130, 240),
+        MusicalRegime.FLOATING_PULSE: (0, 220, 255),
+        MusicalRegime.THE_POCKET: (40, 240, 120),
+        MusicalRegime.CHAOTIC_FILL: (255, 160, 20),
+        MusicalRegime.PRE_DROP_BUILDUP: (255, 40, 130),
+        MusicalRegime.STRUCTURAL_CHANGE: (180, 80, 255),
+    }
+
+    REGIME_BG_COLORS = {
+        MusicalRegime.DEEP_AMBIENT: (18, 28, 55),
+        MusicalRegime.FLOATING_PULSE: (12, 45, 60),
+        MusicalRegime.THE_POCKET: (16, 55, 32),
+        MusicalRegime.CHAOTIC_FILL: (60, 35, 12),
+        MusicalRegime.PRE_DROP_BUILDUP: (65, 15, 35),
+        MusicalRegime.STRUCTURAL_CHANGE: (50, 20, 70),
+    }
+
+    REGIME_ICONS = {
+        MusicalRegime.DEEP_AMBIENT: "≋",
+        MusicalRegime.FLOATING_PULSE: "◌",
+        MusicalRegime.THE_POCKET: "●",
+        MusicalRegime.CHAOTIC_FILL: "⚡",
+        MusicalRegime.PRE_DROP_BUILDUP: "▲",
+        MusicalRegime.STRUCTURAL_CHANGE: "✦",
+    }
 
     def __init__(self, song_path: str, initial_mode_name: Optional[str] = None, nb_leds: int = 80, model_name: str = "MultiBandOnsetAudioAnalyzer"):
         pygame.init()
         pygame.font.init()
 
-        self.width = 1180
-        self.height = 720
+        self.width = 1380
+        self.height = 760
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("Vialactée Mode Studio — Hardware-Parity Oracle Lab")
 
@@ -404,6 +439,7 @@ class StudioApp:
 
         # Text rendering cache (avoids heap thrashing at 60 FPS)
         self._text_cache: Dict[Tuple[int, str, Tuple[int, int, int]], pygame.Surface] = {}
+        self._pulse_glow_surf: Optional[pygame.Surface] = None
 
         # Find all available songs in assets/musics/mp3_files
         self.assets_music_dir = os.path.join(_REPO_ROOT, "assets", "musics", "mp3_files")
@@ -507,7 +543,9 @@ class StudioApp:
 
         was_playing = self.streamer.is_playing
         self.streamer.stop_stream()
-        if hasattr(self.listener.analyzer, 'reset'):
+        if hasattr(self.listener, 'reset'):
+            self.listener.reset()
+        elif hasattr(self.listener.analyzer, 'reset'):
             self.listener.analyzer.reset()
         self.streamer = AudioStreamer(new_path, self.listener)
         self.streamer.prime_analyzer(self.sync_offset_ms / 1000.0)
@@ -652,20 +690,70 @@ class StudioApp:
         tot_min, tot_sec = divmod(int(tot_time), 60)
         time_str = f"{cur_min:02d}:{cur_sec:02d} / {tot_min:02d}:{tot_sec:02d}"
         time_surf = self.get_text(self.font_small, time_str, self.TEXT_DIM)
-        self.screen.blit(time_surf, (bar_x, bar_y + 14))
+        hx = bar_x
+        self.screen.blit(time_surf, (hx, bar_y + 14))
+        hx += time_surf.get_width() + 18
 
         # A/V Sync Calibration Readout
         sync_color = self.ACCENT_CYAN if self.sync_offset_ms != 0 else self.TEXT_DIM
-        sync_label = f"A/V Sync: {self.sync_offset_ms:+.0f} ms (K / L to tune)"
+        sync_label = f"A/V Sync: {self.sync_offset_ms:+.0f} ms"
         sync_surf = self.get_text(self.font_small, sync_label, sync_color)
-        self.screen.blit(sync_surf, (bar_x + time_surf.get_width() + 25, bar_y + 14))
+        self.screen.blit(sync_surf, (hx, bar_y + 14))
+        hx += sync_surf.get_width() + 18
+
+        # Context thresholds
+        context = getattr(self.listener, 'context', None)
+        s_low = float(getattr(context, 'salience_low', 0.35)) if context else 0.35
+        s_high = float(getattr(context, 'salience_high', 0.45)) if context else 0.45
+        t_low = float(getattr(context, 'trust_low', 0.35)) if context else 0.35
+        t_high = float(getattr(context, 'trust_high', 0.50)) if context else 0.50
+        drop_th = float(getattr(context, 'drop_buildup_threshold', 0.40)) if context else 0.40
 
         # Beat Confidence Quick Readout in Header
         conf_val = float(getattr(self.listener, 'beat_confidence', 0.0))
-        conf_clamped = float(np.clip(conf_val, 0.0, 1.0))
+        conf_clamped = min(1.0, max(0.0, conf_val))
         conf_color = self.ACCENT_GREEN if conf_clamped >= 0.30 else (self.ACCENT_ORANGE if conf_clamped >= 0.15 else self.ACCENT_RED)
-        conf_surf = self.get_text(self.font_small, f"Beat Conf: {int(conf_clamped * 100)}%", conf_color)
-        self.screen.blit(conf_surf, (bar_x + time_surf.get_width() + 25 + sync_surf.get_width() + 25, bar_y + 14))
+        conf_surf = self.get_text(self.font_small, f"Conf: {int(conf_clamped * 100)}%", conf_color)
+        self.screen.blit(conf_surf, (hx, bar_y + 14))
+        hx += conf_surf.get_width() + 18
+
+        # Beat Trust (T, speaker-delayed) & Live Trust
+        t_val = float(getattr(self.listener, 'beat_trust', 0.0))
+        t_live = float(getattr(self.listener, 'live_beat_trust', t_val))
+        t_color = self.ACCENT_GREEN if t_val >= t_high else (self.ACCENT_ORANGE if t_val >= t_low else self.ACCENT_RED)
+        t_surf = self.get_text(self.font_small, f"Trust (T): {int(t_val * 100)}% (Live: {int(t_live * 100)}%)", t_color)
+        self.screen.blit(t_surf, (hx, bar_y + 14))
+        hx += t_surf.get_width() + 18
+
+        # Rhythmic Salience (S, speaker-delayed) & Live Salience
+        s_val = float(getattr(self.listener, 'rhythm_salience', 0.0))
+        s_live = float(getattr(self.listener, 'live_rhythm_salience', s_val))
+        s_color = self.ACCENT_GREEN if s_val >= s_high else (self.ACCENT_CYAN if s_val < s_low else self.ACCENT_ORANGE)
+        s_surf = self.get_text(self.font_small, f"Salience (S): {int(s_val * 100)}% (Live: {int(s_live * 100)}%)", s_color)
+        self.screen.blit(s_surf, (hx, bar_y + 14))
+        hx += s_surf.get_width() + 18
+
+        # Salience Gradient (ΔR)
+        grad_val = float(getattr(self.listener, 'salience_gradient', 0.0))
+        grad_color = self.ACCENT_MAGENTA if grad_val >= drop_th else (self.ACCENT_CYAN if grad_val > 0.05 else self.TEXT_DIM)
+        grad_surf = self.get_text(self.font_small, f"ΔR: {grad_val:+.2f}", grad_color)
+        self.screen.blit(grad_surf, (hx, bar_y + 14))
+        hx += grad_surf.get_width() + 18
+
+        # Active Musical Regime Badge
+        if context is not None:
+            curr_reg = context.current_regime
+            reg_col = self.REGIME_COLORS.get(curr_reg, self.TEXT_MAIN)
+            reg_icon = self.REGIME_ICONS.get(curr_reg, "●")
+            reg_name = getattr(curr_reg, 'value', str(curr_reg))
+            reg_surf = self.get_text(self.font_small, f"[{reg_icon} {reg_name}]", reg_col)
+            self.screen.blit(reg_surf, (hx, bar_y + 14))
+            hx += reg_surf.get_width() + 18
+
+            countdown = float(context.drop_countdown)
+            if countdown > 0.0 or curr_reg == MusicalRegime.PRE_DROP_BUILDUP:
+                alert_surf = self.get_text(self.font_main, f"⚠️ DROP IN {countdown:.1f}s!", self.ACCENT_MAGENTA)
+                self.screen.blit(alert_surf, (hx, bar_y + 12))
 
         # Toast notification message
         if time.time() - self.status_msg_time < 3.0:
@@ -737,22 +825,553 @@ class StudioApp:
                 pygame.draw.circle(self.screen, (r, g, b), (cx, cy), r_led)
 
     def _draw_telemetry_hud(self) -> None:
-        """Renders the 4 Oracle telemetry cards: Flywheel, Beat Badges, FFT Equalizer, Chroma."""
+        """Renders the 5 Oracle telemetry cards: Flywheel, Regime & Context, Salience & Trust, Beat Badges, Spectral/Harmony."""
         hud_y = 272
-        hud_h = 365
-        card_w = (self.width - 80 - 45) // 4
+        hud_h = 425
+        n_cards = 5
+        card_w = (self.width - 80 - (n_cards - 1) * 15) // n_cards
+        spacing = 15
 
-        # Card 1: Anticipation Flywheel
+        # Card 1: Anticipation Flywheel & BPM
         self._draw_flywheel_card(40, hud_y, card_w, hud_h)
 
-        # Card 2: Beat & Transient Tagging
-        self._draw_beat_card(40 + card_w + 15, hud_y, card_w, hud_h)
+        # Card 2: Musical Context & Canonical Regime Engine
+        self._draw_context_card(40 + (card_w + spacing) * 1, hud_y, card_w, hud_h)
 
-        # Card 3: 8-Band Equalizer & Power
-        self._draw_fft_card(40 + (card_w + 15) * 2, hud_y, card_w, hud_h)
+        # Card 3: Rhythmic Salience (S), Beat Trust (T) & Salience Gradient (ΔR)
+        self._draw_salience_trust_card(40 + (card_w + spacing) * 2, hud_y, card_w, hud_h)
 
-        # Card 4: Harmonic Chromagram & Novelty
-        self._draw_chroma_card(40 + (card_w + 15) * 3, hud_y, card_w, hud_h)
+        # Card 4: Beat & Transient Tagging
+        self._draw_beat_card(40 + (card_w + spacing) * 3, hud_y, card_w, hud_h)
+
+        # Card 5: Spectral Dynamics, Total Power & Chromagram Harmony
+        self._draw_spectral_card(40 + (card_w + spacing) * 4, hud_y, card_w, hud_h)
+
+    def _draw_context_card(self, x: int, y: int, w: int, h: int) -> None:
+        """Card 2: Real-time Musical Context Engine, Canonical Regimes, Transition Crossfade & 2x2 State Matrix."""
+        card_rect = pygame.Rect(x, y, w, h)
+        pygame.draw.rect(self.screen, self.PANEL_BG, card_rect, border_radius=12)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, card_rect, width=1, border_radius=12)
+
+        header = self.get_text(self.font_main, "MUSICAL REGIME", self.ACCENT_GOLD)
+        self.screen.blit(header, (x + 16, y + 14))
+
+        context = getattr(self.listener, 'context', None)
+        if context is None:
+            no_ctx = self.get_text(self.font_small, "Musical Context Engine Inactive", self.TEXT_MUTED)
+            self.screen.blit(no_ctx, (x + 16, y + 46))
+            return
+
+        curr_reg = context.current_regime
+        prev_reg = context.previous_regime
+        blend = float(context.regime_blend)
+        dwell = float(context.regime_dwell_time)
+        countdown = float(context.drop_countdown)
+
+        reg_col = self.REGIME_COLORS.get(curr_reg, self.TEXT_MAIN)
+        reg_bg = self.REGIME_BG_COLORS.get(curr_reg, (20, 24, 34))
+        reg_icon = self.REGIME_ICONS.get(curr_reg, "●")
+        reg_name = getattr(curr_reg, 'value', str(curr_reg))
+
+        # 1. Primary Regime Badge
+        badge_rect = pygame.Rect(x + 16, y + 42, w - 32, 42)
+        pygame.draw.rect(self.screen, reg_bg, badge_rect, border_radius=8)
+        pygame.draw.rect(self.screen, reg_col, badge_rect, width=2, border_radius=8)
+
+        # Pulse glow if in PRE_DROP_BUILDUP (cached surface, zero heap allocation)
+        if curr_reg == MusicalRegime.PRE_DROP_BUILDUP:
+            glow_w = w - 32
+            glow_h = 42
+            if self._pulse_glow_surf is None or self._pulse_glow_surf.get_size() != (glow_w, glow_h):
+                self._pulse_glow_surf = pygame.Surface((glow_w, glow_h), pygame.SRCALPHA)
+            pulse_alpha = int(128 + 127 * math.sin(time.time() * 8.0))
+            self._pulse_glow_surf.fill((255, 40, 130, pulse_alpha // 3))
+            self.screen.blit(self._pulse_glow_surf, badge_rect.topleft)
+
+        badge_txt = f"{reg_icon} {reg_name}"
+        badge_surf = self.get_text(self.font_main, badge_txt, (255, 255, 255))
+        self.screen.blit(badge_surf, (badge_rect.centerx - badge_surf.get_width() // 2, badge_rect.centery - badge_surf.get_height() // 2))
+
+        # Regime Description
+        desc_map = {
+            MusicalRegime.THE_POCKET: "Solid groove • High S & T",
+            MusicalRegime.DEEP_AMBIENT: "Atmospheric drift • Low S & T",
+            MusicalRegime.FLOATING_PULSE: "Metric pulse • Low S, High T",
+            MusicalRegime.CHAOTIC_FILL: "Aperiodic fill • High S, Low T",
+            MusicalRegime.PRE_DROP_BUILDUP: "Salience spike • Drop imminent!",
+            MusicalRegime.STRUCTURAL_CHANGE: "Section / song boundary cut",
+        }
+        desc_txt = desc_map.get(curr_reg, "Active musical context state")
+        desc_surf = self.get_text(self.font_tiny, desc_txt, self.TEXT_DIM)
+        self.screen.blit(desc_surf, (x + 16, y + 88))
+
+        # 2. Transition Crossfade (Blend Progress)
+        cy = y + 108
+        self.screen.blit(self.get_text(self.font_tiny, "CROSSFADE PROGRESS", self.TEXT_DIM), (x + 16, cy))
+
+        pct_col = self.ACCENT_GREEN if blend >= 0.99 else self.ACCENT_CYAN
+        pct_lbl = f"{int(blend * 100)}%" if blend < 0.99 else "100% (Settled)"
+        pct_surf = self.get_text(self.font_mono, pct_lbl, pct_col)
+        self.screen.blit(pct_surf, (x + w - pct_surf.get_width() - 16, cy))
+
+        # Progress bar
+        cy += 15
+        bar_w = w - 32
+        bar_h = 6
+        pygame.draw.rect(self.screen, (14, 16, 22), (x + 16, cy, bar_w, bar_h), border_radius=3)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, (x + 16, cy, bar_w, bar_h), width=1, border_radius=3)
+        fill_w = int(bar_w * min(1.0, max(0.0, blend)))
+        if fill_w > 0:
+            pygame.draw.rect(self.screen, pct_col, (x + 16, cy, fill_w, bar_h), border_radius=3)
+
+        # 3. Dwell Time & Stability Gate (Compact formatting avoids horizontal text overlap)
+        cy += 14
+        dwell_min = getattr(context, 'min_dwell_time', 1.0)
+        is_locked = dwell < dwell_min
+        dwell_txt = f"Dwell: {dwell:.1f}s [{'🔒' if is_locked else '✓'}]"
+        dwell_col = self.ACCENT_ORANGE if is_locked else self.ACCENT_GREEN
+        dwell_surf = self.get_text(self.font_tiny, dwell_txt, dwell_col)
+        self.screen.blit(dwell_surf, (x + 16, cy))
+
+        if blend < 1.0:
+            reg_short = {
+                MusicalRegime.THE_POCKET: "POCKET",
+                MusicalRegime.DEEP_AMBIENT: "AMBIENT",
+                MusicalRegime.FLOATING_PULSE: "PULSE",
+                MusicalRegime.CHAOTIC_FILL: "FILL",
+                MusicalRegime.PRE_DROP_BUILDUP: "BUILDUP",
+                MusicalRegime.STRUCTURAL_CHANGE: "STRUCT",
+            }
+            from_name = reg_short.get(prev_reg, getattr(prev_reg, 'value', str(prev_reg)))
+            from_surf = self.get_text(self.font_tiny, f"From: {from_name}", self.TEXT_MUTED)
+            self.screen.blit(from_surf, (x + w - from_surf.get_width() - 16, cy))
+
+        # 4. Drop Countdown Alert Box or Semantic Flags
+        cy += 20
+        if curr_reg == MusicalRegime.PRE_DROP_BUILDUP or countdown > 0.0:
+            drop_box = pygame.Rect(x + 16, cy, w - 32, 54)
+            pygame.draw.rect(self.screen, (60, 15, 30), drop_box, border_radius=6)
+            pygame.draw.rect(self.screen, self.ACCENT_MAGENTA, drop_box, width=2, border_radius=6)
+
+            c_lbl = self.get_text(self.font_tiny, "⚠️ INCOMING DROP COUNTDOWN", self.ACCENT_MAGENTA)
+            self.screen.blit(c_lbl, (drop_box.centerx - c_lbl.get_width() // 2, drop_box.y + 6))
+
+            c_num = self.get_text(self.font_main, f"{countdown:.2f} s", (255, 255, 255))
+            self.screen.blit(c_num, (drop_box.centerx - c_num.get_width() // 2, drop_box.y + 22))
+
+            # Shrinking countdown bar
+            lookahead = getattr(self.listener.analyzer, 'lookahead_seconds', 5.0)
+            c_ratio = min(1.0, max(0.0, countdown / max(0.1, lookahead)))
+            c_bar_w = int((w - 48) * c_ratio)
+            pygame.draw.rect(self.screen, (20, 24, 34), (x + 24, drop_box.bottom - 8, w - 48, 4), border_radius=2)
+            if c_bar_w > 0:
+                pygame.draw.rect(self.screen, self.ACCENT_MAGENTA, (x + 24, drop_box.bottom - 8, c_bar_w, 4), border_radius=2)
+            box_bottom = drop_box.bottom
+        else:
+            # Semantic Flags Display
+            flags_box = pygame.Rect(x + 16, cy, w - 32, 54)
+            pygame.draw.rect(self.screen, (14, 16, 22), flags_box, border_radius=6)
+            pygame.draw.rect(self.screen, self.PANEL_BORDER, flags_box, width=1, border_radius=6)
+
+            self.screen.blit(self.get_text(self.font_tiny, "SEMANTIC CONTEXT FLAGS", self.TEXT_DIM), (x + 22, cy + 5))
+
+            f1 = "● RHYTHMIC" if context.is_rhythmic else "○ AMBIENT"
+            c1 = self.ACCENT_GREEN if context.is_rhythmic else self.ACCENT_CYAN
+            self.screen.blit(self.get_text(self.font_tiny, f1, c1), (x + 22, cy + 20))
+
+            f2 = "● IN POCKET" if context.is_in_pocket else "○ OFF POCKET"
+            c2 = self.ACCENT_GREEN if context.is_in_pocket else self.TEXT_DIM
+            self.screen.blit(self.get_text(self.font_tiny, f2, c2), (x + 22, cy + 34))
+
+            f3 = "● BUILDUP" if context.is_buildup else "○ STEADY"
+            c3 = self.ACCENT_MAGENTA if context.is_buildup else self.TEXT_MUTED
+            self.screen.blit(self.get_text(self.font_tiny, f3, c3), (x + 120, cy + 20))
+
+            f4 = "● STRUCT CUT" if context.is_structural_change else "○ NO CUT"
+            c4 = self.ACCENT_PURPLE if context.is_structural_change else self.TEXT_MUTED
+            self.screen.blit(self.get_text(self.font_tiny, f4, c4), (x + 120, cy + 34))
+            box_bottom = flags_box.bottom
+
+        # -------------------------------------------------------------
+        # 5. 2x2 Canonical Regime State Matrix (T x S) Phase Plane Mini-Grid
+        # -------------------------------------------------------------
+        grid_x = x + 16
+        grid_y = box_bottom + 8
+        grid_w = w - 32
+        grid_h = h - (grid_y - y) - 12
+
+        pygame.draw.rect(self.screen, (12, 14, 20), (grid_x, grid_y, grid_w, grid_h), border_radius=6)
+        pygame.draw.rect(self.screen, (35, 42, 58), (grid_x, grid_y, grid_w, grid_h), width=1, border_radius=6)
+
+        t_low = float(getattr(context, "trust_low", 0.35))
+        t_high = float(getattr(context, "trust_high", 0.50))
+        s_low = float(getattr(context, "salience_low", 0.35))
+        s_high = float(getattr(context, "salience_high", 0.45))
+
+        t_val = float(getattr(self.listener, "beat_trust", 0.0))
+        s_val = float(getattr(self.listener, "rhythm_salience", 0.0))
+
+        # Thresholds: T in [t_low, t_high], S in [s_low, s_high]
+        x_t_low = grid_x + int(grid_w * t_low)
+        x_t_high = grid_x + int(grid_w * t_high)
+        y_s_high = grid_y + int(grid_h * (1.0 - s_high))
+        y_s_low = grid_y + int(grid_h * (1.0 - s_low))
+
+        # Deadband shaded strips
+        pygame.draw.rect(self.screen, (20, 24, 34), (x_t_low, grid_y, max(1, x_t_high - x_t_low), grid_h))
+        pygame.draw.rect(self.screen, (20, 24, 34), (grid_x, y_s_high, grid_w, max(1, y_s_low - y_s_high)))
+
+        # Active Quadrant Highlight
+        if curr_reg == MusicalRegime.CHAOTIC_FILL:
+            pygame.draw.rect(self.screen, (50, 30, 12), (grid_x, grid_y, max(1, x_t_low - grid_x), max(1, y_s_high - grid_y)))
+        elif curr_reg == MusicalRegime.THE_POCKET:
+            pygame.draw.rect(self.screen, (14, 45, 26), (x_t_high, grid_y, max(1, grid_x + grid_w - x_t_high), max(1, y_s_high - grid_y)))
+        elif curr_reg == MusicalRegime.DEEP_AMBIENT:
+            pygame.draw.rect(self.screen, (16, 24, 45), (grid_x, y_s_low, max(1, x_t_low - grid_x), max(1, grid_y + grid_h - y_s_low)))
+        elif curr_reg == MusicalRegime.FLOATING_PULSE:
+            pygame.draw.rect(self.screen, (10, 38, 50), (x_t_high, y_s_low, max(1, grid_x + grid_w - x_t_high), max(1, grid_y + grid_h - y_s_low)))
+
+        # Threshold lines
+        pygame.draw.line(self.screen, (40, 48, 65), (x_t_low, grid_y), (x_t_low, grid_y + grid_h), 1)
+        pygame.draw.line(self.screen, (40, 48, 65), (x_t_high, grid_y), (x_t_high, grid_y + grid_h), 1)
+        pygame.draw.line(self.screen, (40, 48, 65), (grid_x, y_s_low), (grid_x + grid_w, y_s_low), 1)
+        pygame.draw.line(self.screen, (40, 48, 65), (grid_x, y_s_high), (grid_x + grid_w, y_s_high), 1)
+
+        # Quadrant labels (tiny font)
+        cf_col = self.REGIME_COLORS[MusicalRegime.CHAOTIC_FILL] if curr_reg == MusicalRegime.CHAOTIC_FILL else self.TEXT_MUTED
+        cf_surf = self.get_text(self.font_tiny, "FILL", cf_col)
+        self.screen.blit(cf_surf, (grid_x + 5, grid_y + 4))
+
+        poc_col = self.REGIME_COLORS[MusicalRegime.THE_POCKET] if curr_reg == MusicalRegime.THE_POCKET else self.TEXT_MUTED
+        poc_surf = self.get_text(self.font_tiny, "POCKET", poc_col)
+        self.screen.blit(poc_surf, (x_t_high + 5, grid_y + 4))
+
+        amb_col = self.REGIME_COLORS[MusicalRegime.DEEP_AMBIENT] if curr_reg == MusicalRegime.DEEP_AMBIENT else self.TEXT_MUTED
+        amb_surf = self.get_text(self.font_tiny, "AMBIENT", amb_col)
+        self.screen.blit(amb_surf, (grid_x + 5, y_s_low + 4))
+
+        fp_col = self.REGIME_COLORS[MusicalRegime.FLOATING_PULSE] if curr_reg == MusicalRegime.FLOATING_PULSE else self.TEXT_MUTED
+        fp_surf = self.get_text(self.font_tiny, "PULSE", fp_col)
+        self.screen.blit(fp_surf, (x_t_high + 5, y_s_low + 4))
+
+        # Center Hysteresis Label
+        cx_db = (x_t_low + x_t_high) // 2
+        cy_db = (y_s_low + y_s_high) // 2
+        db_lbl = self.get_text(self.font_tiny, "HYST", self.TEXT_MUTED)
+        self.screen.blit(db_lbl, (cx_db - db_lbl.get_width() // 2, cy_db - db_lbl.get_height() // 2))
+
+        # Current (T, S) Point & Crosshairs
+        pt_x = grid_x + int(grid_w * min(1.0, max(0.0, t_val)))
+        pt_y = grid_y + int(grid_h * (1.0 - min(1.0, max(0.0, s_val))))
+
+        pygame.draw.line(self.screen, (55, 65, 85), (grid_x, pt_y), (grid_x + grid_w, pt_y), 1)
+        pygame.draw.line(self.screen, (55, 65, 85), (pt_x, grid_y), (pt_x, grid_y + grid_h), 1)
+
+        pygame.draw.circle(self.screen, reg_col, (pt_x, pt_y), 4)
+        pygame.draw.circle(self.screen, (255, 255, 255), (pt_x, pt_y), 2)
+
+        # Coordinate label
+        coord_txt = f"({t_val:.2f}, {s_val:.2f})"
+        coord_surf = self.get_text(self.font_tiny, coord_txt, (255, 255, 255))
+        coord_x = pt_x + 5 if pt_x + 5 + coord_surf.get_width() < grid_x + grid_w else pt_x - 5 - coord_surf.get_width()
+        coord_y = pt_y - 11 if pt_y - 11 > grid_y else pt_y + 3
+        self.screen.blit(coord_surf, (coord_x, coord_y))
+
+        # Override Alert Banner for PRE_DROP_BUILDUP or STRUCTURAL_CHANGE
+        if curr_reg in (MusicalRegime.PRE_DROP_BUILDUP, MusicalRegime.STRUCTURAL_CHANGE):
+            banner_w = grid_w - 20
+            banner_h = 20
+            banner_x = grid_x + 10
+            banner_y = grid_y + grid_h // 2 - banner_h // 2
+            b_bg = self.REGIME_BG_COLORS.get(curr_reg, (65, 15, 35))
+            b_border = self.REGIME_COLORS.get(curr_reg, self.ACCENT_MAGENTA)
+            pygame.draw.rect(self.screen, b_bg, (banner_x, banner_y, banner_w, banner_h), border_radius=4)
+            pygame.draw.rect(self.screen, b_border, (banner_x, banner_y, banner_w, banner_h), width=1, border_radius=4)
+
+            b_msg = f"OVERRIDE: {reg_name}"
+            if curr_reg == MusicalRegime.PRE_DROP_BUILDUP and countdown > 0.0:
+                b_msg += f" ({countdown:.2f}s)"
+            ov_surf = self.get_text(self.font_tiny, b_msg, b_border)
+            self.screen.blit(ov_surf, (banner_x + banner_w // 2 - ov_surf.get_width() // 2, banner_y + banner_h // 2 - ov_surf.get_height() // 2))
+
+        # Axis indicators
+        axis_t = self.get_text(self.font_tiny, "T →", self.TEXT_DIM)
+        self.screen.blit(axis_t, (grid_x + grid_w - axis_t.get_width() - 3, grid_y + grid_h - 12))
+        axis_s = self.get_text(self.font_tiny, "↑ S", self.TEXT_DIM)
+        self.screen.blit(axis_s, (grid_x + 3, grid_y + grid_h - 12))
+
+    def _draw_salience_trust_card(self, x: int, y: int, w: int, h: int) -> None:
+        """Card 3: Rhythmic Salience (S), Beat Trust (T), Schmitt Deadbands & Salience Gradient (ΔR)."""
+        card_rect = pygame.Rect(x, y, w, h)
+        pygame.draw.rect(self.screen, self.PANEL_BG, card_rect, border_radius=12)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, card_rect, width=1, border_radius=12)
+
+        header = self.get_text(self.font_main, "SALIENCE & TRUST", self.ACCENT_CYAN)
+        self.screen.blit(header, (x + 16, y + 14))
+
+        context = getattr(self.listener, 'context', None)
+        s_low = float(getattr(context, 'salience_low', 0.35)) if context else 0.35
+        s_high = float(getattr(context, 'salience_high', 0.45)) if context else 0.45
+        t_low = float(getattr(context, 'trust_low', 0.35)) if context else 0.35
+        t_high = float(getattr(context, 'trust_high', 0.50)) if context else 0.50
+        drop_th = float(getattr(context, 'drop_buildup_threshold', 0.40)) if context else 0.40
+
+        s_val = float(getattr(self.listener, 'rhythm_salience', 0.0))
+        s_live = float(getattr(self.listener, 'live_rhythm_salience', s_val))
+        t_val = float(getattr(self.listener, 'beat_trust', 0.0))
+        t_live = float(getattr(self.listener, 'live_beat_trust', t_val))
+        grad_val = float(getattr(self.listener, 'salience_gradient', 0.0))
+
+        # -------------------------------------------------------------
+        # 1. RHYTHMIC SALIENCE (S)
+        # -------------------------------------------------------------
+        sy = y + 46
+        self.screen.blit(self.get_text(self.font_small, "RHYTHMIC SALIENCE (S)", self.TEXT_DIM), (x + 16, sy))
+
+        s_col = self.ACCENT_GREEN if s_val >= s_high else (self.ACCENT_CYAN if s_val < s_low else self.ACCENT_ORANGE)
+        s_tag = "POCKET" if s_val >= s_high else ("AMBIENT" if s_val < s_low else "HYSTERESIS")
+        s_surf = self.get_text(self.font_title, f"{int(s_val * 100)}%", s_col)
+        self.screen.blit(s_surf, (x + 16, sy + 16))
+
+        tag_surf = self.get_text(self.font_mono, f"[{s_tag}]", s_col)
+        self.screen.blit(tag_surf, (x + 22 + s_surf.get_width(), sy + 20))
+
+        live_s_surf = self.get_text(self.font_tiny, f"Live (+5s): {int(s_live * 100)}%", self.TEXT_DIM)
+        self.screen.blit(live_s_surf, (x + w - live_s_surf.get_width() - 16, sy + 22))
+
+        # Meter with Schmitt deadband [s_low, s_high]
+        bar_x = x + 16
+        bar_y = sy + 44
+        bar_w = w - 32
+        bar_h = 10
+        pygame.draw.rect(self.screen, (14, 16, 22), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, (bar_x, bar_y, bar_w, bar_h), width=1, border_radius=4)
+
+        # Deadband background highlight [s_low, s_high]
+        db_s_start = bar_x + int(bar_w * s_low)
+        db_s_end = bar_x + int(bar_w * s_high)
+        pygame.draw.rect(self.screen, (35, 30, 20), (db_s_start, bar_y, max(1, db_s_end - db_s_start), bar_h))
+
+        fill_s = int(bar_w * min(1.0, max(0.0, s_val)))
+        if fill_s > 0:
+            pygame.draw.rect(self.screen, s_col, (bar_x, bar_y, fill_s, bar_h), border_radius=4)
+
+        # Threshold ticks at s_low and s_high
+        pygame.draw.line(self.screen, (160, 160, 170), (db_s_start, bar_y - 2), (db_s_start, bar_y + bar_h + 2), 1)
+        pygame.draw.line(self.screen, (220, 220, 230), (db_s_end, bar_y - 2), (db_s_end, bar_y + bar_h + 2), 1)
+
+        leg_s = self.get_text(self.font_tiny, f"0%       {int(s_low*100)}% [Deadband] {int(s_high*100)}%     100%", self.TEXT_MUTED)
+        self.screen.blit(leg_s, (bar_x, bar_y + 12))
+
+        # -------------------------------------------------------------
+        # 2. BEAT TRUST (T)
+        # -------------------------------------------------------------
+        ty = bar_y + 34
+        self.screen.blit(self.get_text(self.font_small, "BEAT TRUST (T)", self.TEXT_DIM), (x + 16, ty))
+
+        t_col = self.ACCENT_GREEN if t_val >= t_high else (self.ACCENT_ORANGE if t_val >= t_low else self.ACCENT_RED)
+        t_tag = "TRUSTED" if t_val >= t_high else ("COASTING" if t_val >= t_low else "DRIFTING")
+        t_surf = self.get_text(self.font_title, f"{int(t_val * 100)}%", t_col)
+        self.screen.blit(t_surf, (x + 16, ty + 16))
+
+        t_tag_surf = self.get_text(self.font_mono, f"[{t_tag}]", t_col)
+        self.screen.blit(t_tag_surf, (x + 22 + t_surf.get_width(), ty + 20))
+
+        live_t_surf = self.get_text(self.font_tiny, f"Live (+5s): {int(t_live * 100)}%", self.TEXT_DIM)
+        self.screen.blit(live_t_surf, (x + w - live_t_surf.get_width() - 16, ty + 22))
+
+        # Meter with Schmitt deadband [t_low, t_high]
+        bar_y = ty + 44
+        pygame.draw.rect(self.screen, (14, 16, 22), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, (bar_x, bar_y, bar_w, bar_h), width=1, border_radius=4)
+
+        db_t_start = bar_x + int(bar_w * t_low)
+        db_t_end = bar_x + int(bar_w * t_high)
+        pygame.draw.rect(self.screen, (35, 30, 20), (db_t_start, bar_y, max(1, db_t_end - db_t_start), bar_h))
+
+        fill_t = int(bar_w * min(1.0, max(0.0, t_val)))
+        if fill_t > 0:
+            pygame.draw.rect(self.screen, t_col, (bar_x, bar_y, fill_t, bar_h), border_radius=4)
+
+        # Threshold ticks at t_low and t_high
+        pygame.draw.line(self.screen, (160, 160, 170), (db_t_start, bar_y - 2), (db_t_start, bar_y + bar_h + 2), 1)
+        pygame.draw.line(self.screen, (220, 220, 230), (db_t_end, bar_y - 2), (db_t_end, bar_y + bar_h + 2), 1)
+
+        leg_t = self.get_text(self.font_tiny, f"0%       {int(t_low*100)}% [Deadband] {int(t_high*100)}%     100%", self.TEXT_MUTED)
+        self.screen.blit(leg_t, (bar_x, bar_y + 12))
+
+        # -------------------------------------------------------------
+        # 3. SALIENCE GRADIENT (ΔR) & PRE-DROP TRIGGER
+        # -------------------------------------------------------------
+        gy = bar_y + 34
+        self.screen.blit(self.get_text(self.font_small, "SALIENCE GRADIENT (ΔR = R_live - R_spk)", self.TEXT_DIM), (x + 16, gy))
+
+        g_col = self.ACCENT_MAGENTA if grad_val >= drop_th else (self.ACCENT_CYAN if grad_val > 0.05 else (self.ACCENT_ORANGE if grad_val < -0.05 else self.TEXT_DIM))
+        g_arrow = "▲" if grad_val > 0.05 else ("▼" if grad_val < -0.05 else "●")
+        g_surf = self.get_text(self.font_title, f"{g_arrow} {grad_val:+.2f}", g_col)
+        self.screen.blit(g_surf, (x + 16, gy + 16))
+
+        if grad_val >= drop_th:
+            trig_surf = self.get_text(self.font_small, "⚠️ BUILDUP TRIGGER!", self.ACCENT_MAGENTA)
+            self.screen.blit(trig_surf, (x + w - trig_surf.get_width() - 16, gy + 20))
+        elif grad_val > 0.10:
+            trig_surf = self.get_text(self.font_small, "Rising Influx", self.ACCENT_CYAN)
+            self.screen.blit(trig_surf, (x + w - trig_surf.get_width() - 16, gy + 20))
+        else:
+            trig_surf = self.get_text(self.font_small, "Stable Flow", self.TEXT_MUTED)
+            self.screen.blit(trig_surf, (x + w - trig_surf.get_width() - 16, gy + 20))
+
+        # Bipolar gauge [-0.5, +0.5]
+        bar_y = gy + 44
+        pygame.draw.rect(self.screen, (14, 16, 22), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, (bar_x, bar_y, bar_w, bar_h), width=1, border_radius=4)
+
+        # Center line (0.0)
+        cx_grad = bar_x + bar_w // 2
+        pygame.draw.line(self.screen, (100, 110, 130), (cx_grad, bar_y - 2), (cx_grad, bar_y + bar_h + 2), 1)
+
+        # Pre-drop threshold tick (+drop_th)
+        th_ratio = min(1.0, max(0.0, drop_th / 0.50))
+        th_grad_x = cx_grad + int((bar_w // 2) * th_ratio)
+        pygame.draw.line(self.screen, self.ACCENT_MAGENTA, (th_grad_x, bar_y - 2), (th_grad_x, bar_y + bar_h + 2), 2)
+
+        # Fill bi-directional from center
+        clamped_g = min(0.5, max(-0.5, grad_val))
+        g_fill = int((bar_w // 2) * (clamped_g / 0.5))
+        if g_fill > 0:
+            pygame.draw.rect(self.screen, g_col, (cx_grad, bar_y, g_fill, bar_h), border_radius=2)
+        elif g_fill < 0:
+            pygame.draw.rect(self.screen, g_col, (cx_grad + g_fill, bar_y, -g_fill, bar_h), border_radius=2)
+
+        leg_g = self.get_text(self.font_tiny, f"-0.50             0.00        +{drop_th:.2f} [Drop] +0.50", self.TEXT_MUTED)
+        self.screen.blit(leg_g, (bar_x, bar_y + 12))
+
+        # 4. Telemetry Alignment & Flywheel Coupling Summary Box
+        sy_box = bar_y + 30
+        sh_box = h - (sy_box - y) - 12
+        if sh_box >= 40:
+            box_rect = pygame.Rect(bar_x, sy_box, bar_w, sh_box)
+            pygame.draw.rect(self.screen, (14, 16, 22), box_rect, border_radius=6)
+            pygame.draw.rect(self.screen, self.PANEL_BORDER, box_rect, width=1, border_radius=6)
+
+            self.screen.blit(self.get_text(self.font_tiny, "TELEMETRY DYNAMICS", self.TEXT_DIM), (bar_x + 8, sy_box + 5))
+
+            delta_s = s_live - s_val
+            ds_col = self.ACCENT_CYAN if delta_s >= 0 else self.ACCENT_ORANGE
+            ds_txt = f"Salience Lead: {delta_s:+.2f} (+5.0s)"
+            self.screen.blit(self.get_text(self.font_tiny, ds_txt, ds_col), (bar_x + 8, sy_box + 20))
+
+            delta_t = t_live - t_val
+            dt_col = self.ACCENT_GREEN if delta_t >= 0 else self.ACCENT_ORANGE
+            dt_txt = f"Trust Lead:    {delta_t:+.2f} (+5.0s)"
+            self.screen.blit(self.get_text(self.font_tiny, dt_txt, dt_col), (bar_x + 8, sy_box + 34))
+
+            is_s_lock = s_val >= s_high
+            is_t_lock = t_val >= t_high
+            lock_str = "DUAL LOCK" if (is_s_lock and is_t_lock) else ("RHYTHM ONLY" if is_s_lock else ("BEAT ONLY" if is_t_lock else "AMBIENT DRIFT"))
+            lock_col = self.ACCENT_GREEN if (is_s_lock and is_t_lock) else (self.ACCENT_CYAN if (is_s_lock or is_t_lock) else self.TEXT_MUTED)
+            self.screen.blit(self.get_text(self.font_tiny, f"State: {lock_str}", lock_col), (bar_x + 8, sy_box + 48))
+
+    def _draw_spectral_card(self, x: int, y: int, w: int, h: int) -> None:
+        """Card 5: Multi-Band Equalizer, Total Power, Chromagram Harmony & Novelty."""
+        card_rect = pygame.Rect(x, y, w, h)
+        pygame.draw.rect(self.screen, self.PANEL_BG, card_rect, border_radius=12)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, card_rect, width=1, border_radius=12)
+
+        header = self.get_text(self.font_main, "SPECTRAL & HARMONY", self.ACCENT_PURPLE)
+        self.screen.blit(header, (x + 16, y + 14))
+
+        # 1. Multi-band Equalizer
+        bands = self.listener.asserved_fft_band
+        n_bands = len(bands) if len(bands) > 0 else self.nb_bands
+
+        eq_x = x + 16
+        eq_y = y + 46
+        eq_w = w - 32
+        eq_h = 100
+        pygame.draw.rect(self.screen, (14, 16, 22), (eq_x, eq_y, eq_w, eq_h), border_radius=6)
+
+        spacing = 2 if n_bands <= 16 else 1
+        bar_w = max(2.0, (eq_w - spacing * (n_bands - 1)) / float(n_bands))
+
+        for i in range(n_bands):
+            val = float(min(1.0, max(0.0, bands[i]))) if i < len(bands) else 0.0
+            bh = int(val * (eq_h - 8))
+            bx = int(eq_x + i * (bar_w + spacing))
+            by = eq_y + eq_h - 4 - bh
+
+            frac = i / float(max(1, n_bands - 1))
+            color = self.ACCENT_CYAN if frac < 0.25 else (self.ACCENT_GREEN if frac < 0.65 else self.ACCENT_ORANGE)
+            if bh > 0:
+                pygame.draw.rect(self.screen, color, (bx, by, max(1, int(bar_w)), bh), border_radius=1)
+
+        # Total Power readout
+        power = float(min(1.0, max(0.0, self.listener.asserved_total_power)))
+        p_surf = self.get_text(self.font_tiny, f"Total Power: {power * 100:.0f}%", self.TEXT_DIM)
+        self.screen.blit(p_surf, (x + 16, eq_y + eq_h + 6))
+
+        # 2. 12-Tone Chromagram Pitch Classes
+        cy = eq_y + eq_h + 28
+        notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+        chroma = self.listener.smoothed_chroma_values
+        c_max = max(1e-4, float(np.max(chroma))) if len(chroma) > 0 else 1.0
+
+        ch_x = x + 16
+        ch_y = cy
+        ch_w = w - 32
+        ch_h = 65
+        pygame.draw.rect(self.screen, (14, 16, 22), (ch_x, ch_y, ch_w, ch_h), border_radius=6)
+
+        n_chroma = 12
+        c_col_w = int((ch_w - (n_chroma + 1) * 2) / float(n_chroma))
+        best_note_idx = int(np.argmax(chroma)) if len(chroma) > 0 and c_max > 0.05 else 0
+
+        for i in range(n_chroma):
+            val = float(chroma[i]) / c_max if len(chroma) > i else 0.0
+            bh = int(val * (ch_h - 8))
+            bx = ch_x + 2 + i * (c_col_w + 2)
+            by = ch_y + ch_h - 4 - bh
+            is_dom = (i == best_note_idx) and (c_max > 0.05)
+            color = (255, 230, 80) if is_dom else self.ACCENT_PURPLE
+            if bh > 0:
+                pygame.draw.rect(self.screen, color, (bx, by, c_col_w, bh), border_radius=1)
+
+        dom_note = notes[best_note_idx] if c_max > 0.05 else "—"
+        key_lbl = self.get_text(self.font_small, f"Dominant Key: {dom_note}", self.TEXT_MAIN)
+        self.screen.blit(key_lbl, (x + 16, ch_y + ch_h + 6))
+
+        # 3. Structural Novelty & Drop Transition
+        ny = ch_y + ch_h + 28
+        is_vc = self.listener.is_verse_chorus_change
+        is_sc = self.listener.is_song_change
+
+        vc_rect = pygame.Rect(x + 16, ny, w - 32, 28)
+        if is_vc:
+            pygame.draw.rect(self.screen, self.ACCENT_PURPLE, vc_rect, border_radius=6)
+            vc_txt = "★ VERSE / CHORUS DROP!"
+            vc_col = (10, 12, 18)
+        elif is_sc:
+            pygame.draw.rect(self.screen, self.ACCENT_CYAN, vc_rect, border_radius=6)
+            vc_txt = "★ SONG CHANGE DETECTED"
+            vc_col = (10, 12, 18)
+        else:
+            pygame.draw.rect(self.screen, (14, 16, 22), vc_rect, border_radius=6)
+            pygame.draw.rect(self.screen, self.PANEL_BORDER, vc_rect, width=1, border_radius=6)
+            vc_txt = "Steady Macro Structure"
+            vc_col = self.TEXT_MUTED
+
+        vc_surf = self.get_text(self.font_small, vc_txt, vc_col)
+        self.screen.blit(vc_surf, (vc_rect.centerx - vc_surf.get_width() // 2, vc_rect.centery - vc_surf.get_height() // 2))
+
+        # Novelty meter
+        ny += 36
+        nov = float(min(1.0, max(0.0, self.listener.asserved_novelty)))
+        self.screen.blit(self.get_text(self.font_tiny, f"Novelty Index: {nov * 100:.0f}%", self.TEXT_DIM), (x + 16, ny))
+        nov_rect = pygame.Rect(x + 16, ny + 16, w - 32, 8)
+        pygame.draw.rect(self.screen, (14, 16, 22), nov_rect, border_radius=4)
+        if nov > 0:
+            pygame.draw.rect(self.screen, self.ACCENT_PURPLE, (x + 16, ny + 16, int((w - 32) * nov), 8), border_radius=4)
+
 
     def _draw_flywheel_card(self, x: int, y: int, w: int, h: int) -> None:
         """Card 1: Continuous Flywheel Phase Dial, BPM, Confidence Meter, Status."""
@@ -921,135 +1540,7 @@ class StudioApp:
         for idx, r in enumerate(recipes):
             self.screen.blit(self.get_text(self.font_tiny, r, self.TEXT_MAIN), (x + 18, my + 20 + idx * 17))
 
-    def _draw_fft_card(self, x: int, y: int, w: int, h: int) -> None:
-        """Card 3: Multi-Band Equalizer & Power Meter."""
-        card_rect = pygame.Rect(x, y, w, h)
-        pygame.draw.rect(self.screen, self.PANEL_BG, card_rect, border_radius=12)
-        pygame.draw.rect(self.screen, self.PANEL_BORDER, card_rect, width=1, border_radius=12)
 
-        bands = self.listener.asserved_fft_band
-        n_bands = len(bands) if len(bands) > 0 else self.nb_bands
-
-        header = self.get_text(self.font_main, f"{n_bands}-BAND EQUALIZER", self.ACCENT_ORANGE)
-        self.screen.blit(header, (x + 16, y + 14))
-
-        eq_x = x + 18
-        eq_y = y + 55
-        eq_w = w - 36
-        eq_h = 160
-
-        pygame.draw.rect(self.screen, (14, 16, 22), (eq_x, eq_y, eq_w, eq_h), border_radius=8)
-
-        spacing = 3 if n_bands <= 8 else (2 if n_bands <= 16 else 1)
-        bar_w = max(2.0, (eq_w - spacing * (n_bands - 1)) / float(n_bands))
-
-        for i in range(n_bands):
-            val = float(np.clip(bands[i], 0.0, 1.0)) if i < len(bands) else 0.0
-            bh = int(val * (eq_h - 10))
-            bx = int(eq_x + i * (bar_w + spacing))
-            by = eq_y + eq_h - 5 - bh
-
-            frac = i / float(max(1, n_bands - 1))
-            color = self.ACCENT_CYAN if frac < 0.25 else (self.ACCENT_GREEN if frac < 0.65 else self.ACCENT_ORANGE)
-            if bh > 0:
-                pygame.draw.rect(self.screen, color, (bx, by, max(1, int(bar_w)), bh), border_radius=2 if bar_w >= 6 else 1)
-
-            # Band number label
-            show_lbl = (n_bands <= 8) or (n_bands <= 16 and i % 2 == 0) or (n_bands > 16 and (i % 4 == 0 or i == n_bands - 1))
-            if show_lbl:
-                lbl = self.get_text(self.font_tiny, str(i + 1), self.TEXT_DIM)
-                self.screen.blit(lbl, (bx + int(bar_w) // 2 - lbl.get_width() // 2, eq_y + eq_h + 3))
-
-        # Total Audio Power Meter
-        my = eq_y + eq_h + 30
-        self.screen.blit(self.get_text(self.font_small, "TOTAL ASSERVED POWER", self.TEXT_DIM), (x + 18, my))
-
-        p_rect = pygame.Rect(x + 18, my + 18, w - 36, 16)
-        pygame.draw.rect(self.screen, (14, 16, 22), p_rect, border_radius=4)
-
-        power = float(np.clip(self.listener.asserved_total_power, 0.0, 1.0))
-        if power > 0:
-            fill_w = int((w - 36) * power)
-            p_color = self.ACCENT_ORANGE if power < 0.8 else self.ACCENT_RED
-            pygame.draw.rect(self.screen, p_color, (x + 18, my + 18, fill_w, 16), border_radius=4)
-
-        p_lbl = self.get_text(self.font_mono, f"{power * 100:.1f}%", self.TEXT_MAIN)
-        self.screen.blit(p_lbl, (x + 18, my + 40))
-
-    def _draw_chroma_card(self, x: int, y: int, w: int, h: int) -> None:
-        """Card 4: 12-Tone Chromagram Pitch Classes & Structural Novelty."""
-        card_rect = pygame.Rect(x, y, w, h)
-        pygame.draw.rect(self.screen, self.PANEL_BG, card_rect, border_radius=12)
-        pygame.draw.rect(self.screen, self.PANEL_BORDER, card_rect, width=1, border_radius=12)
-
-        header = self.get_text(self.font_main, "HARMONY & STRUCTURE", self.ACCENT_PURPLE)
-        self.screen.blit(header, (x + 16, y + 14))
-
-        # 12-Tone Chromagram
-        notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-        chroma = self.listener.smoothed_chroma_values
-        c_max = max(1e-4, float(np.max(chroma)))
-
-        ch_x = x + 18
-        ch_y = y + 55
-        ch_w = w - 36
-        ch_h = 100
-
-        pygame.draw.rect(self.screen, (14, 16, 22), (ch_x, ch_y, ch_w, ch_h), border_radius=8)
-
-        n_bars = 12
-        bar_w = int((ch_w - (n_bars + 1) * 2) / float(n_bars))
-        best_note_idx = int(np.argmax(chroma)) if c_max > 0 else 0
-
-        for i in range(n_bars):
-            val = float(chroma[i]) / c_max if len(chroma) > i else 0.0
-            bh = int(val * (ch_h - 10))
-            bx = ch_x + 2 + i * (bar_w + 2)
-            by = ch_y + ch_h - 5 - bh
-
-            is_dom = (i == best_note_idx) and (c_max > 0.05)
-            color = self.ACCENT_PURPLE if not is_dom else (255, 230, 80)
-            if bh > 0:
-                pygame.draw.rect(self.screen, color, (bx, by, bar_w, bh), border_radius=2)
-
-        # Dominant Pitch Readout
-        dom_note = notes[best_note_idx] if c_max > 0.05 else "—"
-        note_lbl = self.get_text(self.font_small, f"Dominant Chord Pitch: {dom_note}", self.TEXT_MAIN)
-        self.screen.blit(note_lbl, (x + 18, ch_y + ch_h + 8))
-
-        # Structural Novelty & Drop Transition
-        my = ch_y + ch_h + 38
-        self.screen.blit(self.get_text(self.font_small, "SONG STRUCTURE DETECTOR", self.TEXT_DIM), (x + 18, my))
-
-        is_vc = self.listener.is_verse_chorus_change
-        is_sc = self.listener.is_song_change
-
-        vc_rect = pygame.Rect(x + 18, my + 18, w - 36, 32)
-        if is_vc:
-            pygame.draw.rect(self.screen, self.ACCENT_PURPLE, vc_rect, border_radius=6)
-            vc_txt = "★ VERSE / CHORUS DROP!"
-            vc_col = (10, 12, 18)
-        elif is_sc:
-            pygame.draw.rect(self.screen, self.ACCENT_CYAN, vc_rect, border_radius=6)
-            vc_txt = "★ SONG CHANGE DETECTED"
-            vc_col = (10, 12, 18)
-        else:
-            pygame.draw.rect(self.screen, (15, 18, 26), vc_rect, border_radius=6)
-            pygame.draw.rect(self.screen, self.PANEL_BORDER, vc_rect, width=1, border_radius=6)
-            vc_txt = "Steady Section"
-            vc_col = self.TEXT_DIM
-
-        vc_surf = self.get_text(self.font_main, vc_txt, vc_col)
-        self.screen.blit(vc_surf, (vc_rect.centerx - vc_surf.get_width() // 2, vc_rect.centery - vc_surf.get_height() // 2))
-
-        # Novelty Gauge
-        my += 60
-        nov = float(np.clip(self.listener.asserved_novelty, 0.0, 1.0))
-        self.screen.blit(self.get_text(self.font_small, f"Novelty Index: {nov * 100:.0f}%", self.TEXT_DIM), (x + 18, my))
-        nov_rect = pygame.Rect(x + 18, my + 18, w - 36, 12)
-        pygame.draw.rect(self.screen, (14, 16, 22), nov_rect, border_radius=4)
-        if nov > 0:
-            pygame.draw.rect(self.screen, self.ACCENT_PURPLE, (x + 18, my + 18, int((w - 36) * nov), 12), border_radius=4)
 
     def _draw_footer(self) -> None:
         """Renders keyboard shortcut reference bar at the bottom."""
@@ -1088,6 +1579,11 @@ def main():
 
     # Default fallback song
     song_path = args.song
+    if song_path and not os.path.isabs(song_path) and not os.path.exists(song_path):
+        repo_relative = os.path.join(_REPO_ROOT, song_path)
+        if os.path.exists(repo_relative):
+            song_path = repo_relative
+
     if not song_path:
         default_song = os.path.join(_REPO_ROOT, "assets", "musics", "mp3_files", "Palladium.mp3")
         if os.path.exists(default_song):

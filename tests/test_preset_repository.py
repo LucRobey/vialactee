@@ -198,9 +198,16 @@ async def test_persist_app_config_debounced_no_disk_reads_during_slider_updates(
     # Verify zero disk reads occurred during the 20 rapid slider updates
     assert len(read_open_calls) == 0
 
-    await asyncio.sleep(0.1)
-    with original_open(test_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    assert data["val"] == 20
+    data = {}
+    for _ in range(20):
+        await asyncio.sleep(0.05)
+        try:
+            with original_open(test_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data.get("val") == 20:
+                break
+        except Exception:
+            pass
+    assert data.get("val") == 20
 
 

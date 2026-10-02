@@ -29,10 +29,14 @@ Every visual animation subclasses `modes.Mode.Mode`.
 
 ### Rule 2: Perceptual Invariance & Real-Beat Gating (AXIOM-06)
 - High-energy strobes and boundary impacts must check `self.listener.is_real_beat`.
-- When `self.listener.beat_confidence` drops, decay smoothly to acoustic power breathing (`self.listener.instant_power`). Never cut abruptly to black.
+- When beat trust drops, decay smoothly to acoustic power breathing (`self.listener.asserved_total_power`). Never cut abruptly to black.
 
 ### Rule 3: Frame-Rate Independence
 - Always scale kinematics with `self.infos.get("fps_ratio", 1.0)` or `delta_time`.
+
+### Rule 4: Musical Context & Regimes Integration
+- Prefer declarative state branching via `self.listener.context.current_regime` (`THE_POCKET`, `FLOATING_PULSE`, `DEEP_AMBIENT`, `CHAOTIC_FILL`, `PRE_DROP_BUILDUP`, `STRUCTURAL_CHANGE`).
+- Interpolate parameter shifts using `self.listener.context.regime_blend` $\in [0.0, 1.0]$.
 
 ---
 

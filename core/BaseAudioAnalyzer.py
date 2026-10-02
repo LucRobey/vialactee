@@ -115,6 +115,16 @@ class BaseAudioAnalyzer(ABC):
         """Instantaneous rhythmic salience [0.0, 1.0] at lookahead time."""
         return float(np.clip(self.beat_confidence, 0.0, 1.0))
 
+    @property
+    def beat_trust(self) -> float:
+        """Normalized beat trust [0.0, 1.0] at speaker playback time."""
+        return float(np.clip(self.beat_confidence, 0.0, 1.0))
+
+    @property
+    def live_beat_trust(self) -> float:
+        """Normalized beat trust [0.0, 1.0] at lookahead time."""
+        return float(np.clip(self.beat_confidence, 0.0, 1.0))
+
     # Aliases for backwards compatibility
     @property
     def standalone_bpm(self) -> float:

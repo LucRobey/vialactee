@@ -7,6 +7,7 @@ import numpy as np
 from core.AudioIngestion import AudioIngestion
 from core.AudioAnalyzer import AudioAnalyzer
 from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+from core.MusicalContextEngine import MusicalContextEngine
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class Listener:
         self._ring_novelty_lm = np.zeros(self._ring_capacity, dtype=np.float64)
         self._ring_novelty_gm = np.zeros(self._ring_capacity, dtype=np.float64)
         self._ring_rhythm_salience = np.zeros(self._ring_capacity, dtype=np.float64)
+        self._ring_beat_trust = np.zeros(self._ring_capacity, dtype=np.float64)
 
         self._ring_write = 0  # Next write position
         self._ring_read = 0   # Next read position
@@ -78,6 +80,11 @@ class Listener:
         self._delayed_novelty_lm = 0.0
         self._delayed_novelty_gm = 0.0
         self._delayed_rhythm_salience = 0.0
+        self._delayed_beat_trust = 0.0
+
+        # Musical Context Engine (6 canonical regimes, Schmitt hysteresis, crossfading)
+        context_cfg = infos.get("musical_context") or infos.get("context_engine")
+        self.context = MusicalContextEngine(self, config=context_cfg)
 
     def reset(self) -> None:
         """Resets all ring buffers, read/write pointers, delayed state, and underlying analyzer."""
@@ -89,7 +96,7 @@ class Listener:
                     self._ring_band_means, self._ring_smoothed_total_power, self._ring_asserved_total_power,
                     self._ring_band_flux, self._ring_is_song_change, self._ring_is_verse_chorus_change,
                     self._ring_asserved_novelty, self._ring_combined_novelty, self._ring_novelty_lm,
-                    self._ring_novelty_gm, self._ring_rhythm_salience):
+                    self._ring_novelty_gm, self._ring_rhythm_salience, self._ring_beat_trust):
             buf.fill(0)
 
         for d_buf in (self._delayed_fft_band_values, self._delayed_chroma_values, self._delayed_smoothed_fft_band_values,
@@ -106,6 +113,10 @@ class Listener:
         self._delayed_novelty_lm = 0.0
         self._delayed_novelty_gm = 0.0
         self._delayed_rhythm_salience = 0.0
+        self._delayed_beat_trust = 0.0
+
+        if hasattr(self, 'context'):
+            self.context.reset()
 
         if hasattr(self.analyzer, 'reset'):
             self.analyzer.reset()
@@ -197,6 +208,10 @@ class Listener:
             self._delayed_novelty_lm = float(self._ring_novelty_lm[best_idx])
             self._delayed_novelty_gm = float(self._ring_novelty_gm[best_idx])
             self._delayed_rhythm_salience = float(self._ring_rhythm_salience[best_idx])
+            self._delayed_beat_trust = float(self._ring_beat_trust[best_idx])
+
+        if hasattr(self, 'context'):
+            self.context.update(self.dt)
 
     def _update_ring_buffers(self, current_time: float) -> None:
         """Writes current audio and analysis metrics into pre-allocated circular ring arrays."""
@@ -223,6 +238,8 @@ class Listener:
         self._ring_novelty_lm[w] = float(getattr(nov_det, 'novelty_lm', 0.0))
         self._ring_novelty_gm[w] = float(getattr(nov_det, 'novelty_gm', 0.0))
         self._ring_rhythm_salience[w] = float(getattr(self.analyzer, 'live_rhythm_salience', 1.0))
+        raw_trust = float(getattr(self.analyzer, 'live_beat_trust', getattr(self.analyzer, 'confidence_score', 0.0)))
+        self._ring_beat_trust[w] = max(0.0, min(1.0, raw_trust))
 
         self._ring_write = (w + 1) % self._ring_capacity
         if self._ring_count < self._ring_capacity:
@@ -372,6 +389,18 @@ class Listener:
 
     @property
     def live_rhythm_salience(self): return float(getattr(self.analyzer, 'live_rhythm_salience', 1.0))
+
+    @property
+    def beat_trust(self) -> float: return float(self._delayed_beat_trust)
+
+    @property
+    def live_beat_trust(self) -> float:
+        raw = float(getattr(self.analyzer, 'live_beat_trust', getattr(self.analyzer, 'confidence_score', 0.0)))
+        return max(0.0, min(1.0, raw))
+
+    @property
+    def salience_gradient(self) -> float:
+        return float(self.context.salience_gradient)
 
     def process_raw_audio(self, audio_data: np.ndarray) -> None:
         self.ingestion.process_raw_audio(audio_data)

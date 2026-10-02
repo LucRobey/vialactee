@@ -45,3 +45,9 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 * Always evaluate changes against the immutable benchmark suite (`python -m research.benchmarks.run_benchmark --suite synthetic --save-run`) before merging.
 * Enforce the physical refractory lockout ($T_{\min} = \max(0.18\text{s}, 0.40 \times 60/\text{BPM})$) and backward wrap clamp on soft-snapping to prevent double-trigger chatter and phase jitter.
 
+### 8. Musical Context Engine & Canonical Regimes
+* High-level musical regime classification is managed by `core/MusicalContextEngine.py` and exposed via `self.listener.context`.
+* It consumes delayed `rhythm_salience`, delayed `beat_trust`, spectral power, novelty, and lookahead `salience_gradient` $\Delta R$.
+* It classifies audio into 6 canonical regimes (`DEEP_AMBIENT`, `FLOATING_PULSE`, `THE_POCKET`, `CHAOTIC_FILL`, `PRE_DROP_BUILDUP`, `STRUCTURAL_CHANGE`) using Schmitt trigger hysteresis and minimum dwell times.
+
+

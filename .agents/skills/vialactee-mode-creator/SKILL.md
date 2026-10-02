@@ -54,6 +54,7 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 ### 4. Audio & Rhythm Reactivity
 * Access audio data via `self.listener`.
 * Consult [listener_api.md](./references/listener_api.md) for full descriptions of `asserved_fft_band`, `beat_phase`, `is_real_beat`, `beat_tag`, and `chroma_values`.
+* **Musical Regimes & State Branching**: Access high-level musical context via `self.listener.context.current_regime` and interpolate transitions with `self.listener.context.regime_blend` $\in [0.0, 1.0]$.
 * **Rhythm Integration Rules**: Strictly follow [`modes/MODE_RULES.md`](../../modes/MODE_RULES.md) for confidence-based graceful degradation, `is_real_beat` strobe gating, and acoustic fallback. Never flash blindly on ghost beats.
 
 ### 5. Reference Implementation

@@ -49,9 +49,16 @@ class TestListener(unittest.TestCase):
         self.assertAlmostEqual(self.listener.live_asserved_novelty, 0.0)
         self.assertAlmostEqual(self.listener.live_combined_novelty, 0.0)
 
-        # Salience properties
+        # Salience & Trust properties
         self.assertAlmostEqual(self.listener.rhythm_salience, 0.0)
         self.assertAlmostEqual(self.listener.live_rhythm_salience, 0.0)
+        self.assertAlmostEqual(self.listener.beat_trust, 0.0)
+        self.assertAlmostEqual(self.listener.live_beat_trust, 0.0)
+        self.assertAlmostEqual(self.listener.salience_gradient, 0.0)
+
+        # Context engine
+        self.assertTrue(hasattr(self.listener, "context"))
+        self.assertEqual(self.listener.context.current_regime, "DEEP_AMBIENT")
 
         # Status & tags
         self.assertIn(self.listener.beat_tag, ["Bass/Kick", "Snare/Mid", "Hi-hat/Cymbal"])
@@ -177,6 +184,23 @@ class TestListener(unittest.TestCase):
         self.assertAlmostEqual(self.listener.rhythm_salience, 0.0)
         self.assertTrue(np.all(self.listener._ring_rhythm_salience == 0.0))
         self.assertAlmostEqual(self.listener.live_rhythm_salience, 0.0)
+
+    def test_listener_beat_trust_and_context(self):
+        """Verify delayed beat_trust, live_beat_trust, and context engine integration."""
+        self.listener._delayed_beat_trust = 0.65
+        self.listener._ring_beat_trust[0] = 0.65
+        self.assertAlmostEqual(self.listener.beat_trust, 0.65)
+
+        # live_beat_trust comes from confidence_score
+        self.listener.analyzer.confidence_score = 0.82
+        self.assertAlmostEqual(self.listener.live_beat_trust, 0.82)
+
+        # Calling reset clears beat_trust ring buffer and delayed state, and resets context
+        self.listener.context._current_regime = "THE_POCKET"
+        self.listener.reset()
+        self.assertAlmostEqual(self.listener.beat_trust, 0.0)
+        self.assertTrue(np.all(self.listener._ring_beat_trust == 0.0))
+        self.assertEqual(self.listener.context.current_regime, "DEEP_AMBIENT")
 
 
 if __name__ == '__main__':

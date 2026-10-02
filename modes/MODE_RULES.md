@@ -11,25 +11,28 @@ It codifies how modes must consume rhythmic signals from the **Anticipation Flyw
 Interactive lighting has a golden rule: **The spectator must never see a broken rhythm.**
 Human perception detects audio-visual desync in under 50 milliseconds. If the beat tracker is confused (e.g. during a chaotic guitar solo, ambient intro, or tempo shift) and the chandelier keeps strobing out of time, spectators instantly perceive it as a technical glitch.
 
-### The Two Modes of Operation
-Every rhythm-aware mode must support two complementary visual states:
+### The 6 Canonical Musical Regimes (MusicalContextEngine)
+Rather than requiring every mode to invent its own ad-hoc fallback logic, [`core/MusicalContextEngine.py`](../core/MusicalContextEngine.py) centrally manages 6 canonical regimes via `self.listener.context.current_regime`:
 
 ```
-┌──────────────────────────────────────┐     ┌──────────────────────────────────────┐
-│       LOCKED STATE (High Trust)      │     │      ACOUSTIC / AMBIENT FALLBACK     │
-│       confidence >= 0.65             │     │      confidence < 0.40               │
-├──────────────────────────────────────┤     ├──────────────────────────────────────┤
-│ • Sharp, punchy attack & decays      │     │ • Smooth, fluid volume breathing     │
-│ • High dynamic contrast              │     │ • Ambient color drift                │
-│ • Phase-locked geometric kinematics  │     │ • Direct reaction to physical power  │
-│ • Crisp rhythmic pulses              │     │ • Relaxed organic wave motion        │
-└──────────────────────────────────────┘     └──────────────────────────────────────┘
-                   ▲                                            ▲
-                   └────────── BLENDED CONTINUOUSLY ────────────┘
-                              via beat_confidence
+                      BEAT TRUST (T)
+                     Low (< 0.35)           High (>= 0.50)
+                 ┌──────────────────────┬──────────────────────┐
+   High          │                      │                      │
+  (>= 0.45)      │     CHAOTIC_FILL     │      THE_POCKET      │
+                 │                      │                      │
+RHYTHM           ├──────────────────────┼──────────────────────┤
+SALIENCE (S)     │                      │                      │
+   Low           │     DEEP_AMBIENT     │    FLOATING_PULSE    │
+  (< 0.35)       │                      │                      │
+                 └──────────────────────┴──────────────────────┘
+
+   TRANSITIONAL / MACRO OVERRIDES:
+   • PRE_DROP_BUILDUP  : Triggered when salience gradient ΔR >= +0.40 (arms drop_countdown)
+   • STRUCTURAL_CHANGE : Triggered on is_song_change or is_verse_chorus_change
 ```
 
-When the analyzer is lost, the mode does **not** fail—it smoothly dissolves into an organic, ambient, or direct volume-reactive visual. To the spectator, it feels like an artistic choice matching the music's breakdown.
+Modes can smoothly blend between states using `self.listener.context.regime_blend` $\in [0.0, 1.0]$. When the analyzer is lost or the music shifts to ambient breakdown, the mode does **not** fail—it smoothly dissolves into an organic ambient visual.
 
 ---
 
@@ -38,12 +41,16 @@ When the analyzer is lost, the mode does **not** fail—it smoothly dissolves in
 ### Signals You CAN Rely On:
 | Property | Type | Description | Best Used For |
 | :--- | :--- | :--- | :--- |
+| `self.listener.context.current_regime` | `MusicalRegime` | Active musical regime (`THE_POCKET`, `FLOATING_PULSE`, `DEEP_AMBIENT`, `CHAOTIC_FILL`, `PRE_DROP_BUILDUP`, `STRUCTURAL_CHANGE`). | Top-level visual behavior branching. |
+| `self.listener.context.regime_blend` | `float` | Crossfade progress $[0.0, 1.0]$ between previous and current regime. | Seamless interpolation between regime visual parameters. |
+| `self.listener.context.drop_countdown`| `float` | Seconds remaining until impending drop hits speakers. | Building tension (color shift, strobe acceleration, spatial contraction). |
+| `self.listener.rhythm_salience` | `float` | Speaker-aligned groove & rhythmic prominence $[0.0, 1.0]$. | Dynamic scaling of percussive contrast vs fluid watercolor. |
+| `self.listener.beat_trust` | `float` | Speaker-aligned tempo tracking trust $[0.0, 1.0]$. | Eliminates timing lead of `beat_confidence`. |
 | `self.listener.beat_phase` | `float` | Continuous phase $\theta \in [0.0, 1.0)$ in speaker time ($0.0 = \text{strike}$). | Smooth ADSR decays, sine breathing, traveling wave positions. |
 | `self.listener.bpm` | `float` | Current estimated tempo (e.g. `124.0`). | Scaling particle speeds, wave travel times, and physics constants. |
 | `self.listener.is_beat` | `bool` | `True` for exactly 1 frame when a beat strikes speaker time. | 1-shot events (wave injection, projectile spawn, color step). |
 | `self.listener.is_real_beat` | `bool` | `True` if the beat tick matches an actual physical acoustic transient. | **Gating hard flashes** and strobes (suppresses ghost hits). |
 | `self.listener.is_dropped_beat`| `bool` | `True` when flywheel is coasting through silence or a drumless breakdown. | Softening flashes or rendering phantom ghost pulses. |
-| `self.listener.beat_confidence`| `float` | Pearson correlation confidence score $[0.0, 1.0]$. | Blending factor between rhythmic and acoustic fallback states. |
 | `self.listener.flywheel_status`| `str` | `'locked'` vs `'coasting'`. | High-level state switching. |
 
 ### Signals to AVOID For Now:

@@ -34,12 +34,13 @@ python tools/mode_studio.py --leds 120
    - Hit **`[R]`** in the Pygame window.
    - Python reloads the module via `importlib.reload()` and continues playback immediately without restarting the song or resetting the beat tracker.
 
-3. **Live Oracle Telemetry HUD:**
-   - **Continuous Flywheel:** Circular dial showing real-time `beat_phase` ($0.0 \to 1.0$), BPM, and lock confidence.
-   - **Beat Classification:** Flashing badges for `● REAL BEAT` vs `◐ DROPPED / BREAKDOWN`, plus `[Bass/Kick]`, `[Snare/Mid]`, `[Hi-hat/Cymbal]` tags.
-   - **8-Band Equalizer:** Live auto-gain normalized frequency bands.
-   - **12-Tone Chromagram:** Real-time musical pitch classes and dominant chord key.
-   - **Structure Detector:** Indicators for `is_verse_chorus_change` (drop detection) and `is_song_change`.
+3. **Live 5-Card Telemetry & Context HUD:**
+   - **Card 0 (Flywheel & BPM):** Circular phase dial showing real-time `beat_phase` ($0.0 \to 1.0$), base tempo, lock status, Pearson confidence meter, and total beats.
+   - **Card 1 (Musical Regime Engine & 2x2 State Matrix):** Real-time canonical regime badge (`DEEP_AMBIENT`, `FLOATING_PULSE`, `THE_POCKET`, `CHAOTIC_FILL`, `PRE_DROP_BUILDUP`, `STRUCTURAL_CHANGE`), transition crossfade progress bar (`regime_blend`), dwell time with stability lock, pre-drop countdown alerts, and embedded **2x2 Regime State Matrix ($T \times S$ Phase Plane Mini-Grid)** showing real-time $(T, S)$ navigation, Schmitt hysteresis deadbands, and active quadrant highlights.
+   - **Card 2 (Salience & Trust Telemetry):** Rhythmic Salience ($S$) with dynamic Schmitt deadband shaded, Beat Trust ($T$) with dynamic Schmitt deadband shaded, Salience Gradient ($\Delta R$) bipolar gauge with pre-drop buildup trigger tick, and Telemetry Dynamics Summary box tracking speaker vs lookahead lead deltas and lock coupling states.
+   - **Card 3 (Beat & Transient Tagging):** Flashing badges for `● REAL BEAT` vs `◐ DROPPED / BREAKDOWN`, plus `[Bass/Kick]`, `[Snare/Mid]`, `[Hi-hat/Cymbal]` tags, and mode authoring guidelines.
+   - **Card 4 (Spectral Dynamics & Harmony):** N-Band Mel filterbank dynamics, total asserved power meter, and 12-tone chromagram dominant key class.
+   - **Scrubber Readout:** Interactive progress bar blits live values for `Trust (T)` (Speaker & Live), `Salience (S)` (Speaker & Live), `ΔR`, `[Regime Badge]`, and flashing `[⚠️ DROP IN X.Xs!]` alerts.
 
 ### Keyboard Shortcuts
 
@@ -47,7 +48,7 @@ python tools/mode_studio.py --leds 120
 | :--- | :--- |
 | **`[R]`** | **Hot-Reload** active mode code from disk |
 | **`[Space]`** | Pause / Resume playback and animation |
-| **`[↑] / [↓]`** | Cycle through all 20 modes in `modes/` |
+| **`[↑] / [↓]`** | Cycle through all 23 modes in `modes/` |
 | **`[←] / [→]`** | Seek -5s / +5s backward / forward |
 | **`[N] / [P]`** | Next / Previous song in playlist |
 | **`[1] - [9]`** | Jump directly to track 1 through 9 |
@@ -82,12 +83,13 @@ python tools/music_studio.py --model AudioAnalyzer
    - Visualizes the past 1.0s and next 4.0s of multi-band positive spectral flux streaming toward the speaker line.
    - Distinct **`▼ SPEAKER NOW`** line marking exact acoustic speaker emission with hardware DAC compensation.
    - Overlays the **Oracle Template Pulse Wave** showing anticipated beat peaks before they hit the speakers.
-   - Reference threshold lines for rolling flux baseline and strong peak multipliers.
+   - Highlights the pre-drop buildup anticipation zone with countdown label when $\Delta R \ge +0.40$.
+   - Real-time sub-header readouts comparing Speaker vs Lookahead (+5.0s) Salience and Beat Trust.
 
-2. **Anticipation Flywheel & Beat Tracker Core:**
+2. **Anticipation Flywheel & Dual Beat Trust Core:**
    - **Continuous Phase Dial:** 360-degree mechanical flywheel needle tracking `beat_phase` ($0.0 \to 1.0$).
-   - **Multi-Band & Anti-Phase Engine:** Runs `MultiBandOnsetAudioAnalyzer` with kick downbeat verification and mid-melodic squelch.
-   - **Lock / Coasting Ring:** Glowing Emerald Green when `LOCKED` ($\ge 15\%$ Pearson confidence) and Amber/Orange when `COASTING` through drum breakdowns.
+   - **Speaker Beat Trust ($T$):** Meter with Schmitt trigger deadband $[0.35, 0.50]$ shaded and `[TRUSTED / COASTING / DRIFTING]` states.
+   - **Lookahead Beat Trust ($T_{\text{live}}$) & Pearson $r$:** Predictive flywheel stability meter.
    - **High-Impact Beat Flash:** Flashes on downbeats with frequency classification:
      - 🔴 **Bass/Kick** (< 150 Hz)
      - 🟢 **Snare/Mid** (150 - 2000 Hz)
@@ -105,17 +107,21 @@ python tools/music_studio.py --model AudioAnalyzer
    - 12 pitch classes ($C, C\sharp, D, \dots, B$).
    - Visual bar heights and dominant key/chord badge.
 
-5. **Structural Novelty, Tension & Drop Detection Scope:**
-   - Rolling real-time graph plotting:
-     - **Combined Novelty** (Cyan): Instantaneous STM vs LTM timbral divergence + power difference.
-     - **Local Max (LM)** (Orange): Fast decay envelope.
-     - **Global Max (GM)** (Purple): Macro-structure tension envelope.
-   - Asserved Novelty gauge ($0.0 \to 1.0$) with song drop threshold line.
-   - Flashing badges for `★ VERSE / CHORUS DROP` and `⚡ SONG TRANSITION`.
+5. **Structural Novelty & Regime State Engine (Panel 5):**
+   - Header with Canonical Musical Regime badge (`[● THE_POCKET]`, `[▲ PRE_DROP_BUILDUP]`, etc.) and flashing `⚠️ DROP COUNTDOWN: X.XXs` alert.
+   - Rolling real-time graph plotting Combined Novelty (Cyan), Local Max LM (Orange), and Global Max GM (Purple).
+   - Expanded right-sidebar instrumentation:
+     - **Asserved Novelty Meter:** Gauge ($0.0 \to 1.0$) with song drop threshold line.
+     - **Memory Envelopes:** STM Power, LTM Power, Novelty LM, Novelty GM, and silence frame counters.
+     - **Rhythmic Salience ($S$) Meter:** Speaker vs Live (+5s) readouts with Schmitt trigger deadband $[0.35, 0.45]$ shaded and `[POCKET / AMBIENT / HYST]` badges.
+     - **Salience Gradient ($\Delta R$) Gauge:** Bipolar $[-0.5, +0.5]$ meter with center tick, $+0.40$ buildup threshold line, and trigger alert.
+     - **Semantic Context Flags:** Mini-card reporting `RHYTHMIC`, `IN POCKET`, `BUILDUP`, and `STRUCT CUT`.
+     - **Regime Transition Crossfade:** Blend progress bar ($0.0 \to 1.0$), source regime readout, and dwell time with stability lock indicator.
+     - **2x2 Regime State Matrix ($T \times S$) Phase Plane Mini-Grid:** Visualizes musical navigation across $(T, S)$ state plane (`CHAOTIC_FILL`, `THE_POCKET`, `DEEP_AMBIENT`, `FLOATING_PULSE`), with active quadrant highlights, Schmitt hysteresis zones, crosshairs, coordinate readouts, and override alert banners.
 
 6. **Interactive Live Parameter Tuning Drawer (`[T]` Key):**
-   - Press **`[T]`** to slide open the live parameter editor.
-   - Select parameter with **`[↑] / [↓]`**, adjust with **`[←] / [→]`**:
+   - Press **`[T]`** to slide open the live parameter editor (dynamically sized, zero-overflow backdrop).
+   - Select parameter with **`[↑] / [↓]`**, adjust with **`[←] / [→]`**, or **click / drag with mouse**:
      - `sensi` (Audio Sensitivity)
      - `moderate_confidence_threshold` (Flywheel lock sensitivity)
      - `high_confidence_threshold` (Flywheel high snap threshold)
@@ -123,7 +129,15 @@ python tools/music_studio.py --model AudioAnalyzer
      - `real_beat_baseline_ratio` (Drum presence validation)
      - `song_novelty_asserved_th` (Verse/Chorus drop threshold)
      - `silence_power_threshold` (Silence detection floor)
-   - Press **`[D]`** inside drawer to reset parameters to default `RhythmConfig`.
+     - `drop_buildup` (Pre-drop buildup salience gradient threshold)
+     - `salience_low` (Rhythmic salience Schmitt low threshold)
+     - `salience_high` (Rhythmic salience Schmitt high threshold)
+     - `trust_low` (Beat trust Schmitt low threshold)
+     - `trust_high` (Beat trust Schmitt high threshold)
+   - Real-time deadband inversion guard prevents hysteresis collapse.
+   - Panel 5 phase plane matrix and meters dynamically track live threshold adjustments.
+   - Click directly on any parameter row to select it; click or drag along any slider bar to set values.
+   - Press **`[D]`** inside drawer to reset DSP and Context parameters to defaults.
 
 7. **Miniature Chandelier Preview:**
    - 80-pixel virtual LED strip across the top header displaying real-time chandelier response.
@@ -141,6 +155,7 @@ python tools/music_studio.py --model AudioAnalyzer
 | **`[T]`** | Toggle Live Parameter Tuning Drawer |
 | **`[↑] / [↓]`** | Select parameter in Tuning Drawer |
 | **`[←] / [→]`** | Adjust selected parameter value |
+| **`Mouse Click / Drag`** | Click parameter row to select; drag slider bar to tune |
 | **`[D]`** | Reset DSP parameters to defaults |
 | **`[+] / [-]`** | Increase / decrease audio sensitivity |
 | **Click scrubber** | Seek to exact song timestamp |

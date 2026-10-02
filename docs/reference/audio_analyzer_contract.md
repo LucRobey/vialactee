@@ -63,6 +63,8 @@ The audio analysis pipeline processes incoming audio in real time while supporti
 | **`is_real_beat`** | `bool`<br>`True`/`False` | **$T_{\text{speaker}}$** | **High** | 1-frame trigger indicating an actual physical acoustic transient occurred on beat. | Evaluates whether `is_beat` is true **and** the delayed percussive flux at $T_{\text{speaker}}$ exceeds both a local baseline ($> 0.5 \times \text{baseline}$) and an absolute floor ($\ge 5.0$). **MANDATORY for hard strobes and shockwaves.** |
 | **`is_dropped_beat`** | `bool`<br>`True`/`False` | **$T_{\text{speaker}}$** | **High** | 1-frame trigger indicating a metronomic beat occurred, but acoustic energy was missing. | True when `is_beat` is true but `is_real_beat` is false. Occurs during syncopation, drum rests, or breakdowns. |
 | **`beat_confidence`** | `float`<br>$[-1.0, 1.0]$ | **$T_{\text{lookahead}}$**<br>(Leads by $\sim 2$–$5$s) | **High** (for 4/4)<br>**Moderate** (drift) | Correlation score measuring how clearly the music matches a periodic pulse. | Computed via Pearson correlation $r = \frac{T \cdot y}{\sigma_T \sigma_y}$ between the rolling 5.0s onset flux buffer and a synthetic triangular pulse train at current BPM, exponentially weighted toward newest audio. **Must be clipped in modes:** `np.clip(val, 0.0, 1.0)`. |
+| **`beat_trust`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$ via ring** | **High** | Normalized beat trust & tempo tracking confidence synchronized to speaker playback time. Eliminates the timing lead of `beat_confidence`. | Computed by clipping raw Pearson correlation $[0.0, 1.0]$ and delaying it through `Listener` FIFO ring buffer `_ring_beat_trust` by exactly `lookahead_seconds`. Consumed by `MusicalContextEngine`. |
+| **`live_beat_trust`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{lookahead}}$**<br>(+5.0s future) | **High** | Anticipatory normalized beat trust on incoming audio before delay buffer. | Unbuffered normalized beat confidence: $\max(0.0, \min(1.0, \text{confidence\_score}))$. |
 | **`flywheel_status`** | `str`<br>`'locked'`, `'coasting'` | **$T_{\text{lookahead}}$** | **High** | Operational state of the metronome flywheel. | Shifts to `'locked'` when `beat_confidence >= 0.15` and $\ge 4$ consecutive beats are verified; shifts to `'coasting'` during unmetered or low-confidence passages. |
 | **`beat_count`** | `int`<br>$[0, \infty)$ | **$T_{\text{speaker}}$** | **High** (counter)<br>**Low** (measure) | Monotonic integer counter incremented on every `is_beat`. | Increments on every phase wrap. Resets to 0 on song change. **Do NOT use `beat_count % 4` for downbeats** (flywheel phase is not locked to bar boundaries). |
 | **`band_flux`** | `np.ndarray (8,)`<br>$[0.0, \sim 500.0]$ | **$T_{\text{speaker}}$ via ring** | **High** | Delayed half-wave rectified onset derivative flux per frequency band. | Computed as $dE_b[t] = \max(0, E_b[t] - E_b[t-1])$ for each of the 8 Mel bands, then passed through `Listener` FIFO ring buffer to align with $T_{\text{speaker}}$. |
@@ -70,6 +72,7 @@ The audio analysis pipeline processes incoming audio in real time while supporti
 | **`beat_tag`** | `str` | **$T_{\text{speaker}}$ via ring** | **High** | Transient classification: `'Bass/Kick'`, `'Snare/Mid'`, `'Hi-hat/Cymbal'`. | Evaluated using circular `band_flux_buffer` at the speaker playback offset ($T_{\text{speaker}}$), classifying the acoustic transient playing out of the speakers at the beat instant. |
 | **`rhythm_salience`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$ via ring** | **High** | Normalized rhythmic prominence & groove saliency at speaker playback time. Differentiates driving percussive passages from ambient/unmetered sections. | Multi-pillar composite metric delayed by 5.0s ring buffer to align with $T_{\text{speaker}}$. Combines 4 acoustic pillars: transient ratio $\rho_{\text{trans}} = \frac{\Phi_{\text{drum}}}{\Phi_{\text{drum}} + 0.4 P_{\text{total}}}$ (0.30), percussive crest factor $C_{\text{norm}}$ (0.25), flywheel consensus $\gamma_{\text{conf}}$ (0.25), and pulse density $D_{\text{pulse}}$ (0.20), smoothed via asymmetric envelope (~50ms attack, ~1.5s release). |
 | **`live_rhythm_salience`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{lookahead}}$**<br>(+5.0s future) | **High** | Anticipatory rhythmic salience evaluated on incoming microphone stream before delay buffer. Allows pre-drop visual build-up and predictive transitions. | Evaluated directly from unbuffered `MultiBandOnsetAudioAnalyzer.live_rhythm_salience` before ring buffer delay. Leads `rhythm_salience` by lookahead delay (`fakeDelay`, typically 5.0s). |
+| **`salience_gradient`** | `float`<br>$[-1.0, 1.0]$ | **Differential** | **High** | Difference between lookahead salience and speaker salience ($\Delta R = R_{\text{live}} - R_{\text{speaker}}$). | Evaluated by `MusicalContextEngine`. When $\Delta R \ge +0.40$, indicates an upcoming rhythmic explosion or drop, arming `PRE_DROP_BUILDUP`. |
 | **`standalone_phase`** / **`standalone_bpm`** | `float` | **$T_{\text{speaker}}$** | **High** | Backward-compatibility aliases for `beat_phase` and `bpm`. | Direct facade getters returning `beat_phase` and `bpm`. |
 
 ---
@@ -113,6 +116,27 @@ The audio analysis pipeline processes incoming audio in real time while supporti
 
 ---
 
+### Group E: Musical Context & Regimes (High-Level Classification Engine)
+
+Accessible directly via `self.listener.context` ([`core/MusicalContextEngine.py`](../../core/MusicalContextEngine.py)):
+
+| Property on `self.listener.context` | Type / Range | Timing | Stability | What It Represents | How It Is Measured (DSP Mechanism) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`current_regime`** | `MusicalRegime`<br>(Enum / `str`) | **Hybrid** | **Maximum** | The active musical regime:<br>• `DEEP_AMBIENT`<br>• `FLOATING_PULSE`<br>• `THE_POCKET`<br>• `CHAOTIC_FILL`<br>• `PRE_DROP_BUILDUP`<br>• `STRUCTURAL_CHANGE` | 2D Schmitt trigger state machine consuming speaker-aligned `rhythm_salience` and `beat_trust`, guarded by 1.0s minimum dwell time and pre-drop differential gradient $\Delta R \ge +0.40$. |
+| **`previous_regime`** | `MusicalRegime` | **Event-based** | **Maximum** | Regime active prior to the latest state transition. | Preserved across regime changes to facilitate seamless crossfading. |
+| **`regime_blend`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$** | **High** | Crossfade transition progress.<br>• $0.0 =$ Just entered new regime<br>• $1.0 =$ Fully transitioned | Linearly ramps from $0.0 \to 1.0$ over 0.5s (`transition_time`) upon entering a new regime. |
+| **`drop_countdown`** | `float`<br>$[0.0, \sim 5.0]$s | **$T_{\text{lookahead}}$** | **High** | Seconds remaining until impending drop hits speakers during `PRE_DROP_BUILDUP`. | Armed at `lookahead_seconds` when $\Delta R \ge 0.40$; decrements by $dt$ until drop impact ($0.0$). |
+| **`salience_gradient`** | `float`<br>$[-1.0, 1.0]$ | **Differential** | **High** | Lookahead salience minus delayed salience ($\Delta R$). | Quantifies incoming rhythmic energy build. |
+| **`power`** | `float`<br>$[0.0, \sim 1.0]$ | **$T_{\text{speaker}}$** | **High** | Speaker-aligned asserved total acoustic power. | Facade to `asserved_total_power` consumed by the engine for ambient energy scaling. |
+| **`novelty`** | `float`<br>$[0.0, \sim 1.0]$ | **$T_{\text{speaker}}$** | **High** | Speaker-aligned asserved spectral novelty. | Facade to `asserved_novelty` consumed by the engine for macro-structural change detection. |
+| **`is_ambient`** | `bool` | **Current** | **Maximum** | True if in `DEEP_AMBIENT` or `FLOATING_PULSE`. | Convenient boolean for ambient volume-breathing modes. |
+| **`is_rhythmic`** | `bool` | **Current** | **Maximum** | True if in `THE_POCKET` or `CHAOTIC_FILL`. | Convenient boolean for percussive modes. |
+| **`is_buildup`** | `bool` | **Current** | **Maximum** | True if in `PRE_DROP_BUILDUP`. | Convenient boolean for drop-anticipation tension builds. |
+| **`is_in_pocket`** | `bool` | **Current** | **Maximum** | True if in `THE_POCKET`. | Convenient boolean for full drum groove animations. |
+| **`is_structural_change`** | `bool` | **Current** | **Maximum** | True if in `STRUCTURAL_CHANGE`. | Convenient boolean for sectional reset animations. |
+
+---
+
 ## 3. Best Practices & Standard Patterns for Visual Modes
 
 ### Pattern 1: Rhythmic vs Ambient Blending (Mandatory Rule)
@@ -144,4 +168,30 @@ if self.listener.is_beat and self.listener.is_real_beat and (self.listener.beat_
 dt_beat = 60.0 / max(60.0, self.listener.bpm)
 speed_px_per_sec = float(self.num_leds) / dt_beat
 self.position = (self.position + speed_px_per_sec * dt) % self.num_leds
+```
+
+### Pattern 4: Declarative Musical Regime Handling (Modern Architecture)
+Instead of hardcoding complex threshold checks, modern modes branch declaratively on `self.listener.context.current_regime` and interpolate with `self.listener.context.regime_blend`:
+```python
+ctx = self.listener.context
+regime = ctx.current_regime
+blend = ctx.regime_blend
+
+if regime == "THE_POCKET":
+    # Snappy quantized percussion
+    intensity = (1.0 - self.listener.beat_phase) ** 3.0
+elif regime == "PRE_DROP_BUILDUP":
+    # Build tension as drop countdown approaches 0.0
+    intensity = (5.0 - ctx.drop_countdown) / 5.0
+elif regime == "FLOATING_PULSE":
+    # Soft undulating wave
+    intensity = 0.5 * (1.0 + np.sin(2.0 * np.pi * self.listener.beat_phase))
+else:
+    # DEEP_AMBIENT or CHAOTIC_FILL: Smooth acoustic volume breathing
+    intensity = float(self.listener.asserved_total_power)
+
+# Smooth crossfade during regime transitions
+if blend < 1.0:
+    intensity = (1.0 - blend) * self._prev_intensity + blend * intensity
+self._prev_intensity = intensity
 ```
