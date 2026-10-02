@@ -80,8 +80,14 @@ class Rhythm_breather_mode(Mode.Mode):
         self.hues: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
         self.sats: np.ndarray = np.ones(self.nb_of_leds, dtype=np.float64)
         self.vals: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
+        self.target_rgb: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.float64)
+        self.grad_colors: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.float64)
+        self.spatial_blend: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
 
     def run(self) -> None:
+        if self.nb_of_leds <= 0:
+            return
+
         dt = getattr(self.listener, "dt", 1.0 / 60.0)
 
         # 1. Read rhythmic metrics and MusicalContextEngine facade
@@ -95,9 +101,10 @@ class Rhythm_breather_mode(Mode.Mode):
         confidence = max(0.0, min(1.0, confidence))
         is_locked = bool(ctx.is_locked if ctx is not None else (confidence >= 0.5))
         is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
-        is_drop = bool(ctx.is_drop_impact if ctx is not None else False)
+        scene = getattr(ctx, "scene", None)
+        is_drop_impact_scene = bool(scene == "DROP_IMPACT")
+        is_drop = bool(ctx.is_drop_impact if ctx is not None else False) or is_drop_impact_scene
         drop_progress = float(ctx.drop_progress if ctx is not None else 0.0)
-        is_drop_impact_scene = bool(getattr(ctx, "scene", None) == "DROP_IMPACT")
         is_silent = bool(ctx.is_silent if ctx is not None else False)
 
         # 2. Compute Rhythmic vs Acoustic energy components (MODE_RULES Rule 1)
@@ -120,28 +127,37 @@ class Rhythm_breather_mode(Mode.Mode):
 
         # 4. Gated Real-Beat transient boost (MODE_RULES Rule 2) & Drop Flare
         is_beat = getattr(self.listener, "is_beat", False)
-        if is_drop or (is_drop_impact_scene and drop_progress > 0.0):
+        if is_drop or is_drop_impact_scene:
             flash_punch = 0.50 * (drop_progress if drop_progress > 0.0 else 1.0)
         elif is_beat and is_real and (confidence > 0.4 or is_locked):
             flash_punch = 0.20 + 0.15 * tension
         else:
             flash_punch = 0.0
 
-        # 5. Slow chromatic hue drift with spectral tilt modulation
-        self.current_hue_offset = (self.current_hue_offset + dt * self.drift_speed) % 1.0
-        target_hue = (self.base_hue + self.current_hue_offset + 0.08 * spectral_tilt) % 1.0
+        # 5. Spatial color gradient derived from self.mood_colors
+        mood = self.mood_colors
+        # Base gradient blends Primary (0) and Secondary (1)
+        np.add(self.spatial_coords, 0.1 * spectral_tilt, out=self.spatial_blend)
+        np.clip(self.spatial_blend, 0.0, 1.0, out=self.spatial_blend)
+        m0, m1 = mood[0], mood[1]
+        for c in range(3):
+            m0_c = float(m0[c])
+            diff = float(m1[c]) - m0_c
+            np.multiply(self.spatial_blend, diff, out=self.grad_colors[:, c])
+            np.add(self.grad_colors[:, c], m0_c, out=self.grad_colors[:, c])
 
-        # 6. Vectorized Color Calculation (Zero Allocation)
-        np.add(target_hue, self.spatial_hue_spread, out=self.hues)
-        np.mod(self.hues, 1.0, out=self.hues)
+        # On transient punch or drop impact, blend toward Accent (2) / Highlight (3)
+        if flash_punch > 0.01:
+            accent_target = mood[3] if is_drop else mood[2]
+            punch_weight = min(1.0, flash_punch * 1.5)
+            inv_punch = 1.0 - punch_weight
+            for c in range(3):
+                np.multiply(self.grad_colors[:, c], inv_punch, out=self.grad_colors[:, c])
+                np.add(self.grad_colors[:, c], punch_weight * float(accent_target[c]), out=self.grad_colors[:, c])
 
+        # 6. Vectorized Intensity Synthesis (Zero Allocation)
         final_val = min(1.0, effective_brightness + flash_punch)
-        self.vals.fill(final_val)
-
-        # Pure 100% saturation for intense, vivid color
-        self.sats.fill(1.0)
-
-        target_rgb = RGB_HSV.fromHSV_toRGB_vectorized(self.hues, self.sats, self.vals)
+        np.multiply(self.grad_colors, final_val, out=self.target_rgb)
 
         # 7. Vectorized smooth segment write with high color punch
-        self.smooth_segment_vectorized(0.55, 0, self.nb_of_leds - 1, target_rgb)
+        self.smooth_segment_vectorized(0.55, 0, self.nb_of_leds - 1, self.target_rgb)

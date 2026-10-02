@@ -5,7 +5,7 @@
     "audio_preset": "spotify",
     "printCpuFpsInfo": true,
     "HARDWARE_MODE": "simulation",
-    "hardware_profile": "small",
+    "hardware_profile": "full",
     "esp32_ip": "192.168.1.41",
     "log_level": "INFO",
     "luminosity": 30,

@@ -10,6 +10,7 @@ import time
 import numpy as np
 from typing import List, Dict, Any, Tuple, Union, Optional
 import logging
+from core.GlobalMoodManager import GlobalMoodManager
 
 ModeSettingValue = Union[str, int, float, bool]
 
@@ -232,4 +233,26 @@ class Mode:
         self.render()
 
     def run(self) -> None:
+        pass
+
+    @property
+    def mood_colors(self) -> np.ndarray:
+        """
+        Global curated palette colors provided by GlobalMoodManager.
+        Shape: (4, 3) np.ndarray of dtype np.int32.
+        """
+        return GlobalMoodManager.get_instance().mood_colors
+
+    def on_transition_exit(self, progress: float) -> None:
+        """
+        Optional lifecycle hook called while this mode is fading or transitioning out.
+        progress ranges from 0.0 (transition start) to 1.0 (transition completion).
+        """
+        pass
+
+    def on_transition_enter(self, progress: float) -> None:
+        """
+        Optional lifecycle hook called while this mode is fading or transitioning in.
+        progress ranges from 0.0 (transition start) to 1.0 (transition completion).
+        """
         pass

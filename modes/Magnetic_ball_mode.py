@@ -1,80 +1,89 @@
 """
 Magnetic Ball Mode
 Physics-based simulation of an elastic ball with mass, friction, and a center gravity well.
-Audio transients and beat impulses kick the ball outward toward strip edges, where it bounces elastically.
-Ball size expands proportionally with instantaneous audio power while friction returns it to center.
-Renders with smooth sub-pixel anti-aliasing and dynamic hue shifts.
+Kicks gated on ctx.is_real_beat. Spring stiffness scales with ctx.tension.
+Explosive release on DROP_IMPACT. Harmonized with GlobalMoodManager mood_colors.
+Zero runtime heap allocations.
 """
-import modes.Mode as Mode
-import utils.rgb_hsv as RGB_HSV
-import random
+from typing import List, Dict, Any
 import numpy as np
-import time
+import modes.Mode as Mode
+
 
 class Magnetic_ball_mode(Mode.Mode):
-
-    def __init__(self, name, segment_name, listener, leds, indexes, rgb_list, infos):
+    def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
-        
-        self.ball_pos = float(self.nb_of_leds / 2)
-        self.ball_speed = 0.0
-        self.ball_size = 4
-        
-        self.friction = 0.96 # Multiplier applied per frame
-        self.gravity_well = self.nb_of_leds / 2 # Slowly pulls it back to the center
-        self.gravity_strength = 0.05
-        
-        self.hue = random.uniform(0.0, 1.0)
-        self.last_beat_count = 0
-        
-    def run(self):
-        power = self.listener.asserved_total_power
-        
-        # Audio injects chaotic momentum/acceleration on beats
-        if self.listener.beat_count != self.last_beat_count:
-            self.last_beat_count = self.listener.beat_count
-            
-            # Change hue softly
-            self.hue = (self.hue + 0.05) % 1.0
-            
-            # Kick it in a random direction with force proportional to audio power
-            kick_direction = random.choice([-1.0, 1.0])
-            kick_force = power * (self.nb_of_leds * 0.15) # 15% of strip length max kick
-            self.ball_speed += kick_direction * kick_force
-            
-        # Add a magnetic pull towards the center if no sound is pushing it
+
+        self.ball_pos: float = float(self.nb_of_leds / 2.0)
+        self.ball_speed: float = 0.0
+        self.ball_size: float = 3.0
+        self.friction: float = 0.96
+        self.gravity_well: float = float(self.nb_of_leds / 2.0)
+
+        # Pre-allocated scratch color vector (ZERO runtime heap allocation)
+        self.ball_color: np.ndarray = np.zeros(3, dtype=np.float64)
+
+    def run(self) -> None:
+        if self.nb_of_leds <= 0:
+            return
+
+        ctx = getattr(self.listener, "context", None)
+        dt = getattr(self.listener, "dt", 1.0 / 60.0)
+        fps_ratio = dt * 60.0
+        is_beat = bool(getattr(self.listener, "is_beat", False))
+        is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
+        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        tension = float(ctx.tension if ctx is not None else 0.0)
+        scene = getattr(ctx, "scene", None)
+        drop_prog = float(getattr(ctx, "drop_progress", 0.0))
+        is_drop = bool(ctx.is_drop_impact if ctx is not None else False) or scene == "DROP_IMPACT"
+        mood = self.mood_colors
+
+        # 1. Gate kicks on ctx.is_real_beat (Rule 2: no coasting phantom kicks)
+        if is_real:
+            kick_dir = 1.0 if (self.ball_pos <= self.gravity_well) else -1.0
+            kick_force = energy * (self.nb_of_leds * 0.18)
+            self.ball_speed += kick_dir * kick_force
+
+        # 2. Explosive release on DROP_IMPACT
+        if is_drop:
+            launch_dir = 1.0 if (self.ball_pos <= self.gravity_well) else -1.0
+            self.ball_speed = launch_dir * (self.nb_of_leds * 0.38) * fps_ratio
+
+        # 3. Spring stiffness scales with ctx.tension
+        stiffness = (0.04 + 0.16 * tension) * fps_ratio
         dist_to_center = self.gravity_well - self.ball_pos
-        self.ball_speed += dist_to_center * self.gravity_strength
-        
-        # Apply speed to position
-        self.ball_pos += self.ball_speed
-        
-        # Apply friction
-        self.ball_speed *= self.friction
-        
-        # Wall collision detection (perfect elastic bounce)
-        if self.ball_pos < 0:
+        self.ball_speed += dist_to_center * stiffness
+
+        # Apply speed and friction
+        self.ball_pos += self.ball_speed * fps_ratio
+        self.ball_speed *= (self.friction ** fps_ratio)
+
+        # Elastic bounce at segment boundaries
+        if self.ball_pos < 0.0:
             self.ball_pos = 0.1
-            self.ball_speed = abs(self.ball_speed) * 0.9 # bounce with energy loss
+            self.ball_speed = abs(self.ball_speed) * 0.85
         elif self.ball_pos >= self.nb_of_leds:
-            self.ball_pos = self.nb_of_leds - 1.1
-            self.ball_speed = -abs(self.ball_speed) * 0.9
-            
-        # Draw the ball
+            self.ball_pos = float(self.nb_of_leds - 1.1)
+            self.ball_speed = -abs(self.ball_speed) * 0.85
+
+        # 4. Color from mood_colors
+        if is_drop:
+            self.ball_color[:] = mood[3]  # Highlight bloom
+        elif tension > 0.45:
+            self.ball_color[:] = mood[2]  # Accent when tense
+        else:
+            self.ball_color[:] = mood[0]  # Primary
+
+        # 5. Render ball and motion blur tails
         center_idx = int(self.ball_pos)
-        
-        # Size grows dynamically with volume
-        dynamic_size = int(self.ball_size + (power * 4))
+        dynamic_size = int(self.ball_size + (energy * 4.0))
         start_idx = max(0, center_idx - dynamic_size)
         end_idx = min(self.nb_of_leds - 1, center_idx + dynamic_size)
-        
-        # Solidly lit center to simulate the physical mass
-        rgb = RGB_HSV.fromHSV_toRGB(self.hue, 1.0, 1.0)
-        self.smooth_segment_vectorized(0.7, start_idx, end_idx, rgb)
-        
-        # Everything else slowly fades for a motion blur effect
+
+        self.smooth_segment_vectorized(0.75, start_idx, end_idx, self.ball_color)
+
         if start_idx > 0:
-             self.fade_to_black_segment_vectorized(0.3, 0, start_idx - 1)
+            self.fade_to_black_segment_vectorized(0.35, 0, start_idx - 1)
         if end_idx < self.nb_of_leds - 1:
-             self.fade_to_black_segment_vectorized(0.3, end_idx + 1, self.nb_of_leds - 1)
-             
+            self.fade_to_black_segment_vectorized(0.35, end_idx + 1, self.nb_of_leds - 1)

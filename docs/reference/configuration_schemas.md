@@ -67,6 +67,9 @@ The root configuration file governing server launch, audio ingestion, hardware d
 | `latency` | float | `0.0` | Seconds (float) | `AudioAnalyzer` | Hardware output latency offset added to phase calculation ($T_{\text{speaker}}$). |
 | `decay_base` | float | `0.98` | Float in $(0.90, 0.999)$ | `AudioAnalyzer` | Exponential decay rate applied to ODF peaks and running beat trust. |
 | `printCpuFpsInfo` | boolean | `false` | `true`, `false` | `Mode_master`, `Profiler` | If `true`, outputs execution metrics and FPS logs to stdout at profiler intervals. |
+| `song` | string / null | `null` | File path or track name | `Main.py`, `Local_AudioFile` | Path or name of local MP3/WAV file for direct audio playback with hardware parity. |
+| `audio_file` | string / null | `null` | File path or track name | `Main.py`, `Local_AudioFile` | Alias for `song`. |
+| `loop` | boolean | `false` | `true`, `false` | `Local_AudioFile` | If `true`, loops the current track indefinitely instead of cycling playlist. |
 | `profiler` | object | `{...}` | JSON object | `Profiler` | Detailed loop profiling configuration. See Section 5. |
 
 ---

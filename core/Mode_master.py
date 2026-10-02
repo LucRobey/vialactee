@@ -11,6 +11,7 @@ import connectors.System_status as System_status
 import core.Segment as Segment
 import core.Listener as Listener
 import core.Transition_Director as Transition_Director
+from core.LocalTransitionManager import LocalTransitionManager
 import utils.Profiler as Profiler
 from core.CommandRouter import router as command_router
 from core.PresetRepository import PresetRepository
@@ -68,6 +69,8 @@ class Mode_master:
         self.mode_settings_catalog = self._build_mode_settings_catalog()
         self.initiate_configuration()
         self.transition_director = Transition_Director.Transition_Director(self, self.listener, self.infos)
+        self.local_transition_manager = LocalTransitionManager(self, self.listener)
+        self.mood_manager = self.local_transition_manager.mood_manager
         self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
 
     def set_connector(self, connector: Any) -> None:
@@ -374,7 +377,8 @@ class Mode_master:
         self.system_status.note_loop_tick(frame_dt)
 
         with self.profiler.measure("listener"):
-            self.listener.update()
+            if not getattr(self.listener, "is_externally_clocked", False):
+                self.listener.update()
 
         with self.profiler.measure("hardware_show"):
             if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or self._is_rpi_hardware:
@@ -409,6 +413,7 @@ class Mode_master:
         self.current_time = time.time()
         with self.profiler.measure("transitions"):
             await self.transition_director.update(self.current_time)
+            self.local_transition_manager.update(frame_dt or 0.033)
         with self.profiler.measure("connector"):
             if self.appli_connector is not None:
                 await self.appli_connector.on_frame_tick(self)

@@ -79,6 +79,8 @@ class Beat_runner_mode(Mode.Mode):
         self.hues: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
         self.sats: np.ndarray = np.ones(self.nb_of_leds, dtype=np.float64)
         self.vals: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
+        self.target_rgb: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.float64)
+        self.beam_color: np.ndarray = np.zeros(3, dtype=np.float64)
 
     def run(self) -> None:
         if self.nb_of_leds <= 1:
@@ -125,7 +127,7 @@ class Beat_runner_mode(Mode.Mode):
         np.multiply(self.gauss_weights, base_intensity, out=self.vals)
         drop_progress = float(ctx.drop_progress if ctx is not None else 0.0)
         is_drop_impact_scene = bool(getattr(ctx, "scene", None) == "DROP_IMPACT")
-        if is_drop or (is_drop_impact_scene and drop_progress > 0.0):
+        if is_drop or is_drop_impact_scene:
             flare = 0.90 * (drop_progress if drop_progress > 0.0 else 1.0)
             np.maximum(self.vals, flare, out=self.vals)
         np.clip(self.vals, 0.0, 1.0, out=self.vals)
@@ -133,17 +135,19 @@ class Beat_runner_mode(Mode.Mode):
         # 6. Boundary Strike Real-Beat Impact (MODE_RULES Rule 2)
         # On verified acoustic hits or drop impacts, ignite a sharp boundary spark
         is_beat = getattr(self.listener, "is_beat", False)
+        mood = self.mood_colors
         if (is_beat and is_real and (confidence > 0.4 or is_locked)) or is_drop:
             strike_idx = 0 if cursor_pos < (max_idx * 0.5) else int(max_idx)
-            self.smooth_segment_vectorized(1.0, strike_idx, strike_idx, colors.white)
+            self.smooth_segment_vectorized(1.0, strike_idx, strike_idx, mood[3])
 
-        # 7. Vectorized Color Synthesis (Modulated by Spectral Tilt & Tension)
+        # 7. Vectorized Color Synthesis using GlobalMoodManager mood_colors
         tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
-        active_hue = (self.base_hue + 0.06 * tilt + 0.04 * tension) % 1.0
-        self.hues.fill(active_hue)
-        self.sats.fill(max(0.3, 1.0 - 0.4 * tension))
-
-        target_rgb = RGB_HSV.fromHSV_toRGB_vectorized(self.hues, self.sats, self.vals)
+        accent_weight = float(np.clip(0.5 * tension + 0.25 * (tilt + 1.0), 0.0, 1.0))
+        m0, m2 = mood[0], mood[2]
+        self.beam_color[0] = (1.0 - accent_weight) * float(m0[0]) + accent_weight * float(m2[0])
+        self.beam_color[1] = (1.0 - accent_weight) * float(m0[1]) + accent_weight * float(m2[1])
+        self.beam_color[2] = (1.0 - accent_weight) * float(m0[2]) + accent_weight * float(m2[2])
+        np.multiply(self.vals[:, None], self.beam_color, out=self.target_rgb)
 
         # 8. Additive blend into the fading segment with crisp punch
-        self.smooth_segment_vectorized(0.85, 0, self.nb_of_leds - 1, target_rgb)
+        self.smooth_segment_vectorized(0.85, 0, self.nb_of_leds - 1, self.target_rgb)

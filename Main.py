@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import asyncio
 import atexit
 import logging
@@ -8,9 +8,11 @@ import contextlib
 import shutil
 import sys
 import subprocess
+import argparse
 
 import core.Listener as Listener
 import connectors.Local_Microphone as Local_Microphone
+import connectors.Local_AudioFile as Local_AudioFile
 import connectors.Connector as Connector
 import core.Mode_master as Mode_master
 import hardware.HardwareFactory as HardwareFactory
@@ -95,9 +97,81 @@ async def launch_webapp(infos: Dict[str, Any]) -> None:
         raise
 
 
-async def main() -> Optional[str]:
+def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Vialactée - Interactive Music-Reactive LED Chandelier Controller"
+    )
+    parser.add_argument(
+        "--song", "-s",
+        nargs="?",
+        const="",
+        default=None,
+        help="Path or name of local MP3/WAV file to stream and analyze (defaults to Palladium.mp3 if flag passed without value)"
+    )
+    parser.add_argument(
+        "song_pos",
+        nargs="?",
+        default=None,
+        help="Optional positional path or name of local MP3/WAV file"
+    )
+    parser.add_argument(
+        "--mic", "--microphone",
+        dest="use_microphone",
+        action="store_true",
+        default=False,
+        help="Force physical microphone input mode"
+    )
+    parser.add_argument(
+        "--loop",
+        action="store_true",
+        default=False,
+        help="Loop the selected audio track instead of advancing through playlist"
+    )
+    parser.add_argument(
+        "--mode", "-m",
+        type=str,
+        default=None,
+        help="Initial lighting mode to activate across all segments"
+    )
+    parser.add_argument(
+        "--profile", "-p",
+        type=str,
+        choices=["full", "small"],
+        default=None,
+        help="Hardware profile override ('full' or 'small')"
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Rhythm analyzer model class override (e.g. MultiBandOnsetAudioAnalyzer, AudioAnalyzer)"
+    )
+    parser.add_argument(
+        "--server",
+        action="store_true",
+        default=False,
+        help="Enable web connector server on 0.0.0.0:8080"
+    )
+    parser.add_argument(
+        "--panel",
+        action="store_true",
+        default=False,
+        help="Enable real-time music analyzer HUD overlay in the simulator"
+    )
+    parser.add_argument(
+        "--config", "-c",
+        type=str,
+        default="config/app_config.json",
+        help="Path to app configuration file"
+    )
+    return parser.parse_args(args)
+
+
+async def main(cli_args: Optional[argparse.Namespace] = None) -> Optional[str]:
+    if cli_args is None:
+        cli_args = parse_arguments()
     
-    config_path = "config/app_config.json"
+    config_path = cli_args.config if (cli_args and cli_args.config) else "config/app_config.json"
     if not os.path.exists(config_path):
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         default_config = {
@@ -120,6 +194,17 @@ async def main() -> Optional[str]:
 
     with open(config_path, 'r') as f:
         infos = json.load(f)
+
+    if cli_args.profile:
+        infos["hardware_profile"] = cli_args.profile
+    if cli_args.model:
+        infos["analyzer_model"] = cli_args.model
+    if cli_args.server:
+        infos["startServer"] = True
+    if cli_args.panel:
+        infos["show_music_analyser_panel"] = True
+    if cli_args.loop:
+        infos["loop"] = True
         
     from logging.handlers import RotatingFileHandler
     log_level_str = infos.get("log_level", "INFO").upper()
@@ -138,6 +223,21 @@ async def main() -> Optional[str]:
     )
     
     infos = Configuration_manager.resolve_audio_config(infos)
+
+    # Determine audio source (Local_AudioFile vs Local_Microphone)
+    target_song = cli_args.song if cli_args.song is not None else cli_args.song_pos
+    use_audio_file = False
+    song_path = None
+
+    if cli_args.use_microphone:
+        use_audio_file = False
+        infos["useMicrophone"] = True
+    elif target_song is not None:
+        use_audio_file = True
+        song_path = target_song
+    elif infos.get("song") or infos.get("audio_file"):
+        use_audio_file = True
+        song_path = infos.get("song") or infos.get("audio_file")
     
     listener = Listener.Listener(infos)
     
@@ -149,9 +249,23 @@ async def main() -> Optional[str]:
             hardware_leds[0].set_analyzer(listener.analyzer)
 
     mode_master = Mode_master.Mode_master(listener, infos, *hardware_leds)                                 
-    atexit.register(mode_master.flush_sync)                                 
+    atexit.register(mode_master.flush_sync)
+
+    if cli_args.mode:
+        for seg in mode_master.segments_list:
+            seg.force_mode(cli_args.mode)
    
-    local_microphone = Local_Microphone.Local_Microphone(listener, infos)
+    if use_audio_file:
+        infos["useMicrophone"] = False
+        audio_connector = Local_AudioFile.Local_AudioFile(listener, infos, song_path=song_path)
+        logging.info(f"(Main) Streaming local audio file: {audio_connector.file_path}")
+        if len(hardware_leds) > 0 and hasattr(hardware_leds[0], 'set_audio_player'):
+            hardware_leds[0].set_audio_player(audio_connector)
+        audio_task = asyncio.create_task(audio_connector.play_forever(), name="AudioPlayer")
+    else:
+        local_microphone = Local_Microphone.Local_Microphone(listener, infos)
+        audio_task = asyncio.create_task(local_microphone.listen_forever(), name="Microphone")
+
     connector = Connector.Connector(mode_master, infos)
     mode_master.set_connector(connector)
 
@@ -161,7 +275,7 @@ async def main() -> Optional[str]:
     tasks = [
         restart_task,
         asyncio.create_task(mode_master.update_forever(), name="ModeMaster"),
-        asyncio.create_task(local_microphone.listen_forever(), name="Microphone")
+        audio_task
     ]
     if infos.get("startServer", False):
         tasks.append(asyncio.create_task(connector.start_server(), name="Connector"))
@@ -204,17 +318,34 @@ async def main() -> Optional[str]:
         atexit.unregister(mode_master.flush_sync)
 
 def run_forever() -> None:
-    while True:
+    is_win = (sys.platform == "win32")
+    if is_win:
         try:
-            result = asyncio.run(main())
-        except KeyboardInterrupt:
-            break
+            import ctypes
+            ctypes.windll.winmm.timeBeginPeriod(1)
+        except Exception:
+            pass
 
-        if result != RESTART_REQUESTED:
-            break
+    cli_args = parse_arguments()
+    try:
+        while True:
+            try:
+                result = asyncio.run(main(cli_args))
+            except KeyboardInterrupt:
+                break
 
-        # Keep the controller attached to the same terminal so Ctrl+C / stop still works after a web-triggered restart.
-        logging.info("Restart requested from the web app. Relaunching the controller...")
+            if result != RESTART_REQUESTED:
+                break
+
+            # Keep the controller attached to the same terminal so Ctrl+C / stop still works after a web-triggered restart.
+            logging.info("Restart requested from the web app. Relaunching the controller...")
+    finally:
+        if is_win:
+            try:
+                import ctypes
+                ctypes.windll.winmm.timeEndPeriod(1)
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

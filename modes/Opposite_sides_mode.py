@@ -1,58 +1,72 @@
 """
 Opposite Sides Mode
 Dual complementary audio-reactive bars advancing toward each other across a central gap.
-A warm bass bar (red/orange) expands outward from the middle-left based on low-frequency energy.
-A cool treble bar (blue/purple) expands outward from the middle-right based on high-frequency energy.
-Creates a dynamic visual tug-of-war responding to frequency balance.
+Strip all per-frame logger.debug calls and pre-allocate arrays in __init__.
+Balance point driven directly by ctx.spectral_tilt [-1.0, 1.0] and bar depths scaled by ctx.energy.
+Harmonized with GlobalMoodManager mood_colors.
 """
+from typing import List, Dict, Any
+import numpy as np
 import modes.Mode as Mode
-import utils.colors as colors
-import utils.rgb_hsv as RGB_HSV
-import time
+
 
 class Opposite_sides_mode(Mode.Mode):
+    def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
+        super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
-    def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
-        super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
+        self.middle_len: int = max(2, int(self.nb_of_leds / 4))
+        self.maxSize: int = max(1, int(self.nb_of_leds / 3))
 
-        self.bass_hue = 0.0
-        self.high_hue = 0.7
+        # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
+        self.bass_color: np.ndarray = np.zeros(3, dtype=np.float64)
+        self.high_color: np.ndarray = np.zeros(3, dtype=np.float64)
+        self.gradient_buffer: np.ndarray = np.zeros((self.middle_len, 3), dtype=np.float64)
+        self.t_coords: np.ndarray = np.linspace(0.0, 1.0, self.middle_len)[:, None]
 
-        self.bass_color = RGB_HSV.fromHSV_toRGB(self.bass_hue,1.0,1.0)
-        self.high_color = RGB_HSV.fromHSV_toRGB(self.high_hue,1.0,1.0)
-        
-        self.middleSize = int(self.nb_of_leds/4)
-        self.middle_start_index = int(3*self.nb_of_leds/8) #middle_pos - middleSize/2 == int(self.nb_of_leds/2 - self.nb_of_leds/8)
-        self.middle_end_index = int(5*self.nb_of_leds/8)   #middle_pos + middleSize/2
-        
-        self.maxSize = int(self.nb_of_leds/3)
+    def run(self) -> None:
+        if self.nb_of_leds <= 0:
+            return
 
-        self.lower_height = 0
-        self.higher_height = 0  
+        ctx = getattr(self.listener, "context", None)
+        tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
+        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        mood = self.mood_colors
 
-        self.firstUpdate = True
+        # 1. Balance point driven directly by ctx.spectral_tilt [-1.0, 1.0]
+        nominal_center = self.nb_of_leds / 2.0
+        center_shift = tilt * (self.nb_of_leds * 0.15)
+        center_pos = int(np.clip(nominal_center + center_shift, 0, self.nb_of_leds - 1))
 
-    def start(self):
-        super().start()
-        self.firstUpdate = True
+        half_mid = self.middle_len // 2
+        mid_start = max(0, center_pos - half_mid)
+        mid_end = min(self.nb_of_leds - 1, mid_start + self.middle_len - 1)
+        actual_mid_len = mid_end - mid_start + 1
 
-    def run(self):
-        if (self.firstUpdate):
-            length = self.middle_end_index + 1 - self.middle_start_index
-            if length > 0:
-                import numpy as np
-                hues = np.linspace(self.bass_hue, self.high_hue, length)
-                view = self.rgb_list[self.middle_start_index : self.middle_end_index + 1]
-                RGB_HSV.fromHSV_toRGB_vectorized(hues, 1.0, 1.0, out=view)
-            self.firstUpdate = False
+        # 2. Colors from mood_colors
+        self.bass_color[:] = mood[0]
+        self.high_color[:] = mood[1]
 
-        self.lower_height  = int(self.maxSize * (self.listener._delayed_asserved_fft_band[0]  + self.listener._delayed_asserved_fft_band[1] )/2)
-        self.higher_height = int(self.maxSize * (self.listener._delayed_asserved_fft_band[-1] + self.listener._delayed_asserved_fft_band[-2])/2)
+        # Draw center equilibrium gradient
+        m0, m1 = mood[0], mood[1]
+        t = self.t_coords[:actual_mid_len, 0]
+        for c in range(3):
+            self.gradient_buffer[:actual_mid_len, c] = (1.0 - t) * float(m0[c]) + t * float(m1[c])
+        self.smooth_segment_vectorized(0.5, mid_start, mid_end, self.gradient_buffer[:actual_mid_len])
 
-        self.fade_to_black_segment_vectorized(0.5,0,self.middle_start_index-1-self.lower_height-1)
-        self.smooth_segment_vectorized(0.5,self.middle_start_index-1-self.lower_height,self.middle_start_index-1,self.bass_color)
-        self.smooth_segment_vectorized(0.5,self.middle_end_index+1,self.middle_end_index+1+self.higher_height,self.high_color)
-        self.fade_to_black_segment_vectorized(0.5,self.middle_end_index+1+self.higher_height+1,self.nb_of_leds-1)
+        # 3. Bar depths scaled by ctx.energy
+        lower_height = int(np.clip(self.maxSize * energy * (1.0 - 0.4 * max(0.0, tilt)), 0, self.maxSize))
+        higher_height = int(np.clip(self.maxSize * energy * (1.0 + 0.4 * min(0.0, tilt)), 0, self.maxSize))
 
-        self.logger.debug(f"(PSG)     lower_height = {self.lower_height}")
-        self.logger.debug(f"(PSG)     higher_height = {self.higher_height}")
+        bass_start = max(0, mid_start - 1 - lower_height)
+        bass_end = max(0, mid_start - 1)
+        if bass_end >= bass_start and mid_start > 0:
+            self.smooth_segment_vectorized(0.5, bass_start, bass_end, self.bass_color)
+        if bass_start > 0:
+            self.fade_to_black_segment_vectorized(0.5, 0, bass_start - 1)
+
+        treble_start = min(self.nb_of_leds - 1, mid_end + 1)
+        treble_end = min(self.nb_of_leds - 1, mid_end + 1 + higher_height)
+        if treble_end >= treble_start and mid_end < self.nb_of_leds - 1:
+            self.smooth_segment_vectorized(0.5, treble_start, treble_end, self.high_color)
+        if treble_end < self.nb_of_leds - 1:
+            self.fade_to_black_segment_vectorized(0.5, treble_end + 1, self.nb_of_leds - 1)

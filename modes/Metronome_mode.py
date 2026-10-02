@@ -1,16 +1,16 @@
 """
 Metronome Mode
-Rhythm visualization lock-stepped to the Anticipation Flywheel ("Oracle") beat tracker.
-Flashes bright white on primary downbeats and pulses deep blue on sub-beats.
-Uses sharp attack and exponential decay envelopes for precise rhythmic cadence.
-Exposes adjustable brightness multiplier and alternating sub-beat toggle in settings schema.
+Rhythm visualization lock-stepped to the Anticipation Flywheel beat tracker.
+Modulates flash sharpness by ctx.beat_trust and dissolves into smooth sine breathing in CHILL or lost beat.
+Fades to black in silence. Harmonized with GlobalMoodManager mood_colors with zero runtime heap allocations.
 """
+from typing import List, Dict, Any
 import numpy as np
-import utils.rgb_hsv as RGB_HSV
 import modes.Mode as Mode
 
+
 class Metronome_mode(Mode.Mode):
-    def get_settings_schema(self):
+    def get_settings_schema(self) -> List[Dict[str, Any]]:
         return [
             {
                 "key": "brightnessMultiplier",
@@ -47,40 +47,66 @@ class Metronome_mode(Mode.Mode):
             },
         ]
 
-    def __init__(self, name, segment_name, listener, leds, indexes, rgb_list, infos):
+    def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
-        self.brightness_multiplier = infos.get("metronome_brightness", 1.0)
-        self.alternate_sub_beats = bool(infos.get("metronome_alternate_sub_beats", True))
-        self.accent_color = str(infos.get("metronome_accent_color", "blue"))
+        self.brightness_multiplier = float(infos.get("metronome_brightness", infos.get("brightnessMultiplier", 1.0)))
+        self.alternate_sub_beats = bool(infos.get("metronome_alternate_sub_beats", infos.get("alternateSubBeats", True)))
+        self.accent_color = str(infos.get("metronome_accent_color", infos.get("accentColor", "blue")))
 
-    def _accent_rgb(self):
-        accent_colors = {
-            "blue": np.array([0.0, 0.0, 255.0]),
-            "purple": np.array([180.0, 0.0, 255.0]),
-            "red": np.array([255.0, 0.0, 0.0]),
-            "green": np.array([0.0, 255.0, 0.0]),
+        # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
+        self.base_color: np.ndarray = np.zeros(3, dtype=np.float64)
+        self.active_color: np.ndarray = np.zeros(3, dtype=np.float64)
+        self.custom_accents: Dict[str, np.ndarray] = {
+            "blue": np.array([0.0, 100.0, 255.0], dtype=np.float64),
+            "purple": np.array([180.0, 0.0, 255.0], dtype=np.float64),
+            "red": np.array([255.0, 30.0, 0.0], dtype=np.float64),
+            "green": np.array([57.0, 255.0, 20.0], dtype=np.float64),
         }
-        return accent_colors.get(self.accent_color, accent_colors["blue"])
 
-    def run(self):
-        # Retrieve the continuous Phase-Locked Loop data
-        phase = self.listener.beat_phase # 0.0 -> 1.0 continuously
-        count = self.listener.beat_count
-        
-        # Alternate between White (beats) and Blue (sub-beats)
-        if count % 2 == 0 or not self.alternate_sub_beats:
-            base_color = np.array([255.0, 255.0, 255.0]) * self.brightness_multiplier
+    def run(self) -> None:
+        if self.nb_of_leds <= 0:
+            return
+
+        ctx = getattr(self.listener, "context", None)
+        phase = float(getattr(self.listener, "beat_phase", 0.0))
+        count = int(getattr(self.listener, "beat_count", 0))
+        mood = self.mood_colors
+
+        if ctx is not None:
+            if ctx.is_silent:
+                self.fade_to_black_segment_vectorized(0.20, 0, self.nb_of_leds - 1)
+                return
+
+            trust = float(ctx.beat_trust)
+            scene = getattr(ctx, "scene", None)
+            is_chill = bool(scene == "CHILL" or trust < 0.35)
+            energy = float(ctx.energy)
+
+            # Modulate flash sharpness by ctx.beat_trust
+            sharpness = 1.0 + 3.0 * trust
+            flash_env = (max(0.0, 1.0 - (phase * 2.0))) ** sharpness
+
+            # Sine breathing in CHILL or lost beat
+            if is_chill:
+                sine_breath = 0.5 * (1.0 + np.sin(2.0 * np.pi * phase - (np.pi / 2.0)))
+                effective_val = (trust * flash_env) + ((1.0 - trust) * sine_breath)
+                effective_val = max(0.0, min(1.0, effective_val * (0.4 + 0.6 * energy)))
+            else:
+                effective_val = flash_env
+
+            # Pick base color from mood_colors without heap allocation
+            if count % 2 == 0 or not self.alternate_sub_beats:
+                self.base_color[:] = mood[3]  # Highlight downbeat
+            else:
+                self.base_color[:] = mood[2]  # Accent sub-beat
+
+            np.multiply(self.base_color, effective_val * self.brightness_multiplier, out=self.active_color)
+            self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, self.active_color)
         else:
-            base_color = self._accent_rgb() * self.brightness_multiplier
-        
-        # Flashing ADSR envelope: 
-        # Peaks instantly at phase=0, then fades to black (0) by halfway through the phase
-        flash_envelope = max(0.0, 1.0 - (phase * 2.0))
-        
-        # Power curve to make the strobe punchier
-        brightness = (flash_envelope ** 1.5)
-        
-        active_color = base_color * brightness
-        
-        # Paint the entire bar instantaneously with the calculated color
-        self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, active_color)
+            flash_env = (max(0.0, 1.0 - (phase * 2.0))) ** 1.5
+            if count % 2 == 0 or not self.alternate_sub_beats:
+                self.base_color[:] = mood[3]
+            else:
+                self.base_color[:] = self.custom_accents.get(self.accent_color, mood[2])
+            np.multiply(self.base_color, flash_env * self.brightness_multiplier, out=self.active_color)
+            self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, self.active_color)

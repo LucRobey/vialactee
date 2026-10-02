@@ -35,6 +35,7 @@ class Segment:
         self.logger = logging.getLogger(f"Segment.{self.name}")
         self.leds = leds
         self.indexes = indexes
+        self.orientation = orientation
         self.infos = infos
         self._configuration_manager = Configuration_manager.Configurations_manager(infos)
         self.nb_of_leds=len(self.indexes)
@@ -94,12 +95,18 @@ class Segment:
             
         # State machine for transitions
         if self.is_in_transition:
-            if td.state == "TRANSITION_DUAL":
-                if not self.modes[self.activ_mode].has_custom_transition:
+            target_mode = self.modes.get(self.target_mode_name)
+            prog = float(getattr(td, "transition_progress", 0.0))
+            if target_mode is not None and hasattr(target_mode, "on_transition_enter"):
+                target_mode.on_transition_enter(prog)
+            activ_mode_obj = self.modes.get(self.activ_mode)
+            if activ_mode_obj is not None and hasattr(activ_mode_obj, "on_transition_exit"):
+                activ_mode_obj.on_transition_exit(prog)
+            if td is not None and getattr(td, "state", None) == "TRANSITION_DUAL":
+                if activ_mode_obj is not None and not getattr(activ_mode_obj, "has_custom_transition", False):
                     
                     # --- UPDATE NEW MODE INTO SECONDARY BUFFER ---
-                    target_mode = self.modes[self.target_mode_name]
-                    if target_mode.isActiv:
+                    if target_mode is not None and target_mode.isActiv:
                         if hasattr(target_mode, "render"):
                             target_mode.render(self.dual_rgb_list)
                         else:
@@ -115,9 +122,10 @@ class Segment:
                     Transition_Engine.apply_transition(self.rgb_list, self.dual_rgb_list, td.transition_progress, td.transition_type, active_coords)
 
                 
-            if td.state == "PASSATION" or self.modes[self.activ_mode].has_custom_transition:
+            if td is not None and (getattr(td, "state", None) == "PASSATION" or (activ_mode_obj is not None and getattr(activ_mode_obj, "has_custom_transition", False))):
                 # Execution complete! Swap the modes and terminate old one.
-                self.modes[self.activ_mode].terminate()
+                if activ_mode_obj is not None:
+                    activ_mode_obj.terminate()
                 self.activ_mode = self.target_mode_name
                 self.is_in_transition = False
         

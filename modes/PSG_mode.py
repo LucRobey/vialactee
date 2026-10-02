@@ -1,55 +1,56 @@
 """
 PSG (Paris Saint-Germain) Mode
-Split-spectrum visualizer featuring club colors: red bar on the left, blue bar on the right.
-The left red bar expands proportionally to bass energy; the right blue bar expands to treble energy.
-A stark white balance dot dynamically floats at the equilibrium position between low and high frequencies.
-Produces an energetic dual-spectrum level meter across the strip.
+Split-spectrum visualizer featuring club colors and a dynamic balance dot.
+Stripped of per-frame logging. White balance dot driven directly by ctx.spectral_tilt.
+Modulates bar power with ctx.energy and harmonized with GlobalMoodManager mood_colors.
+Zero runtime heap allocations.
 """
+from typing import List, Dict, Any
+import numpy as np
 import modes.Mode as Mode
-import utils.colors as colors
-import time
+
 
 class PSG_mode(Mode.Mode):
+    def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
+        super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
-    def __init__(self , name ,segment_name , listener , leds , indexes , rgb_list , infos):
-        super().__init__(name ,segment_name , listener , leds , indexes , rgb_list , infos)
-        
-        self.maxSize = int(self.nb_of_leds/3)
+        self.maxSize: int = max(1, int(self.nb_of_leds / 3))
 
-        self.lower_height = 0
-        self.higher_height = 0
+        # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
+        self.left_color: np.ndarray = np.zeros(3, dtype=np.float64)
+        self.right_color: np.ndarray = np.zeros(3, dtype=np.float64)
+        self.white_dot_color: np.ndarray = np.zeros(3, dtype=np.float64)
 
-        self.white_dot_pos = 0
-        
-        
-        
-    def run(self):
-        #====================================================================================
-        
+    def run(self) -> None:
+        if self.nb_of_leds <= 0:
+            return
 
-        self.lower_height  = int(self.maxSize * (self.listener._delayed_asserved_fft_band[0]  + self.listener._delayed_asserved_fft_band[1] )/2)
-        self.higher_height = int(self.maxSize * (self.listener._delayed_asserved_fft_band[-1] + self.listener._delayed_asserved_fft_band[-2])/2)
+        ctx = getattr(self.listener, "context", None)
+        tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
+        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        mood = self.mood_colors
 
-        self.smooth_segment(0.5,0,self.lower_height,colors.red)
-        self.fade_to_black_segment(0.5,self.lower_height+1,self.nb_of_leds-1-self.higher_height-1)
-        self.smooth_segment(0.5,self.nb_of_leds-1-self.higher_height,self.nb_of_leds-1,colors.blue)
+        # 1. Modulate bar power with ctx.energy and spectral_tilt
+        lower_height = int(np.clip(self.maxSize * energy * (1.0 - 0.4 * max(0.0, tilt)), 0, self.maxSize))
+        higher_height = int(np.clip(self.maxSize * energy * (1.0 + 0.4 * min(0.0, tilt)), 0, self.maxSize))
 
-        if (self.higher_height==self.lower_height):
-            coef = 0
-        else :
-            coef = float(self.higher_height - self.lower_height)/(self.higher_height + self.lower_height)
+        self.left_color[:] = mood[0]
+        self.right_color[:] = mood[1]
+        self.white_dot_color[:] = mood[3]
 
-        self.white_dot_pos = int((self.nb_of_leds/2) *(1 + coef))
-        if(self.white_dot_pos > self.nb_of_leds-1):
-            self.white_dot_pos = self.nb_of_leds-1
-        if(self.white_dot_pos < 0):
-            self.white_dot_pos = 0
-        
-        self.logger.debug(f"(PSG)     lower_height = {self.lower_height}")
-        self.logger.debug(f"(PSG)     higher_height = {self.higher_height}")
-        self.logger.debug(f"(PSG)     coef = {coef}")
-        self.rgb_list[self.white_dot_pos] = colors.white
+        # 2. Render left bar, middle gap fade, and right bar
+        if lower_height >= 0:
+            self.smooth_segment_vectorized(0.5, 0, lower_height, self.left_color)
 
-        
+        gap_start = lower_height + 1
+        gap_end = self.nb_of_leds - 1 - higher_height - 1
+        if gap_end >= gap_start and gap_start < self.nb_of_leds:
+            self.fade_to_black_segment_vectorized(0.5, gap_start, gap_end)
 
-        #====================================================================================
+        right_start = self.nb_of_leds - 1 - higher_height
+        if right_start < self.nb_of_leds:
+            self.smooth_segment_vectorized(0.5, right_start, self.nb_of_leds - 1, self.right_color)
+
+        # 3. White balance dot driven directly by ctx.spectral_tilt [-1.0, 1.0]
+        white_dot_pos = int(np.clip((self.nb_of_leds / 2.0) * (1.0 + tilt), 0, self.nb_of_leds - 1))
+        self.smooth_segment_vectorized(1.0, white_dot_pos, white_dot_pos, self.white_dot_color)

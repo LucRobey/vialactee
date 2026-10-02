@@ -103,6 +103,7 @@ class Impact_shockwave_mode(Mode.Mode):
         self.wave_positions: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float64)
         self.wave_amps: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float64)
         self.wave_hues: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float64)
+        self.wave_colors: np.ndarray = np.zeros((self.MAX_WAVES, 3), dtype=np.float64)
         self.wave_active: np.ndarray = np.zeros(self.MAX_WAVES, dtype=bool)
         self.next_wave_slot: int = 0
         self.wave_count_total: int = 0
@@ -115,11 +116,18 @@ class Impact_shockwave_mode(Mode.Mode):
         self.half_coords: np.ndarray = np.arange(self.half_len, dtype=np.float64)
         self.half_dists: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
         self.half_intensity: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
+        self.ambient_glow: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
         self.half_hues: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
         self.half_sats: np.ndarray = np.ones(self.half_len, dtype=np.float64)
         self.half_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float64)
+        self.center_falloff: np.ndarray = np.exp(- (self.half_coords ** 2) / 8.0)
+        self.wave_scratch_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float64)
+        self.wave_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
 
     def run(self) -> None:
+        if self.nb_of_leds <= 0:
+            return
+
         dt = getattr(self.listener, "dt", 1.0 / 60.0)
         fps_ratio = getattr(self.listener, "fps_ratio", 1.0)
         self.time_since_last_wave += dt
@@ -130,7 +138,9 @@ class Impact_shockwave_mode(Mode.Mode):
         is_beat = getattr(self.listener, "is_beat", False)
         is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
         is_locked = bool(ctx.is_locked if ctx is not None else (float(getattr(self.listener, "beat_confidence", 0.0)) >= 0.5))
-        is_drop = bool(ctx.is_drop_impact if ctx is not None else False)
+        scene = getattr(ctx, "scene", None)
+        is_drop_impact_scene = bool(scene == "DROP_IMPACT")
+        is_drop = bool(ctx.is_drop_impact if ctx is not None else False) or is_drop_impact_scene
         is_silent = bool(ctx.is_silent if ctx is not None else False)
         confidence = float(ctx.beat_trust if ctx is not None else getattr(self.listener, "beat_confidence", 0.0))
         confidence = max(0.0, min(1.0, confidence))
@@ -139,7 +149,6 @@ class Impact_shockwave_mode(Mode.Mode):
         energy = float(ctx.energy if ctx is not None else power)
         tension = float(ctx.tension if ctx is not None else 0.0)
         drop_progress = float(ctx.drop_progress if ctx is not None else 0.0)
-        is_drop_impact_scene = bool(getattr(ctx, "scene", None) == "DROP_IMPACT")
 
         # Detect continuous phase reaching 1.0 (wrapping back to 0.0)
         phase_wrapped = (phase < self.prev_phase) and (self.prev_phase > 0.5)
@@ -187,16 +196,17 @@ class Impact_shockwave_mode(Mode.Mode):
             else:
                 wave_hue = self.base_hue
 
+            mood = self.mood_colors
             self.wave_active[slot] = True
             self.wave_positions[slot] = 0.0
             self.wave_amps[slot] = intensity
             self.wave_hues[slot] = wave_hue
+            self.wave_colors[slot] = mood[self.wave_count_total % 4]
             self.wave_count_total += 1
 
-        # 4. Synthesize Half-Strip Energy
+        # 4. Synthesize Half-Strip Energy & Colors with self.mood_colors
+        self.half_rgb.fill(0.0)
         self.half_intensity.fill(0.0)
-        self.half_hues.fill(self.base_hue)
-        self.half_sats.fill(self.color_saturation)
         two_w_sq = 2.0 * ((self.wave_width * (1.0 - 0.20 * tension)) ** 2)
 
         for w in range(self.MAX_WAVES):
@@ -204,24 +214,30 @@ class Impact_shockwave_mode(Mode.Mode):
                 # Gaussian pulse profile across half-strip
                 np.subtract(self.half_coords, self.wave_positions[w], out=self.half_dists)
                 np.square(self.half_dists, out=self.half_dists)
-                profile = np.exp(-self.half_dists / two_w_sq) * self.wave_amps[w]
-                np.maximum(self.half_intensity, profile, out=self.half_intensity)
-                # Blend hue toward active wave hue
-                mask = profile > 0.08
-                self.half_hues[mask] = self.wave_hues[w]
+                np.divide(-self.half_dists, two_w_sq, out=self.wave_profile)
+                np.exp(self.wave_profile, out=self.wave_profile)
+                self.wave_profile *= self.wave_amps[w]
+                np.maximum(self.half_intensity, self.wave_profile, out=self.half_intensity)
+                np.multiply(self.wave_profile[:, None], self.wave_colors[w], out=self.wave_scratch_rgb)
+                np.add(self.half_rgb, self.wave_scratch_rgb, out=self.half_rgb)
 
         # 5. Acoustic Ambient Center Glow Fallback (MODE_RULES Rule 1) & Drop Impact Core Glow
-        # Reduced glow floor keeps the background pitch black for extreme color contrast
-        center_falloff = np.exp(- (self.half_coords ** 2) / 8.0)
-        ambient_glow = 0.0 if is_silent else (1.0 - confidence) * energy * 0.12 * center_falloff
-        if is_drop or (is_drop_impact_scene and drop_progress > 0.0):
-            drop_flare = 0.50 * (drop_progress if drop_progress > 0.0 else 1.0) * center_falloff
-            ambient_glow = np.maximum(ambient_glow, drop_flare)
-        np.maximum(self.half_intensity, ambient_glow, out=self.half_intensity)
+        mood = self.mood_colors
+        if is_silent:
+            self.ambient_glow.fill(0.0)
+        else:
+            np.multiply((1.0 - confidence) * energy * 0.12, self.center_falloff, out=self.ambient_glow)
+
+        if is_drop or is_drop_impact_scene:
+            drop_flare = 0.50 * (drop_progress if drop_progress > 0.0 else 1.0) * self.center_falloff
+            np.maximum(self.ambient_glow, drop_flare, out=self.ambient_glow)
+
+        np.maximum(self.half_intensity, self.ambient_glow, out=self.half_intensity)
         np.clip(self.half_intensity, 0.0, 1.0, out=self.half_intensity)
 
-        # 6. Vectorized Color Generation on Half-Strip (100% Saturation)
-        self.half_rgb = RGB_HSV.fromHSV_toRGB_vectorized(self.half_hues, self.half_sats, self.half_intensity)
+        glow_color = mood[3] if is_drop else mood[0]
+        np.add(self.half_rgb, self.ambient_glow[:, None] * glow_color, out=self.half_rgb)
+        np.clip(self.half_rgb, 0.0, 255.0, out=self.half_rgb)
 
         # 7. Symmetrical Mirroring to Full Segment (Zero Allocation)
         # High write ratio (0.85) delivers immediate explosive color punch

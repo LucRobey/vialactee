@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import time
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 
@@ -23,6 +24,8 @@ class FakeLedsVisualizer:
             cls._instance.segment_modes = {}
             # Latest analyzer state received from the main process (for HUD overlay)
             cls._instance._analyzer_data = None
+            cls._instance.audio_player = None
+            cls._instance._last_caption_update = 0.0
             
             # Dynamic geometry mapping based on active profile
             cls._instance.segments_def = cls._instance._load_visualizer_segments_def()
@@ -131,12 +134,40 @@ class FakeLedsVisualizer:
             "target": target_mode_name,
         }
 
+    def set_audio_player(self, player):
+        self.audio_player = player
+
     def show(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.KEYDOWN and self.audio_player is not None:
+                p = self.audio_player
+                if event.key == pygame.K_SPACE:
+                    p.toggle_pause()
+                elif event.key == pygame.K_RIGHT:
+                    p.seek_relative(5.0)
+                elif event.key == pygame.K_LEFT:
+                    p.seek_relative(-5.0)
+                elif event.key == pygame.K_n:
+                    p.next_song()
+                elif event.key == pygame.K_p:
+                    p.prev_song()
+                elif pygame.K_1 <= event.key <= pygame.K_9:
+                    p.change_song_number(event.key - pygame.K_1)
         
+        if self.audio_player is not None:
+            now = time.time()
+            if now - self._last_caption_update >= 0.5:
+                self._last_caption_update = now
+                p = self.audio_player
+                cur = p.get_current_time()
+                tot = max(1.0, p.total_duration)
+                st = "PLAYING" if p.is_playing else "PAUSED"
+                name = os.path.basename(p.file_path)
+                pygame.display.set_caption(f"Vialactée Simulator [{st}: {name} ({int(cur)//60:02d}:{int(cur)%60:02d}/{int(tot)//60:02d}:{int(tot)%60:02d}) | Space: Pause, ←/→: Seek, N/P: Tracks]")
+
         self.screen.fill((15, 15, 15))
         
         for strip_id, strip_data in enumerate(self.strips):
@@ -431,6 +462,9 @@ class Fake_leds(HardwareInterface):
             })
         visualizer.update_strip(self.strip_id, self.data)
         visualizer.show()
+
+    def set_audio_player(self, audio_player):
+        visualizer.set_audio_player(audio_player)
 
     def set_segment_mode(self, segment_name, mode_name, target_mode_name=None):
         """
