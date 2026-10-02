@@ -1,6 +1,6 @@
 """
 Unit tests for core/Mode_master.py.
-Verifies configuration loading, state snapshot serialization,
+Verifies pure random startup, state snapshot serialization,
 segment reporting, transition normalization, and settings mapping.
 """
 import unittest
@@ -34,10 +34,12 @@ class TestModeMasterSnapshot(unittest.TestCase):
 
         self.mode_master = Mode_master(self.mock_listener, self.infos, self.leds1, self.leds2)
 
-    def test_load_configurations(self):
-        self.assertIsInstance(self.mode_master.configurations, dict)
-        self.assertGreater(len(self.mode_master.playlists), 0)
-        self.assertEqual(len(self.mode_master.blocked_playlists), len(self.mode_master.playlists))
+    def test_initiate_configuration(self):
+        self.assertEqual(self.mode_master.activ_configuration.get("name"), "Live Random DNA")
+        self.assertEqual(len(self.mode_master.activ_configuration.get("modes", {})), 11)
+        self.assertEqual(len(self.mode_master.activ_configuration.get("way", {})), 11)
+        self.assertIsNotNone(self.mode_master.local_transition_manager)
+        self.assertIsNotNone(self.mode_master.mood_manager)
 
     def test_get_state_snapshot_schema(self):
         snapshot = self.mode_master.get_state_snapshot()
@@ -57,6 +59,8 @@ class TestModeMasterSnapshot(unittest.TestCase):
             "autoTransitionTime",
             "playlists",
             "availableModes",
+            "activeMood",
+            "availableMoods",
             "segments",
             "modeSettingsCatalog",
             "modeSettings",
@@ -64,6 +68,18 @@ class TestModeMasterSnapshot(unittest.TestCase):
         ]
         for key in required_keys:
             self.assertIn(key, snapshot, f"Snapshot missing required key: {key}")
+
+        # Playlist retirement invariants
+        self.assertIsNone(snapshot["activePlaylist"])
+        self.assertEqual(snapshot["enabledPlaylists"], [])
+        self.assertEqual(snapshot["playlists"], [])
+        self.assertIsNone(snapshot["queuedConfiguration"])
+        self.assertEqual(snapshot["activeConfiguration"], "Live Random DNA")
+
+        # Mood invariants
+        self.assertEqual(snapshot["activeMood"], "Cyberpunk")
+        self.assertIn("Cyberpunk", snapshot["availableMoods"])
+        self.assertIn("Solar Ember", snapshot["availableMoods"])
 
         # Numerical bounds
         self.assertEqual(snapshot["luminosity"], 80)

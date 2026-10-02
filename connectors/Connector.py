@@ -77,15 +77,7 @@ class Connector:
         return resolve_configurations_file_path(infos)
 
     async def handle_get_configurations(self, request):
-        file_path = self.configurations_file_path()
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as exc:
-            logger.error("(C) Could not read configurations.json: %s", exc)
-            return web.json_response({"error": "could_not_read_configurations"}, status=500)
-
-        return web.json_response(data)
+        return web.json_response({"playlists": [], "configurations": {}})
 
     def segments_file_path(self):
         infos = getattr(self.mode_master, "infos", None)
@@ -119,29 +111,7 @@ class Connector:
         })
 
     async def handle_post_configurations(self, request):
-        try:
-            data = await request.json()
-        except Exception:
-            return web.json_response({"error": "invalid_json"}, status=400)
-
-        if (
-            not isinstance(data, dict)
-            or not isinstance(data.get("configurations"), dict)
-        ):
-            return web.json_response({"error": "invalid_configurations_schema"}, status=400)
-
-        sanitized = {"configurations": data["configurations"]}
-        file_path = self.configurations_file_path()
-        try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(sanitized, f, indent=2)
-            self.mode_master.load_configurations()
-            await self.broadcast_state_if_changed(self.mode_master.get_state_snapshot(), force=True)
-        except Exception as exc:
-            logger.error("(C) Could not save configurations.json: %s", exc)
-            return web.json_response({"error": "could_not_save_configurations"}, status=500)
-
-        return web.json_response({"success": True})
+        return web.json_response({"applied": False, "reason": "playlists_retired"}, status=200)
 
     async def websocket_handler(self, request):
         ws = web.WebSocketResponse()

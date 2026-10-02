@@ -15,15 +15,15 @@ from core.LocalTransitionManager import LocalTransitionManager
 import utils.Profiler as Profiler
 from core.CommandRouter import router as command_router
 from core.PresetRepository import PresetRepository
-from config.Configuration_manager import resolve_configurations_file_path, resolve_segments_file_path
+from config.Configuration_manager import resolve_segments_file_path
 
 
 class Mode_master:
     """
     Master controller for all visual segments, modes, and configurations.
 
-    Manages the global state, playlists, and transitions between different
-    configurations across the entire installation.
+    Manages the global state, dynamic mode DNA allocation, and transitions
+    between configurations across the entire installation.
     """
 
     def __init__(self, listener: Any, infos: Dict[str, Any], *leds: Any) -> None:
@@ -49,28 +49,23 @@ class Mode_master:
         self.segments_list: List[Segment.Segment] = []
         self.segments_names_to_index: Dict[str, int] = {}
         self.activ_configuration: Dict[str, Any] = {}
-        self.configurations: Dict[str, List[Dict[str, Any]]] = {}
-        self.playlists: List[str] = []
-        self.blocked_playlists: List[bool] = []
-        self.shuffle_bag: List[Dict[str, Any]] = []
         self.transition_locked = False
-        self.selected_transition_config = {"type": "fade_in_out", "duration": 2.0}
+        self.selected_transition_config: Optional[Dict[str, Any]] = None
         self.queued_configuration_name: Optional[str] = None
         self.mode_settings_catalog: Dict[str, Dict[str, Any]] = {}
         self.pending_system_action: Optional[str] = None
         self._restart_requested = asyncio.Event()
         self._last_update_monotonic: Optional[float] = None
 
-        # Delegate configuration persistence to PresetRepository
+        # Delegate app config persistence to PresetRepository
         self._preset_repo = PresetRepository(infos)
-        self.load_configurations()
 
         self.initiate_segments()
         self.mode_settings_catalog = self._build_mode_settings_catalog()
-        self.initiate_configuration()
         self.transition_director = Transition_Director.Transition_Director(self, self.listener, self.infos)
         self.local_transition_manager = LocalTransitionManager(self, self.listener)
         self.mood_manager = self.local_transition_manager.mood_manager
+        self.initiate_configuration()
         self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
 
     def set_connector(self, connector: Any) -> None:
@@ -140,6 +135,8 @@ class Mode_master:
             )
 
     def _selected_transition_label(self) -> str:
+        if self.selected_transition_config is None:
+            return "DYNAMIC"
         transition_type = self.selected_transition_config.get("type")
         if transition_type == "explosion":
             return "CUT"
@@ -147,7 +144,7 @@ class Mode_master:
             return "CROSSFADE"
         if transition_type == "fade_in_out":
             return "FADE IN/OUT"
-        return str(transition_type or "FADE IN/OUT")
+        return str(transition_type or "DYNAMIC")
 
     def _copy_mode_settings_map(self, mode_settings: Any) -> Dict[str, Dict[str, Any]]:
         if not isinstance(mode_settings, dict):
@@ -230,6 +227,7 @@ class Mode_master:
             ]
             if len(allowed_values) > 0 and normalized_value not in allowed_values:
                 return None, False
+            return normalized_value, True
 
         return normalized_value, True
 
@@ -240,23 +238,27 @@ class Mode_master:
             for mode_name in self.mode_settings_catalog
         }
 
-        overrides = config.get("modeSettings", {})
-        if not isinstance(overrides, dict):
-            return effective
+        # Apply persisted overrides from infos["mode_settings"] and active config
+        persisted = self.infos.get("mode_settings")
+        if isinstance(persisted, dict):
+            for mode_name, settings in persisted.items():
+                if mode_name in effective and isinstance(settings, dict):
+                    effective[mode_name].update(settings)
 
-        for mode_name, settings in overrides.items():
-            if mode_name not in self.mode_settings_catalog or not isinstance(settings, dict):
-                continue
-
-            merged = dict(effective.get(mode_name, {}))
-            for descriptor in self.mode_settings_catalog[mode_name].get("settings", []):
-                key = descriptor.get("key")
-                if not isinstance(key, str) or key not in settings:
+        overrides = config.get("modeSettings")
+        if isinstance(overrides, dict):
+            for mode_name, settings in overrides.items():
+                if mode_name not in self.mode_settings_catalog or not isinstance(settings, dict):
                     continue
-                normalized_value, ok = self._normalize_mode_setting_value(descriptor, settings.get(key))
-                if ok:
-                    merged[key] = normalized_value
-            effective[mode_name] = merged
+                merged = dict(effective.get(mode_name, {}))
+                for descriptor in self.mode_settings_catalog[mode_name].get("settings", []):
+                    key = descriptor.get("key")
+                    if not isinstance(key, str) or key not in settings:
+                        continue
+                    normalized_value, ok = self._normalize_mode_setting_value(descriptor, settings.get(key))
+                    if ok:
+                        merged[key] = normalized_value
+                effective[mode_name] = merged
 
         return effective
 
@@ -272,43 +274,15 @@ class Mode_master:
     def _apply_active_mode_settings(self) -> None:
         self._apply_mode_settings_to_segments(self._get_effective_mode_settings())
 
-    def _persist_configurations_store(self) -> bool:
-        self._preset_repo.configurations = self.configurations
-        self._preset_repo.playlists = self.playlists
-        self._preset_repo.persist_configurations_debounced()
-        return True
-
     def _persist_active_configuration_mode_settings(self) -> bool:
-        playlist_name = self.activ_configuration.get("playlist")
-        configuration_name = self.activ_configuration.get("name")
-        if not isinstance(playlist_name, str) or not isinstance(configuration_name, str):
-            return False
-
-        playlist_configs = self.configurations.get(playlist_name)
-        if not isinstance(playlist_configs, list):
-            return False
-
-        for config in playlist_configs:
-            if not isinstance(config, dict):
-                continue
-            if str(config.get("name", "")).strip().lower() != configuration_name.strip().lower():
-                continue
-            config["modeSettings"] = self._copy_mode_settings_map(self.activ_configuration.get("modeSettings", {}))
-            return self._persist_configurations_store()
-
-        return False
+        mode_settings = self._copy_mode_settings_map(self.activ_configuration.get("modeSettings", {}))
+        self._persist_app_config_value("mode_settings", mode_settings)
+        return True
 
     def get_state_snapshot(self) -> Dict[str, Any]:
         """
         Build a JSON-serializable snapshot for the web interface.
         """
-        active_playlist = self.activ_configuration.get("playlist")
-        enabled_playlists = [
-            playlist
-            for index, playlist in enumerate(self.playlists)
-            if index >= len(self.blocked_playlists) or not self.blocked_playlists[index]
-        ]
-
         segments = []
         for segment in self.segments_list:
             segments.append({
@@ -329,10 +303,10 @@ class Mode_master:
 
         return {
             "hardwareProfile": self.hardware_profile,
-            "activePlaylist": active_playlist,
-            "enabledPlaylists": enabled_playlists,
-            "activeConfiguration": self.activ_configuration.get("name"),
-            "queuedConfiguration": self.queued_configuration_name,
+            "activePlaylist": None,
+            "enabledPlaylists": [],
+            "activeConfiguration": self.activ_configuration.get("name", "Live Random DNA"),
+            "queuedConfiguration": None,
             "selectedTransition": self._selected_transition_label(),
             "transitionLocked": self.transition_locked,
             "transitionState": getattr(self.transition_director, "state", None),
@@ -340,8 +314,10 @@ class Mode_master:
             "luminosity": int(round(max(0.0, min(1.0, float(getattr(self.listener, "luminosite", 0.0)))) * 100)),
             "sensibility": int(round(max(0.0, float(getattr(self.listener, "sensi", 0.0))) * 100)),
             "autoTransitionTime": int(round(float(getattr(self.transition_director, "configuration_duration", 20.0)))),
-            "playlists": list(self.playlists),
+            "playlists": [],
             "availableModes": available_modes,
+            "activeMood": getattr(self.mood_manager, "current_palette", "Cyberpunk"),
+            "availableMoods": getattr(self.mood_manager, "palette_names", []),
             "segments": segments,
             "modeSettingsCatalog": list(self.mode_settings_catalog.values()),
             "modeSettings": self._get_effective_mode_settings(),
@@ -419,18 +395,6 @@ class Mode_master:
                 await self.appli_connector.on_frame_tick(self)
         self.profiler.tick()
 
-    def load_configurations(self) -> None:
-        """
-        Load modes and playlists from the configurations.json file.
-        Delegates to PresetRepository for actual file I/O.
-        """
-        self._preset_repo.load_configurations()
-        self.configurations = self._preset_repo.configurations
-        self.playlists = self._preset_repo.playlists
-        self.blocked_playlists = self._preset_repo.blocked_playlists
-        self.shuffle_bag = self._preset_repo.shuffle_bag
-        self.logger.debug(f"(MM) Loaded {len(self.playlists)} playlists")
-
     def update_segments_modes(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
         Apply the active configuration to all relevant segments.
@@ -448,7 +412,6 @@ class Mode_master:
         active_way = self.activ_configuration.get("way", {})
         for segment in self.segments_list:
             if not segment.isBlocked:
-                self.logger.debug(f"(MM) update_segments_modes : {segment.name} non bloqué donc on ordonne de le changer")
                 mode_name = active_modes.get(segment.name)
                 if mode_name is not None:
                     segment.change_mode(mode_name, transition_config)
@@ -459,11 +422,28 @@ class Mode_master:
 
     def initiate_configuration(self) -> None:
         """
-        Initialize the starting configuration by picking a random one from available playlists.
+        Pure random startup: pick a valid mode and direction for every segment.
+        Builds self.activ_configuration with 'Live Random DNA' and applies settings.
         """
-        #On initialise en prenant une conf au pif dans une playlist au pif
-        self.activ_configuration = self._detach_configuration_modes(self.pick_a_random_conf())
-        self.update_segments_modes()
+        modes_dict: Dict[str, str] = {}
+        ways_dict: Dict[str, str] = {}
+        for segment in self.segments_list:
+            avail = list(segment.modes.keys())
+            mode_name = random.choice(avail) if avail else "Rainbow"
+            direction = random.choice(["UP", "DOWN"])
+            modes_dict[segment.name] = mode_name
+            ways_dict[segment.name] = direction
+            segment.change_mode(mode_name)
+            segment.change_way(direction)
+
+        self.activ_configuration = {
+            "name": "Live Random DNA",
+            "modes": modes_dict,
+            "way": ways_dict,
+            "modeSettings": self._get_effective_mode_settings({}),
+        }
+        self._apply_active_mode_settings()
+        self._state_dirty = True
 
     def initiate_segments(self) -> None:
         """
@@ -473,11 +453,11 @@ class Mode_master:
             offset = 0
             for segment_index in range(len(info_list)):
                 seg_infos = info_list[segment_index]
-                indexes = [i for i in range(offset,offset+seg_infos["size"])]
-                new_segment = Segment.Segment(seg_infos["name"],self.listener, leds ,indexes,seg_infos["orientation"],self.infos)
+                indexes = [i for i in range(offset, offset + seg_infos["size"])]
+                new_segment = Segment.Segment(seg_infos["name"], self.listener, leds, indexes, seg_infos["orientation"], self.infos)
                 offset += seg_infos["size"]
                 self.segments_list.append(new_segment)
-                self.segments_names_to_index[seg_infos["name"]]=seg_infos["order"]
+                self.segments_names_to_index[seg_infos["name"]] = seg_infos["order"]
         file_path = resolve_segments_file_path(self.infos)
         with open(file_path, "r", encoding='utf-8') as f:
             data = json.load(f)
@@ -488,26 +468,23 @@ class Mode_master:
 
     async def change_configuration(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
         """
-        Change the global active configuration to a new random one.
+        Delegate to local_transition_manager to execute a dynamic DNA transition.
 
         Args:
-            transition_config (dict, optional): Configuration defining the type and
-                duration of the transition. Defaults to None.
+            transition_config (dict, optional): Transition parameters dict.
         """
-        #on pick une conf nouvelle au pif
-        last_configuration = self.activ_configuration
-        loop_guard = 0
-        while (last_configuration==self.activ_configuration and loop_guard < 10):
-            self.activ_configuration = self._detach_configuration_modes(self.pick_a_random_conf())
-            loop_guard += 1
-        #on l'applique à tous les segments
-        self.update_segments_modes(transition_config)
+        self.local_transition_manager.schedule_transition(
+            transition_config=transition_config,
+            quantize_downbeat=True
+        )
 
-    def _normalize_transition(self, transition_name: Any) -> Dict[str, Any]:
+    def _normalize_transition(self, transition_name: Any) -> Optional[Dict[str, Any]]:
         if not isinstance(transition_name, str):
             return {"type": "fade_in_out", "duration": 2.0}
 
         normalized = transition_name.strip().upper()
+        if normalized in ("DYNAMIC", "AUTO"):
+            return None
         if normalized == "CUT":
             return {"type": "explosion", "duration": 0.0}
         if normalized == "CROSSFADE":
@@ -527,27 +504,9 @@ class Mode_master:
                 return segment
         return None
 
-    def _set_only_playlist_active(self, playlist_name: Any) -> bool:
-        self._preset_repo.playlists = self.playlists
-        success = self._preset_repo.set_only_playlist_active(playlist_name)
-        if success:
-            self.blocked_playlists = self._preset_repo.blocked_playlists
-            self.shuffle_bag = self._preset_repo.shuffle_bag
-        return success
-
-    def _pick_random_conf_from_playlist(self, playlist_name: Any) -> Optional[Dict[str, Any]]:
-        self._preset_repo.configurations = self.configurations
-        self._preset_repo.playlists = self.playlists
-        return self._preset_repo.pick_random_conf_from_playlist(playlist_name)
-
-    def _find_configuration(self, configuration_name: Any, playlist_name: Optional[Any] = None) -> Optional[Dict[str, Any]]:
-        self._preset_repo.configurations = self.configurations
-        self._preset_repo.playlists = self.playlists
-        return self._preset_repo.find_configuration(configuration_name, playlist_name)
-
     def _detach_configuration_modes(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Shallow-copy modes/way so live segment swaps never mutate the in-memory playlist store.
+        Shallow-copy modes/way so live segment swaps never mutate the original dict.
         """
         if not isinstance(config, dict):
             return {}
@@ -577,28 +536,8 @@ class Mode_master:
     async def process_instruction(self, instruction: Dict[str, Any]) -> Dict[str, Any]:
         """
         Process a WebSocket instruction by delegating to the CommandRouter.
-
-        All handler logic has been extracted into core/CommandRouter.py as
-        individually registered async handlers.
         """
         result = await command_router.dispatch(self, instruction)
         if result.get("applied", False):
             self._state_dirty = True
         return result
-
-    def pick_a_random_conf(self) -> Dict[str, Any]:
-        """
-        Select a random configuration from the unblocked playlists using a shuffle bag approach.
-        Delegates to PresetRepository.
-
-        Returns:
-            dict: The selected configuration dictionary.
-        """
-        self._preset_repo.configurations = self.configurations
-        self._preset_repo.playlists = self.playlists
-        self._preset_repo.blocked_playlists = self.blocked_playlists
-        self._preset_repo.shuffle_bag = self.shuffle_bag
-        new_conf = self._preset_repo.pick_a_random_conf(self.activ_configuration)
-        self.shuffle_bag = self._preset_repo.shuffle_bag
-        self.logger.debug(f"(MM)   pick_a_random_conf() :     conf = {new_conf}")
-        return new_conf

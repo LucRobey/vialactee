@@ -6,46 +6,9 @@ from core.PresetRepository import PresetRepository
 
 def test_preset_repository_init():
     repo = PresetRepository({"hardware_profile": "full"})
-    assert repo.configurations == {}
-    assert repo.playlists == []
-    assert repo.blocked_playlists == []
-    assert repo.shuffle_bag == []
-
-
-def test_preset_repository_load_and_pick():
-    repo = PresetRepository({"hardware_profile": "full"})
-    repo.load_configurations()
-    assert len(repo.playlists) > 0
-    assert len(repo.configurations) > 0
-
-    conf = repo.pick_a_random_conf()
-    assert isinstance(conf, dict)
-    assert "name" in conf
-    assert "modes" in conf
-
-
-def test_preset_repository_playlist_activation():
-    repo = PresetRepository({"hardware_profile": "full"})
-    repo.load_configurations()
-    first_playlist = repo.playlists[0]
-
-    assert repo.set_only_playlist_active(first_playlist) is True
-    # First should be False (unblocked), all others True (blocked)
-    assert repo.blocked_playlists[0] is False
-    for blocked in repo.blocked_playlists[1:]:
-        assert blocked is True
-
-
-def test_preset_repository_find_configuration():
-    repo = PresetRepository({"hardware_profile": "full"})
-    repo.load_configurations()
-    first_playlist = repo.playlists[0]
-    first_conf = repo.configurations[first_playlist][0]
-    conf_name = first_conf["name"]
-
-    found = repo.find_configuration(conf_name)
-    assert found is not None
-    assert found["name"] == conf_name
+    assert repo.infos == {"hardware_profile": "full"}
+    assert repo._app_config_flush_task is None
+    assert repo._pending_app_config_snapshot is None
 
 
 def test_atomic_write(tmp_path):
@@ -59,92 +22,64 @@ def test_atomic_write(tmp_path):
     assert not (tmp_path / "test_file.json.tmp").exists()
 
 
-def test_persist_configurations_debounced_sync_fallback(tmp_path, monkeypatch):
-    repo = PresetRepository({"hardware_profile": "full"})
-    test_file = str(tmp_path / "configurations_test.json")
-    monkeypatch.setattr("core.PresetRepository.resolve_configurations_file_path", lambda infos: test_file)
-
-    repo.playlists = ["P1"]
-    repo.configurations = {"P1": [{"name": "C1"}]}
-
-    repo.persist_configurations_debounced()
-    assert (tmp_path / "configurations_test.json").exists()
-    assert repo._pending_snapshot is None
-
-
-@pytest.mark.anyio
-async def test_persist_configurations_debounced_async(tmp_path, monkeypatch):
-    import asyncio
-    import json
-    repo = PresetRepository({"hardware_profile": "full"})
-    test_file = str(tmp_path / "configurations_test.json")
-    monkeypatch.setattr("core.PresetRepository.resolve_configurations_file_path", lambda infos: test_file)
-
-    repo.playlists = ["P1"]
-    repo.configurations = {"P1": [{"name": "initial"}]}
-
-    # Rapid slider movements
-    for i in range(5):
-        repo.configurations["P1"][0]["name"] = f"val_{i}"
-        repo.persist_configurations_debounced(delay_seconds=0.05)
-
-    # File should not exist yet (debounced)
-    await asyncio.sleep(0.01)
-    assert not (tmp_path / "configurations_test.json").exists()
-
-    # Wait for debounce to complete
-    await asyncio.sleep(0.15)
-    assert (tmp_path / "configurations_test.json").exists()
-    with open(test_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    assert data["configurations"]["P1"][0]["name"] == "val_4"
-    assert repo._pending_snapshot is None
-
-
 @pytest.mark.anyio
 async def test_persist_app_config_debounced_async(tmp_path, monkeypatch):
-    import asyncio
-    import json
     repo = PresetRepository({"hardware_profile": "full"})
     test_file = str(tmp_path / "app_config_test.json")
     monkeypatch.setattr(repo, "_resolve_app_config_path", lambda: test_file)
 
-    # Initial write
+    # Write settings including mode_settings
     repo.persist_app_config_debounced("luminosity", 50, delay_seconds=0.05)
     repo.persist_app_config_debounced("sensibility", 70, delay_seconds=0.05)
-    repo.persist_app_config_debounced("luminosity", 80, delay_seconds=0.05)
+    repo.persist_app_config_debounced("mode_settings", {"Rainbow": {"speed": 2.5}}, delay_seconds=0.05)
 
-    await asyncio.sleep(0.15)
+    data = {}
+    for _ in range(30):
+        await asyncio.sleep(0.05)
+        if (tmp_path / "app_config_test.json").exists():
+            try:
+                with open(test_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if data.get("mode_settings"):
+                    break
+            except Exception:
+                pass
+
     assert (tmp_path / "app_config_test.json").exists()
+    assert data["luminosity"] == 50
+    assert data["sensibility"] == 70
+    assert data["mode_settings"]["Rainbow"]["speed"] == 2.5
+    assert repo._pending_app_config_snapshot is None
+
+
+def test_persist_app_config_sync(tmp_path, monkeypatch):
+    repo = PresetRepository({"hardware_profile": "full"})
+    test_file = str(tmp_path / "app_config_sync.json")
+    monkeypatch.setattr(repo, "_resolve_app_config_path", lambda: test_file)
+
+    repo._persist_app_config_value_sync("auto_transition_time", 42)
+    assert (tmp_path / "app_config_sync.json").exists()
     with open(test_file, "r", encoding="utf-8") as f:
         data = json.load(f)
-    assert data["luminosity"] == 80
-    assert data["sensibility"] == 70
-    assert repo._pending_app_config_snapshot is None
+    assert data["auto_transition_time"] == 42
 
 
 @pytest.mark.anyio
 async def test_flush_sync_immediate_persistence(tmp_path, monkeypatch):
     repo = PresetRepository({"hardware_profile": "full"})
-    conf_file = str(tmp_path / "configurations_flush.json")
     app_file = str(tmp_path / "app_config_flush.json")
-    monkeypatch.setattr("core.PresetRepository.resolve_configurations_file_path", lambda infos: conf_file)
     monkeypatch.setattr(repo, "_resolve_app_config_path", lambda: app_file)
 
-    repo.playlists = ["P1"]
-    repo.configurations = {"P1": [{"name": "before_shutdown"}]}
-
-    repo.persist_configurations_debounced(delay_seconds=10.0)
     repo.persist_app_config_debounced("luminosity", 99, delay_seconds=10.0)
 
     # Immediate shutdown flush
     repo.flush_sync()
-    assert (tmp_path / "configurations_flush.json").exists()
     assert (tmp_path / "app_config_flush.json").exists()
-    assert repo._pending_snapshot is None
+    with open(app_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["luminosity"] == 99
     assert repo._pending_app_config_snapshot is None
     await asyncio.sleep(0.01)
-    assert repo._flush_task.cancelled()
     assert repo._app_config_flush_task.cancelled()
 
 
@@ -161,14 +96,12 @@ def test_concurrent_atomic_writes(tmp_path):
 
     assert all(results)
     assert (tmp_path / "concurrent_output.json").exists()
-    # Confirm no orphan tmp files remain
     tmp_files = list(tmp_path.glob("*.tmp"))
     assert len(tmp_files) == 0
 
 
 @pytest.mark.anyio
 async def test_persist_app_config_debounced_no_disk_reads_during_slider_updates(tmp_path, monkeypatch):
-    import asyncio
     import builtins
     repo = PresetRepository({"hardware_profile": "full"})
     test_file = str(tmp_path / "app_config_reads_test.json")
@@ -209,5 +142,3 @@ async def test_persist_app_config_debounced_no_disk_reads_during_slider_updates(
         except Exception:
             pass
     assert data.get("val") == 20
-
-

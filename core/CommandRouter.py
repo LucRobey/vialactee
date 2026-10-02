@@ -122,44 +122,43 @@ async def _handle_select_transition(mm: Any, payload: Dict[str, Any]) -> Dict[st
 
 @router.register("live_deck", "select_configuration")
 async def _handle_select_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    configuration_name = payload.get("configuration")
-    config = mm._find_configuration(configuration_name)
-    if config is not None:
-        mm.queued_configuration_name = config["name"]
-        return {"applied": True}
-    return {"applied": False, "reason": "unknown_configuration"}
+    return {"applied": False, "reason": "playlists_retired"}
 
 
 @router.register("live_deck", "select_playlist")
 async def _handle_select_playlist(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    playlist_name = payload.get("playlist")
-    if mm._set_only_playlist_active(playlist_name):
-        config = mm._pick_random_conf_from_playlist(playlist_name)
-        if config is not None:
-            mm.queued_configuration_name = config["name"]
-            mm._apply_configuration(config, mm.selected_transition_config)
-            return {"applied": True, "configuration": config["name"]}
-        return {"applied": True}
-    return {"applied": False, "reason": "unknown_playlist"}
+    return {"applied": False, "reason": "playlists_retired"}
+
+
+@router.register("live_deck", "select_mood")
+async def _handle_select_mood(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
+    palette = payload.get("palette") or payload.get("mood")
+    if not isinstance(palette, str):
+        return {"applied": False, "reason": "invalid_palette"}
+    success = mm.mood_manager.set_palette(palette)
+    if success:
+        return {"applied": True, "mood": palette}
+    return {"applied": False, "reason": "unknown_palette"}
 
 
 @router.register("live_deck", "go_to_next_configuration")
 async def _handle_go_to_next_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    mm.selected_transition_config = mm._normalize_transition(payload.get("transition"))
-    configuration_name = payload.get("configuration")
-    config = mm._find_configuration(configuration_name)
-    if config is None:
-        config = mm.pick_a_random_conf()
-    mm._apply_configuration(config, mm.selected_transition_config)
+    if payload.get("transition"):
+        mm.selected_transition_config = mm._normalize_transition(payload.get("transition"))
+    mm.local_transition_manager.schedule_transition(
+        transition_config=mm.selected_transition_config,
+        quantize_downbeat=True
+    )
     return {"applied": True}
 
 
 @router.register("live_deck", "manual_drop")
 async def _handle_manual_drop(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    config = mm._find_configuration(mm.queued_configuration_name) if mm.queued_configuration_name else None
-    if config is None:
-        config = mm.pick_a_random_conf()
-    mm._apply_configuration(config, mm.selected_transition_config)
+    transition_config = {"type": "explosion", "duration": 0.4}
+    mm.local_transition_manager.schedule_transition(
+        transition_config=transition_config,
+        quantize_downbeat=False
+    )
     return {"applied": True}
 
 
@@ -176,20 +175,12 @@ async def _handle_lock_current_configuration(mm: Any, payload: Dict[str, Any]) -
 
 @router.register("topology", "select_playlist_slot")
 async def _handle_topology_select_playlist_slot(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    if mm._set_only_playlist_active(payload.get("playlist")):
-        return {"applied": True}
-    return {"applied": False, "reason": "unknown_playlist"}
+    return {"applied": False, "reason": "playlists_retired"}
 
 
 @router.register("topology", "select_configuration")
 async def _handle_topology_select_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    if mm._set_only_playlist_active(payload.get("playlist")):
-        mm.shuffle_bag = []
-    config = mm._find_configuration(payload.get("configuration"), payload.get("playlist"))
-    if config is not None:
-        mm._apply_configuration(config, mm.selected_transition_config)
-        return {"applied": True}
-    return {"applied": False, "reason": "unknown_configuration"}
+    return {"applied": False, "reason": "playlists_retired"}
 
 
 @router.register("topology", "select_segment_mode")
@@ -220,14 +211,12 @@ async def _handle_topology_toggle_segment_direction(mm: Any, payload: Dict[str, 
 
 @router.register("topology", "build_configuration")
 async def _handle_topology_build_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    mm.load_configurations()
-    return {"applied": True}
+    return {"applied": False, "reason": "playlists_retired"}
 
 
 @router.register("topology", "modify_configuration")
 async def _handle_topology_modify_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    mm.load_configurations()
-    return {"applied": True}
+    return {"applied": False, "reason": "playlists_retired"}
 
 
 @router.register("topology", "set_editor_mode")

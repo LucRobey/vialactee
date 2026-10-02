@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import sys
 import time
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
@@ -27,6 +28,14 @@ class FakeLedsVisualizer:
             cls._instance.audio_player = None
             cls._instance._last_caption_update = 0.0
             
+            # Text and label surface caches to avoid allocation churn in hot path
+            cls._instance.font = None
+            cls._instance.mode_font = None
+            cls._instance._segment_label_cache, cls._instance._mode_label_cache = {}, {}
+            cls._instance._hud_section_cache, cls._instance._hud_label_cache = {}, {}
+            cls._instance._hud_value_cache, cls._instance._hud_small_val_cache = {}, {}
+            cls._instance._hud_bg_surf = None
+
             # Dynamic geometry mapping based on active profile
             cls._instance.segments_def = cls._instance._load_visualizer_segments_def()
             
@@ -79,10 +88,7 @@ class FakeLedsVisualizer:
 
                     # Scale factor 2, Offset 100
                     start_x = 100 + (start_x_grid * 2)
-                    if orientation == "vertical_up":
-                        start_y = 100 + (start_y_grid * 2) + 2
-                    else:
-                        start_y = 100 + (start_y_grid * 2)
+                    start_y = 100 + (start_y_grid * 2) + (2 if orientation == "vertical_up" else 0)
 
                     name = f"segment_{s.get('id', s.get('name', ''))}"
                     border_color = cls._hex_to_rgb(s.get("ui", {}).get("color", "#ffffff"))
@@ -98,21 +104,16 @@ class FakeLedsVisualizer:
         return [
             # Strip 0 (segs_1)
             [
-                (173, "vertical_up", 962, 510, "segment_v4", (50, 100, 255)),
-                (48, "horizontal", 866, 270, "segment_h32", (255, 50, 50)),
-                (48, "horizontal", 866, 442, "segment_h31", (255, 0, 255)),
-                (47, "horizontal", 866, 102, "segment_h30", (150, 150, 150)),
-                (173, "vertical_up", 866, 592, "segment_v3", (0, 255, 255)),
-                (91, "horizontal", 684, 132, "segment_h20", (150, 255, 150)),
-                (205, "horizontal", 100, 132, "segment_h00", (0, 0, 255))
+                (173, "vertical_up", 962, 510, "segment_v4", (50, 100, 255)), (48, "horizontal", 866, 270, "segment_h32", (255, 50, 50)),
+                (48, "horizontal", 866, 442, "segment_h31", (255, 0, 255)), (47, "horizontal", 866, 102, "segment_h30", (150, 150, 150)),
+                (173, "vertical_up", 866, 592, "segment_v3", (0, 255, 255)), (91, "horizontal", 684, 132, "segment_h20", (150, 255, 150)),
+                (205, "horizontal", 100, 132, "segment_h00", (0, 0, 255)),
             ],
             # Strip 1 (segs_2)
             [
-                (173, "vertical_up", 684, 592, "segment_v2", (0, 255, 0)),
-                (87, "horizontal", 510, 246, "segment_h11", (255, 150, 100)),
-                (86, "horizontal", 510, 478, "segment_h10", (150, 50, 200)),
-                (173, "vertical_up", 510, 478, "segment_v1", (255, 255, 0))
-            ]
+                (173, "vertical_up", 684, 592, "segment_v2", (0, 255, 0)), (87, "horizontal", 510, 246, "segment_h11", (255, 150, 100)),
+                (86, "horizontal", 510, 478, "segment_h10", (150, 50, 200)), (173, "vertical_up", 510, 478, "segment_v1", (255, 255, 0)),
+            ],
         ]
 
     def register_strip(self, nb_of_leds):
@@ -137,25 +138,22 @@ class FakeLedsVisualizer:
     def set_audio_player(self, player):
         self.audio_player = player
 
-    def show(self):
+    def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                exit()
+                sys.exit(0)
             elif event.type == pygame.KEYDOWN and self.audio_player is not None:
                 p = self.audio_player
-                if event.key == pygame.K_SPACE:
-                    p.toggle_pause()
-                elif event.key == pygame.K_RIGHT:
-                    p.seek_relative(5.0)
-                elif event.key == pygame.K_LEFT:
-                    p.seek_relative(-5.0)
-                elif event.key == pygame.K_n:
-                    p.next_song()
-                elif event.key == pygame.K_p:
-                    p.prev_song()
-                elif pygame.K_1 <= event.key <= pygame.K_9:
-                    p.change_song_number(event.key - pygame.K_1)
+                if event.key == pygame.K_SPACE: p.toggle_pause()
+                elif event.key == pygame.K_RIGHT: p.seek_relative(5.0)
+                elif event.key == pygame.K_LEFT: p.seek_relative(-5.0)
+                elif event.key == pygame.K_n: p.next_song()
+                elif event.key == pygame.K_p: p.prev_song()
+                elif pygame.K_1 <= event.key <= pygame.K_9: p.change_song_number(event.key - pygame.K_1)
+
+    def show(self):
+        self.handle_events()
         
         if self.audio_player is not None:
             now = time.time()
@@ -169,51 +167,52 @@ class FakeLedsVisualizer:
                 pygame.display.set_caption(f"Vialactée Simulator [{st}: {name} ({int(cur)//60:02d}:{int(cur)%60:02d}/{int(tot)//60:02d}:{int(tot)%60:02d}) | Space: Pause, ←/→: Seek, N/P: Tracks]")
 
         self.screen.fill((15, 15, 15))
-        
+        if self.font is None:
+            pygame.font.init()
+            self.font = pygame.font.SysFont('arial', 16, bold=True)
+            self.mode_font = pygame.font.SysFont('arial', 11, italic=True)
+
         for strip_id, strip_data in enumerate(self.strips):
             if strip_id >= len(self.segments_def):
                 continue
                 
             cursor = 0
             for (size, orientation, start_x, start_y, name, border_color) in self.segments_def[strip_id]:
-                
-                # Draw the Text Label Box
-                if not hasattr(self, 'font'):
-                    pygame.font.init()
-                    self.font = pygame.font.SysFont('arial', 16, bold=True)
-                if not hasattr(self, 'mode_font'):
-                    self.mode_font = pygame.font.SysFont('arial', 11, italic=True)
-                
-                text_surface = self.font.render(name, True, (0, 0, 0))
-                text_rect = text_surface.get_rect()
-                
-                if orientation == "horizontal":
-                    text_rect.center = (start_x + size, start_y + 25)
-                elif orientation == "vertical_up":
-                    text_rect.center = (start_x - 55, start_y - size)
-                else: # fallback for normal vertical
-                    text_rect.center = (start_x - 55, start_y + size)
-                    
-                bg_rect = text_rect.inflate(10, 8)
+                # Draw the cached Text Label Box
+                key = (name, start_x, start_y, size, orientation)
+                if key not in self._segment_label_cache:
+                    surf = self.font.render(name, True, (0, 0, 0))
+                    rect = surf.get_rect()
+                    if orientation == "horizontal":
+                        rect.center = (start_x + size, start_y + 25)
+                    elif orientation == "vertical_up":
+                        rect.center = (start_x - 55, start_y - size)
+                    else:
+                        rect.center = (start_x - 55, start_y + size)
+                    self._segment_label_cache[key] = (surf, rect, rect.inflate(10, 8))
+
+                text_surface, text_rect, bg_rect = self._segment_label_cache[key]
                 pygame.draw.rect(self.screen, (245, 245, 245), bg_rect)
                 pygame.draw.rect(self.screen, border_color, bg_rect, 2)
                 self.screen.blit(text_surface, text_rect)
 
-                # Draw the active mode label right below the name label
+                # Draw the cached active mode label
                 mode_info = self.segment_modes.get(name)
                 if mode_info is not None and mode_info.get("mode"):
                     mode_label = mode_info["mode"]
                     if mode_info.get("target"):
                         mode_label = f"{mode_label} -> {mode_info['target']}"
 
-                    mode_surface = self.mode_font.render(mode_label, True, (35, 35, 35))
-                    mode_rect = mode_surface.get_rect()
-                    mode_rect.center = (bg_rect.centerx, bg_rect.bottom + 10)
+                    m_key = (mode_label, bg_rect.centerx, bg_rect.bottom)
+                    if m_key not in self._mode_label_cache:
+                        m_surf = self.mode_font.render(mode_label, True, (35, 35, 35))
+                        m_rect = m_surf.get_rect(center=(bg_rect.centerx, bg_rect.bottom + 10))
+                        self._mode_label_cache[m_key] = (m_surf, m_rect, m_rect.inflate(8, 4))
 
-                    mode_bg = mode_rect.inflate(8, 4)
-                    pygame.draw.rect(self.screen, (255, 255, 255), mode_bg)
-                    pygame.draw.rect(self.screen, border_color, mode_bg, 1)
-                    self.screen.blit(mode_surface, mode_rect)
+                    m_surf, m_rect, m_bg = self._mode_label_cache[m_key]
+                    pygame.draw.rect(self.screen, (255, 255, 255), m_bg)
+                    pygame.draw.rect(self.screen, border_color, m_bg, 1)
+                    self.screen.blit(m_surf, m_rect)
             
                 x, y = start_x, start_y
                 for _ in range(size):
@@ -260,20 +259,20 @@ class FakeLedsVisualizer:
             self._hud_section_font = pygame.font.SysFont('consolas', 12, bold=True)
             self._hud_label_font = pygame.font.SysFont('consolas', 11)
             self._hud_value_font = pygame.font.SysFont('consolas', 11, bold=True)
+            self._hud_title_surf = self._hud_title_font.render("MUSIC ANALYZER", True, (220, 220, 255))
+            self._hud_bg_surf = pygame.Surface((295, 345), pygame.SRCALPHA)
+            self._hud_bg_surf.fill((12, 12, 20, 215))
 
         # Panel geometry
         px, py = 10, 545
         pw, ph = 295, 345
 
         # Semi-transparent background
-        bg = pygame.Surface((pw, ph), pygame.SRCALPHA)
-        bg.fill((12, 12, 20, 215))
-        self.screen.blit(bg, (px, py))
+        self.screen.blit(self._hud_bg_surf, (px, py))
         pygame.draw.rect(self.screen, (160, 60, 220), (px, py, pw, ph), 2)
 
         # Title
-        title = self._hud_title_font.render("MUSIC ANALYZER", True, (220, 220, 255))
-        self.screen.blit(title, (px + pw // 2 - title.get_width() // 2, py + 8))
+        self.screen.blit(self._hud_title_surf, (px + pw // 2 - self._hud_title_surf.get_width() // 2, py + 8))
         pygame.draw.line(self.screen, (80, 40, 120),
                          (px + 8, py + 28), (px + pw - 8, py + 28), 1)
 
@@ -303,8 +302,7 @@ class FakeLedsVisualizer:
         color = (50, 255, 100) if locked else (255, 200, 50)
         self._hud_label("Status", lx, cy)
         pygame.draw.circle(self.screen, color, (vx + 5, cy + 6), 4)
-        s = self._hud_value_font.render(status, True, color)
-        self.screen.blit(s, (vx + 14, cy))
+        self.screen.blit(self._hud_value(status, color), (vx + 14, cy))
         cy += 16
 
         # Confidence bar
@@ -318,8 +316,7 @@ class FakeLedsVisualizer:
         # Beat Tag
         tag = d.get('beat_tag', '')
         self._hud_label("Beat Tag", lx, cy)
-        s = self._hud_value_font.render(tag, True, (100, 220, 255))
-        self.screen.blit(s, (vx, cy))
+        self.screen.blit(self._hud_value(tag, (100, 220, 255)), (vx, cy))
         cy += 22
 
         # ── separator ──
@@ -373,26 +370,41 @@ class FakeLedsVisualizer:
         sil = d.get('silence_frames', 0)
         self._hud_label("Silence", lx + 118, cy)
         sil_color = (255, 60, 60) if sil > 30 else (200, 200, 200)
-        s = self._hud_value_font.render(str(sil), True, sil_color)
-        self.screen.blit(s, (lx + 170, cy))
+        self.screen.blit(self._hud_value(str(sil), sil_color), (lx + 170, cy))
 
     # ── HUD drawing helpers ──
 
+    def _hud_value(self, text, color=(255, 255, 255)):
+        key = (text, color)
+        s = self._hud_value_cache.get(key)
+        if s is None:
+            if len(self._hud_value_cache) > 128:
+                self._hud_value_cache.clear()
+            s = self._hud_value_cache[key] = self._hud_value_font.render(str(text), True, color)
+        return s
+
     def _hud_section(self, text, x, y, color):
-        s = self._hud_section_font.render(text, True, color)
+        s = self._hud_section_cache.get((text, color))
+        if s is None:
+            s = self._hud_section_cache[(text, color)] = self._hud_section_font.render(text, True, color)
         self.screen.blit(s, (x, y))
 
     def _hud_label(self, text, x, y):
-        s = self._hud_label_font.render(text, True, (150, 150, 160))
+        s = self._hud_label_cache.get(text)
+        if s is None:
+            s = self._hud_label_cache[text] = self._hud_label_font.render(text, True, (150, 150, 160))
         self.screen.blit(s, (x, y))
 
     def _hud_row(self, label, value, lx, vx, y):
         self._hud_label(label, lx, y)
-        s = self._hud_value_font.render(str(value), True, (255, 255, 255))
-        self.screen.blit(s, (vx, y))
+        self.screen.blit(self._hud_value(value), (vx, y))
 
     def _hud_small_val(self, text, x, y):
-        s = self._hud_label_font.render(text, True, (200, 200, 200))
+        s = self._hud_small_val_cache.get(text)
+        if s is None:
+            if len(self._hud_small_val_cache) > 128:
+                self._hud_small_val_cache.clear()
+            s = self._hud_small_val_cache[text] = self._hud_label_font.render(str(text), True, (200, 200, 200))
         self.screen.blit(s, (x, y))
 
     def _hud_bar(self, x, y, w, h, value, fill_color):

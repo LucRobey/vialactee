@@ -19,10 +19,10 @@ class Extending_waves_mode(Mode.Mode):
         self.half_len: int = self.middle_idx + 1
 
         # Pre-allocated scratch wave arrays (ZERO runtime heap allocation)
-        self.wave_positions: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float64)
-        self.wave_velocities: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float64)
-        self.wave_amps: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float64)
-        self.wave_colors: np.ndarray = np.zeros((self.MAX_WAVES, 3), dtype=np.float64)
+        self.wave_positions: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float32)
+        self.wave_velocities: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float32)
+        self.wave_amps: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float32)
+        self.wave_colors: np.ndarray = np.zeros((self.MAX_WAVES, 3), dtype=np.float32)
         self.wave_active: np.ndarray = np.zeros(self.MAX_WAVES, dtype=bool)
         self.wave_slot: int = 0
         self.wave_count: int = 0
@@ -30,11 +30,11 @@ class Extending_waves_mode(Mode.Mode):
         self.wave_width: float = 2.2
 
         # Coordinate and color buffers
-        self.half_coords: np.ndarray = np.arange(self.half_len, dtype=np.float64)
-        self.half_dists: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
-        self.wave_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
-        self.wave_scratch_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float64)
-        self.half_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float64)
+        self.half_coords: np.ndarray = np.arange(self.half_len, dtype=np.float32)
+        self.half_dists: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
+        self.wave_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
+        self.wave_scratch_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
+        self.half_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -107,13 +107,13 @@ class Extending_waves_mode(Mode.Mode):
         # 3. Synthesize Half-Strip Energy & Colors
         self.half_rgb.fill(0.0)
         two_w_sq = 2.0 * ((self.wave_width * (1.0 - 0.20 * tension)) ** 2)
+        inv_two_w_sq = float(-1.0 / two_w_sq) if two_w_sq > 0 else -1.0
 
         for w in range(self.MAX_WAVES):
             if self.wave_active[w]:
                 np.subtract(self.half_coords, self.wave_positions[w], out=self.half_dists)
                 np.square(self.half_dists, out=self.half_dists)
-                np.negative(self.half_dists, out=self.wave_profile)
-                np.divide(self.wave_profile, two_w_sq, out=self.wave_profile)
+                np.multiply(self.half_dists, inv_two_w_sq, out=self.wave_profile)
                 np.exp(self.wave_profile, out=self.wave_profile)
                 np.multiply(self.wave_profile, self.wave_amps[w], out=self.wave_profile)
                 col = self.wave_colors[w]

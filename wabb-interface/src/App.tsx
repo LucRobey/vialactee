@@ -6,7 +6,6 @@ import { NoticeBanner } from './components/common/NoticeBanner'
 
 import { LiveDeck } from './components/pages/LiveDeck'
 import { TopologyEditor } from './components/pages/TopologyEditor'
-import { Configurator } from './components/pages/Configurator'
 import { ModeSettings } from './components/pages/ModeSettings'
 import { SystemSetup } from './components/pages/SystemSetup'
 
@@ -36,7 +35,6 @@ function App() {
   const tabs = useMemo(() => ([
     { name: 'Live Deck', component: <LiveDeck /> },
     { name: 'Topology', component: <TopologyEditor allowedModes={TOPOLOGY_LIVE_MODES} /> },
-    { name: 'Configurator', component: <Configurator /> },
     { name: 'Mode Settings', component: <ModeSettings /> },
     { name: 'System', component: <SystemSetup /> },
   ]), [])

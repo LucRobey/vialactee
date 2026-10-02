@@ -106,6 +106,7 @@ class GlobalMoodManager:
         # Pre-allocated zero-allocation buffers (AXIOM-02)
         self._from_colors: np.ndarray = np.array(self._cached_palettes[self._current_palette_name], copy=True)
         self._to_colors: np.ndarray = np.array(self._cached_palettes[self._current_palette_name], copy=True)
+        self._diff_colors: np.ndarray = np.zeros((4, 3), dtype=np.float32)
         self._blend_scratch: np.ndarray = np.zeros((4, 3), dtype=np.float32)
         self._term2_scratch: np.ndarray = np.zeros((4, 3), dtype=np.float32)
         self._mood_colors: np.ndarray = np.array(PALETTES[self._current_palette_name], dtype=np.int32)
@@ -130,6 +131,7 @@ class GlobalMoodManager:
         # Snapshot current blended colors as starting point
         self._from_colors[:] = self._mood_colors
         self._to_colors[:] = self._cached_palettes[palette_name]
+        np.subtract(self._to_colors, self._from_colors, out=self._diff_colors)
         self._target_palette_name = palette_name
         self._transition_duration = max(0.01, float(duration if duration is not None else self._default_duration))
         self._timer = 0.0
@@ -188,14 +190,11 @@ class GlobalMoodManager:
         self._blend_progress = progress
 
         # Cosine crossfade weighting: 0.5 * (1.0 - cos(pi * progress))
-        w = 0.5 * (1.0 - math.cos(math.pi * progress))
-        inv_w = 1.0 - w
+        w = np.float32(0.5 * (1.0 - math.cos(math.pi * progress)))
 
-        # Zero-allocation arithmetic using pre-allocated scratch buffers
-        np.multiply(self._from_colors, inv_w, out=self._blend_scratch)
-        np.multiply(self._to_colors, w, out=self._term2_scratch)
-        np.add(self._blend_scratch, self._term2_scratch, out=self._blend_scratch)
-        self._mood_colors[:] = self._blend_scratch
+        # Zero-allocation arithmetic: mood = from + diff * w
+        np.multiply(self._diff_colors, w, out=self._blend_scratch)
+        np.add(self._from_colors, self._blend_scratch, out=self._mood_colors, casting='unsafe')
 
     @property
     def mood_colors(self) -> np.ndarray:

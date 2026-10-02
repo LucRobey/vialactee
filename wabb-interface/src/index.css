@@ -1333,6 +1333,10 @@ body {
   background-color: var(--lego-dark-blue);
 }
 
+.bg-chrome {
+  background-color: #7b8895;
+}
+
 .bpm-display {
   margin-top: 1rem;
   background: #0a0a0a;

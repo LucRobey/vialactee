@@ -99,6 +99,8 @@ export type ModeMasterState = {
   autoTransitionTime: number;
   playlists: string[];
   availableModes: string[];
+  activeMood?: string | null;
+  availableMoods?: string[];
   segments: ModeMasterSegmentState[];
   modeSettingsCatalog: ModeSettingsCatalogEntry[];
   modeSettings: Record<string, Record<string, ModeSettingValue>>;
@@ -233,6 +235,8 @@ export const normalizeModeMasterState = (value: unknown): ModeMasterState | null
     autoTransitionTime: typeof value.autoTransitionTime === 'number' ? value.autoTransitionTime : 20,
     playlists: Array.isArray(value.playlists) ? value.playlists.filter((p): p is string => typeof p === 'string') : [],
     availableModes: Array.isArray(value.availableModes) ? value.availableModes.filter((m): m is string => typeof m === 'string') : [],
+    activeMood: typeof value.activeMood === 'string' ? value.activeMood : null,
+    availableMoods: Array.isArray(value.availableMoods) ? value.availableMoods.filter((m): m is string => typeof m === 'string') : [],
     segments,
     modeSettingsCatalog: catalog,
     modeSettings,

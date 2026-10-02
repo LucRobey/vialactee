@@ -4,7 +4,6 @@ import { FitBoard } from '../layout/FitBoard';
 import { GridSpot } from '../layout/GridSpot';
 import { NoticeBanner } from '../common/NoticeBanner';
 import { sendInstruction, subscribeModeMasterState, type SystemStatus } from '../../utils/controlBridge';
-import { loadConfigurationStore } from '../../utils/configurationStore';
 import { useBridgeStatus } from '../../utils/useBridgeStatus';
 import {
   buildDropWordPlacements,
@@ -30,13 +29,21 @@ const DROP_STUD_ROWS = Math.floor(
 const DROP_LETTER_START_COL = Math.floor((DROP_STUD_COLS - DROP_WORD_WIDTH_STUDS) / 2);
 const DROP_LETTER_START_ROW = Math.floor((DROP_STUD_ROWS - DROP_WORD_HEIGHT_STUDS) / 2);
 
-const EMPTY_CONFIGURATIONS: string[] = [];
 const EMPTY_SYSTEM: Pick<SystemStatus, 'cpuTempC' | 'dynamicAudioLatencyMs'> = {
   cpuTempC: null,
   dynamicAudioLatencyMs: null,
 };
 const BOARD_WIDTH = LEGO_MATH.grid(74);
 const BOARD_HEIGHT = LEGO_MATH.physicalSize(37);
+
+const MOOD_PALETTES = [
+  { name: 'Cyberpunk', colorClass: 'bg-cyan', accent: '#00f0ff' },
+  { name: 'Solar Ember', colorClass: 'bg-orange', accent: '#ff8c00' },
+  { name: 'Deep Ocean', colorClass: 'bg-blue', accent: '#00c8b4' },
+  { name: 'Ethereal', colorClass: 'bg-purple', accent: '#b482ff' },
+  { name: 'Neon Acid', colorClass: 'bg-green', accent: '#39ff14' },
+  { name: 'Monochrome Chrome', colorClass: 'bg-chrome', accent: '#b0b8c0' },
+] as const;
 
 const formatTelemetryValue = (value: number | null, suffix: string, digits = 0) => {
   if (value === null || Number.isNaN(value)) {
@@ -57,14 +64,10 @@ export const LiveDeck = () => {
   const [sensValue, setSensValue] = useState(70);
   const [autoTimeValue, setAutoTimeValue] = useState(20);
   const [isHold, setIsHold] = useState(false);
-  const [selectedConfiguration, setSelectedConfiguration] = useState('');
   const [selectedTransition, setSelectedTransition] = useState('CUT');
-  const [currentPlaylist, setCurrentPlaylist] = useState('');
-  const [currentConfiguration, setCurrentConfiguration] = useState('');
-  const [availablePlaylists, setAvailablePlaylists] = useState<string[]>([]);
-  const [configurationsByPlaylist, setConfigurationsByPlaylist] = useState<Record<string, string[]>>({});
+  const [currentMood, setCurrentMood] = useState('Cyberpunk');
+  const [currentConfiguration, setCurrentConfiguration] = useState('Live Random DNA');
   const [systemTelemetry, setSystemTelemetry] = useState(EMPTY_SYSTEM);
-  const [configurationError, setConfigurationError] = useState<string | null>(null);
   const bridgeStatus = useBridgeStatus();
 
   const isDraggingRef = useRef<{ lum: boolean; sens: boolean; autoTime: boolean }>({
@@ -98,30 +101,6 @@ export const LiveDeck = () => {
   }, []);
 
   const transitions = ['CUT', 'FADE IN/OUT', 'CROSSFADE'];
-  const presetColors = ['bg-blue', 'bg-orange', 'bg-green', 'bg-purple', 'bg-yellow', 'bg-red', 'bg-cyan', 'bg-magenta'];
-  const availableConfigurations = currentPlaylist ? configurationsByPlaylist[currentPlaylist] ?? EMPTY_CONFIGURATIONS : EMPTY_CONFIGURATIONS;
-  const effectiveSelectedConfiguration = availableConfigurations.includes(selectedConfiguration)
-    ? selectedConfiguration
-    : (availableConfigurations[0] ?? '');
-
-  useEffect(() => {
-    loadConfigurationStore()
-      .then(store => {
-        setAvailablePlaylists(store.playlists);
-        setConfigurationsByPlaylist(Object.fromEntries(
-          store.playlists.map(playlist => [
-            playlist,
-            (store.configurations[playlist] ?? []).map(config => config.name),
-          ])
-        ));
-        setCurrentPlaylist(prev => prev || store.playlists[0] || '');
-        setConfigurationError(null);
-      })
-      .catch(error => {
-        console.error('Could not load saved playlists/configurations', error);
-        setConfigurationError(error instanceof Error ? error.message : 'Could not load saved playlists and configurations.');
-      });
-  }, []);
 
   useEffect(() => {
     return subscribeModeMasterState((state) => {
@@ -137,19 +116,11 @@ export const LiveDeck = () => {
       setIsHold(state.transitionLocked);
       setSelectedTransition(state.selectedTransition);
 
-      if (state.activePlaylist) {
-        setCurrentPlaylist(state.activePlaylist);
+      if (state.activeMood) {
+        setCurrentMood(state.activeMood);
       }
-      const activeConfiguration = state.activeConfiguration;
-      if (activeConfiguration) {
-        setCurrentConfiguration(activeConfiguration);
-      }
-      const queuedConfiguration = state.queuedConfiguration;
-      if (queuedConfiguration) {
-        setSelectedConfiguration(queuedConfiguration);
-      }
-      if (state.playlists.length > 0) {
-        setAvailablePlaylists(state.playlists);
+      if (state.activeConfiguration) {
+        setCurrentConfiguration(state.activeConfiguration);
       }
       setSystemTelemetry({
         cpuTempC: state.system?.cpuTempC ?? null,
@@ -161,22 +132,13 @@ export const LiveDeck = () => {
   return (
     <FitBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
       <div className="live-deck-grid" style={{ width: `${BOARD_WIDTH}px`, height: `${BOARD_HEIGHT}px` }}>
-      {bridgeStatus !== 'open' || configurationError ? (
+      {bridgeStatus !== 'open' ? (
         <div style={{ position: 'absolute', top: '100px', left: '240px', width: '560px', zIndex: 50 }}>
-          {bridgeStatus !== 'open' ? (
-            <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="LIVE DATA STATUS">
-              {bridgeStatus === 'connecting'
-                ? 'Reconnecting to the controller. Telemetry and playlist state may lag for a few seconds.'
-                : 'Controller offline. Controls may queue locally, but the show state cannot be confirmed right now.'}
-            </NoticeBanner>
-          ) : null}
-          {configurationError ? (
-            <div style={{ marginTop: bridgeStatus !== 'open' ? '10px' : 0 }}>
-              <NoticeBanner tone="error" title="CONFIGURATION STORE">
-                {configurationError}
-              </NoticeBanner>
-            </div>
-          ) : null}
+          <NoticeBanner tone={bridgeStatus === 'connecting' ? 'warning' : 'error'} title="LIVE DATA STATUS">
+            {bridgeStatus === 'connecting'
+              ? 'Reconnecting to the controller. Telemetry state may lag for a few seconds.'
+              : 'Controller offline. Controls may queue locally, but the show state cannot be confirmed right now.'}
+          </NoticeBanner>
         </div>
       ) : null}
 
@@ -423,13 +385,13 @@ export const LiveDeck = () => {
               </span>
             </div>
             <div className="status-item" style={{ textAlign: 'center' }}>
-              <span className="status-label" style={{ fontSize: '0.7rem' }}>PLAYLIST</span>
+              <span className="status-label" style={{ fontSize: '0.7rem' }}>MOOD</span>
               <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-cyan)', fontWeight: 800, letterSpacing: '1px' }}>
-                {currentPlaylist || '--'}
+                {currentMood || '--'}
               </span>
             </div>
             <div className="status-item" style={{ textAlign: 'center' }}>
-              <span className="status-label" style={{ fontSize: '0.7rem' }}>CONFIG</span>
+              <span className="status-label" style={{ fontSize: '0.7rem' }}>DNA REGIME</span>
               <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-purple)', fontWeight: 800, letterSpacing: '1px' }}>
                 {currentConfiguration || '--'}
               </span>
@@ -475,36 +437,20 @@ export const LiveDeck = () => {
             borderTop: '2px solid #fff', borderLeft: '2px solid #ddd', borderBottom: '2px solid #999', borderRight: '2px solid #ccc',
             boxShadow: '2px 2px 5px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
-            <span style={{ color: '#000', fontWeight: '900', fontSize: '0.8rem', letterSpacing: '1px' }}>NEXT CONFIGURATION</span>
+            <span style={{ color: '#000', fontWeight: '900', fontSize: '0.8rem', letterSpacing: '1px' }}>DNA REGIME</span>
           </div>
-          {/* Working Dropdown inside a fake printed tile wrapper */}
           <div style={{ position: 'relative', width: '240px', height: '40px' }}>
             <div className="rogue-piece" style={{
               position: 'absolute', inset: 0,
               backgroundColor: '#f4f4f4', pointerEvents: 'none',
               borderTop: '2px solid #fff', borderLeft: '2px solid #ddd', borderBottom: '2px solid #999', borderRight: '2px solid #ccc',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '0 15px', boxShadow: '2px 2px 5px rgba(0,0,0,0.4)', borderRadius: '2px'
             }}>
-              <span style={{ color: '#000', fontWeight: '900', fontSize: '0.9rem', letterSpacing: '1px', pointerEvents: 'none' }}></span>
-              <span style={{ color: '#000', fontSize: '0.7rem', pointerEvents: 'none' }}>▼</span>
+              <span style={{ color: '#000', fontWeight: '900', fontSize: '0.9rem', letterSpacing: '1px', pointerEvents: 'none' }}>
+                {currentConfiguration || 'Live Random DNA'}
+              </span>
             </div>
-            <select className="lego-select-transparent" style={{
-              width: '100%', height: '100%', background: 'transparent', color: '#000', border: 'none',
-              padding: '0 15px', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: '900',
-              appearance: 'none', position: 'relative', zIndex: 2
-            }}
-            value={effectiveSelectedConfiguration}
-            disabled={availableConfigurations.length === 0}
-            onChange={(e) => {
-              const configuration = e.target.value;
-              setSelectedConfiguration(configuration);
-              sendInstruction({ page: 'live_deck', action: 'select_configuration', payload: { configuration } });
-            }}>
-              {availableConfigurations.map((config) => (
-                <option key={config}>{config}</option>
-              ))}
-            </select>
           </div>
         </div>
       </GridSpot>
@@ -564,29 +510,26 @@ export const LiveDeck = () => {
             position: 'relative',
             width: '80px', height: '80px', margin: 0, padding: 0, borderRadius: '6px', border: 'none',
             backgroundColor: '#0055bf', cursor: 'pointer',
-            boxShadow: effectiveSelectedConfiguration 
-              ? 'inset 2px 2px 6px rgba(255,255,255,0.5), inset -4px -4px 10px rgba(0,0,0,0.6), 5px 5px 15px rgba(0,0,0,0.8), 0 0 25px rgba(0, 85, 191, 0.7)'
-              : 'inset 2px 2px 6px rgba(255,255,255,0.2), inset -4px -4px 10px rgba(0,0,0,0.4), 5px 5px 12px rgba(0,0,0,0.7)',
+            boxShadow: 'inset 2px 2px 6px rgba(255,255,255,0.5), inset -4px -4px 10px rgba(0,0,0,0.6), 5px 5px 15px rgba(0,0,0,0.8), 0 0 25px rgba(0, 85, 191, 0.7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-            opacity: effectiveSelectedConfiguration ? 1 : 0.5,
+            opacity: 1,
             overflow: 'visible'
           }}
           onClick={() => sendInstruction({
             page: 'live_deck',
             action: 'go_to_next_configuration',
-            payload: { configuration: effectiveSelectedConfiguration, transition: selectedTransition }
-          })}
-          disabled={!effectiveSelectedConfiguration}>
+            payload: { transition: selectedTransition }
+          })}>
             {/* Square Glowing Ring */}
             <div style={{
               position: 'absolute',
               inset: '-8px',
               borderRadius: '10px',
               border: '2px solid rgba(0, 181, 226, 0.4)',
-              boxShadow: effectiveSelectedConfiguration ? '0 0 20px rgba(0, 181, 226, 0.5), inset 0 0 10px rgba(0, 181, 226, 0.3)' : 'none',
+              boxShadow: '0 0 20px rgba(0, 181, 226, 0.5), inset 0 0 10px rgba(0, 181, 226, 0.3)',
               pointerEvents: 'none',
-              animation: effectiveSelectedConfiguration ? 'pulse-ring 2s infinite' : 'none'
+              animation: 'pulse-ring 2s infinite'
             }} />
             
             <div style={{
@@ -714,7 +657,7 @@ export const LiveDeck = () => {
       </GridSpot>
 
 
-      {/* ======================= LEFT PLAYLIST COLUMN ======================= */}
+      {/* ======================= LEFT MOOD PALETTES COLUMN ======================= */}
       <GridSpot col={0} row={0}>
         <div className="rogue-piece" style={{
           width: '360px', height: '45px',
@@ -725,43 +668,57 @@ export const LiveDeck = () => {
           boxShadow: '2px 2px 5px rgba(0,0,0,0.5)', borderRadius: '2px', position: 'relative'
         }}>
           <div style={{ backgroundColor: '#fcd000', padding: '0 15px', border: '1px solid #000', boxShadow: '0 0 0 1px #fcd000' }}>
-            <span style={{ color: '#000', fontWeight: '900', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Presets</span>
+            <span style={{ color: '#000', fontWeight: '900', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Mood Palettes</span>
           </div>
         </div>
       </GridSpot>
 
-      {availablePlaylists.slice(0, 8).map((name, i) => (
-        <GridSpot key={name} col={0} row={2 + i * 4}>
-          <button
-            className={`preset-brick ${presetColors[i % presetColors.length]}`}
-            style={{ width: '360px', height: '84px', position: 'relative' }}
-            onClick={() => {
-              setCurrentPlaylist(name);
-              sendInstruction({ page: 'live_deck', action: 'select_playlist', payload: { playlist: name } });
-            }}
-          >
-            {/* Printed White Tile Label */}
-            <div className="rogue-piece" style={{
-              position: 'absolute', top: '50%', left: '15px', transform: 'translateY(-50%)',
-              width: '210px', height: '27px', backgroundColor: '#f4f4f4',
-              borderTop: '2px solid #fff', borderLeft: '2px solid #ddd', borderBottom: '2px solid #999', borderRight: '2px solid #ccc',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '2px 2px 5px rgba(0,0,0,0.6)', borderRadius: '2px'
-            }}>
-              <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.9rem', letterSpacing: '0.5px' }}>{name}</span>
-            </div>
-            {/* Round 1x1 Stud Indicator */}
-            <div className="rogue-piece" style={{
-              position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)',
-              width: 'var(--stud-diameter)', height: 'var(--stud-diameter)', borderRadius: '50%', backgroundColor: '#fcd000',
-              boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.8), inset -1px -1px 2px rgba(0,0,0,0.3), 2px 2px 4px rgba(0,0,0,0.6)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.85rem' }}>{i + 1}</span>
-            </div>
-          </button>
-        </GridSpot>
-      ))}
+      {MOOD_PALETTES.map((mood, i) => {
+        const isActive = currentMood.toLowerCase() === mood.name.toLowerCase();
+        return (
+          <GridSpot key={mood.name} col={0} row={2 + i * 4}>
+            <button
+              className={`preset-brick ${mood.colorClass}`}
+              style={{
+                width: '360px',
+                height: '84px',
+                position: 'relative',
+                boxShadow: isActive
+                  ? `0 0 20px ${mood.accent}, inset 0 0 12px rgba(255,255,255,0.6)`
+                  : undefined,
+                border: isActive ? `2px solid ${mood.accent}` : '1px solid rgba(0, 0, 0, 0.8)',
+              }}
+              onClick={() => {
+                setCurrentMood(mood.name);
+                sendInstruction({ page: 'live_deck', action: 'select_mood', payload: { palette: mood.name } });
+              }}
+            >
+              {/* Printed White Tile Label */}
+              <div className="rogue-piece" style={{
+                position: 'absolute', top: '50%', left: '15px', transform: 'translateY(-50%)',
+                width: '230px', height: '27px', backgroundColor: '#f4f4f4',
+                borderTop: '2px solid #fff', borderLeft: '2px solid #ddd', borderBottom: '2px solid #999', borderRight: '2px solid #ccc',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '2px 2px 5px rgba(0,0,0,0.6)', borderRadius: '2px'
+              }}>
+                <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.9rem', letterSpacing: '0.5px' }}>{mood.name}</span>
+              </div>
+              {/* Round 1x1 Stud Indicator */}
+              <div className="rogue-piece" style={{
+                position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)',
+                width: 'var(--stud-diameter)', height: 'var(--stud-diameter)', borderRadius: '50%',
+                backgroundColor: isActive ? mood.accent : '#fcd000',
+                boxShadow: isActive
+                  ? `0 0 10px ${mood.accent}, inset 1px 1px 2px rgba(255,255,255,0.8)`
+                  : 'inset 1px 1px 2px rgba(255,255,255,0.8), inset -1px -1px 2px rgba(0,0,0,0.3), 2px 2px 4px rgba(0,0,0,0.6)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <span style={{ color: '#000', fontWeight: 'bold', fontSize: '0.85rem' }}>{i + 1}</span>
+              </div>
+            </button>
+          </GridSpot>
+        );
+      })}
 
       </div>
     </FitBoard>
