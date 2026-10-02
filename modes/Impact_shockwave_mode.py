@@ -124,14 +124,22 @@ class Impact_shockwave_mode(Mode.Mode):
         fps_ratio = getattr(self.listener, "fps_ratio", 1.0)
         self.time_since_last_wave += dt
 
-        # 1. Read rhythmic and acoustic metrics
+        # 1. Read rhythmic and acoustic metrics from Listener and MusicalContextEngine facade
+        ctx = getattr(self.listener, "context", None)
         phase = float(getattr(self.listener, "beat_phase", 0.0))
         is_beat = getattr(self.listener, "is_beat", False)
-        is_real = getattr(self.listener, "is_real_beat", False)
-        raw_conf = float(getattr(self.listener, "beat_confidence", 0.0))
-        confidence = max(0.0, min(1.0, raw_conf))
+        is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
+        is_locked = bool(ctx.is_locked if ctx is not None else (float(getattr(self.listener, "beat_confidence", 0.0)) >= 0.5))
+        is_drop = bool(ctx.is_drop_impact if ctx is not None else False)
+        is_silent = bool(ctx.is_silent if ctx is not None else False)
+        confidence = float(ctx.beat_trust if ctx is not None else getattr(self.listener, "beat_confidence", 0.0))
+        confidence = max(0.0, min(1.0, confidence))
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
-        power = float(getattr(self.listener, "asserved_total_power", 0.0))
+        power = float(ctx.power if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        energy = float(ctx.energy if ctx is not None else power)
+        tension = float(ctx.tension if ctx is not None else 0.0)
+        drop_progress = float(ctx.drop_progress if ctx is not None else 0.0)
+        is_drop_impact_scene = bool(getattr(ctx, "scene", None) == "DROP_IMPACT")
 
         # Detect continuous phase reaching 1.0 (wrapping back to 0.0)
         phase_wrapped = (phase < self.prev_phase) and (self.prev_phase > 0.5)
@@ -141,7 +149,7 @@ class Impact_shockwave_mode(Mode.Mode):
         # Propagation speed: wave reaches the segment edge in exactly 1 beat period
         # half_len / (frames per beat)
         frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
-        speed = (float(self.half_len) / frames_per_beat) * fps_ratio
+        speed = (float(self.half_len) / frames_per_beat) * fps_ratio * (1.0 + 0.15 * tension)
 
         for w in range(self.MAX_WAVES):
             if self.wave_active[w]:
@@ -151,20 +159,22 @@ class Impact_shockwave_mode(Mode.Mode):
                 if self.wave_positions[w] >= (self.half_len + 2.0) or self.wave_amps[w] < 0.01:
                     self.wave_active[w] = False
 
-        # 3. Shockwave Injection: fires on is_beat OR every time phase reaches 1.0 (wraps)
+        # 3. Shockwave Injection: fires on is_drop OR is_beat OR every time phase reaches 1.0 (wraps)
         min_wave_interval = 0.40 * (60.0 / bpm)
-        should_trigger = (is_beat or phase_wrapped) and (self.time_since_last_wave >= min_wave_interval)
+        should_trigger = is_drop or ((is_beat or phase_wrapped) and (self.time_since_last_wave >= min_wave_interval))
 
         if should_trigger:
             self.time_since_last_wave = 0.0
             slot = self.next_wave_slot
             self.next_wave_slot = (self.next_wave_slot + 1) % self.MAX_WAVES
 
-            # Calculate wave intensity: verified acoustic hits are full maximum, coasting hits are punchy
-            if is_real or confidence > 0.6:
+            # Calculate wave intensity: verified acoustic hits and drops are full maximum
+            if is_drop:
+                intensity = 1.0
+            elif is_real or is_locked or confidence > 0.6:
                 intensity = 1.0
             else:
-                intensity = float(np.clip(0.60 + 0.40 * power, 0.60, 0.95))
+                intensity = float(np.clip(0.60 + 0.40 * energy, 0.60, 0.95))
 
             # Select vivid, high-contrast intense hue
             if self.color_mode == "vibrant_cycle":
@@ -187,7 +197,7 @@ class Impact_shockwave_mode(Mode.Mode):
         self.half_intensity.fill(0.0)
         self.half_hues.fill(self.base_hue)
         self.half_sats.fill(self.color_saturation)
-        two_w_sq = 2.0 * (self.wave_width ** 2)
+        two_w_sq = 2.0 * ((self.wave_width * (1.0 - 0.20 * tension)) ** 2)
 
         for w in range(self.MAX_WAVES):
             if self.wave_active[w]:
@@ -200,10 +210,13 @@ class Impact_shockwave_mode(Mode.Mode):
                 mask = profile > 0.08
                 self.half_hues[mask] = self.wave_hues[w]
 
-        # 5. Acoustic Ambient Center Glow Fallback (MODE_RULES Rule 1)
+        # 5. Acoustic Ambient Center Glow Fallback (MODE_RULES Rule 1) & Drop Impact Core Glow
         # Reduced glow floor keeps the background pitch black for extreme color contrast
         center_falloff = np.exp(- (self.half_coords ** 2) / 8.0)
-        ambient_glow = (1.0 - confidence) * power * 0.12 * center_falloff
+        ambient_glow = 0.0 if is_silent else (1.0 - confidence) * energy * 0.12 * center_falloff
+        if is_drop or (is_drop_impact_scene and drop_progress > 0.0):
+            drop_flare = 0.50 * (drop_progress if drop_progress > 0.0 else 1.0) * center_falloff
+            ambient_glow = np.maximum(ambient_glow, drop_flare)
         np.maximum(self.half_intensity, ambient_glow, out=self.half_intensity)
         np.clip(self.half_intensity, 0.0, 1.0, out=self.half_intensity)
 

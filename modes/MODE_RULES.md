@@ -11,28 +11,27 @@ It codifies how modes must consume rhythmic signals from the **Anticipation Flyw
 Interactive lighting has a golden rule: **The spectator must never see a broken rhythm.**
 Human perception detects audio-visual desync in under 50 milliseconds. If the beat tracker is confused (e.g. during a chaotic guitar solo, ambient intro, or tempo shift) and the chandelier keeps strobing out of time, spectators instantly perceive it as a technical glitch.
 
-### The 6 Canonical Musical Regimes (MusicalContextEngine)
-Rather than requiring every mode to invent its own ad-hoc fallback logic, [`core/MusicalContextEngine.py`](../core/MusicalContextEngine.py) centrally manages 6 canonical regimes via `self.listener.context.current_regime`:
+### The Unified 3-Tier Musical Context Engine (`self.listener.context`)
+Rather than requiring every mode to invent its own ad-hoc fallback logic, [`core/MusicalContextEngine.py`](../core/MusicalContextEngine.py) centrally evaluates real-time musical intent across 3 unified tiers accessible via `self.listener.context`:
 
 ```
-                      BEAT TRUST (T)
-                     Low (< 0.35)           High (>= 0.50)
-                 ┌──────────────────────┬──────────────────────┐
-   High          │                      │                      │
-  (>= 0.45)      │     CHAOTIC_FILL     │      THE_POCKET      │
-                 │                      │                      │
-RHYTHM           ├──────────────────────┼──────────────────────┤
-SALIENCE (S)     │                      │                      │
-   Low           │     DEEP_AMBIENT     │    FLOATING_PULSE    │
-  (< 0.35)       │                      │                      │
-                 └──────────────────────┴──────────────────────┘
-
-   TRANSITIONAL / MACRO OVERRIDES:
-   • PRE_DROP_BUILDUP  : Triggered when salience gradient ΔR >= +0.40 (arms drop_countdown)
-   • STRUCTURAL_CHANGE : Triggered on is_song_change or is_verse_chorus_change
+┌────────────────────────────────────────────────────────────────────────┐
+│ TIER 1: CONTINUOUS DYNAMIC KINETICS                                    │
+│ energy [0, 1] · tension [0, 1] · drop_progress [0, 1]                  │
+│ spectral_tilt [-1, 1] · vertical_center [0, 1] · gradients (ΔR, ΔP)   │
+├────────────────────────────────────────────────────────────────────────┤
+│ TIER 2: 4 MACRO SCENES (Schmitt Hysteresis & Dwell Locks)              │
+│ CHILL · GROOVE · BUILDUP · DROP_IMPACT                                 │
+├────────────────────────────────────────────────────────────────────────┤
+│ TIER 3: MICRO PHYSICAL BADGES                                          │
+│ is_locked · is_syncopated · is_real_beat · is_silent · is_drop_impact  │
+│ is_drop_imminent · is_structural_cut                                   │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-Modes can smoothly blend between states using `self.listener.context.regime_blend` $\in [0.0, 1.0]$. When the analyzer is lost or the music shifts to ambient breakdown, the mode does **not** fail—it smoothly dissolves into an organic ambient visual.
+Modes can smoothly blend between macro scenes using `self.listener.context.scene_blend` $\in [0.0, 1.0]$ or modulate continuously using Tier 1 kinetic scalars (`energy`, `tension`). When the analyzer is lost or the music shifts to ambient breakdown, the mode does **not** fail—it smoothly dissolves into an organic ambient visual.
+
+For backward compatibility, `self.listener.context.current_regime` and `regime_blend` remain available, cleanly mapping macro states (`CHILL`, `GROOVE`, `BUILDUP`) and micro cuts (`STRUCTURAL_CHANGE`).
 
 ---
 
@@ -41,17 +40,20 @@ Modes can smoothly blend between states using `self.listener.context.regime_blen
 ### Signals You CAN Rely On:
 | Property | Type | Description | Best Used For |
 | :--- | :--- | :--- | :--- |
-| `self.listener.context.current_regime` | `MusicalRegime` | Active musical regime (`THE_POCKET`, `FLOATING_PULSE`, `DEEP_AMBIENT`, `CHAOTIC_FILL`, `PRE_DROP_BUILDUP`, `STRUCTURAL_CHANGE`). | Top-level visual behavior branching. |
-| `self.listener.context.regime_blend` | `float` | Crossfade progress $[0.0, 1.0]$ between previous and current regime. | Seamless interpolation between regime visual parameters. |
-| `self.listener.context.drop_countdown`| `float` | Seconds remaining until impending drop hits speakers. | Building tension (color shift, strobe acceleration, spatial contraction). |
-| `self.listener.rhythm_salience` | `float` | Speaker-aligned groove & rhythmic prominence $[0.0, 1.0]$. | Dynamic scaling of percussive contrast vs fluid watercolor. |
-| `self.listener.beat_trust` | `float` | Speaker-aligned tempo tracking trust $[0.0, 1.0]$. | Eliminates timing lead of `beat_confidence`. |
-| `self.listener.beat_phase` | `float` | Continuous phase $\theta \in [0.0, 1.0)$ in speaker time ($0.0 = \text{strike}$). | Smooth ADSR decays, sine breathing, traveling wave positions. |
-| `self.listener.bpm` | `float` | Current estimated tempo (e.g. `124.0`). | Scaling particle speeds, wave travel times, and physics constants. |
-| `self.listener.is_beat` | `bool` | `True` for exactly 1 frame when a beat strikes speaker time. | 1-shot events (wave injection, projectile spawn, color step). |
-| `self.listener.is_real_beat` | `bool` | `True` if the beat tick matches an actual physical acoustic transient. | **Gating hard flashes** and strobes (suppresses ghost hits). |
-| `self.listener.is_dropped_beat`| `bool` | `True` when flywheel is coasting through silence or a drumless breakdown. | Softening flashes or rendering phantom ghost pulses. |
-| `self.listener.flywheel_status`| `str` | `'locked'` vs `'coasting'`. | High-level state switching. |
+| `self.listener.context.energy` | `float` | Continuous fused visual energy drive $[0.0, 1.0]$. | Master brightness, particle speed, and motion drive. |
+| `self.listener.context.tension` | `float` | Real-time musical tension & buildup curve $[0.0, 1.0]$. | Narrowing beams, color temperature shifts, strobe rate. |
+| `self.listener.context.drop_progress` | `float` | Linear progression $[0.0, 1.0]$ through buildup and drop dwell decay. | Buildup spatial contraction and drop impact dissipation. |
+| `self.listener.context.scene` | `MusicalScene` | Canonical macro scene (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`). | High-level behavioral choreography. |
+| `self.listener.context.scene_blend` | `float` | Crossfade progress $[0.0, 1.0]$ between previous and current scene. | Seamless interpolation between scene visual parameters. |
+| `self.listener.context.is_locked` | `bool` | Schmitt-triggered tempo lock stability badge. | Gating tight rhythmic lock vs ambient drift. |
+| `self.listener.context.is_real_beat` | `bool` | True if beat tick matches verified acoustic transient ($P \ge 0.20$). | Gating hard strobes, explosive sparks, and shockwaves. |
+| `self.listener.context.is_drop_impact` | `bool` | True for exactly 1 frame on drop impact arrival. | Maximum visual bloom, shockwave detonations. |
+| `self.listener.context.is_structural_cut` | `bool` | True for 1.2s upon track transition or verse/chorus cut. | Scene wipe, boundary reset, or thematic palette change. |
+| `self.listener.context.spectral_tilt` | `float` | Treble vs Bass balance $[-1.0, 1.0]$ across 8 Mel bands. | Warm/cool color shifts, vertical weight distribution. |
+| `self.listener.context.drop_countdown`| `float` | Seconds remaining until impending drop hits speakers. | Anticipation visuals, countdown indicators. |
+| `self.listener.beat_phase` | `float` | Continuous phase $\theta \in [0.0, 1.0)$ in speaker time ($0.0 = \text{strike}$). | Smooth ADSR decays, sine breathing, traveling waves. |
+| `self.listener.bpm` | `float` | Current estimated tempo (e.g. `124.0`). | Scaling particle speeds, wave travel times, and physics. |
+| `self.listener.is_beat` | `bool` | `True` for exactly 1 frame when a beat strikes speaker time. | 1-shot tick events. |
 
 ### Signals to AVOID For Now:
 * **`self.listener.beat_count`**: **Do not rely on `beat_count % 2` or `beat_count % 4` for strict musical meter** (downbeat vs upbeat) at this stage. Skipped beats, ghost onsets, or breakdown coasting can invert parity, turning a kick flash into an upbeat flash. Treat every verified beat equally until measure tracking is stabilized.

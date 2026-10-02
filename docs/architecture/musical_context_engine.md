@@ -161,10 +161,10 @@ To ensure seamless operation with legacy modes, visual tools, and tests, `core/M
   - `MusicalRegime.THE_POCKET` $\to$ `MusicalScene.GROOVE`
   - `MusicalRegime.CHAOTIC_FILL` $\to$ `MusicalScene.GROOVE`
   - `MusicalRegime.PRE_DROP_BUILDUP` $\to$ `MusicalScene.BUILDUP`
-  - `MusicalRegime.STRUCTURAL_CHANGE` $\to$ `MusicalScene.CHILL`
-- **Equality Overrides:** Direct string equality `scene == "THE_POCKET"` or `scene == "DEEP_AMBIENT"` evaluates to `True`.
+  - `MusicalRegime.STRUCTURAL_CHANGE` $\to$ `"STRUCTURAL_CHANGE"` (decoupled legacy string with `.value`, evaluates `!= MusicalScene.CHILL`)
+- **Equality Overrides:** Direct string equality `scene == "THE_POCKET"` or `scene == "DEEP_AMBIENT"` evaluates to `True`. `MusicalScene.CHILL == "STRUCTURAL_CHANGE"` evaluates to `False`.
 - **Legacy Properties:**
-  - `current_regime` $\to$ `scene`
+  - `current_regime` $\to$ `"STRUCTURAL_CHANGE"` when `is_structural_cut` is active, and `scene` otherwise
   - `previous_regime` $\to$ `previous_scene`
   - `regime_blend` $\to$ `scene_blend`
   - `regime_dwell_time` $\to$ `scene_dwell_time`

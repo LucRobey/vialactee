@@ -34,9 +34,12 @@ Every visual animation subclasses `modes.Mode.Mode`.
 ### Rule 3: Frame-Rate Independence
 - Always scale kinematics with `self.infos.get("fps_ratio", 1.0)` or `delta_time`.
 
-### Rule 4: Musical Context & Regimes Integration
-- Prefer declarative state branching via `self.listener.context.current_regime` (`THE_POCKET`, `FLOATING_PULSE`, `DEEP_AMBIENT`, `CHAOTIC_FILL`, `PRE_DROP_BUILDUP`, `STRUCTURAL_CHANGE`).
-- Interpolate parameter shifts using `self.listener.context.regime_blend` $\in [0.0, 1.0]$.
+### Rule 4: Musical Context & Unified 3-Tier Conductor Integration
+- Consume high-level musical context via `self.listener.context` (`MusicalContextEngine`):
+  - **Tier 1 Kinetics:** Continuous drives `context.energy` $\in [0.0, 1.0]$, `context.tension` $\in [0.0, 1.0]$, `context.drop_progress`, and `context.spectral_tilt` $[-1.0, 1.0]$.
+  - **Tier 2 Macro Scenes:** Declarative branching on `context.scene` (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) with crossfade blending `context.scene_blend`.
+  - **Tier 3 Micro Badges:** Strict physical gating via `context.is_locked`, `context.is_real_beat`, `context.is_drop_impact`, `context.is_syncopated`, and `context.is_structural_cut`.
+- Backward-compatible access via `context.current_regime` and `context.regime_blend` is also supported.
 
 ---
 

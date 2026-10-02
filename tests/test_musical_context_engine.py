@@ -15,6 +15,9 @@ import tracemalloc
 import numpy as np
 
 from core.MusicalContextEngine import MusicalContextEngine, MusicalScene, MusicalRegime
+from modes.Beat_runner_mode import Beat_runner_mode
+from modes.Impact_shockwave_mode import Impact_shockwave_mode
+from modes.Rhythm_breather_mode import Rhythm_breather_mode
 
 
 class MockListener:
@@ -30,6 +33,8 @@ class MockListener:
         self.asserved_fft_band = np.full(8, 0.5, dtype=np.float64)
         self.is_song_change = False
         self.is_verse_chorus_change = False
+        self.live_is_song_change = False
+        self.live_is_verse_chorus_change = False
         self.is_beat = False
         self.analyzer = type("MockAnalyzer", (), {"lookahead_seconds": lookahead})()
 
@@ -89,12 +94,15 @@ class TestMusicalContextEngine(unittest.TestCase):
         self.assertEqual(MusicalRegime.THE_POCKET, MusicalScene.GROOVE)
         self.assertEqual(MusicalRegime.CHAOTIC_FILL, MusicalScene.GROOVE)
         self.assertEqual(MusicalRegime.PRE_DROP_BUILDUP, MusicalScene.BUILDUP)
-        self.assertEqual(MusicalRegime.STRUCTURAL_CHANGE, MusicalScene.CHILL)
+        self.assertEqual(MusicalRegime.STRUCTURAL_CHANGE, "STRUCTURAL_CHANGE")
+        self.assertEqual(MusicalRegime.STRUCTURAL_CHANGE.value, "STRUCTURAL_CHANGE")
+        self.assertEqual(MusicalScene.STRUCTURAL_CHANGE.value, "STRUCTURAL_CHANGE")
+        self.assertNotEqual(MusicalRegime.STRUCTURAL_CHANGE, MusicalScene.CHILL)
 
         # String equality with legacy regime names
         self.assertEqual(MusicalScene.CHILL, "DEEP_AMBIENT")
         self.assertEqual(MusicalScene.CHILL, "FLOATING_PULSE")
-        self.assertEqual(MusicalScene.CHILL, "STRUCTURAL_CHANGE")
+        self.assertNotEqual(MusicalScene.CHILL, "STRUCTURAL_CHANGE")
         self.assertEqual(MusicalScene.GROOVE, "THE_POCKET")
         self.assertEqual(MusicalScene.GROOVE, "CHAOTIC_FILL")
         self.assertEqual(MusicalScene.BUILDUP, "PRE_DROP_BUILDUP")
@@ -343,6 +351,175 @@ class TestMusicalContextEngine(unittest.TestCase):
             self.engine.update(dt)
         self.assertAlmostEqual(self.engine.scene_blend, 1.0, places=2)
 
+    def test_zero_lookahead_disarms_buildup(self) -> None:
+        """Verify that when lookahead_seconds <= 0.0, BUILDUP does not trigger (0-lookahead live mic)."""
+        self.listener.analyzer.lookahead_seconds = 0.0
+        self.listener.live_rhythm_salience = 0.90
+        self.listener.rhythm_salience = 0.10
+        self.listener.live_asserved_total_power = 0.90
+        self.listener.asserved_total_power = 0.10
+        self.engine.update(0.1)
+
+        self.assertNotEqual(self.engine.scene, MusicalScene.BUILDUP)
+        self.assertFalse(self.engine.is_buildup)
+        self.assertEqual(self.engine.drop_countdown, 0.0)
+
+    def test_drop_impact_kinetic_decay(self) -> None:
+        """Verify drop_progress and tension smoothly decay from 1.0 to 0.0 across 1.5s DROP_IMPACT dwell."""
+        dt = 0.1
+        self.listener.analyzer.lookahead_seconds = 2.0
+        self.listener.rhythm_salience = 0.10
+        self.listener.live_rhythm_salience = 0.80
+        self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP)
+
+        # Step until drop lands
+        while self.engine.scene == MusicalScene.BUILDUP and self.engine.drop_countdown > 0.0:
+            self.engine.update(dt)
+
+        # Frame 1: Impact frame
+        self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
+        self.assertTrue(self.engine.is_drop_impact)
+        self.assertAlmostEqual(self.engine.drop_progress, 1.0, places=2)
+        self.assertAlmostEqual(self.engine.tension, 1.0, places=2)
+
+        # Frame 2: 1-frame badge clears, but drop_progress and tension must sustain and decay smoothly
+        self.engine.update(dt)
+        self.assertFalse(self.engine.is_drop_impact)
+        self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
+        self.assertGreater(self.engine.drop_progress, 0.85, "drop_progress must not collapse to 0.0 on frame 2")
+        self.assertLess(self.engine.drop_progress, 1.0)
+        self.assertGreater(self.engine.tension, 0.85, "tension must not collapse to 0.0 on frame 2")
+
+        # Halfway through dwell (0.7s - 0.8s)
+        for _ in range(6):
+            self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
+        self.assertAlmostEqual(self.engine.drop_progress, 0.50, delta=0.15)
+        self.assertAlmostEqual(self.engine.tension, 0.50, delta=0.15)
+
+        # Past 1.5s dwell: exits DROP_IMPACT
+        for _ in range(10):
+            self.engine.update(dt)
+        self.assertNotEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
+        self.assertEqual(self.engine.drop_progress, 0.0)
+
+    def test_buildup_riser_immunity(self) -> None:
+        """Verify volume/salience risers during BUILDUP do not prematurely trip drop_arrived while countdown > 0.40s."""
+        dt = 0.1
+        self.listener.analyzer.lookahead_seconds = 5.0
+        self.listener.asserved_total_power = 0.20
+        self.listener.live_asserved_total_power = 0.70  # ΔP >= 0.35 triggers BUILDUP
+        self.engine.update(dt)
+
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP)
+        self.assertAlmostEqual(self.engine.drop_countdown, 5.0, places=2)
+
+        # Advance 1.0s: countdown = 4.0s > 0.40s
+        for _ in range(10):
+            self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP)
+
+        # Crescendo riser: power and salience surge at speakers during buildup
+        self.listener.asserved_total_power = 0.80  # Loud crescendo riser
+        self.listener.rhythm_salience = 0.85       # Snare roll riser
+        self.engine.update(dt)
+
+        # Must NOT trip drop_arrived prematurely!
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP, "Crescendo riser must not trip drop prematurely")
+        self.assertFalse(self.engine.is_drop_impact)
+        self.assertGreater(self.engine.drop_countdown, 3.0)
+
+        # Advance until imminent window (<= 0.40s) and expiration
+        while self.engine.scene == MusicalScene.BUILDUP and self.engine.drop_countdown > 0.0:
+            self.engine.update(dt)
+
+        # Drop lands upon natural countdown expiration
+        self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
+        self.assertTrue(self.engine.is_drop_impact)
+
+    def test_buildup_riser_immunity_from_silence(self) -> None:
+        """Verify volume risers starting from silence do NOT prematurely trip drop_arrived."""
+        dt = 0.1
+        self.listener.analyzer.lookahead_seconds = 5.0
+        self.listener.asserved_total_power = 0.02
+        self.listener.live_asserved_total_power = 0.02
+        self.listener.rhythm_salience = 0.0
+        self.listener.live_rhythm_salience = 0.0
+        for _ in range(20):
+            self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.CHILL)
+        self.assertTrue(self.engine.is_silent)
+
+        # Lookahead triggers buildup 5s ahead
+        self.listener.live_asserved_total_power = 0.80
+        self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP)
+
+        # Still silent at speaker for 2 frames
+        self.engine.update(dt)
+        self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP)
+
+        # Volume riser starts at speakers (power rises from 0.02 to 0.65)
+        self.listener.asserved_total_power = 0.65
+        self.engine.update(dt)
+
+        # Must remain in BUILDUP and not trip premature drop impact!
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP)
+        self.assertFalse(self.engine.is_drop_impact)
+        self.assertGreater(self.engine.drop_countdown, 3.5)
+
+    def test_song_change_cancels_active_buildup(self) -> None:
+        """Verify song change / verse chorus at speaker cancels active BUILDUP and arms cooldown."""
+        dt = 0.1
+        self.listener.analyzer.lookahead_seconds = 5.0
+        self.listener.rhythm_salience = 0.10
+        self.listener.live_rhythm_salience = 0.80
+        self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP)
+
+        # Advance 1.5s into buildup
+        for _ in range(15):
+            self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.BUILDUP)
+
+        # Song change occurs at speaker
+        self.listener.is_song_change = True
+        self.engine.update(dt)
+
+        # Active buildup must be canceled immediately
+        self.assertNotEqual(self.engine.scene, MusicalScene.BUILDUP)
+        self.assertFalse(self.engine.is_buildup)
+        self.assertEqual(self.engine.drop_countdown, 0.0)
+        self.assertTrue(self.engine.is_structural_cut)
+        self.assertEqual(self.engine.current_regime, "STRUCTURAL_CHANGE")
+        self.assertEqual(self.engine.current_regime.value, "STRUCTURAL_CHANGE")
+
+    def test_lookahead_song_change_prevents_false_buildup(self) -> None:
+        """Verify live_is_song_change in lookahead audio prevents incoming track spikes from triggering BUILDUP."""
+        dt = 0.1
+        self.listener.analyzer.lookahead_seconds = 5.0
+        # Speaker and lookahead both playing quiet outro of song 1
+        self.listener.asserved_total_power = 0.10
+        self.listener.live_asserved_total_power = 0.10
+        self.listener.rhythm_salience = 0.10
+        self.listener.live_rhythm_salience = 0.10
+        for _ in range(15):
+            self.engine.update(dt)
+        self.assertEqual(self.engine.scene, MusicalScene.CHILL)
+
+        # Song 2 arrives in lookahead with massive power surge, but unbuffered detector flags live_is_song_change
+        self.listener.live_asserved_total_power = 0.90  # ΔP = 0.80 >= 0.35
+        self.listener.live_rhythm_salience = 0.80       # ΔR = 0.70 >= 0.40
+        self.listener.live_is_song_change = True
+        self.engine.update(dt)
+
+        # Must NOT trigger BUILDUP
+        self.assertNotEqual(self.engine.scene, MusicalScene.BUILDUP)
+        self.assertFalse(self.engine.is_buildup)
+        self.assertEqual(self.engine.drop_countdown, 0.0)
+
     # =========================================================================
     # 4. TIER 3: MICRO PHYSICAL BADGES
     # =========================================================================
@@ -590,6 +767,58 @@ class TestMusicalContextEngine(unittest.TestCase):
             f"AXIOM-02 violation: {total_allocated_bytes} bytes allocated in hot path:\n"
             + "\n".join(str(s) for s in engine_stats)
         )
+
+    def test_pilot_modes_drop_impact_dwell_decay(self) -> None:
+        """Verify Beat_runner, Impact_shockwave, and Rhythm_breather sustain kinetic intensity across DROP_IMPACT dwell."""
+        self.listener.context = self.engine
+        rgb_runner = np.zeros((80, 3), dtype=np.int32)
+        mode_runner = Beat_runner_mode("Runner", "s1", self.listener, None, list(range(80)), rgb_runner, {})
+
+        rgb_shockwave = np.zeros((80, 3), dtype=np.int32)
+        mode_shockwave = Impact_shockwave_mode("Shockwave", "s2", self.listener, None, list(range(80)), rgb_shockwave, {})
+
+        rgb_breather = np.zeros((80, 3), dtype=np.int32)
+        mode_breather = Rhythm_breather_mode("Breather", "s3", self.listener, None, list(range(80)), rgb_breather, {})
+
+        # Trigger drop
+        self.listener.analyzer.lookahead_seconds = 2.0
+        self.listener.live_rhythm_salience = 0.80
+        self.engine.update(0.1)
+        while self.engine.scene == MusicalScene.BUILDUP and self.engine.drop_countdown > 0.0:
+            self.engine.update(0.1)
+
+        # Frame 1: Impact frame
+        self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
+        self.assertTrue(self.engine.is_drop_impact)
+        mode_runner.run()
+        mode_shockwave.run()
+        mode_breather.run()
+        f1_runner_max = float(np.max(mode_runner.vals))
+        f1_shock_glow = float(mode_shockwave.half_intensity[0])
+        self.assertGreaterEqual(f1_runner_max, 0.90)
+        self.assertGreaterEqual(f1_shock_glow, 0.40)
+
+        # Frame 2: is_drop_impact badge clears, but engine is in DROP_IMPACT dwell
+        self.engine.update(0.1)
+        self.assertFalse(self.engine.is_drop_impact)
+        self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
+        self.assertGreater(self.engine.drop_progress, 0.85)
+
+        mode_runner.run()
+        mode_shockwave.run()
+        mode_breather.run()
+        f2_runner_max = float(np.max(mode_runner.vals))
+        f2_shock_glow = float(mode_shockwave.half_intensity[0])
+
+        # Verify sustained flare across dwell (must NOT collapse to zero!)
+        self.assertGreater(f2_runner_max, 0.70, "Beat_runner flare must sustain across dwell")
+        self.assertGreater(f2_shock_glow, 0.35, "Impact_shockwave core glow must sustain across dwell")
+
+        # Step past 1.5s dwell: exits DROP_IMPACT
+        for _ in range(16):
+            self.engine.update(0.1)
+        self.assertNotEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
+        self.assertEqual(self.engine.drop_progress, 0.0)
 
 
 if __name__ == "__main__":

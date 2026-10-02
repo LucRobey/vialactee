@@ -87,11 +87,17 @@ class Beat_runner_mode(Mode.Mode):
         # 1. Decay previous frame tails for smooth motion blur
         self.fade_to_black_segment_vectorized(self.trail_decay, 0, self.nb_of_leds - 1)
 
-        # 2. Read rhythmic state from Listener facade
+        # 2. Read rhythmic state and MusicalContextEngine facade
+        ctx = getattr(self.listener, "context", None)
         phase = float(getattr(self.listener, "beat_phase", 0.0))
-        raw_conf = float(getattr(self.listener, "beat_confidence", 0.0))
-        confidence = max(0.0, min(1.0, raw_conf))
-        power = float(getattr(self.listener, "asserved_total_power", 0.0))
+        power = float(ctx.power if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        energy = float(ctx.energy if ctx is not None else power)
+        tension = float(ctx.tension if ctx is not None else 0.0)
+        is_locked = bool(ctx.is_locked if ctx is not None else (float(getattr(self.listener, "beat_confidence", 0.0)) >= 0.5))
+        is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
+        is_drop = bool(ctx.is_drop_impact if ctx is not None else False)
+        confidence = float(ctx.beat_trust if ctx is not None else getattr(self.listener, "beat_confidence", 0.0))
+        confidence = max(0.0, min(1.0, confidence))
 
         # 3. Calculate target cursor position mapped strictly to continuous phase θ
         max_idx = float(self.nb_of_leds - 1)
@@ -100,14 +106,12 @@ class Beat_runner_mode(Mode.Mode):
             cursor_pos = phase * max_idx
         else:
             # Harmonic pendulum: oscillates 0 -> max_idx -> 0 over 1 beat cycle
-            # Hits index 0 on downbeat (phase=0), max_idx on upbeat (phase=0.5), returns to 0 on next beat
             harmonic_factor = 0.5 * (1.0 - np.cos(2.0 * np.pi * phase))
             cursor_pos = harmonic_factor * max_idx
 
         # 4. Confidence-Weighted Beam Width & Fallback (MODE_RULES Rule 1)
-        # High confidence -> Sharp, narrow laser bead (sigma ~ 1.5)
-        # Low confidence -> Wide, diffuse floating cloud (sigma ~ 5.5) tracking volume
-        sigma = self.head_width + (1.0 - confidence) * 4.0
+        # Tension narrows beam into sharp laser bead; low confidence diffuses into cloud
+        sigma = (self.head_width + (1.0 - confidence) * 4.0) * (1.0 - 0.25 * tension)
         two_sigma_sq = 2.0 * (sigma ** 2)
 
         # 5. Vectorized Gaussian Intensity Calculation
@@ -116,23 +120,28 @@ class Beat_runner_mode(Mode.Mode):
         np.divide(-self.dist_sq, two_sigma_sq, out=self.gauss_weights)
         np.exp(self.gauss_weights, out=self.gauss_weights)
 
-        # Intensity blend: high confidence gives full laser power, low confidence scales with volume
-        base_intensity = confidence * 1.0 + (1.0 - confidence) * max(0.2, power)
+        # Intensity blend: confidence gives laser power, fallback scales with visual energy
+        base_intensity = confidence * 1.0 + (1.0 - confidence) * max(0.2, energy)
         np.multiply(self.gauss_weights, base_intensity, out=self.vals)
+        drop_progress = float(ctx.drop_progress if ctx is not None else 0.0)
+        is_drop_impact_scene = bool(getattr(ctx, "scene", None) == "DROP_IMPACT")
+        if is_drop or (is_drop_impact_scene and drop_progress > 0.0):
+            flare = 0.90 * (drop_progress if drop_progress > 0.0 else 1.0)
+            np.maximum(self.vals, flare, out=self.vals)
         np.clip(self.vals, 0.0, 1.0, out=self.vals)
 
         # 6. Boundary Strike Real-Beat Impact (MODE_RULES Rule 2)
-        # On verified acoustic hits (phase wrap at T_speaker), ignite a sharp boundary spark
+        # On verified acoustic hits or drop impacts, ignite a sharp boundary spark
         is_beat = getattr(self.listener, "is_beat", False)
-        is_real = getattr(self.listener, "is_real_beat", False)
-        if is_beat and is_real and confidence > 0.4:
-            # Spark the boundary LED hit by the runner
+        if (is_beat and is_real and (confidence > 0.4 or is_locked)) or is_drop:
             strike_idx = 0 if cursor_pos < (max_idx * 0.5) else int(max_idx)
             self.smooth_segment_vectorized(1.0, strike_idx, strike_idx, colors.white)
 
-        # 7. Vectorized Color Synthesis (Pure 100% Saturation)
-        self.hues.fill(self.base_hue)
-        self.sats.fill(1.0)
+        # 7. Vectorized Color Synthesis (Modulated by Spectral Tilt & Tension)
+        tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
+        active_hue = (self.base_hue + 0.06 * tilt + 0.04 * tension) % 1.0
+        self.hues.fill(active_hue)
+        self.sats.fill(max(0.3, 1.0 - 0.4 * tension))
 
         target_rgb = RGB_HSV.fromHSV_toRGB_vectorized(self.hues, self.sats, self.vals)
 

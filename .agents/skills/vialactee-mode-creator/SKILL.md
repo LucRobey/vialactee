@@ -54,7 +54,11 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 ### 4. Audio & Rhythm Reactivity
 * Access audio data via `self.listener`.
 * Consult [listener_api.md](./references/listener_api.md) for full descriptions of `asserved_fft_band`, `beat_phase`, `is_real_beat`, `beat_tag`, and `chroma_values`.
-* **Musical Regimes & State Branching**: Access high-level musical context via `self.listener.context.current_regime` and interpolate transitions with `self.listener.context.regime_blend` $\in [0.0, 1.0]$.
+* **Unified 3-Tier Musical Context (`self.listener.context`)**:
+  - Modulate visuals continuously with **Tier 1 Kinetics** (`context.energy`, `context.tension`, `context.drop_progress`, `context.spectral_tilt`).
+  - Branch choreographies declaratively on **Tier 2 Macro Scenes** (`context.scene`: `CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) with `context.scene_blend`.
+  - Gate physical flashes and transient impacts using **Tier 3 Micro Badges** (`context.is_locked`, `context.is_real_beat`, `context.is_drop_impact`, `context.is_syncopated`, `context.is_structural_cut`).
+  - Legacy `context.current_regime` and `context.regime_blend` are supported for backward compatibility.
 * **Rhythm Integration Rules**: Strictly follow [`modes/MODE_RULES.md`](../../modes/MODE_RULES.md) for confidence-based graceful degradation, `is_real_beat` strobe gating, and acoustic fallback. Never flash blindly on ghost beats.
 
 ### 5. Reference Implementation

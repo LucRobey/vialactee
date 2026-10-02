@@ -396,6 +396,7 @@ class StudioApp:
         MusicalScene.GROOVE: (40, 240, 120),      # Emerald Green
         MusicalScene.BUILDUP: (255, 40, 130),     # Vivid Crimson
         MusicalScene.DROP_IMPACT: (255, 230, 80), # Blinding White/Gold
+        MusicalScene.STRUCTURAL_CHANGE: (255, 145, 0), # Vibrant Orange
     }
 
     SCENE_BG_COLORS = {
@@ -403,6 +404,7 @@ class StudioApp:
         MusicalScene.GROOVE: (16, 55, 32),
         MusicalScene.BUILDUP: (65, 15, 35),
         MusicalScene.DROP_IMPACT: (70, 60, 20),
+        MusicalScene.STRUCTURAL_CHANGE: (60, 35, 10),
     }
 
     SCENE_ICONS = {
@@ -410,6 +412,7 @@ class StudioApp:
         MusicalScene.GROOVE: "●",
         MusicalScene.BUILDUP: "▲",
         MusicalScene.DROP_IMPACT: "💥",
+        MusicalScene.STRUCTURAL_CHANGE: "⚡",
     }
 
     REGIME_COLORS = SCENE_COLORS
@@ -619,6 +622,41 @@ class StudioApp:
                     elif event.key == pygame.K_o:
                         self.is_vertical = not self.is_vertical
                         self.set_status("Orientation: " + ("Vertical" if self.is_vertical else "Horizontal"), self.ACCENT_PURPLE)
+                    elif event.key == pygame.K_b:
+                        # Toggle / Force BUILDUP test
+                        ctx = getattr(self.listener, 'context', None)
+                        if ctx is not None:
+                            if ctx.scene == MusicalScene.BUILDUP:
+                                ctx._switch_scene(MusicalScene.GROOVE)
+                                ctx._drop_countdown = 0.0
+                                ctx._buildup_silence_cut = False
+                                ctx._buildup_saw_silence = False
+                                self.set_status("Buildup Canceled -> GROOVE", self.ACCENT_CYAN)
+                            else:
+                                ctx._switch_scene(MusicalScene.BUILDUP)
+                                ctx._drop_countdown = 5.0
+                                ctx._drop_duration = 5.0
+                                ctx._pre_drop_cooldown = 0.0
+                                ctx._buildup_entered_high_salience = ctx._is_salience_high
+                                ctx._buildup_entered_high_power = ctx._is_power_high
+                                ctx._buildup_silence_cut = False
+                                ctx._buildup_saw_silence = False
+                                self.set_status("TEST: BUILDUP TRIGGERED (5.0s countdown)", self.ACCENT_MAGENTA)
+                    elif event.key == pygame.K_d:
+                        # Trigger / Test Drop Impact
+                        ctx = getattr(self.listener, 'context', None)
+                        if ctx is not None:
+                            ctx._is_drop_impact = True
+                            ctx._switch_scene(MusicalScene.DROP_IMPACT)
+                            ctx._drop_countdown = 0.0
+                            ctx._pre_drop_cooldown = ctx.pre_drop_cooldown_time
+                            self.set_status("TEST: DROP IMPACT TRIGGERED (1.5s dwell)", self.ACCENT_GOLD)
+                    elif event.key == pygame.K_c:
+                        # Reset cooldown / arm trigger
+                        ctx = getattr(self.listener, 'context', None)
+                        if ctx is not None:
+                            ctx._pre_drop_cooldown = 0.0
+                            self.set_status("COOLDOWN RESET (Trigger Armed)", self.ACCENT_GREEN)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     # Check if clicked on seek progress bar
                     mx, my = event.pos
@@ -738,20 +776,50 @@ class StudioApp:
         self.screen.blit(grad_surf, (hx, bar_y + 14))
         hx += grad_surf.get_width() + 18
 
-        # Active Musical Regime Badge
+        # Context 3-Tier Visual Readout in Header
         if context is not None:
-            curr_reg = context.current_regime
-            reg_col = self.REGIME_COLORS.get(curr_reg, self.TEXT_MAIN)
-            reg_icon = self.REGIME_ICONS.get(curr_reg, "●")
-            reg_name = getattr(curr_reg, 'value', str(curr_reg))
-            reg_surf = self.get_text(self.font_small, f"[{reg_icon} {reg_name}]", reg_col)
-            self.screen.blit(reg_surf, (hx, bar_y + 14))
-            hx += reg_surf.get_width() + 18
+            scene = context.scene
+            scene_col = self.SCENE_COLORS.get(scene, self.TEXT_MAIN)
+            scene_icon = self.SCENE_ICONS.get(scene, "●")
+            scene_name = scene.value
 
+            if context.is_structural_cut:
+                scene_badge_txt = "[⚡ STRUCTURAL CUT]"
+                scene_badge_col = self.ACCENT_ORANGE
+            else:
+                scene_badge_txt = f"[{scene_icon} {scene_name}]"
+                scene_badge_col = scene_col
+
+            scene_surf = self.get_text(self.font_small, scene_badge_txt, scene_badge_col)
+            self.screen.blit(scene_surf, (hx, bar_y + 14))
+            hx += scene_surf.get_width() + 14
+
+            # Buildup / Drop Alerts & Cooldown
             countdown = float(context.drop_countdown)
-            if countdown > 0.0 or curr_reg == MusicalRegime.PRE_DROP_BUILDUP:
-                alert_surf = self.get_text(self.font_main, f"⚠️ DROP IN {countdown:.1f}s!", self.ACCENT_MAGENTA)
+            drop_prog = float(context.drop_progress)
+            cooldown = float(getattr(context, 'pre_drop_cooldown', 0.0))
+
+            if scene == MusicalScene.BUILDUP:
+                alert_surf = self.get_text(self.font_main, f"▲ DROP IN {countdown:.1f}s ({int(drop_prog * 100)}%)", self.ACCENT_MAGENTA)
                 self.screen.blit(alert_surf, (hx, bar_y + 12))
+                hx += alert_surf.get_width() + 14
+            elif scene == MusicalScene.DROP_IMPACT or context.is_drop_impact:
+                alert_surf = self.get_text(self.font_main, "💥 DROP IMPACT!", self.ACCENT_GOLD)
+                self.screen.blit(alert_surf, (hx, bar_y + 12))
+                hx += alert_surf.get_width() + 14
+            elif cooldown > 0.0:
+                cd_surf = self.get_text(self.font_small, f"CD: {cooldown:.1f}s", self.TEXT_MUTED)
+                self.screen.blit(cd_surf, (hx, bar_y + 14))
+                hx += cd_surf.get_width() + 14
+
+            # Tier 1 Quick Readouts: Energy & Tension
+            e_val = float(context.energy)
+            t_val_kin = float(context.tension)
+            e_col = self.ACCENT_GREEN if e_val > 0.6 else (self.ACCENT_CYAN if e_val > 0.3 else self.TEXT_DIM)
+            t_col_kin = self.ACCENT_MAGENTA if t_val_kin > 0.6 else (self.ACCENT_PURPLE if t_val_kin > 0.3 else self.TEXT_DIM)
+            kin_surf = self.get_text(self.font_small, f"E:{int(e_val*100)}% τ:{int(t_val_kin*100)}%", e_col)
+            self.screen.blit(kin_surf, (hx, bar_y + 14))
+            hx += kin_surf.get_width() + 14
 
         # Toast notification message
         if time.time() - self.status_msg_time < 3.0:
@@ -846,12 +914,12 @@ class StudioApp:
         self._draw_spectral_card(40 + (card_w + spacing) * 4, hud_y, card_w, hud_h)
 
     def _draw_context_card(self, x: int, y: int, w: int, h: int) -> None:
-        """Card 2: Real-time Musical Context Engine, Canonical Regimes, Transition Crossfade & 2x2 State Matrix."""
+        """Card 2: Unified 3-Tier Musical Context: Macro Scenes, Continuous Kinetics & Physical Badges."""
         card_rect = pygame.Rect(x, y, w, h)
         pygame.draw.rect(self.screen, self.PANEL_BG, card_rect, border_radius=12)
         pygame.draw.rect(self.screen, self.PANEL_BORDER, card_rect, width=1, border_radius=12)
 
-        header = self.get_text(self.font_main, "MUSICAL REGIME", self.ACCENT_GOLD)
+        header = self.get_text(self.font_main, "3-TIER MUSICAL CONTEXT", self.ACCENT_GOLD)
         self.screen.blit(header, (x + 16, y + 14))
 
         context = getattr(self.listener, 'context', None)
@@ -860,238 +928,247 @@ class StudioApp:
             self.screen.blit(no_ctx, (x + 16, y + 46))
             return
 
-        curr_reg = getattr(context, 'scene', context.current_regime)
-        prev_reg = getattr(context, 'previous_scene', context.previous_regime)
-        blend = float(getattr(context, 'scene_blend', context.regime_blend))
-        dwell = float(getattr(context, 'scene_dwell_time', context.regime_dwell_time))
+        scene = context.scene
+        prev_scene = context.previous_scene
+        blend = float(context.scene_blend)
+        dwell = float(context.scene_dwell_time)
         countdown = float(context.drop_countdown)
+        drop_prog = float(context.drop_progress)
+        cooldown = float(getattr(context, 'pre_drop_cooldown', 0.0))
+        is_struct_cut = bool(context.is_structural_cut)
+        grad_sal = float(context.salience_gradient)
+        grad_pow = float(context.power_gradient)
 
-        reg_col = self.REGIME_COLORS.get(curr_reg, self.TEXT_MAIN)
-        reg_bg = self.REGIME_BG_COLORS.get(curr_reg, (20, 24, 34))
-        reg_icon = self.REGIME_ICONS.get(curr_reg, "●")
-        reg_name = getattr(curr_reg, 'value', str(curr_reg))
+        # =========================================================
+        # SECTION 1: TIER 2 — MACRO SCENE
+        # =========================================================
+        if is_struct_cut:
+            reg_col = self.ACCENT_ORANGE
+            reg_bg = (60, 35, 10)
+            badge_txt = "⚡ STRUCTURAL CUT"
+        else:
+            reg_col = self.SCENE_COLORS.get(scene, self.TEXT_MAIN)
+            reg_bg = self.SCENE_BG_COLORS.get(scene, (20, 24, 34))
+            reg_icon = self.SCENE_ICONS.get(scene, "●")
+            badge_txt = f"{reg_icon} {scene.value}"
 
-        # 1. Primary Scene Badge
-        badge_rect = pygame.Rect(x + 16, y + 42, w - 32, 42)
+        badge_rect = pygame.Rect(x + 16, y + 36, w - 32, 36)
         pygame.draw.rect(self.screen, reg_bg, badge_rect, border_radius=8)
         pygame.draw.rect(self.screen, reg_col, badge_rect, width=2, border_radius=8)
 
         # Pulse glow if in BUILDUP or DROP_IMPACT
-        if curr_reg in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT):
+        if scene in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT) or context.is_drop_impact:
             glow_w = w - 32
-            glow_h = 42
+            glow_h = 36
             if self._pulse_glow_surf is None or self._pulse_glow_surf.get_size() != (glow_w, glow_h):
                 self._pulse_glow_surf = pygame.Surface((glow_w, glow_h), pygame.SRCALPHA)
             pulse_alpha = int(128 + 127 * math.sin(time.time() * 8.0))
-            glow_rgb = (255, 230, 80) if curr_reg == MusicalScene.DROP_IMPACT else (255, 40, 130)
-            self._pulse_glow_surf.fill((*glow_rgb, pulse_alpha // 3))
+            glow_rgb = (255, 230, 80) if (scene == MusicalScene.DROP_IMPACT or context.is_drop_impact) else (255, 40, 130)
+            self._pulse_glow_surf.fill((0, 0, 0, 0))
+            pygame.draw.rect(self._pulse_glow_surf, (*glow_rgb, pulse_alpha // 3), (0, 0, glow_w, glow_h), border_radius=8)
             self.screen.blit(self._pulse_glow_surf, badge_rect.topleft)
 
-        badge_txt = f"{reg_icon} {reg_name}"
         badge_surf = self.get_text(self.font_main, badge_txt, (255, 255, 255))
         self.screen.blit(badge_surf, (badge_rect.centerx - badge_surf.get_width() // 2, badge_rect.centery - badge_surf.get_height() // 2))
 
-        # Scene Description
+        # Scene description
         desc_map = {
             MusicalScene.CHILL: "Atmospheric / Resting • Low S & P",
-            MusicalScene.GROOVE: "Locked Groove / Rhythm • High S or T",
-            MusicalScene.BUILDUP: "Drop Buildup / Tension • Ramp armed",
-            MusicalScene.DROP_IMPACT: "Climax Drop Impact • Shockwave land",
+            MusicalScene.GROOVE: "Locked Rhythm • Snappy Waves",
+            MusicalScene.BUILDUP: "Tension Ramp • Pre-Drop Armed",
+            MusicalScene.DROP_IMPACT: "Climax Shockwave • 1.5s Land",
         }
-        desc_txt = desc_map.get(curr_reg, "Active musical context scene")
+        desc_txt = "Sectional Cut • Structural Reset" if is_struct_cut else desc_map.get(scene, "Active macro scene")
         desc_surf = self.get_text(self.font_tiny, desc_txt, self.TEXT_DIM)
-        self.screen.blit(desc_surf, (x + 16, y + 88))
+        self.screen.blit(desc_surf, (x + 16, y + 75))
 
-        # 2. Transition Crossfade (Blend Progress)
-        cy = y + 108
-        self.screen.blit(self.get_text(self.font_tiny, "CROSSFADE PROGRESS", self.TEXT_DIM), (x + 16, cy))
+        # Crossfade & Dwell readout
+        cy = y + 91
+        dwell_min = getattr(context, 'min_dwell_time', 1.0)
+        is_dwell_locked = dwell < dwell_min and scene not in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT)
+        dwell_txt = f"Dwell: {dwell:.1f}s [{'🔒' if is_dwell_locked else '✓'}]"
+        self.screen.blit(self.get_text(self.font_tiny, dwell_txt, self.ACCENT_ORANGE if is_dwell_locked else self.ACCENT_GREEN), (x + 16, cy))
 
-        pct_col = self.ACCENT_GREEN if blend >= 0.99 else self.ACCENT_CYAN
-        pct_lbl = f"{int(blend * 100)}%" if blend < 0.99 else "100% (Settled)"
-        pct_surf = self.get_text(self.font_mono, pct_lbl, pct_col)
+        pct_lbl = f"Blend: {int(blend * 100)}%" if blend < 0.99 else "Blend: 100%"
+        pct_surf = self.get_text(self.font_tiny, pct_lbl, self.ACCENT_CYAN if blend < 0.99 else self.TEXT_MUTED)
         self.screen.blit(pct_surf, (x + w - pct_surf.get_width() - 16, cy))
 
-        # Progress bar
-        cy += 15
-        bar_w = w - 32
-        bar_h = 6
-        pygame.draw.rect(self.screen, (14, 16, 22), (x + 16, cy, bar_w, bar_h), border_radius=3)
-        pygame.draw.rect(self.screen, self.PANEL_BORDER, (x + 16, cy, bar_w, bar_h), width=1, border_radius=3)
-        fill_w = int(bar_w * min(1.0, max(0.0, blend)))
-        if fill_w > 0:
-            pygame.draw.rect(self.screen, pct_col, (x + 16, cy, fill_w, bar_h), border_radius=3)
-
-        # 3. Dwell Time & Stability Gate
+        # Crossfade progress bar
         cy += 14
-        dwell_min = getattr(context, 'min_dwell_time', 1.0)
-        is_dwell_locked = dwell < dwell_min and curr_reg not in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT)
-        dwell_txt = f"Dwell: {dwell:.1f}s [{'🔒' if is_dwell_locked else '✓'}]"
-        dwell_col = self.ACCENT_ORANGE if is_dwell_locked else self.ACCENT_GREEN
-        dwell_surf = self.get_text(self.font_tiny, dwell_txt, dwell_col)
-        self.screen.blit(dwell_surf, (x + 16, cy))
+        bar_w = w - 32
+        pygame.draw.rect(self.screen, (14, 16, 22), (x + 16, cy, bar_w, 4), border_radius=2)
+        fill_b = int(bar_w * min(1.0, max(0.0, blend)))
+        if fill_b > 0:
+            pygame.draw.rect(self.screen, self.ACCENT_CYAN if blend < 0.99 else self.ACCENT_GREEN, (x + 16, cy, fill_b, 4), border_radius=2)
 
-        if blend < 1.0:
-            from_name = getattr(prev_reg, 'value', str(prev_reg))
-            from_surf = self.get_text(self.font_tiny, f"From: {from_name}", self.TEXT_MUTED)
-            self.screen.blit(from_surf, (x + w - from_surf.get_width() - 16, cy))
+        # Dynamic Buildup / Drop / Cooldown Card
+        cy += 8
+        dyn_box = pygame.Rect(x + 16, cy, bar_w, 42)
+        pygame.draw.rect(self.screen, (12, 14, 20), dyn_box, border_radius=6)
+        pygame.draw.rect(self.screen, self.PANEL_BORDER, dyn_box, width=1, border_radius=6)
 
-        # 4. Tier 3 Micro Physical Badges Display
-        cy += 20
-        badges_h = 58
-        badges_box = pygame.Rect(x + 16, cy, w - 32, badges_h)
-        pygame.draw.rect(self.screen, (14, 16, 22), badges_box, border_radius=6)
-        pygame.draw.rect(self.screen, self.PANEL_BORDER, badges_box, width=1, border_radius=6)
+        if scene == MusicalScene.BUILDUP:
+            b_title = f"▲ COUNTDOWN: {countdown:.2f}s"
+            b_col = self.ACCENT_MAGENTA
+            self.screen.blit(self.get_text(self.font_tiny, b_title, b_col), (x + 22, cy + 4))
+            p_lbl = f"{int(drop_prog * 100)}%"
+            p_s = self.get_text(self.font_tiny, p_lbl, b_col)
+            self.screen.blit(p_s, (x + w - p_s.get_width() - 22, cy + 4))
+            # Progress bar
+            pygame.draw.rect(self.screen, (24, 28, 38), (x + 22, cy + 18, bar_w - 12, 6), border_radius=3)
+            fill_dp = int((bar_w - 12) * min(1.0, max(0.0, drop_prog)))
+            if fill_dp > 0:
+                pygame.draw.rect(self.screen, self.ACCENT_MAGENTA, (x + 22, cy + 18, fill_dp, 6), border_radius=3)
+            imminent_lbl = "⚠️ IMMINENT DROP (<0.4s)!" if countdown <= 0.40 else "Pre-drop tension rising..."
+            self.screen.blit(self.get_text(self.font_tiny, imminent_lbl, self.ACCENT_RED if countdown <= 0.40 else self.TEXT_DIM), (x + 22, cy + 26))
 
-        # Tier 3 status flags
-        b_locked = bool(getattr(context, 'is_locked', False))
-        b_synco = bool(getattr(context, 'is_syncopated', False))
-        b_silent = bool(getattr(context, 'is_silent', False))
-        b_imminent = bool(getattr(context, 'is_drop_imminent', False))
-        b_impact = bool(getattr(context, 'is_drop_impact', False) or curr_reg == MusicalScene.DROP_IMPACT)
+        elif scene == MusicalScene.DROP_IMPACT or context.is_drop_impact:
+            b_title = "💥 CLIMAX DROP IMPACT!"
+            self.screen.blit(self.get_text(self.font_tiny, b_title, self.ACCENT_GOLD), (x + 22, cy + 4))
+            dwell_frac = min(1.0, max(0.0, dwell / 1.5))
+            pygame.draw.rect(self.screen, (24, 28, 38), (x + 22, cy + 18, bar_w - 12, 6), border_radius=3)
+            fill_di = int((bar_w - 12) * (1.0 - dwell_frac))
+            if fill_di > 0:
+                pygame.draw.rect(self.screen, self.ACCENT_GOLD, (x + 22, cy + 18, fill_di, 6), border_radius=3)
+            self.screen.blit(self.get_text(self.font_tiny, f"Shockwave land ({dwell:.1f}s / 1.5s lock)", self.TEXT_DIM), (x + 22, cy + 26))
 
-        # Row 1: [LOCKED] [SYNCOPATED] [SILENT]
-        rw1_y = cy + 6
-        bw3 = (w - 32 - 16) // 3
+        elif cooldown > 0.0:
+            cd_title = f"COOLDOWN: {cooldown:.1f}s"
+            self.screen.blit(self.get_text(self.font_tiny, cd_title, self.ACCENT_ORANGE), (x + 22, cy + 4))
+            max_cd = float(getattr(context, 'pre_drop_cooldown_time', 8.0))
+            cd_ratio = min(1.0, max(0.0, cooldown / max(0.1, max_cd)))
+            pygame.draw.rect(self.screen, (24, 28, 38), (x + 22, cy + 18, bar_w - 12, 6), border_radius=3)
+            fill_cd = int((bar_w - 12) * (1.0 - cd_ratio))
+            if fill_cd > 0:
+                pygame.draw.rect(self.screen, self.ACCENT_ORANGE, (x + 22, cy + 18, fill_cd, 6), border_radius=3)
+            self.screen.blit(self.get_text(self.font_tiny, "Re-trigger protected • Arming...", self.TEXT_MUTED), (x + 22, cy + 26))
+
+        else:
+            self.screen.blit(self.get_text(self.font_tiny, "TRIGGER STATUS: ARMED", self.ACCENT_GREEN), (x + 22, cy + 6))
+            self.screen.blit(self.get_text(self.font_tiny, "Listening for transient surge", self.TEXT_MUTED), (x + 22, cy + 24))
+
+        # =========================================================
+        # SECTION 2: TIER 1 — CONTINUOUS DYNAMIC KINETICS
+        # =========================================================
+        cy += 48
+        self.screen.blit(self.get_text(self.font_main, "TIER 1: CONTINUOUS KINETICS", self.ACCENT_CYAN), (x + 16, cy))
+
+        # 1. Master Visual Energy
+        cy += 18
+        e_val = float(context.energy)
+        e_pct = int(e_val * 100)
+        e_col = self.ACCENT_GREEN if e_val > 0.6 else (self.ACCENT_CYAN if e_val > 0.3 else self.TEXT_DIM)
+        self.screen.blit(self.get_text(self.font_tiny, "Energy (E)", self.TEXT_DIM), (x + 16, cy))
+        e_s = self.get_text(self.font_tiny, f"{e_pct}%", e_col)
+        self.screen.blit(e_s, (x + w - e_s.get_width() - 16, cy))
+
+        cy += 13
+        pygame.draw.rect(self.screen, (14, 16, 22), (x + 16, cy, bar_w, 6), border_radius=3)
+        fill_e = int(bar_w * min(1.0, max(0.0, e_val)))
+        if fill_e > 0:
+            pygame.draw.rect(self.screen, e_col, (x + 16, cy, fill_e, 6), border_radius=3)
+
+        # 2. Anticipation & Tension
+        cy += 10
+        t_val = float(context.tension)
+        t_pct = int(t_val * 100)
+        t_col = self.ACCENT_MAGENTA if t_val > 0.6 else (self.ACCENT_PURPLE if t_val > 0.3 else self.TEXT_DIM)
+        self.screen.blit(self.get_text(self.font_tiny, "Tension (τ)", self.TEXT_DIM), (x + 16, cy))
+        t_s = self.get_text(self.font_tiny, f"{t_pct}%", t_col)
+        self.screen.blit(t_s, (x + w - t_s.get_width() - 16, cy))
+
+        cy += 13
+        pygame.draw.rect(self.screen, (14, 16, 22), (x + 16, cy, bar_w, 6), border_radius=3)
+        fill_t = int(bar_w * min(1.0, max(0.0, t_val)))
+        if fill_t > 0:
+            pygame.draw.rect(self.screen, t_col, (x + 16, cy, fill_t, 6), border_radius=3)
+
+        # 3. Spectral Tilt [-1.0 Bass ↔ +1.0 Treble]
+        cy += 10
+        tilt = float(context.spectral_tilt)
+        tilt_col = self.ACCENT_CYAN if tilt < -0.2 else (self.ACCENT_ORANGE if tilt > 0.2 else self.TEXT_MAIN)
+        self.screen.blit(self.get_text(self.font_tiny, "Tilt [-1.0B ↔ +1.0T]", self.TEXT_DIM), (x + 16, cy))
+        tilt_s = self.get_text(self.font_tiny, f"{tilt:+.2f}", tilt_col)
+        self.screen.blit(tilt_s, (x + w - tilt_s.get_width() - 16, cy))
+
+        cy += 13
+        pygame.draw.rect(self.screen, (14, 16, 22), (x + 16, cy, bar_w, 6), border_radius=3)
+        cx_tilt = x + 16 + bar_w // 2
+        pygame.draw.line(self.screen, (80, 90, 110), (cx_tilt, cy - 1), (cx_tilt, cy + 7), 1)
+        clamped_tilt = min(1.0, max(-1.0, tilt))
+        tilt_fill = int((bar_w // 2) * clamped_tilt)
+        if tilt_fill > 0:
+            pygame.draw.rect(self.screen, self.ACCENT_ORANGE, (cx_tilt, cy, tilt_fill, 6), border_radius=2)
+        elif tilt_fill < 0:
+            pygame.draw.rect(self.screen, self.ACCENT_CYAN, (cx_tilt + tilt_fill, cy, -tilt_fill, 6), border_radius=2)
+
+        # 4. Vertical Center [0.0 Bottom ↔ 1.0 Top]
+        cy += 10
+        vert = float(context.vertical_center)
+        self.screen.blit(self.get_text(self.font_tiny, "V-Center [0.0B ↔ 1.0T]", self.TEXT_DIM), (x + 16, cy))
+        vert_s = self.get_text(self.font_tiny, f"{vert:.2f}", self.TEXT_MAIN)
+        self.screen.blit(vert_s, (x + w - vert_s.get_width() - 16, cy))
+
+        cy += 13
+        pygame.draw.rect(self.screen, (14, 16, 22), (x + 16, cy, bar_w, 6), border_radius=3)
+        fill_vert = int(bar_w * min(1.0, max(0.0, vert)))
+        if fill_vert > 0:
+            pygame.draw.rect(self.screen, self.ACCENT_BLUE, (x + 16, cy, fill_vert, 6), border_radius=3)
+        pygame.draw.circle(self.screen, (255, 255, 255), (x + 16 + fill_vert, cy + 3), 4)
+
+        # =========================================================
+        # SECTION 3: TIER 3 — MICRO PHYSICAL BADGES
+        # =========================================================
+        cy += 14
+        self.screen.blit(self.get_text(self.font_main, "TIER 3: PHYSICAL BADGES", self.ACCENT_GREEN), (x + 16, cy))
+
+        cy += 16
+        b_locked = bool(context.is_locked)
+        b_synco = bool(context.is_syncopated)
+        b_real = bool(context.is_real_beat)
+        b_silent = bool(context.is_silent)
+        b_imminent = bool(context.is_drop_imminent)
+        b_impact = bool(context.is_drop_impact or scene == MusicalScene.DROP_IMPACT)
+
+        # Row 1: 4 badges [LOCKED] [SYNCO] [BEAT] [SILENT]
+        bw4 = (bar_w - 9) // 4
         badge_defs_row1 = [
-            ("LOCKED", b_locked, (40, 240, 120), (16, 50, 28)),
-            ("SYNCOPATED", b_synco, (255, 160, 20), (55, 35, 12)),
+            ("LOCK", b_locked, (40, 240, 120), (16, 50, 28)),
+            ("SYNCO", b_synco, (255, 160, 20), (55, 35, 12)),
+            ("BEAT", b_real, (255, 215, 0), (55, 50, 16)),
             ("SILENT", b_silent, (70, 130, 240), (20, 28, 55)),
         ]
         for i, (b_name, b_val, b_fg, b_bg_act) in enumerate(badge_defs_row1):
-            bx_cur = x + 16 + 4 + i * (bw3 + 4)
-            b_rect = pygame.Rect(bx_cur, rw1_y, bw3, 20)
+            bx_cur = x + 16 + i * (bw4 + 3)
+            b_rect = pygame.Rect(bx_cur, cy, bw4, 20)
             if b_val:
                 pygame.draw.rect(self.screen, b_bg_act, b_rect, border_radius=4)
                 pygame.draw.rect(self.screen, b_fg, b_rect, width=1, border_radius=4)
-                txt_s = self.get_text(self.font_tiny, f"[{b_name}]", b_fg)
+                txt_s = self.get_text(self.font_tiny, b_name, b_fg)
             else:
                 pygame.draw.rect(self.screen, (18, 20, 28), b_rect, border_radius=4)
-                txt_s = self.get_text(self.font_tiny, b_name, (80, 90, 110))
+                txt_s = self.get_text(self.font_tiny, b_name, (70, 78, 95))
             self.screen.blit(txt_s, (b_rect.centerx - txt_s.get_width() // 2, b_rect.centery - txt_s.get_height() // 2))
 
-        # Row 2: [IMMINENT] [IMPACT]
-        rw2_y = cy + 30
-        bw2 = (w - 32 - 12) // 2
+        # Row 2: 3 badges [IMMINENT] [IMPACT 💥] [STRUCT CUT ⚡]
+        cy += 24
+        bw3 = (bar_w - 6) // 3
         badge_defs_row2 = [
-            (f"IMMINENT ({countdown:.1f}s)" if countdown > 0 else "IMMINENT", b_imminent, (255, 40, 130), (60, 15, 30)),
-            ("IMPACT 💥" if b_impact else "IMPACT", b_impact, (255, 230, 80), (65, 55, 18)),
+            ("IMMINENT" if countdown <= 0 else f"IMM ({countdown:.1f}s)", b_imminent, (255, 40, 130), (60, 15, 30)),
+            ("IMPACT 💥", b_impact, (255, 230, 80), (65, 55, 18)),
+            ("STRUCT ⚡", is_struct_cut, (255, 145, 0), (60, 35, 10)),
         ]
         for i, (b_name, b_val, b_fg, b_bg_act) in enumerate(badge_defs_row2):
-            bx_cur = x + 16 + 4 + i * (bw2 + 4)
-            b_rect = pygame.Rect(bx_cur, rw2_y, bw2, 20)
+            bx_cur = x + 16 + i * (bw3 + 3)
+            b_rect = pygame.Rect(bx_cur, cy, bw3, 20)
             if b_val:
                 pygame.draw.rect(self.screen, b_bg_act, b_rect, border_radius=4)
                 pygame.draw.rect(self.screen, b_fg, b_rect, width=1, border_radius=4)
-                txt_s = self.get_text(self.font_tiny, f"[{b_name}]", b_fg)
+                txt_s = self.get_text(self.font_tiny, b_name, b_fg)
             else:
                 pygame.draw.rect(self.screen, (18, 20, 28), b_rect, border_radius=4)
-                txt_s = self.get_text(self.font_tiny, b_name, (80, 90, 110))
+                txt_s = self.get_text(self.font_tiny, b_name, (70, 78, 95))
             self.screen.blit(txt_s, (b_rect.centerx - txt_s.get_width() // 2, b_rect.centery - txt_s.get_height() // 2))
-
-        box_bottom = badges_box.bottom
-
-        # -------------------------------------------------------------
-        # 5. Canonical Scene Matrix (T x S) Phase Plane Mini-Grid
-        # -------------------------------------------------------------
-        grid_x = x + 16
-        grid_y = box_bottom + 8
-        grid_w = w - 32
-        grid_h = h - (grid_y - y) - 12
-
-        pygame.draw.rect(self.screen, (12, 14, 20), (grid_x, grid_y, grid_w, grid_h), border_radius=6)
-        pygame.draw.rect(self.screen, (35, 42, 58), (grid_x, grid_y, grid_w, grid_h), width=1, border_radius=6)
-
-        t_low = float(getattr(context, "trust_low", 0.35))
-        t_high = float(getattr(context, "trust_high", 0.50))
-        s_low = float(getattr(context, "salience_low", 0.35))
-        s_high = float(getattr(context, "salience_high", 0.45))
-
-        t_val = float(getattr(self.listener, "beat_trust", 0.0))
-        s_val = float(getattr(self.listener, "rhythm_salience", 0.0))
-
-        # Thresholds: T in [t_low, t_high], S in [s_low, s_high]
-        x_t_low = grid_x + int(grid_w * t_low)
-        x_t_high = grid_x + int(grid_w * t_high)
-        y_s_high = grid_y + int(grid_h * (1.0 - s_high))
-        y_s_low = grid_y + int(grid_h * (1.0 - s_low))
-
-        # Deadband shaded strips
-        pygame.draw.rect(self.screen, (20, 24, 34), (x_t_low, grid_y, max(1, x_t_high - x_t_low), grid_h))
-        pygame.draw.rect(self.screen, (20, 24, 34), (grid_x, y_s_high, grid_w, max(1, y_s_low - y_s_high)))
-
-        # Active Quadrant Highlight
-        if curr_reg == MusicalScene.GROOVE:
-            if b_synco:
-                pygame.draw.rect(self.screen, (50, 30, 12), (grid_x, grid_y, max(1, x_t_low - grid_x), max(1, y_s_high - grid_y)))
-            else:
-                pygame.draw.rect(self.screen, (14, 45, 26), (x_t_high, grid_y, max(1, grid_x + grid_w - x_t_high), max(1, y_s_high - grid_y)))
-        elif curr_reg == MusicalScene.CHILL:
-            pygame.draw.rect(self.screen, (16, 24, 45), (grid_x, y_s_low, max(1, x_t_low - grid_x), max(1, grid_y + grid_h - y_s_low)))
-
-        # Threshold lines
-        pygame.draw.line(self.screen, (40, 48, 65), (x_t_low, grid_y), (x_t_low, grid_y + grid_h), 1)
-        pygame.draw.line(self.screen, (40, 48, 65), (x_t_high, grid_y), (x_t_high, grid_y + grid_h), 1)
-        pygame.draw.line(self.screen, (40, 48, 65), (grid_x, y_s_low), (grid_x + grid_w, y_s_low), 1)
-        pygame.draw.line(self.screen, (40, 48, 65), (grid_x, y_s_high), (grid_x + grid_w, y_s_high), 1)
-
-        # Quadrant labels
-        cf_surf = self.get_text(self.font_tiny, "GROOVE (SYNCO)", (255, 160, 20) if (curr_reg == MusicalScene.GROOVE and b_synco) else self.TEXT_MUTED)
-        self.screen.blit(cf_surf, (grid_x + 5, grid_y + 4))
-
-        poc_surf = self.get_text(self.font_tiny, "GROOVE (LOCKED)", self.ACCENT_GREEN if (curr_reg == MusicalScene.GROOVE and b_locked) else self.TEXT_MUTED)
-        self.screen.blit(poc_surf, (x_t_high + 5, grid_y + 4))
-
-        amb_surf = self.get_text(self.font_tiny, "CHILL", self.ACCENT_BLUE if curr_reg == MusicalScene.CHILL else self.TEXT_MUTED)
-        self.screen.blit(amb_surf, (grid_x + 5, y_s_low + 4))
-
-        fp_surf = self.get_text(self.font_tiny, "GROOVE (PULSE)", self.ACCENT_GREEN if (curr_reg == MusicalScene.GROOVE and not b_synco) else self.TEXT_MUTED)
-        self.screen.blit(fp_surf, (x_t_high + 5, y_s_low + 4))
-
-        # Center Hysteresis Label
-        cx_db = (x_t_low + x_t_high) // 2
-        cy_db = (y_s_low + y_s_high) // 2
-        db_lbl = self.get_text(self.font_tiny, "HYST", self.TEXT_MUTED)
-        self.screen.blit(db_lbl, (cx_db - db_lbl.get_width() // 2, cy_db - db_lbl.get_height() // 2))
-
-        # Current (T, S) Point & Crosshairs
-        pt_x = grid_x + int(grid_w * min(1.0, max(0.0, t_val)))
-        pt_y = grid_y + int(grid_h * (1.0 - min(1.0, max(0.0, s_val))))
-
-        pygame.draw.line(self.screen, (55, 65, 85), (grid_x, pt_y), (grid_x + grid_w, pt_y), 1)
-        pygame.draw.line(self.screen, (55, 65, 85), (pt_x, grid_y), (pt_x, grid_y + grid_h), 1)
-
-        pygame.draw.circle(self.screen, reg_col, (pt_x, pt_y), 4)
-        pygame.draw.circle(self.screen, (255, 255, 255), (pt_x, pt_y), 2)
-
-        # Coordinate label
-        coord_txt = f"({t_val:.2f}, {s_val:.2f})"
-        coord_surf = self.get_text(self.font_tiny, coord_txt, (255, 255, 255))
-        coord_x = pt_x + 5 if pt_x + 5 + coord_surf.get_width() < grid_x + grid_w else pt_x - 5 - coord_surf.get_width()
-        coord_y = pt_y - 11 if pt_y - 11 > grid_y else pt_y + 3
-        self.screen.blit(coord_surf, (coord_x, coord_y))
-
-        # Override Alert Banner for BUILDUP or DROP_IMPACT
-        if curr_reg in (MusicalScene.BUILDUP, MusicalScene.DROP_IMPACT):
-            banner_w = grid_w - 20
-            banner_h = 20
-            banner_x = grid_x + 10
-            banner_y = grid_y + grid_h // 2 - banner_h // 2
-            b_bg = self.REGIME_BG_COLORS.get(curr_reg, (65, 15, 35))
-            b_border = self.REGIME_COLORS.get(curr_reg, self.ACCENT_MAGENTA)
-            pygame.draw.rect(self.screen, b_bg, (banner_x, banner_y, banner_w, banner_h), border_radius=4)
-            pygame.draw.rect(self.screen, b_border, (banner_x, banner_y, banner_w, banner_h), width=1, border_radius=4)
-
-            b_msg = f"OVERRIDE: {reg_name}"
-            if curr_reg == MusicalScene.BUILDUP and countdown > 0.0:
-                b_msg += f" ({countdown:.2f}s)"
-            ov_surf = self.get_text(self.font_tiny, b_msg, b_border)
-            self.screen.blit(ov_surf, (banner_x + banner_w // 2 - ov_surf.get_width() // 2, banner_y + banner_h // 2 - ov_surf.get_height() // 2))
-
-        # Axis indicators
-        axis_t = self.get_text(self.font_tiny, "T →", self.TEXT_DIM)
-        self.screen.blit(axis_t, (grid_x + grid_w - axis_t.get_width() - 3, grid_y + grid_h - 12))
-        axis_s = self.get_text(self.font_tiny, "↑ S", self.TEXT_DIM)
-        self.screen.blit(axis_s, (grid_x + 3, grid_y + grid_h - 12))
 
     def _draw_salience_trust_card(self, x: int, y: int, w: int, h: int) -> None:
         """Card 3: Rhythmic Salience (S), Beat Trust (T), Schmitt Deadbands & Salience Gradient (ΔR)."""
@@ -1194,76 +1271,119 @@ class StudioApp:
         self.screen.blit(leg_t, (bar_x, bar_y + 12))
 
         # -------------------------------------------------------------
-        # 3. SALIENCE GRADIENT (ΔR) & PRE-DROP TRIGGER
+        # 3. DIFFERENTIAL GRADIENTS & BUILDUP TRIGGER STATUS
         # -------------------------------------------------------------
-        gy = bar_y + 34
-        self.screen.blit(self.get_text(self.font_small, "SALIENCE GRADIENT (ΔR = R_live - R_spk)", self.TEXT_DIM), (x + 16, gy))
+        drop_pow_th = float(getattr(context, 'drop_buildup_power_threshold', 0.40)) if context else 0.40
+        pow_grad = float(getattr(context, 'power_gradient', 0.0)) if context else 0.0
+        p_val = float(getattr(context, 'power', 0.0)) if context else 0.0
+        p_live = float(getattr(context, 'live_power', 0.0)) if context else 0.0
+        sil_th = float(getattr(context, 'silence_threshold', 0.05)) if context else 0.05
+        cooldown = float(getattr(context, 'pre_drop_cooldown', 0.0)) if context else 0.0
 
-        g_col = self.ACCENT_MAGENTA if grad_val >= drop_th else (self.ACCENT_CYAN if grad_val > 0.05 else (self.ACCENT_ORANGE if grad_val < -0.05 else self.TEXT_DIM))
-        g_arrow = "▲" if grad_val > 0.05 else ("▼" if grad_val < -0.05 else "●")
-        g_surf = self.get_text(self.font_title, f"{g_arrow} {grad_val:+.2f}", g_col)
-        self.screen.blit(g_surf, (x + 16, gy + 16))
+        ctx_scene = getattr(context, 'scene', None)
+        ctx_locked = bool(getattr(context, 'is_locked', False))
+        in_pocket = bool(ctx_scene == MusicalScene.GROOVE and ctx_locked)
+        has_audio = bool(p_val > 0.001 or s_val > 0.001)
 
-        if grad_val >= drop_th:
-            trig_surf = self.get_text(self.font_small, "⚠️ BUILDUP TRIGGER!", self.ACCENT_MAGENTA)
-            self.screen.blit(trig_surf, (x + w - trig_surf.get_width() - 16, gy + 20))
-        elif grad_val > 0.10:
-            trig_surf = self.get_text(self.font_small, "Rising Influx", self.ACCENT_CYAN)
-            self.screen.blit(trig_surf, (x + w - trig_surf.get_width() - 16, gy + 20))
-        else:
-            trig_surf = self.get_text(self.font_small, "Stable Flow", self.TEXT_MUTED)
-            self.screen.blit(trig_surf, (x + w - trig_surf.get_width() - 16, gy + 20))
+        is_sal_trig = bool(has_audio and grad_val >= drop_th and not getattr(context, '_is_salience_high', False))
+        is_pow_trig = bool(has_audio and not in_pocket and pow_grad >= drop_pow_th and not getattr(context, '_is_power_high', False))
+        is_sil_trig = bool(p_val > 0.35 and p_live < sil_th)
+        is_armed = bool(cooldown <= 0.0)
 
-        # Bipolar gauge [-0.5, +0.5]
-        bar_y = gy + 44
-        pygame.draw.rect(self.screen, (14, 16, 22), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
-        pygame.draw.rect(self.screen, self.PANEL_BORDER, (bar_x, bar_y, bar_w, bar_h), width=1, border_radius=4)
+        gy = bar_y + 30
+        self.screen.blit(self.get_text(self.font_small, "DIFFERENTIAL GRADIENTS (INFLUX)", self.TEXT_DIM), (x + 16, gy))
 
-        # Center line (0.0)
+        # 3a. Salience Gradient (ΔR)
+        gy += 18
+        gr_col = self.ACCENT_MAGENTA if is_sal_trig else (self.ACCENT_CYAN if grad_val > 0.05 else self.TEXT_DIM)
+        self.screen.blit(self.get_text(self.font_tiny, f"ΔR: {grad_val:+.2f} (th +{drop_th:.2f})", gr_col), (x + 16, gy))
+
+        bar_y_r = gy + 14
+        pygame.draw.rect(self.screen, (14, 16, 22), (bar_x, bar_y_r, bar_w, 6), border_radius=3)
         cx_grad = bar_x + bar_w // 2
-        pygame.draw.line(self.screen, (100, 110, 130), (cx_grad, bar_y - 2), (cx_grad, bar_y + bar_h + 2), 1)
+        pygame.draw.line(self.screen, (80, 90, 110), (cx_grad, bar_y_r - 1), (cx_grad, bar_y_r + 7), 1)
+        th_r_x = cx_grad + int((bar_w // 2) * min(1.0, max(0.0, drop_th / 0.50)))
+        pygame.draw.line(self.screen, self.ACCENT_MAGENTA, (th_r_x, bar_y_r - 1), (th_r_x, bar_y_r + 7), 2)
+        clamped_gr = min(0.5, max(-0.5, grad_val))
+        g_fill_r = int((bar_w // 2) * (clamped_gr / 0.5))
+        if g_fill_r > 0:
+            pygame.draw.rect(self.screen, gr_col, (cx_grad, bar_y_r, g_fill_r, 6), border_radius=2)
+        elif g_fill_r < 0:
+            pygame.draw.rect(self.screen, gr_col, (cx_grad + g_fill_r, bar_y_r, -g_fill_r, 6), border_radius=2)
 
-        # Pre-drop threshold tick (+drop_th)
-        th_ratio = min(1.0, max(0.0, drop_th / 0.50))
-        th_grad_x = cx_grad + int((bar_w // 2) * th_ratio)
-        pygame.draw.line(self.screen, self.ACCENT_MAGENTA, (th_grad_x, bar_y - 2), (th_grad_x, bar_y + bar_h + 2), 2)
+        # 3b. Power Gradient (ΔP)
+        gy = bar_y_r + 10
+        gp_col = self.ACCENT_MAGENTA if is_pow_trig else (self.ACCENT_ORANGE if pow_grad > 0.05 else self.TEXT_DIM)
+        self.screen.blit(self.get_text(self.font_tiny, f"ΔP: {pow_grad:+.2f} (th +{drop_pow_th:.2f})", gp_col), (x + 16, gy))
 
-        # Fill bi-directional from center
-        clamped_g = min(0.5, max(-0.5, grad_val))
-        g_fill = int((bar_w // 2) * (clamped_g / 0.5))
-        if g_fill > 0:
-            pygame.draw.rect(self.screen, g_col, (cx_grad, bar_y, g_fill, bar_h), border_radius=2)
-        elif g_fill < 0:
-            pygame.draw.rect(self.screen, g_col, (cx_grad + g_fill, bar_y, -g_fill, bar_h), border_radius=2)
+        bar_y_p = gy + 14
+        pygame.draw.rect(self.screen, (14, 16, 22), (bar_x, bar_y_p, bar_w, 6), border_radius=3)
+        pygame.draw.line(self.screen, (80, 90, 110), (cx_grad, bar_y_p - 1), (cx_grad, bar_y_p + 7), 1)
+        th_p_x = cx_grad + int((bar_w // 2) * min(1.0, max(0.0, drop_pow_th / 0.50)))
+        pygame.draw.line(self.screen, self.ACCENT_MAGENTA, (th_p_x, bar_y_p - 1), (th_p_x, bar_y_p + 7), 2)
+        clamped_gp = min(0.5, max(-0.5, pow_grad))
+        g_fill_p = int((bar_w // 2) * (clamped_gp / 0.5))
+        if g_fill_p > 0:
+            pygame.draw.rect(self.screen, gp_col, (cx_grad, bar_y_p, g_fill_p, 6), border_radius=2)
+        elif g_fill_p < 0:
+            pygame.draw.rect(self.screen, gp_col, (cx_grad + g_fill_p, bar_y_p, -g_fill_p, 6), border_radius=2)
 
-        leg_g = self.get_text(self.font_tiny, f"-0.50             0.00        +{drop_th:.2f} [Drop] +0.50", self.TEXT_MUTED)
-        self.screen.blit(leg_g, (bar_x, bar_y + 12))
-
-        # 4. Telemetry Alignment & Flywheel Coupling Summary Box
-        sy_box = bar_y + 30
+        # 4. Buildup Trigger Diagnostic Box
+        sy_box = bar_y_p + 14
         sh_box = h - (sy_box - y) - 12
-        if sh_box >= 40:
+        if sh_box >= 60:
             box_rect = pygame.Rect(bar_x, sy_box, bar_w, sh_box)
-            pygame.draw.rect(self.screen, (14, 16, 22), box_rect, border_radius=6)
+            pygame.draw.rect(self.screen, (12, 14, 20), box_rect, border_radius=6)
             pygame.draw.rect(self.screen, self.PANEL_BORDER, box_rect, width=1, border_radius=6)
 
-            self.screen.blit(self.get_text(self.font_tiny, "TELEMETRY DYNAMICS", self.TEXT_DIM), (bar_x + 8, sy_box + 5))
+            self.screen.blit(self.get_text(self.font_tiny, "BUILDUP TRIGGER READINESS", self.TEXT_DIM), (bar_x + 8, sy_box + 5))
 
+            # Status Banner Pill
+            if not is_armed:
+                pill_bg = (45, 30, 10)
+                pill_fg = self.ACCENT_ORANGE
+                pill_txt = f"🔒 LOCKED (Cooldown {cooldown:.1f}s)"
+            elif is_sal_trig:
+                pill_bg = (60, 15, 30)
+                pill_fg = self.ACCENT_MAGENTA
+                pill_txt = f"⚡ ΔR TRIGGER ACTIVE (+{grad_val:.2f})"
+            elif is_pow_trig:
+                pill_bg = (60, 15, 30)
+                pill_fg = self.ACCENT_MAGENTA
+                pill_txt = f"⚡ ΔP TRIGGER ACTIVE (+{pow_grad:.2f})"
+            elif is_sil_trig:
+                pill_bg = (60, 15, 30)
+                pill_fg = self.ACCENT_MAGENTA
+                pill_txt = "⚡ SILENCE CUT TRIGGER"
+            else:
+                pill_bg = (14, 38, 24)
+                pill_fg = self.ACCENT_GREEN
+                pill_txt = "● ARMED (Ready for surge)"
+
+            pill_rect = pygame.Rect(bar_x + 6, sy_box + 20, bar_w - 12, 20)
+            pygame.draw.rect(self.screen, pill_bg, pill_rect, border_radius=4)
+            pygame.draw.rect(self.screen, pill_fg, pill_rect, width=1, border_radius=4)
+            pill_s = self.get_text(self.font_tiny, pill_txt, pill_fg)
+            self.screen.blit(pill_s, (pill_rect.centerx - pill_s.get_width() // 2, pill_rect.centery - pill_s.get_height() // 2))
+
+            # Trigger condition checklist
+            cy_chk = sy_box + 44
+            col_sal = self.ACCENT_GREEN if is_sal_trig else self.TEXT_MUTED
+            self.screen.blit(self.get_text(self.font_tiny, f"• ΔR >= +{drop_th:.2f} (active audio): {'PASS' if is_sal_trig else 'NO'}", col_sal), (bar_x + 8, cy_chk))
+            col_pow = self.ACCENT_GREEN if is_pow_trig else self.TEXT_MUTED
+            self.screen.blit(self.get_text(self.font_tiny, f"• ΔP >= +{drop_pow_th:.2f} (not in pocket): {'PASS' if is_pow_trig else 'NO'}", col_pow), (bar_x + 8, cy_chk + 13))
+            col_sil = self.ACCENT_GREEN if is_sil_trig else self.TEXT_MUTED
+            self.screen.blit(self.get_text(self.font_tiny, f"• Silence Cut (P>0.35, P<{sil_th:.2f}): {'PASS' if is_sil_trig else 'NO'}", col_sil), (bar_x + 8, cy_chk + 26))
+
+            # Lead Dynamics
             delta_s = s_live - s_val
-            ds_col = self.ACCENT_CYAN if delta_s >= 0 else self.ACCENT_ORANGE
-            ds_txt = f"Salience Lead: {delta_s:+.2f} (+5.0s)"
-            self.screen.blit(self.get_text(self.font_tiny, ds_txt, ds_col), (bar_x + 8, sy_box + 20))
-
             delta_t = t_live - t_val
-            dt_col = self.ACCENT_GREEN if delta_t >= 0 else self.ACCENT_ORANGE
-            dt_txt = f"Trust Lead:    {delta_t:+.2f} (+5.0s)"
-            self.screen.blit(self.get_text(self.font_tiny, dt_txt, dt_col), (bar_x + 8, sy_box + 34))
-
             is_s_lock = s_val >= s_high
             is_t_lock = t_val >= t_high
             lock_str = "DUAL LOCK" if (is_s_lock and is_t_lock) else ("RHYTHM ONLY" if is_s_lock else ("BEAT ONLY" if is_t_lock else "AMBIENT DRIFT"))
             lock_col = self.ACCENT_GREEN if (is_s_lock and is_t_lock) else (self.ACCENT_CYAN if (is_s_lock or is_t_lock) else self.TEXT_MUTED)
-            self.screen.blit(self.get_text(self.font_tiny, f"State: {lock_str}", lock_col), (bar_x + 8, sy_box + 48))
+            self.screen.blit(self.get_text(self.font_tiny, f"Lead: ΔR {delta_s:+.2f} │ ΔT {delta_t:+.2f}", self.TEXT_DIM), (bar_x + 8, cy_chk + 40))
+            self.screen.blit(self.get_text(self.font_tiny, f"State: {lock_str}", lock_col), (bar_x + 8, cy_chk + 53))
 
     def _draw_spectral_card(self, x: int, y: int, w: int, h: int) -> None:
         """Card 5: Multi-Band Equalizer, Total Power, Chromagram Harmony & Novelty."""
@@ -1333,7 +1453,7 @@ class StudioApp:
         key_lbl = self.get_text(self.font_small, f"Dominant Key: {dom_note}", self.TEXT_MAIN)
         self.screen.blit(key_lbl, (x + 16, ch_y + ch_h + 6))
 
-        # 3. Structural Novelty & Drop Transition
+        # 3. Structural Novelty & Transitions
         ny = ch_y + ch_h + 28
         is_vc = self.listener.is_verse_chorus_change
         is_sc = self.listener.is_song_change
@@ -1341,7 +1461,7 @@ class StudioApp:
         vc_rect = pygame.Rect(x + 16, ny, w - 32, 28)
         if is_vc:
             pygame.draw.rect(self.screen, self.ACCENT_PURPLE, vc_rect, border_radius=6)
-            vc_txt = "★ VERSE / CHORUS DROP!"
+            vc_txt = "★ VERSE / CHORUS TRANSITION"
             vc_col = (10, 12, 18)
         elif is_sc:
             pygame.draw.rect(self.screen, self.ACCENT_CYAN, vc_rect, border_radius=6)
@@ -1524,11 +1644,11 @@ class StudioApp:
         self.screen.blit(self.get_text(self.font_small, "MODE CODING RECIPE", self.TEXT_DIM), (x + 18, my))
 
         recipes = [
-            "• is_real_beat -> Kick shockwave",
-            "• is_dropped_beat -> Build suspense",
-            "• beat_confidence -> Blend fallback",
-            "• tag=='Bass/Kick' -> Center red",
-            "• tag=='Snare/Mid' -> Blue ripple"
+            "• context.energy -> Master brightness/speed",
+            "• context.tension -> Saturation & contraction",
+            "• context.is_drop_impact -> Shockwave blast",
+            "• context.is_locked -> Traveling wave lock",
+            "• context.is_syncopated -> Particle burst",
         ]
         for idx, r in enumerate(recipes):
             self.screen.blit(self.get_text(self.font_tiny, r, self.TEXT_MAIN), (x + 18, my + 20 + idx * 17))
@@ -1539,16 +1659,19 @@ class StudioApp:
         """Renders keyboard shortcut reference bar at the bottom."""
         footer_y = self.height - 40
         shortcuts = [
-            "[R] Hot-Reload Code",
-            "[Space] Pause/Play",
-            "[↑/↓] Switch Mode",
-            "[←/→] Seek ±5s",
-            "[N/P] Next/Prev Song",
-            "[K/L] A/V Sync (±10ms)",
-            "[O] Toggle Orientation",
+            "[R] Hot-Reload",
+            "[Space] Pause",
+            "[↑/↓] Mode",
+            "[←/→] Seek",
+            "[B] Test Buildup",
+            "[D] Test Drop",
+            "[C] Reset CD",
+            "[N/P] Song",
+            "[K/L] Sync",
+            "[O] Orient",
             "[Esc] Exit"
         ]
-        total_str = "    │    ".join(shortcuts)
+        total_str = "  │  ".join(shortcuts)
         f_surf = self.get_text(self.font_small, total_str, self.TEXT_DIM)
         self.screen.blit(f_surf, (self.width // 2 - f_surf.get_width() // 2, footer_y))
 

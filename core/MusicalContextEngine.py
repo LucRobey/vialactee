@@ -22,7 +22,7 @@ from typing import Dict, Any, Optional
 import math
 
 
-_CHILL_ALIASES = frozenset(("DEEP_AMBIENT", "FLOATING_PULSE", "STRUCTURAL_CHANGE"))
+_CHILL_ALIASES = frozenset(("DEEP_AMBIENT", "FLOATING_PULSE"))
 _GROOVE_ALIASES = frozenset(("THE_POCKET", "CHAOTIC_FILL"))
 _BUILDUP_ALIASES = frozenset(("PRE_DROP_BUILDUP",))
 
@@ -57,7 +57,7 @@ class MusicalScene(str, Enum):
         legacy_map = {
             "DEEP_AMBIENT": cls.CHILL, "FLOATING_PULSE": cls.CHILL,
             "THE_POCKET": cls.GROOVE, "CHAOTIC_FILL": cls.GROOVE,
-            "PRE_DROP_BUILDUP": cls.BUILDUP, "STRUCTURAL_CHANGE": cls.CHILL,
+            "PRE_DROP_BUILDUP": cls.BUILDUP,
         }
         if isinstance(value, str):
             val_upper = value.upper()
@@ -67,12 +67,15 @@ class MusicalScene(str, Enum):
 
 
 # Backward compatibility aliases for legacy 6-regime code
+class _LegacyRegime(str):
+    value = property(lambda self: str(self))
+
 MusicalScene.DEEP_AMBIENT = MusicalScene.CHILL  # type: ignore[attr-defined]
 MusicalScene.FLOATING_PULSE = MusicalScene.CHILL  # type: ignore[attr-defined]
 MusicalScene.THE_POCKET = MusicalScene.GROOVE  # type: ignore[attr-defined]
 MusicalScene.CHAOTIC_FILL = MusicalScene.GROOVE  # type: ignore[attr-defined]
 MusicalScene.PRE_DROP_BUILDUP = MusicalScene.BUILDUP  # type: ignore[attr-defined]
-MusicalScene.STRUCTURAL_CHANGE = MusicalScene.CHILL  # type: ignore[attr-defined]
+MusicalScene.STRUCTURAL_CHANGE = _LegacyRegime("STRUCTURAL_CHANGE")  # type: ignore[attr-defined]
 
 MusicalRegime = MusicalScene
 
@@ -85,39 +88,26 @@ class MusicalContextEngine:
         cfg = config or {}
 
         # 1. Hysteresis Thresholds (Schmitt Triggers)
-        self.salience_high: float = float(cfg.get("salience_high", 0.45))
-        self.salience_low: float = float(cfg.get("salience_low", 0.35))
-        self.trust_high: float = float(cfg.get("trust_high", 0.50))
-        self.trust_low: float = float(cfg.get("trust_low", 0.35))
-        self.power_high: float = float(cfg.get("power_high", 0.50))
-        self.power_low: float = float(cfg.get("power_low", 0.35))
-        self.silence_threshold: float = float(cfg.get("silence_threshold", 0.05))
-        self.silence_exit_threshold: float = float(cfg.get("silence_exit_threshold", 0.08))
+        self.salience_high, self.salience_low = float(cfg.get("salience_high", 0.45)), float(cfg.get("salience_low", 0.35))
+        self.trust_high, self.trust_low = float(cfg.get("trust_high", 0.50)), float(cfg.get("trust_low", 0.35))
+        self.power_high, self.power_low = float(cfg.get("power_high", 0.50)), float(cfg.get("power_low", 0.35))
+        self.silence_threshold, self.silence_exit_threshold = float(cfg.get("silence_threshold", 0.05)), float(cfg.get("silence_exit_threshold", 0.08))
 
         # 2. Timing & Transition Parameters
-        self.drop_buildup_threshold: float = float(cfg.get("drop_buildup_threshold", 0.40))
-        self.drop_buildup_power_threshold: float = float(cfg.get("drop_buildup_power_threshold", 0.35))
-        self.min_dwell_time: float = float(cfg.get("min_dwell_time", 1.0))
-        self.transition_time: float = float(cfg.get("transition_time", 0.5))
-        self.structural_dwell_time: float = float(cfg.get("structural_dwell_time", 1.2))
-        self.pre_drop_cooldown_time: float = float(cfg.get("pre_drop_cooldown", 3.0))
-        self.drop_impact_dwell_time: float = float(cfg.get("drop_impact_dwell_time", 1.5))
+        self.drop_buildup_threshold = float(cfg.get("drop_buildup_threshold", 0.40))
+        self.drop_buildup_power_threshold = float(cfg.get("drop_buildup_power_threshold", 0.40))
+        self.min_dwell_time, self.transition_time = float(cfg.get("min_dwell_time", 1.0)), float(cfg.get("transition_time", 0.5))
+        self.structural_dwell_time, self.pre_drop_cooldown_time = float(cfg.get("structural_dwell_time", 1.2)), float(cfg.get("pre_drop_cooldown", cfg.get("pre_drop_cooldown_time", 16.0)))
+        self.drop_impact_dwell_time = float(cfg.get("drop_impact_dwell_time", 1.5))
 
         # 3. Pre-allocated State Variables (Zero Hot-Loop Allocations)
-        self._current_scene: MusicalScene = MusicalScene.CHILL
-        self._previous_scene: MusicalScene = MusicalScene.CHILL
-        self._scene_blend: float = 1.0
-        self._scene_dwell_time: float = 0.0
-        self._drop_countdown: float = 0.0
-        self._drop_duration: float = 5.0
-        self._salience_gradient: float = 0.0
-        self._power_gradient: float = 0.0
-        self._pre_drop_cooldown: float = 0.0
-        self._buildup_entered_high_salience: bool = False
-        self._buildup_entered_high_power: bool = False
-        self._buildup_silence_cut: bool = False
-        self._buildup_saw_silence: bool = False
-        self._structural_cut_timer: float = 0.0
+        self._current_scene, self._previous_scene = MusicalScene.CHILL, MusicalScene.CHILL
+        self._scene_blend, self._scene_dwell_time = 1.0, 0.0
+        self._drop_countdown, self._drop_duration = 0.0, 5.0
+        self._salience_gradient, self._power_gradient, self._pre_drop_cooldown = 0.0, 0.0, 0.0
+        self._buildup_entered_high_salience, self._buildup_entered_high_power = False, False
+        self._buildup_silence_cut, self._buildup_saw_silence = False, False
+        self._structural_cut_timer = 0.0
 
         # Schmitt triggers & ingested signals
         self._is_salience_high, self._is_trust_high, self._is_power_high, self._is_silent = False, False, False, True
@@ -164,6 +154,7 @@ class MusicalContextEngine:
         raw_novelty = getattr(self.listener, "asserved_novelty", 0.0)
         is_song_change = bool(getattr(self.listener, "is_song_change", False))
         is_verse_chorus = bool(getattr(self.listener, "is_verse_chorus_change", False))
+        live_is_song_change = bool(getattr(self.listener, "live_is_song_change", False))
         raw_bands = getattr(self.listener, "asserved_fft_band", None)
         if raw_bands is None or not hasattr(raw_bands, "__len__") or len(raw_bands) < 8:
             raw_bands = getattr(self.listener, "fft_band_values", None)
@@ -209,14 +200,10 @@ class MusicalContextEngine:
 
         # --- 3. Spectral Tilt & Vertical Center ---
         if raw_bands is not None and hasattr(raw_bands, "__len__") and len(raw_bands) >= 8:
-            b0 = max(0.0, float(raw_bands[0])) if raw_bands[0] is not None and not math.isnan(raw_bands[0]) and not math.isinf(raw_bands[0]) else 0.0
-            b1 = max(0.0, float(raw_bands[1])) if raw_bands[1] is not None and not math.isnan(raw_bands[1]) and not math.isinf(raw_bands[1]) else 0.0
-            b2 = max(0.0, float(raw_bands[2])) if raw_bands[2] is not None and not math.isnan(raw_bands[2]) and not math.isinf(raw_bands[2]) else 0.0
-            b3 = max(0.0, float(raw_bands[3])) if raw_bands[3] is not None and not math.isnan(raw_bands[3]) and not math.isinf(raw_bands[3]) else 0.0
-            b4 = max(0.0, float(raw_bands[4])) if raw_bands[4] is not None and not math.isnan(raw_bands[4]) and not math.isinf(raw_bands[4]) else 0.0
-            b5 = max(0.0, float(raw_bands[5])) if raw_bands[5] is not None and not math.isnan(raw_bands[5]) and not math.isinf(raw_bands[5]) else 0.0
-            b6 = max(0.0, float(raw_bands[6])) if raw_bands[6] is not None and not math.isnan(raw_bands[6]) and not math.isinf(raw_bands[6]) else 0.0
-            b7 = max(0.0, float(raw_bands[7])) if raw_bands[7] is not None and not math.isnan(raw_bands[7]) and not math.isinf(raw_bands[7]) else 0.0
+            b0 = max(0.0, float(raw_bands[0])) if raw_bands[0] is not None and not math.isnan(raw_bands[0]) and not math.isinf(raw_bands[0]) else 0.0; b1 = max(0.0, float(raw_bands[1])) if raw_bands[1] is not None and not math.isnan(raw_bands[1]) and not math.isinf(raw_bands[1]) else 0.0
+            b2 = max(0.0, float(raw_bands[2])) if raw_bands[2] is not None and not math.isnan(raw_bands[2]) and not math.isinf(raw_bands[2]) else 0.0; b3 = max(0.0, float(raw_bands[3])) if raw_bands[3] is not None and not math.isnan(raw_bands[3]) and not math.isinf(raw_bands[3]) else 0.0
+            b4 = max(0.0, float(raw_bands[4])) if raw_bands[4] is not None and not math.isnan(raw_bands[4]) and not math.isinf(raw_bands[4]) else 0.0; b5 = max(0.0, float(raw_bands[5])) if raw_bands[5] is not None and not math.isnan(raw_bands[5]) and not math.isinf(raw_bands[5]) else 0.0
+            b6 = max(0.0, float(raw_bands[6])) if raw_bands[6] is not None and not math.isnan(raw_bands[6]) and not math.isinf(raw_bands[6]) else 0.0; b7 = max(0.0, float(raw_bands[7])) if raw_bands[7] is not None and not math.isnan(raw_bands[7]) and not math.isinf(raw_bands[7]) else 0.0
             bass, treble = b0 + b1 + b2 + b3, b4 + b5 + b6 + b7
             tot_b = bass + treble
             if tot_b > 1e-6:
@@ -262,15 +249,38 @@ class MusicalContextEngine:
 
         # Case B: BUILDUP Scene Progression & Landing
         if self._current_scene is MusicalScene.BUILDUP:
-            self._drop_countdown = max(0.0, self._drop_countdown - safe_dt)
-            if not self._is_salience_high: self._buildup_entered_high_salience = False
-            if not self._is_power_high: self._buildup_entered_high_power = False
-            if self._is_silent: self._buildup_saw_silence = True
+            if is_song_change or is_verse_chorus:
+                self._switch_scene(steady_target)
+                self._drop_countdown = 0.0
+                self._buildup_silence_cut = False
+                self._buildup_saw_silence = False
+                self._pre_drop_cooldown = self.pre_drop_cooldown_time
+                self._update_modulation_facade()
+                return
 
-            drop_arrived = (self._drop_countdown <= 0.001
-                            or (not self._buildup_entered_high_salience and self._is_salience_high)
-                            or (not self._buildup_entered_high_power and self._is_power_high)
-                            or (self._buildup_saw_silence and (p >= self.power_high or s >= self.salience_high)))
+            self._drop_countdown = max(-2.0, self._drop_countdown - safe_dt)
+            if not self._is_salience_high: self._buildup_entered_high_salience = False
+            elif self._drop_countdown > 0.40: self._buildup_entered_high_salience = True
+
+            if not self._is_power_high: self._buildup_entered_high_power = False
+            elif self._drop_countdown > 0.40: self._buildup_entered_high_power = True
+
+            if self._is_silent and (self._buildup_silence_cut or self._buildup_entered_high_power or self._buildup_entered_high_salience or self._drop_countdown <= 0.80):
+                self._buildup_saw_silence = True
+
+            imminent_transient = (self._drop_countdown <= 0.40) and (
+                (not self._buildup_entered_high_salience and self._is_salience_high)
+                or (not self._buildup_entered_high_power and self._is_power_high)
+            )
+            post_silence_transient = bool(
+                self._buildup_saw_silence and (p >= self.power_high or s >= self.salience_high)
+                and (self._buildup_silence_cut or self._drop_countdown <= 0.40)
+            )
+
+            if self._buildup_silence_cut:
+                drop_arrived = post_silence_transient
+            else:
+                drop_arrived = (self._drop_countdown <= 0.001 or imminent_transient or post_silence_transient)
 
             if drop_arrived:
                 self._is_drop_impact = True
@@ -279,7 +289,7 @@ class MusicalContextEngine:
                 self._pre_drop_cooldown = self.pre_drop_cooldown_time
                 self._buildup_silence_cut = False
                 self._buildup_saw_silence = False
-            elif (not self._buildup_silence_cut
+            elif (self._drop_countdown < -1.5) or (not self._buildup_silence_cut
                   and self._salience_gradient < 0.10 and self._power_gradient < 0.10
                   and self._drop_countdown < (lookahead * 0.5)
                   and not self._is_salience_high and not self._is_power_high):
@@ -293,16 +303,17 @@ class MusicalContextEngine:
             return
 
         # Case C: Check BUILDUP Triggers
-        if is_song_change or is_verse_chorus:
-            self._drop_countdown = 0.0
-            self._buildup_silence_cut = False
-            self._buildup_saw_silence = False
+        has_audio = (p > 0.001 or s > 0.001)
+        is_sal_trig = (has_audio and self._salience_gradient >= self.drop_buildup_threshold and not self._is_salience_high)
+        is_pow_trig = (has_audio and not (self._current_scene is MusicalScene.GROOVE and self._is_locked) and self._power_gradient >= self.drop_buildup_power_threshold and not self._is_power_high)
+        is_sil_trig = (p > 0.35 and p_live < self.silence_threshold)
 
-        is_sal_trig = (self._salience_gradient >= self.drop_buildup_threshold and not self._is_salience_high)
-        is_pow_trig = (self._power_gradient >= self.drop_buildup_power_threshold and not self._is_power_high)
-        is_sil_trig = (p > 0.35 and p_live < 0.10)
-
-        if lookahead > 0.1 and self._pre_drop_cooldown <= 0.0 and (is_sal_trig or is_pow_trig or is_sil_trig):
+        if (lookahead > 0.1
+                and not live_is_song_change
+                and not is_song_change
+                and not is_verse_chorus
+                and self._pre_drop_cooldown <= 0.0
+                and (is_sal_trig or is_pow_trig or is_sil_trig)):
             self._switch_scene(MusicalScene.BUILDUP)
             self._drop_countdown = lookahead
             self._drop_duration = max(0.1, lookahead)
@@ -322,6 +333,10 @@ class MusicalContextEngine:
 
     def _switch_scene(self, new_scene: MusicalScene | str) -> None:
         """Internal helper to switch scenes and reset crossfade progression."""
+        if new_scene == "STRUCTURAL_CHANGE":
+            self._structural_cut_timer = self.structural_dwell_time
+            self._is_structural_cut = True
+            return
         scene_enum = MusicalScene(new_scene) if not isinstance(new_scene, MusicalScene) else new_scene
         if scene_enum is not self._current_scene:
             self._previous_scene = self._current_scene
@@ -333,8 +348,9 @@ class MusicalContextEngine:
 
     def _update_modulation_facade(self) -> None:
         """Updates drop_progress, is_drop_imminent, and tension without dynamic allocation."""
-        if self._is_drop_impact:
-            self._drop_progress = 1.0
+        if self._is_drop_impact or self._current_scene is MusicalScene.DROP_IMPACT:
+            dwell_frac = max(0.0, min(1.0, self._scene_dwell_time / max(0.001, self.drop_impact_dwell_time)))
+            self._drop_progress = 1.0 - dwell_frac
             self._is_drop_imminent = False
         elif self._current_scene is MusicalScene.BUILDUP:
             dur = max(0.001, self._drop_duration)
@@ -345,8 +361,8 @@ class MusicalContextEngine:
             self._is_drop_imminent = False
 
         anticipation = max(0.0, max(self._salience_gradient, self._power_gradient))
-        buildup = 1.0 if self._is_drop_impact else (self._drop_progress if self._current_scene is MusicalScene.BUILDUP else 0.0)
-        self._tension = max(0.0, min(1.0, max(buildup, self._novelty, 0.5 * anticipation)))
+        buildup_or_drop = self._drop_progress if (self._current_scene is MusicalScene.BUILDUP or self._current_scene is MusicalScene.DROP_IMPACT) else 0.0
+        self._tension = max(0.0, min(1.0, max(buildup_or_drop, self._novelty, 0.5 * anticipation)))
 
     # ==========================================
     # PUBLIC PROPERTIES & FACADE
@@ -362,21 +378,25 @@ class MusicalContextEngine:
 
     # Legacy regime aliases
     @property
-    def current_regime(self) -> MusicalScene: return self.scene
+    def current_regime(self) -> MusicalScene | _LegacyRegime: return MusicalScene.STRUCTURAL_CHANGE if self._is_structural_cut else self.scene
     @property
-    def previous_regime(self) -> MusicalScene: return self.previous_scene
+    def previous_regime(self) -> MusicalScene | _LegacyRegime: return self.previous_scene
     @property
     def regime_blend(self) -> float: return self.scene_blend
     @property
     def regime_dwell_time(self) -> float: return self.scene_dwell_time
 
     @property
-    def _current_regime(self) -> MusicalScene: return self._current_scene
+    def _current_regime(self) -> MusicalScene | _LegacyRegime: return MusicalScene.STRUCTURAL_CHANGE if self._is_structural_cut else self._current_scene
     @_current_regime.setter
     def _current_regime(self, value: Any) -> None:
-        self._current_scene = MusicalScene(value) if not isinstance(value, MusicalScene) else value
+        if value == "STRUCTURAL_CHANGE":
+            self._structural_cut_timer = self.structural_dwell_time
+            self._is_structural_cut = True
+        else:
+            self._current_scene = MusicalScene(value) if not isinstance(value, MusicalScene) else value
     @property
-    def _previous_regime(self) -> MusicalScene: return self._previous_scene
+    def _previous_regime(self) -> MusicalScene | str: return self._previous_scene
     @_previous_regime.setter
     def _previous_regime(self, value: Any) -> None:
         self._previous_scene = MusicalScene(value) if not isinstance(value, MusicalScene) else value
@@ -389,9 +409,10 @@ class MusicalContextEngine:
     @_regime_dwell_time.setter
     def _regime_dwell_time(self, value: float) -> None: self._scene_dwell_time = float(value)
 
-    # Tier 1 & Ingested Scalars
     @property
     def drop_countdown(self) -> float: return float(self._drop_countdown)
+    @property
+    def pre_drop_cooldown(self) -> float: return float(self._pre_drop_cooldown)
     @property
     def salience_gradient(self) -> float: return float(self._salience_gradient)
     @property
@@ -453,10 +474,11 @@ class MusicalContextEngine:
         """Provides a complete serializable state snapshot for diagnostics and telemetry."""
         cur = self._current_scene.value if hasattr(self._current_scene, "value") else str(self._current_scene)
         prev = self._previous_scene.value if hasattr(self._previous_scene, "value") else str(self._previous_scene)
+        reg_cur = "STRUCTURAL_CHANGE" if self._is_structural_cut else cur
         return {
             "scene": cur, "previous_scene": prev,
             "scene_blend": round(self._scene_blend, 4), "scene_dwell_time": round(self._scene_dwell_time, 3),
-            "current_regime": cur, "previous_regime": prev,
+            "current_regime": reg_cur, "previous_regime": prev,
             "regime_blend": round(self._scene_blend, 4), "regime_dwell_time": round(self._scene_dwell_time, 3),
             "is_locked": self._is_locked, "is_syncopated": self._is_syncopated,
             "is_real_beat": self._is_real_beat, "is_silent": self._is_silent,

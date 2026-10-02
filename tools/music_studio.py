@@ -289,6 +289,7 @@ class MusicStudioApp:
         MusicalScene.GROOVE: (40, 240, 120),      # Emerald Green
         MusicalScene.BUILDUP: (255, 40, 130),     # Vivid Crimson
         MusicalScene.DROP_IMPACT: (255, 230, 80), # Blinding White/Gold
+        MusicalScene.STRUCTURAL_CHANGE: (255, 145, 0), # Vibrant Orange
     }
 
     SCENE_BG_COLORS = {
@@ -296,6 +297,7 @@ class MusicStudioApp:
         MusicalScene.GROOVE: (16, 55, 32),
         MusicalScene.BUILDUP: (65, 15, 35),
         MusicalScene.DROP_IMPACT: (70, 60, 20),
+        MusicalScene.STRUCTURAL_CHANGE: (60, 35, 10),
     }
 
     SCENE_ICONS = {
@@ -303,6 +305,7 @@ class MusicStudioApp:
         MusicalScene.GROOVE: "●",
         MusicalScene.BUILDUP: "▲",
         MusicalScene.DROP_IMPACT: "💥",
+        MusicalScene.STRUCTURAL_CHANGE: "⚡",
     }
 
     REGIME_COLORS = SCENE_COLORS
@@ -817,7 +820,8 @@ class MusicStudioApp:
             curr_reg = context.current_regime
             reg_col = self.REGIME_COLORS.get(curr_reg, self.TEXT_MAIN)
             reg_icon = self.REGIME_ICONS.get(curr_reg, "●")
-            reg_surf = self.get_text(self.font_small, f"[{reg_icon} {curr_reg.value}]", reg_col)
+            reg_name = getattr(curr_reg, 'value', str(curr_reg))
+            reg_surf = self.get_text(self.font_small, f"[{reg_icon} {reg_name}]", reg_col)
             self.screen.blit(reg_surf, (hx, bar_y + 12))
             hx += reg_surf.get_width() + 18
 

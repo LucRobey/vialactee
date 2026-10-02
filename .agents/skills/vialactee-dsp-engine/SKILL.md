@@ -45,9 +45,14 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 * Always evaluate changes against the immutable benchmark suite (`python -m research.benchmarks.run_benchmark --suite synthetic --save-run`) before merging.
 * Enforce the physical refractory lockout ($T_{\min} = \max(0.18\text{s}, 0.40 \times 60/\text{BPM})$) and backward wrap clamp on soft-snapping to prevent double-trigger chatter and phase jitter.
 
-### 8. Musical Context Engine & Canonical Regimes
-* High-level musical regime classification is managed by `core/MusicalContextEngine.py` and exposed via `self.listener.context`.
-* It consumes delayed `rhythm_salience`, delayed `beat_trust`, spectral power, novelty, and lookahead `salience_gradient` $\Delta R$.
-* It classifies audio into 6 canonical regimes (`DEEP_AMBIENT`, `FLOATING_PULSE`, `THE_POCKET`, `CHAOTIC_FILL`, `PRE_DROP_BUILDUP`, `STRUCTURAL_CHANGE`) using Schmitt trigger hysteresis and minimum dwell times.
+### 8. Musical Context Engine & Unified 3-Tier Visual Conductor
+* High-level musical context is orchestrated by `core/MusicalContextEngine.py` and exposed via `self.listener.context`.
+* It consumes speaker-aligned `rhythm_salience`, `beat_trust`, spectral power, 8-band Mel FFT, novelty, lookahead gradients ($\Delta R, \Delta P$), and boundary flags (`live_is_song_change`).
+* Operates across 3 unified abstraction tiers:
+  - **Tier 1 (Continuous Dynamic Kinetics):** `energy`, `tension`, `drop_progress` (smoothly sustained and decaying from 1.0 to 0.0 across the 1.5s `DROP_IMPACT` dwell), `spectral_tilt`, `vertical_center`.
+  - **Tier 2 (4 Macro Scenes):** `CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT` governed by Schmitt hysteresis and dwell locks.
+  - **Tier 3 (Micro Physical Badges):** `is_locked`, `is_syncopated`, `is_real_beat`, `is_silent`, `is_drop_impact` (1-frame arrival pulse), `is_drop_imminent`, `is_structural_cut`.
+* Protects against premature drop arrivals during buildup risers (requires `drop_countdown <= 0.40s` or a post-silence transient) and false lookahead buildups across track boundaries (`live_is_song_change`).
+* Preserves backward compatibility via legacy regime aliases (`current_regime`, `regime_blend`).
 
 
