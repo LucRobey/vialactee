@@ -1,9 +1,38 @@
-# Transition Contract & Strategy Reference
+# Transition Sector Contract
 
-> **Status: DRAFT: documents the system AS BUILT (2026-10-07).** Sections marked **[GAP]** are not implemented and are the open design work.
-> Sibling of [`audio_analyzer_contract.md`](audio_analyzer_contract.md): that document defines what the audio side *provides*; this one defines how the transition system *consumes* it and what it *provides* to the rest of the installation.
+Sibling of [`audio_analyzer_contract.md`](audio_analyzer_contract.md). The transition sector lives in `transitions/` and is a **sealed room**: it talks to the rest of the project only through the doors below, defined in code in [`transitions/api.py`](../../transitions/api.py).
 
-Source files:
+## Part A: The Doors (authoritative)
+
+**Wall rules**
+1. Nothing in `transitions/` imports from `core/`, `modes/`, `connectors/` or `hardware/`.
+2. Nothing outside `transitions/` imports from it except `transitions.api`.
+3. `api.py` uses only the standard library and numpy.
+4. The front door is **synchronous**.
+
+| # | Door | Dir | Shape (in `api.py`) | Notes |
+| :-: | :--- | :-: | :--- | :--- |
+| 1 | Music | in | `MusicSnapshot` | Read-only, speaker-time. Fields have defaults so it can grow. |
+| 2 | Installation | in | `InstallationSnapshot`, `SegmentDescriptor` | Segments, orientation, modes available, active mode, blocked. `room_bounds` comes from the layout. |
+| 3 | Requests | in | `request_next`, `request_drop`, `set_locked`, `set_auto_interval` | The UI and manual input all arrive as requests. |
+| 4 | Orders | out | `TransitionOrders` containing one `SegmentOrder` per segment | Each entry has its own mode, technique, duration, direction and `start_offset`. Today all entries are identical. |
+| 5 | Acknowledgement | in | `OrderAck` | The caller says which segments accepted (a segment already in transition refuses). |
+| 6 | Blending | out | `blend(dest, incoming, progress, technique, coords)` | **In place**, returns nothing, zero allocation per frame. |
+| 7 | Progress | out | `TransitionStatus.progress` | Used by the optional mode enter/exit hooks and the UI. |
+| 8 | Status | out | `get_status()` → `TransitionStatus` | State, progress, locked, interval, current technique. |
+| 9 | Palette request | out | `TransitionOrders.palette` (`PaletteRequest`) | The palette manager (`GlobalMoodManager`) stays **outside** the room. |
+
+**Ownership.** The room owns: when to transition, what to play where, how it looks, and timing. The outside owns: segments and their buffers, modes, the palette manager, and the UI. Modes never decide when or how they are replaced; the optional `on_transition_enter/exit` hooks stay on the mode side and receive progress from the caller.
+
+**Change policy.** Inside the room anything may change freely. Changing a door means editing `api.py`, `tests/transitions/test_api_contracts.py` and this section together.
+
+---
+
+## Part B: Current internals (as built, 2026-10-07)
+
+> This part describes the code before it moves into the room. It will be superseded as the redesign proceeds. Sections marked **[GAP]** are not implemented.
+
+Source files (pre-move):
 [`core/LocalTransitionManager.py`](../../core/LocalTransitionManager.py) (decision) ·
 [`core/Transition_Director.py`](../../core/Transition_Director.py) (clock + trigger) ·
 [`core/Transition_Engine.py`](../../core/Transition_Engine.py) (pixel blending) ·
