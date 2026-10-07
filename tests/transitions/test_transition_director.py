@@ -1,5 +1,5 @@
 """
-Unit tests for core/Transition_Director.py.
+Unit tests for transitions/director.py.
 Verifies segment geometry loading, transition initiation,
 state transitions, countdown mechanics, and timer safeguards.
 """
@@ -7,7 +7,8 @@ import unittest
 import asyncio
 from unittest.mock import MagicMock, AsyncMock
 
-from core.Transition_Director import Transition_Director
+from transitions.director import Transition_Director
+from config.Configuration_manager import resolve_segments_file_path
 
 
 class TestTransitionDirector(unittest.TestCase):
@@ -26,7 +27,10 @@ class TestTransitionDirector(unittest.TestCase):
             "silence_duration_trigger": 10.0,
             "auto_transition_time": 20.0,
         }
-        self.director = Transition_Director(self.mode_master, self.listener, self.infos)
+        self.director = Transition_Director(
+            self.mode_master, self.listener, self.infos,
+            segments_path=resolve_segments_file_path(self.infos),
+        )
 
     def test_initialization_and_geometry(self):
         self.assertEqual(self.director.state, "PASSATION")

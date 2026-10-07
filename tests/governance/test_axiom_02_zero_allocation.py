@@ -13,7 +13,7 @@ import unittest.mock
 
 from core.Mode_master import Mode_master
 from connectors.Connector import Connector
-from core.Transition_Director import Transition_Director
+from transitions.director import Transition_Director
 
 
 class TestAxiom02ZeroAllocation(unittest.TestCase):

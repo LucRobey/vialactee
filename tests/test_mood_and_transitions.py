@@ -30,9 +30,9 @@ import unittest
 from unittest.mock import MagicMock
 import numpy as np
 
-import config.mode_dna as mode_dna
+import transitions.mode_dna as mode_dna
 from core.GlobalMoodManager import GlobalMoodManager, PALETTES
-from core.LocalTransitionManager import (
+from transitions.manager import (
     LocalTransitionManager,
     CohortPattern,
     TRANSITION_TECHNIQUES,
@@ -340,7 +340,7 @@ class TestLocalTransitionManager(unittest.TestCase):
         stats = snapshot_end.compare_to(snapshot_start, "lineno")
         ltm_allocations = [
             stat for stat in stats
-            if "LocalTransitionManager.py" in stat.traceback[0].filename
+            if "manager.py" in stat.traceback[0].filename
         ]
         total_bytes = sum(stat.size_diff for stat in ltm_allocations)
         self.assertEqual(

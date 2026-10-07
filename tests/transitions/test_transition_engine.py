@@ -1,12 +1,12 @@
 """
-Unit tests for core/Transition_Engine.py.
+Unit tests for transitions/engine.py.
 Verifies all mathematical transitions, geometric spatial masks,
 progress clamping, and dispatcher routing.
 """
 import unittest
 import numpy as np
 
-import core.Transition_Engine as TE
+import transitions.engine as TE
 
 
 class TestTransitionEngine(unittest.TestCase):

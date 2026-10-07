@@ -1,5 +1,5 @@
 """
-config/mode_dna.py - Visual Mode DNA & Spatial Role Specifications.
+transitions/mode_dna.py - Visual Mode DNA & Spatial Role Specifications.
 
 Defines the acoustic-visual fingerprint (DNA) for every visual animation mode:
 - energy [0.0, 1.0]: Overall kinetic drive and luminance activity.

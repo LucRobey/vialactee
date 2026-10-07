@@ -1,5 +1,5 @@
 """
-core/LocalTransitionManager.py - Music Matchmaker, Probabilistic Cohort Allocator, & Downbeat Quantizer.
+transitions/manager.py - Music Matchmaker, Probabilistic Cohort Allocator, & Downbeat Quantizer.
 
 Central orchestrator for intelligent, non-rigid visual transitions:
 1. Music Matchmaker: Evaluates live musical context (energy, salience, beat_trust, novelty)
@@ -26,8 +26,7 @@ import math
 import random
 import time
 
-from config.mode_dna import MODE_DNA, DEFAULT_MODE_DNA, get_mode_dna
-from core.GlobalMoodManager import GlobalMoodManager
+from transitions.mode_dna import MODE_DNA, DEFAULT_MODE_DNA, get_mode_dna
 
 
 class CohortPattern(str, Enum):
@@ -70,7 +69,6 @@ class LocalTransitionManager:
         """
         self.mode_master = mode_master
         self.listener = listener
-        self.mood_manager = GlobalMoodManager.get_instance()
 
         self._pending_transition: Optional[Dict[str, Any]] = None
         self._downbeat_timeout: float = 1.20
@@ -81,19 +79,16 @@ class LocalTransitionManager:
 
     def update(self, dt: float) -> None:
         """
-        Advance steady-state timers, tick GlobalMoodManager, and check downbeat trigger.
+        Advance steady-state timers and check downbeat trigger.
         Zero dynamic heap allocations in steady-state (AXIOM-02).
         Execution <= 0.01 ms (AXIOM-01).
 
         Args:
             dt: Delta time in seconds since previous frame.
         """
-        # 1. Update Global Color Mood
-        self.mood_manager.update(dt)
-
         self._dwell_timer += dt
 
-        # 2. Check Downbeat Quantization for Pending Transition
+        # Check Downbeat Quantization for Pending Transition
         if self._pending_transition is not None:
             td = getattr(self.mode_master, "transition_director", None)
             if td is not None and getattr(td, "is_in_transition", False) is True:

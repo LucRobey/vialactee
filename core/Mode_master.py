@@ -10,10 +10,12 @@ from typing import Dict, Any, List, Optional
 import connectors.System_status as System_status
 import core.Segment as Segment
 import core.Listener as Listener
-import core.Transition_Director as Transition_Director
-import core.Transition_Engine as Transition_Engine
+import transitions.director as Transition_Director
+import transitions.engine as Transition_Engine
 from config.room_bounds import compute_room_bounds
-from core.LocalTransitionManager import LocalTransitionManager
+from transitions.manager import LocalTransitionManager
+from core.GlobalMoodManager import GlobalMoodManager
+from config.Configuration_manager import resolve_segments_file_path
 import utils.Profiler as Profiler
 from core.CommandRouter import router as command_router
 from core.PresetRepository import PresetRepository
@@ -67,9 +69,11 @@ class Mode_master:
 
         self.initiate_segments()
         self.mode_settings_catalog = self._build_mode_settings_catalog()
-        self.transition_director = Transition_Director.Transition_Director(self, self.listener, self.infos)
+        self.transition_director = Transition_Director.Transition_Director(
+            self, self.listener, self.infos, segments_path=resolve_segments_file_path(self.infos)
+        )
         self.local_transition_manager = LocalTransitionManager(self, self.listener)
-        self.mood_manager = self.local_transition_manager.mood_manager
+        self.mood_manager = GlobalMoodManager.get_instance()
         self.initiate_configuration()
         self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
 
@@ -382,6 +386,7 @@ class Mode_master:
         self.current_time = time.time()
         with self.profiler.measure("transitions"):
             await self.transition_director.update(self.current_time)
+            self.mood_manager.update(frame_dt or 0.033)
             self.local_transition_manager.update(frame_dt or 0.033)
         with self.profiler.measure("connector"):
             if self.appli_connector is not None:

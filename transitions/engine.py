@@ -2,7 +2,7 @@ import numpy as np
 import logging
 from typing import Optional
 
-from core.Transition_Assets import spatial_images, load_spatial_images
+from transitions.assets import spatial_images, load_spatial_images
 
 ROOM_MAX_X = 430
 ROOM_MAX_Y = 246

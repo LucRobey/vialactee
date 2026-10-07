@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import core.Transition_Engine as TE
+import transitions.engine as TE
 from config.room_bounds import compute_room_bounds
 
 

@@ -1,5 +1,5 @@
 """
-core/Transition_Assets.py - Spatial transition mask images (PNG threshold maps).
+transitions/assets.py - Spatial transition mask images (PNG threshold maps).
 
 Pure asset loader with no dependency on the rest of the project, so it can move
 into the sealed `transitions/` package unchanged. Lazy: images load on first use.
@@ -11,7 +11,7 @@ import os
 import numpy as np
 from PIL import Image
 
-logger = logging.getLogger("Transition_Assets")
+logger = logging.getLogger("transitions.assets")
 
 spatial_images = {}
 _images_loaded = False

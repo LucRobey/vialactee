@@ -4,7 +4,6 @@ import logging
 import random
 import json
 import os
-from config.Configuration_manager import resolve_segments_file_path
 
 class Transition_Director:
     """
@@ -14,7 +13,8 @@ class Transition_Director:
     to decide when and how to transition between different display modes.
     """
 
-    def __init__(self, mode_master: Any, listener: Any, infos: Dict[str, Any]) -> None:
+    def __init__(self, mode_master: Any, listener: Any, infos: Dict[str, Any],
+                 segments_path: Optional[str] = None) -> None:
         """
         Initialize the Transition_Director.
 
@@ -23,6 +23,8 @@ class Transition_Director:
             listener: The listener object providing audio analysis data.
             infos (dict): Configuration dictionary containing settings like 
                 silence thresholds.
+            segments_path (str, optional): Path of the segments layout file,
+                provided by the caller. None leaves the geometry maps empty.
         """
         self.mode_master = mode_master
         self.listener = listener
@@ -50,6 +52,7 @@ class Transition_Director:
         self.verticals = []
         self.horizontals = []
         self.all_segments = []
+        self.segments_path = segments_path
         self._load_segments()
 
     def _load_segments(self) -> None:
@@ -59,8 +62,10 @@ class Transition_Director:
         Parses the active segments file to classify available segments into 
         vertical and horizontal groups for geometric-based logic.
         """
+        if self.segments_path is None:
+            return
         try:
-            config_path = resolve_segments_file_path(self.infos)
+            config_path = self.segments_path
             with open(config_path, "r") as f:
                 data = json.load(f)
                 if isinstance(data.get("segments"), list):

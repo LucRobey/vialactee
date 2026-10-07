@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Optional
 import config.Configuration_manager as Configuration_manager
-import core.Transition_Engine as Transition_Engine
+import transitions.engine as Transition_Engine
 
 import numpy as np
 import logging
