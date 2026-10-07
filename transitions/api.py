@@ -22,7 +22,7 @@ Guarantees:
 """
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
@@ -192,6 +192,21 @@ class TransitionService:
         raise NotImplementedError
 
 
+def create_transition_service(
+    infos: Optional[Dict[str, Any]] = None,
+    segments_path: Optional[str] = None,
+) -> TransitionService:
+    """
+    Build the default front door. The only way outside code obtains the sector.
+
+    Args:
+        infos: Plain configuration dict (auto_transition_time, silence settings...).
+        segments_path: Path of the segments layout file, used for geometry maps.
+    """
+    from transitions.service import DefaultTransitionService
+    return DefaultTransitionService(infos, segments_path)
+
+
 __all__ = [
     "MusicSnapshot",
     "SegmentDescriptor",
@@ -202,4 +217,5 @@ __all__ = [
     "OrderAck",
     "TransitionStatus",
     "TransitionService",
+    "create_transition_service",
 ]

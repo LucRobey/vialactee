@@ -8,6 +8,7 @@ import numpy as np
 from unittest.mock import MagicMock
 
 from core.Segment import Segment
+from transitions.api import TransitionStatus
 
 
 class TestSegment(unittest.TestCase):
@@ -111,20 +112,18 @@ class TestSegment(unittest.TestCase):
         self.assertTrue(self.segment.is_in_transition)
         self.assertEqual(self.segment.target_mode_name, target_mode)
 
-        # Mock Transition Director in DUAL state
-        mock_td = MagicMock()
-        mock_td.state = "TRANSITION_DUAL"
-        mock_td.transition_progress = 0.5
-        mock_td.transition_type = "fade_to_black"
+        # Transition status in DUAL state
+        blend = MagicMock()
+        status = TransitionStatus(state="TRANSITION_DUAL", progress=0.5, is_in_transition=True, technique="fade_to_black")
 
-        self.segment.update(mock_td)
+        self.segment.update(status, blend)
+        blend.assert_called_once()
         self.assertTrue(self.segment.is_in_transition)
         self.assertEqual(self.segment.activ_mode, start_mode)
 
-        # Mock Transition Director finishing with PASSATION
-        mock_td.state = "PASSATION"
-        mock_td.transition_progress = 1.0
-        self.segment.update(mock_td)
+        # Transition finishing with PASSATION
+        status = TransitionStatus(state="PASSATION", progress=1.0, technique="fade_to_black")
+        self.segment.update(status, blend)
 
         self.assertFalse(self.segment.is_in_transition)
         self.assertEqual(self.segment.activ_mode, target_mode)

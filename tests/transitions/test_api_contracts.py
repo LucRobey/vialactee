@@ -99,7 +99,7 @@ class TestWallPrerequisites(unittest.TestCase):
                 roots.update(a.name.split(".")[0] for a in node.names)
             elif isinstance(node, ast.ImportFrom) and node.module:
                 roots.add(node.module.split(".")[0])
-        self.assertTrue(roots <= {"dataclasses", "typing", "numpy"}, roots)
+        self.assertTrue(roots <= {"dataclasses", "typing", "numpy", "transitions"}, roots)
 
 
 if __name__ == "__main__":

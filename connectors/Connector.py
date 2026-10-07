@@ -217,8 +217,8 @@ class Connector:
         if mm is None:
             return
 
-        td = getattr(mm, "transition_director", None)
-        in_trans = getattr(td, "is_in_transition", False) if td else False
+        transitions = getattr(mm, "transitions", None)
+        in_trans = transitions.get_status().is_in_transition if transitions else False
         now = time.monotonic()
 
         # Edge-detect transition start or completion for instant UI sync

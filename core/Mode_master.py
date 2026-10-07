@@ -10,10 +10,9 @@ from typing import Dict, Any, List, Optional
 import connectors.System_status as System_status
 import core.Segment as Segment
 import core.Listener as Listener
-import transitions.director as Transition_Director
-import transitions.engine as Transition_Engine
+import core.TransitionBridge as TransitionBridge
 from config.room_bounds import compute_room_bounds
-from transitions.manager import LocalTransitionManager
+from transitions.api import create_transition_service
 from core.GlobalMoodManager import GlobalMoodManager
 from config.Configuration_manager import resolve_segments_file_path
 import utils.Profiler as Profiler
@@ -53,7 +52,6 @@ class Mode_master:
         self.segments_list: List[Segment.Segment] = []
         self.segments_names_to_index: Dict[str, int] = {}
         self.activ_configuration: Dict[str, Any] = {}
-        self.transition_locked = False
         self.queued_configuration_name: Optional[str] = None
         self.mode_settings_catalog: Dict[str, Dict[str, Any]] = {}
         self.pending_system_action: Optional[str] = None
@@ -63,16 +61,11 @@ class Mode_master:
         # Delegate app config persistence to PresetRepository
         self._preset_repo = PresetRepository(infos)
 
-        bounds = compute_room_bounds(infos)
-        if bounds is not None:
-            Transition_Engine.set_room_bounds(*bounds)
+        self._room_bounds = compute_room_bounds(infos)
 
         self.initiate_segments()
         self.mode_settings_catalog = self._build_mode_settings_catalog()
-        self.transition_director = Transition_Director.Transition_Director(
-            self, self.listener, self.infos, segments_path=resolve_segments_file_path(self.infos)
-        )
-        self.local_transition_manager = LocalTransitionManager(self, self.listener)
+        self.transitions = create_transition_service(self.infos, resolve_segments_file_path(self.infos))
         self.mood_manager = GlobalMoodManager.get_instance()
         self.initiate_configuration()
         self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
@@ -298,6 +291,7 @@ class Mode_master:
             for mode_name in getattr(segment, "modes", {}).keys()
         })
 
+        transition_status = self.transitions.get_status()
         return {
             "hardwareProfile": self.hardware_profile,
             "activePlaylist": None,
@@ -305,12 +299,12 @@ class Mode_master:
             "activeConfiguration": self.activ_configuration.get("name", "Live Random DNA"),
             "queuedConfiguration": None,
             "selectedTransition": "DYNAMIC",
-            "transitionLocked": self.transition_locked,
-            "transitionState": getattr(self.transition_director, "state", None),
-            "transitionProgress": getattr(self.transition_director, "transition_progress", 0.0),
+            "transitionLocked": transition_status.is_locked,
+            "transitionState": transition_status.state,
+            "transitionProgress": transition_status.progress,
             "luminosity": int(round(max(0.0, min(1.0, float(getattr(self.listener, "luminosite", 0.0)))) * 100)),
             "sensibility": int(round(max(0.0, float(getattr(self.listener, "sensi", 0.0))) * 100)),
-            "autoTransitionTime": int(round(float(getattr(self.transition_director, "configuration_duration", 20.0)))),
+            "autoTransitionTime": int(round(transition_status.auto_interval)),
             "playlists": [],
             "availableModes": available_modes,
             "activeMood": getattr(self.mood_manager, "current_palette", "Cyberpunk"),
@@ -342,7 +336,7 @@ class Mode_master:
         Perform a single update loop iteration.
 
         Updates the audio listener, flushes hardware LED buffers, updates all
-        segments, and evaluates global transitions via the Transition_Director.
+        segments, and drives global transitions through the transition service.
         """
         frame_start = time.monotonic()
         frame_dt = None if self._last_update_monotonic is None else frame_start - self._last_update_monotonic
@@ -366,11 +360,13 @@ class Mode_master:
         slowest_seg_time = 0.0
         slowest_mode_name = None
 
+        transition_status = self.transitions.get_status()
+        blend = self.transitions.blend
         with self.profiler.measure("modes_render"):
             if getattr(self.profiler, "track_slowest_mode", False) and getattr(self.profiler, "active", False):
                 for seg in self.segments_list:
                     t0 = time.perf_counter()
-                    seg.update(self.transition_director)
+                    seg.update(transition_status, blend)
                     t_seg = time.perf_counter() - t0
                     if t_seg > slowest_seg_time:
                         slowest_seg_time = t_seg
@@ -378,32 +374,27 @@ class Mode_master:
                         slowest_mode_name = getattr(seg, "activ_mode", "unknown")
             else:
                 for seg in self.segments_list:
-                    seg.update(self.transition_director)
+                    seg.update(transition_status, blend)
 
         if slowest_seg is not None:
             self.profiler.record_slowest_mode(slowest_seg, slowest_mode_name, slowest_seg_time)
 
         self.current_time = time.time()
         with self.profiler.measure("transitions"):
-            await self.transition_director.update(self.current_time)
-            self.mood_manager.update(frame_dt or 0.033)
-            self.local_transition_manager.update(frame_dt or 0.033)
+            dt = frame_dt or 0.033
+            self.mood_manager.update(dt)
+            orders = self.transitions.update(dt, TransitionBridge.build_music_snapshot(self.listener))
+            if orders is not None:
+                self.transitions.acknowledge(TransitionBridge.apply_orders(self, orders))
         with self.profiler.measure("connector"):
             if self.appli_connector is not None:
                 await self.appli_connector.on_frame_tick(self)
         self.profiler.tick()
 
-    def update_segments_modes(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
+    def update_segments_modes(self) -> None:
         """
-        Apply the active configuration to all relevant segments.
-
-        Args:
-            transition_config (dict, optional): Configuration defining the type and
-                duration of the transition. Defaults to None.
+        Apply the active configuration to all relevant segments (instant swap).
         """
-        if transition_config is not None:
-            self.transition_director.start_transition(transition_config)
-
         self._apply_active_mode_settings()
 
         active_modes = self.activ_configuration.get("modes", {})
@@ -412,7 +403,7 @@ class Mode_master:
             if not segment.isBlocked:
                 mode_name = active_modes.get(segment.name)
                 if mode_name is not None:
-                    segment.change_mode(mode_name, transition_config)
+                    segment.change_mode(mode_name)
                 way = active_way.get(segment.name)
                 if way is not None:
                     segment.change_way(way)
@@ -441,6 +432,7 @@ class Mode_master:
             "modeSettings": self._get_effective_mode_settings({}),
         }
         self._apply_active_mode_settings()
+        self._push_installation()
         self._state_dirty = True
 
     def initiate_segments(self) -> None:
@@ -464,16 +456,10 @@ class Mode_master:
             if key in data:
                 add_segments(data[key], leds)
 
-    async def change_configuration(self, transition_config: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Delegate to local_transition_manager to execute a dynamic DNA transition.
-
-        Args:
-            transition_config (dict, optional): Transition parameters dict.
-        """
-        self.local_transition_manager.schedule_transition(
-            transition_config=transition_config,
-            quantize_downbeat=True
+    def _push_installation(self) -> None:
+        """Describe the current segments to the transition sector."""
+        self.transitions.set_installation(
+            TransitionBridge.build_installation_snapshot(self.segments_list, self._room_bounds)
         )
 
     def _segment_name_from_id(self, segment_id: Any) -> Optional[str]:
@@ -503,9 +489,10 @@ class Mode_master:
             "modeSettings": self._copy_mode_settings_map(mode_settings),
         }
 
-    def _apply_configuration(self, config: Dict[str, Any], transition_config: Optional[Dict[str, Any]]) -> None:
+    def _apply_configuration(self, config: Dict[str, Any]) -> None:
         self.activ_configuration = self._detach_configuration_modes(config)
-        self.update_segments_modes(transition_config)
+        self.update_segments_modes()
+        self._push_installation()
 
     def _persist_app_config_value(self, key: str, value: Any) -> None:
         self.infos[key] = value

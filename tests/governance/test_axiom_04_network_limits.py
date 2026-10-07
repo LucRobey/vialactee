@@ -67,7 +67,7 @@ class TestAxiom04NetworkLimits(unittest.TestCase):
         connector.send_state = AsyncMock()
 
         mock_mm = MagicMock()
-        mock_mm.transition_director.is_in_transition = True
+        mock_mm.transitions.get_status.return_value.is_in_transition = True
         mock_mm._state_dirty = False
         mock_mm.get_state_snapshot.return_value = {"active": True}
 

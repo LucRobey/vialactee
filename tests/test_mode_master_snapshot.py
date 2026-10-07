@@ -38,7 +38,7 @@ class TestModeMasterSnapshot(unittest.TestCase):
         self.assertEqual(self.mode_master.activ_configuration.get("name"), "Live Random DNA")
         self.assertEqual(len(self.mode_master.activ_configuration.get("modes", {})), 11)
         self.assertEqual(len(self.mode_master.activ_configuration.get("way", {})), 11)
-        self.assertIsNotNone(self.mode_master.local_transition_manager)
+        self.assertIsNotNone(self.mode_master.transitions)
         self.assertIsNotNone(self.mode_master.mood_manager)
 
     def test_get_state_snapshot_schema(self):

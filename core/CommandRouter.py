@@ -108,7 +108,7 @@ async def _handle_set_auto_transition_time(mm: Any, payload: Dict[str, Any]) -> 
     value = payload.get("value")
     if isinstance(value, (int, float)):
         persisted_value = int(round(max(1.0, float(value))))
-        mm.transition_director.configuration_duration = float(persisted_value)
+        mm.transitions.set_auto_interval(persisted_value)
         mm._persist_app_config_value("auto_transition_time", persisted_value)
         return {"applied": True}
     return {"applied": False, "reason": "invalid_value"}
@@ -142,26 +142,20 @@ async def _handle_select_mood(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any
 
 @router.register("live_deck", "go_to_next_configuration")
 async def _handle_go_to_next_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    mm.local_transition_manager.schedule_transition(
-        quantize_downbeat=True
-    )
+    mm.transitions.request_next()
     return {"applied": True}
 
 
 @router.register("live_deck", "manual_drop")
 async def _handle_manual_drop(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    transition_config = {"type": "explosion", "duration": 0.4}
-    mm.local_transition_manager.schedule_transition(
-        transition_config=transition_config,
-        quantize_downbeat=False
-    )
+    mm.transitions.request_drop()
     return {"applied": True}
 
 
 @router.register("live_deck", "lock_current_configuration")
 async def _handle_lock_current_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
     locked = payload.get("locked")
-    mm.transition_locked = bool(locked)
+    mm.transitions.set_locked(bool(locked))
     return {"applied": True}
 
 
@@ -189,6 +183,7 @@ async def _handle_topology_select_segment_mode(mm: Any, payload: Dict[str, Any])
     if segment is None:
         return {"applied": False, "reason": "unknown_segment"}
     segment.execute_mode_swap(mode_name)
+    mm._push_installation()
     return {"applied": True}
 
 

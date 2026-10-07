@@ -4,31 +4,21 @@ Verifies segment geometry loading, transition initiation,
 state transitions, countdown mechanics, and timer safeguards.
 """
 import unittest
-import asyncio
-from unittest.mock import MagicMock, AsyncMock
 
-from transitions.director import Transition_Director
 from config.Configuration_manager import resolve_segments_file_path
+from transitions.api import MusicSnapshot
+from transitions.director import Transition_Director
 
 
 class TestTransitionDirector(unittest.TestCase):
     def setUp(self):
-        self.mode_master = MagicMock()
-        self.mode_master.change_configuration = AsyncMock()
-        self.mode_master.transition_locked = False
-
-        self.listener = MagicMock()
-        self.listener.live_is_song_change = False
-        self.listener.live_is_verse_chorus_change = False
-        self.listener.analyzer.lookahead_seconds = 5.0
-
         self.infos = {
             "silence_threshold": 150,
             "silence_duration_trigger": 10.0,
             "auto_transition_time": 20.0,
         }
         self.director = Transition_Director(
-            self.mode_master, self.listener, self.infos,
+            self.infos,
             segments_path=resolve_segments_file_path(self.infos),
         )
 
@@ -37,7 +27,7 @@ class TestTransitionDirector(unittest.TestCase):
         self.assertEqual(self.director.transition_progress, 0.0)
         self.assertIsNone(self.director.transition_type)
         self.assertEqual(self.director.configuration_duration, 20.0)
-        
+
         # Verify segment geometry loaded from active segments config
         self.assertGreater(len(self.director.all_segments), 0)
         self.assertGreater(len(self.director.verticals), 0)
@@ -46,6 +36,10 @@ class TestTransitionDirector(unittest.TestCase):
             len(self.director.all_segments),
             len(self.director.verticals) + len(self.director.horizontals)
         )
+
+    def test_no_segments_path_leaves_geometry_empty(self):
+        director = Transition_Director(self.infos)
+        self.assertEqual(director.all_segments, [])
 
     def test_start_transition(self):
         # None should be a no-op
@@ -63,55 +57,56 @@ class TestTransitionDirector(unittest.TestCase):
         self.director.start_transition({"type": "cut", "duration": 0.0})
         self.assertEqual(self.director.transition_step, 1.0)
 
-    def test_async_update_progress_and_completion(self):
-        async def run_test():
-            self.director.start_transition({"type": "global_change", "duration": 0.1})
-            # Step size = (1/30) / 0.1 = ~0.333
-            t0 = 100.0
-            await self.director.update(t0)
-            self.assertGreater(self.director.transition_progress, 0.0)
-            self.assertEqual(self.director.state, "TRANSITION_DUAL")
+    def test_cancel_transition_returns_to_idle(self):
+        self.director.start_transition({"type": "explosion", "duration": 2.0})
+        self.director.cancel_transition()
+        self.assertEqual(self.director.state, "PASSATION")
+        self.assertFalse(self.director.is_in_transition)
 
-            # Advance enough steps to complete transition
-            for i in range(1, 5):
-                await self.director.update(t0 + i * 0.033)
+    def test_update_progress_and_completion(self):
+        self.director.start_transition({"type": "global_change", "duration": 0.1})
+        # Step size = (1/30) / 0.1 = ~0.333
+        t0 = 100.0
+        self.director.update(t0)
+        self.assertGreater(self.director.transition_progress, 0.0)
+        self.assertEqual(self.director.state, "TRANSITION_DUAL")
 
-            self.assertEqual(self.director.transition_progress, 1.0)
-            self.assertEqual(self.director.state, "PASSATION")
+        # Advance enough steps to complete transition
+        for i in range(1, 5):
+            self.director.update(t0 + i * 0.033)
 
-        asyncio.run(run_test())
+        self.assertEqual(self.director.transition_progress, 1.0)
+        self.assertEqual(self.director.state, "PASSATION")
 
     def test_live_event_lookahead_countdowns(self):
-        async def run_test():
-            t0 = 100.0
-            await self.director.update(t0)
-            self.assertEqual(self.director.upcoming_song_change_countdown, 0.0)
-            self.assertEqual(self.director.upcoming_structural_change_countdown, 0.0)
+        t0 = 100.0
+        self.director.update(t0, MusicSnapshot())
+        self.assertEqual(self.director.upcoming_song_change_countdown, 0.0)
+        self.assertEqual(self.director.upcoming_structural_change_countdown, 0.0)
 
-            # Trigger live song change
-            self.listener.live_is_song_change = True
-            await self.director.update(t0 + 0.1)
-            self.assertEqual(self.director.upcoming_song_change_countdown, 5.0)
+        # Trigger live song change
+        self.director.update(t0 + 0.1, MusicSnapshot(live_is_song_change=True, lookahead_seconds=5.0))
+        self.assertEqual(self.director.upcoming_song_change_countdown, 5.0)
 
-            # Reset flag and advance time by 1 second
-            self.listener.live_is_song_change = False
-            await self.director.update(t0 + 1.1)
-            self.assertAlmostEqual(self.director.upcoming_song_change_countdown, 4.0, places=2)
+        # Reset flag and advance time by 1 second
+        self.director.update(t0 + 1.1, MusicSnapshot())
+        self.assertAlmostEqual(self.director.upcoming_song_change_countdown, 4.0, places=2)
 
-        asyncio.run(run_test())
+    def test_timer_expiry_reports_true_once_per_interval(self):
+        self.director.update(0.0)  # arms the timer at 20 s
+        self.assertFalse(self.director.update(19.0))
+        self.assertTrue(self.director.update(20.5))
+        self.assertFalse(self.director.update(21.0))
+        self.assertGreater(self.director.next_change_time, 21.0)
 
     def test_transition_locked_guard(self):
-        async def run_test():
-            # Force expiration of next change time
-            past_time = self.director.next_change_time + 1.0
-            self.mode_master.transition_locked = True
+        self.director.update(0.0)
+        self.director.locked = True
+        past_time = self.director.next_change_time + 1.0
 
-            await self.director.update(past_time)
-            # Should NOT trigger change_configuration when transition is locked
-            self.mode_master.change_configuration.assert_not_called()
-            self.assertGreater(self.director.next_change_time, past_time)
-
-        asyncio.run(run_test())
+        # Locked: no expiry reported, but the timer is pushed forward
+        self.assertFalse(self.director.update(past_time))
+        self.assertGreater(self.director.next_change_time, past_time)
 
 
 if __name__ == '__main__':

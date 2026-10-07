@@ -1,6 +1,5 @@
 from typing import Dict, Any, List, Optional
 import config.Configuration_manager as Configuration_manager
-import transitions.engine as Transition_Engine
 
 import numpy as np
 import logging
@@ -78,7 +77,7 @@ class Segment:
 
 
 
-    def update(self, td: Any) -> None:
+    def update(self, status: Any, blend: Any) -> None:
         """
         Update the current active mode and handle any ongoing visual transitions.
         
@@ -96,13 +95,13 @@ class Segment:
         # State machine for transitions
         if self.is_in_transition:
             target_mode = self.modes.get(self.target_mode_name)
-            prog = float(getattr(td, "transition_progress", 0.0))
+            prog = float(status.progress)
             if target_mode is not None and hasattr(target_mode, "on_transition_enter"):
                 target_mode.on_transition_enter(prog)
             activ_mode_obj = self.modes.get(self.activ_mode)
             if activ_mode_obj is not None and hasattr(activ_mode_obj, "on_transition_exit"):
                 activ_mode_obj.on_transition_exit(prog)
-            if td is not None and getattr(td, "state", None) == "TRANSITION_DUAL":
+            if status.state == "TRANSITION_DUAL":
                 if activ_mode_obj is not None and not getattr(activ_mode_obj, "has_custom_transition", False):
                     
                     # --- UPDATE NEW MODE INTO SECONDARY BUFFER ---
@@ -119,10 +118,10 @@ class Segment:
                     if self.way == "DOWN" and self.coords_array is not None:
                         active_coords = self.coords_array[::-1]
 
-                    Transition_Engine.apply_transition(self.rgb_list, self.dual_rgb_list, td.transition_progress, td.transition_type, active_coords)
+                    blend(self.rgb_list, self.dual_rgb_list, status.progress, status.technique, active_coords)
 
                 
-            if td is not None and (getattr(td, "state", None) == "PASSATION" or (activ_mode_obj is not None and getattr(activ_mode_obj, "has_custom_transition", False))):
+            if status.state == "PASSATION" or (activ_mode_obj is not None and getattr(activ_mode_obj, "has_custom_transition", False)):
                 # Execution complete! Swap the modes and terminate old one.
                 if activ_mode_obj is not None:
                     activ_mode_obj.terminate()
