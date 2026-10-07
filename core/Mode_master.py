@@ -11,6 +11,8 @@ import connectors.System_status as System_status
 import core.Segment as Segment
 import core.Listener as Listener
 import core.Transition_Director as Transition_Director
+import core.Transition_Engine as Transition_Engine
+from config.room_bounds import compute_room_bounds
 from core.LocalTransitionManager import LocalTransitionManager
 import utils.Profiler as Profiler
 from core.CommandRouter import router as command_router
@@ -58,6 +60,10 @@ class Mode_master:
 
         # Delegate app config persistence to PresetRepository
         self._preset_repo = PresetRepository(infos)
+
+        bounds = compute_room_bounds(infos)
+        if bounds is not None:
+            Transition_Engine.set_room_bounds(*bounds)
 
         self.initiate_segments()
         self.mode_settings_catalog = self._build_mode_settings_catalog()

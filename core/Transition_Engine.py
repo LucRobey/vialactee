@@ -1,14 +1,12 @@
 import numpy as np
-from PIL import Image
-import os
-import glob
 import logging
 from typing import Optional
+
+from core.Transition_Assets import spatial_images, load_spatial_images
 
 ROOM_MAX_X = 430
 ROOM_MAX_Y = 246
 
-spatial_images = {}
 logger = logging.getLogger("Transition_Engine")
 
 TRANSITION_DEFAULTS = {
@@ -17,69 +15,13 @@ TRANSITION_DEFAULTS = {
     "dt": 0.003
 }
 
-def init_room_bounds(infos=None) -> None:
-    """Dynamically determine room bounds from the active segments file."""
+def set_room_bounds(max_x: float, max_y: float) -> None:
+    """Set the physical room extent used by the spatial transitions (pushed in from outside)."""
     global ROOM_MAX_X, ROOM_MAX_Y
-    try:
-        from config.Configuration_manager import resolve_segments_file_path
-        import json
-        seg_path = resolve_segments_file_path(infos)
-        if os.path.exists(seg_path):
-            with open(seg_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            segs = []
-            for k, v in data.items():
-                if k.startswith("segs_") and isinstance(v, list):
-                    segs.extend(v)
-            if not segs and isinstance(data.get("segments"), list):
-                segs = data["segments"]
-            max_x = 0
-            max_y = 0
-            for s in segs:
-                if isinstance(s, dict) and "start" in s and "size" in s and "step" in s:
-                    x0 = int(s["start"].get("x", 0))
-                    y0 = int(s["start"].get("y", 0))
-                    step_x = int(s["step"].get("x", 0))
-                    step_y = int(s["step"].get("y", 0))
-                    size = int(s.get("size", 0))
-                    max_x = max(max_x, x0, x0 + (size * step_x))
-                    max_y = max(max_y, y0, y0 + (size * step_y))
-            if max_x > 0:
-                ROOM_MAX_X = max_x
-            if max_y > 0:
-                ROOM_MAX_Y = max_y
-    except Exception as e:
-        logger.debug(f"Could not load dynamic room bounds: {e}")
+    if max_x > 0 and max_y > 0:
+        ROOM_MAX_X = max_x
+        ROOM_MAX_Y = max_y
 
-init_room_bounds()
-
-_images_loaded = False
-
-def load_spatial_images() -> None:
-    global _images_loaded
-    if _images_loaded:
-        return
-    _images_loaded = True
-    assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'assets', 'transitions'))
-    if not os.path.exists(assets_dir):
-        logger.warning(f"Spatial transition folder not found at {assets_dir}")
-        return
-
-    png_files = glob.glob(os.path.join(assets_dir, "*.png"))
-    for file_path in png_files:
-        name = os.path.splitext(os.path.basename(file_path))[0]
-        try:
-            img = Image.open(file_path).convert('L')
-            # img size is (width=ROOM_MAX_X, height=ROOM_MAX_Y)
-            # np.array(img) has shape (ROOM_MAX_Y, ROOM_MAX_X)
-            # Transpose gives (ROOM_MAX_X, ROOM_MAX_Y) = (X, Y) layout to match coords
-            arr = np.array(img).T.astype(np.float32) / 255.0
-            spatial_images[name] = arr
-            logger.debug(f"Loaded spatial transition image: {name}")
-        except Exception as e:
-            logger.error(f"Failed to load spatial image {file_path}: {e}")
-
-# Load immediately on import removed for lazy loading
 
 def apply_dual_fade(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float) -> None:
     """ Crossfades old mode softly into new mode """

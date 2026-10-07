@@ -16,10 +16,9 @@ class TestCodeGovernance(unittest.TestCase):
         os.path.normpath("core/AudioAnalyzer.py"): 598,
         os.path.normpath("core/Mode_master.py"): 613,
         os.path.normpath("core/MultiBandOnsetAudioAnalyzer.py"): 621,
-        os.path.normpath("core/Transition_Engine.py"): 548,
     }
 
-    PRODUCTION_DIRS = ["core", "hardware", "modes", "config", "connectors"]
+    PRODUCTION_DIRS = ["core", "hardware", "modes", "config", "connectors", "transitions"]
     PRODUCTION_ROOT_FILES = ["Main.py"]
 
     def test_file_line_counts_and_ratchet(self):
