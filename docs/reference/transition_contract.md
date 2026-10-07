@@ -32,12 +32,14 @@ Sibling of [`audio_analyzer_contract.md`](audio_analyzer_contract.md). The trans
 
 > This part describes the code before it moves into the room. It will be superseded as the redesign proceeds. Sections marked **[GAP]** are not implemented.
 
-Source files (pre-move):
-[`core/LocalTransitionManager.py`](../../core/LocalTransitionManager.py) (decision) ·
-[`core/Transition_Director.py`](../../core/Transition_Director.py) (clock + trigger) ·
-[`core/Transition_Engine.py`](../../core/Transition_Engine.py) (pixel blending) ·
+Source files (all but the last three now inside the room):
+[`transitions/manager.py`](../../transitions/manager.py) (decision) ·
+[`transitions/director.py`](../../transitions/director.py) (clock + trigger) ·
+[`transitions/engine.py`](../../transitions/engine.py) (pixel blending) ·
+[`transitions/service.py`](../../transitions/service.py) (front door) ·
+[`transitions/mode_dna.py`](../../transitions/mode_dna.py) (mode fingerprints) ·
+[`core/TransitionBridge.py`](../../core/TransitionBridge.py) (outside glue) ·
 [`core/Segment.py`](../../core/Segment.py) (per-segment dual buffer) ·
-[`config/mode_dna.py`](../../config/mode_dna.py) (mode fingerprints) ·
 [`core/GlobalMoodManager.py`](../../core/GlobalMoodManager.py) (palettes) ·
 [`modes/Mode.py`](../../modes/Mode.py) (lifecycle hooks)
 
@@ -132,7 +134,7 @@ Engine types available in `Transition_Engine.apply_transition`: `fade_in_out`, `
 | UI `manual_drop` | `schedule_transition` | no | forced `explosion` 0.4 s |
 | UI `select_transition` | retired | n/a | n/a |
 
-**[GAP]** Nothing is triggered by the music itself. The commented-out block in `Transition_Director.update` was the song-change hook. The Director computes `upcoming_song_change_countdown` and `upcoming_structural_change_countdown` but nothing reads them.
+**[GAP]** Nothing is triggered by the music itself. The commented-out block in `transitions/director.py` `update` was the song-change hook. The Director computes `upcoming_song_change_countdown` and `upcoming_structural_change_countdown` but nothing reads them.
 
 ---
 
@@ -144,13 +146,13 @@ Engine types available in `Transition_Engine.apply_transition`: `fade_in_out`, `
 | `Mode_master.activ_configuration["modes"]` | Updated with the new allocation. `_state_dirty = True`. |
 | `Transition_Director` | `state` (`PASSATION` or `TRANSITION_DUAL`), `transition_progress` [0..1], `transition_type`, `transition_duration`, `is_in_transition`. Published in the web state as `transitionState` / `transitionProgress`. `selectedTransition` is always `"DYNAMIC"`. |
 | Modes (optional hooks) | `on_transition_exit(progress)` on the outgoing mode and `on_transition_enter(progress)` on the incoming mode, called every frame; `has_custom_transition=True` makes the Segment skip the engine blend and swap immediately. |
-| `GlobalMoodManager` | Cosine palette crossfade (default 2 s), ticked by `LocalTransitionManager.update`. |
+| `GlobalMoodManager` | Cosine palette crossfade (default 2 s), now ticked by `Mode_master` (outside the room). |
 
 ### Invariants
 - One transition at a time installation-wide. The Director holds a single `type` and `progress` shared by every segment.
 - Every non-blocked segment is retargeted on each transition (no partial or staggered transitions).
 - The Director clock advances in `Director.update`. The Segment reads `td.transition_progress`.
-- Hot path: `LocalTransitionManager.update` must satisfy AXIOM-01 (≤ 0.01 ms) and AXIOM-02 (zero allocation). It is covered by `tests/test_mood_and_transitions.py`.
+- Hot path: `transitions/manager.py` `update` must satisfy AXIOM-01 (≤ 0.01 ms) and AXIOM-02 (zero allocation). It is covered by `tests/test_mood_and_transitions.py`.
 
 ---
 
@@ -169,7 +171,7 @@ Engine types available in `Transition_Engine.apply_transition`: `fade_in_out`, `
 | Automatic palette change on transitions | **[GAP]** Palette changes only via the UI `select_mood`. |
 | Dwell and cooldown policy between transitions | **[GAP]** `_dwell_timer` is incremented and reset but never read. |
 | Silence and standby behavior | **[GAP]** `silence_threshold`, `silence_duration_trigger` and `is_in_standby` are initialized in the Director and unused. |
-| Tests | 38 transition tests pass (`test_mood_and_transitions`, `test_transition_director`, `test_transition_engine`). |
+| Tests | `tests/transitions/` (contracts, service, sandbox, engine, director), `test_mood_and_transitions`, `test_transition_bridge`, and the wall test `governance/test_transition_isolation`. |
 
 ## 7. Open design questions
 1. Which musical events should trigger a transition (drop, structural cut, song change, scene change) versus the timer?

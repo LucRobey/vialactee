@@ -35,7 +35,7 @@ graph TD
         AudioIngest["AudioIngestion (Dual-Res Mel Filterbanks: 8/32 Bands)"]
         AudioAnalyz["DyadicMetricalAudioAnalyzer (Production 32-Band Onset + Metrical Sub-Pulse Engine)<br/><i>Fallbacks: MultiBandOnsetAudioAnalyzer (stable parent), AudioAnalyzer (Legacy Single-ODF)</i>"]
         ModeMaster["Mode_master (Orchestrator)"]
-        TransDir["Transition_Director"]
+        TransDir["TransitionBridge -> transitions.api (sealed sector)"]
     end
 
     Mic -->|Raw PCM Push| ListenerFacade
@@ -88,7 +88,8 @@ graph TD
 
 Here is a breakdown of the core directories in this project:
 
-- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `comb_kernels`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `BeatGridQuantizer`, `Webapp_instruction_logger`, and `Transition_Director`.
+- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `comb_kernels`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `BeatGridQuantizer`, `Webapp_instruction_logger`, and `TransitionBridge` (the only glue to the transition sector).
+- **`/transitions`**: The sealed transition sector (when and how modes change). `transitions/` is a sealed room: all transition logic lives there and is reached only through `transitions.api` (see `docs/reference/transition_contract.md`). Enforced by `tests/governance/test_transition_isolation.py`; to work on it alone run `python -m transitions.sandbox`.
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
 - **`/config`**: JSON files and managers detailing hardware profiles (`hardware_profile`: `"full"` vs `"small"` in `app_config.json`), unified physical geometry + Web App UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
 - **`/connectors`**: External communication handlers: `Connector.py` (HTTP/WebSocket server on port 8080 exposing `/ws`, `/api/topology`, and `/api/configurations`) and `Local_Microphone.py` (analog audio push stream).
@@ -129,7 +130,7 @@ Do not guess how the architecture works. Depending on the task you have been giv
 - **If you are working on Music Events (Drops, Verse/Chorus detection):**
   - 👉 Read [`docs/architecture/structural_novelty.md`](docs/architecture/structural_novelty.md).
 - **If you are working on Transitions between modes:**
-  - 👉 Read [`docs/architecture/transition_director.md`](docs/architecture/transition_director.md) and [`core/Transition_Engine.py`](core/Transition_Engine.py).
+  - 👉 Read [`docs/architecture/transition_director.md`](docs/architecture/transition_director.md) and [`docs/reference/transition_contract.md`](docs/reference/transition_contract.md); the code is in [`transitions/`](transitions/).
 - **If you are touching Hardware, Network, or Output Drivers:**
   - 👉 Read [`docs/architecture/hardware_abstraction.md`](docs/architecture/hardware_abstraction.md) and [`docs/axioms/AXIOM-04_NETWORK_PROTOCOLS.md`](docs/axioms/AXIOM-04_NETWORK_PROTOCOLS.md).
 - **If you are modifying Web App playlists, configurations, Mode Settings, Live Deck, or Topology state:**

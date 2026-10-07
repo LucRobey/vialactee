@@ -1,7 +1,7 @@
 # Transition Director & Spatial Blending Engine
 
 > **Location:** `docs/architecture/transition_director.md` (Tier 1 Canonical Specification)  
-> **Source Files:** [`core/Transition_Director.py`](../../core/Transition_Director.py), [`core/Transition_Engine.py`](../../core/Transition_Engine.py)  
+> **Source Files:** [`transitions/director.py`](../../transitions/director.py), [`transitions/engine.py`](../../transitions/engine.py) (inside the sealed `transitions/` sector; contract: [`transition_contract.md`](../reference/transition_contract.md))  
 > **Enforcing Axioms:** [AXIOM-01](../axioms/AXIOM-01_FRAME_BUDGET.md), [AXIOM-02](../axioms/AXIOM-02_ZERO_ALLOCATION.md), [AXIOM-07](../axioms/AXIOM-07_CODE_GOVERNANCE.md)
 
 ---

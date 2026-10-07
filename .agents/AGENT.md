@@ -19,10 +19,10 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
   * `RhythmConfig.py`: Central dataclass for rhythm, confidence, and tempo search parameters.
   * `BeatGridQuantizer.py`: High-precision beat-grid quantization and musical subdivision calculations.
   * `Webapp_instruction_logger.py`: Diagnostic telemetry logger for incoming control instructions.
-  * `Transition_Director.py`: State machine driving automated and manual playlist transitions.
-  * `Transition_Engine.py`: Math engine calculating spatial blends (curtain, explosion, wave, dual fade, slice).
+  * `TransitionBridge.py`: The only glue between the project (Listener, Segments) and the sealed `transitions/` package.
   * `Mode_master.py`: Central runtime orchestrator managing segments, modes, and WebSocket snapshots.
   * `Segment.py`: Logical strip abstraction managing mode instances, transitions, and LED index mapping.
+* `transitions/`: The sealed transition sector. `transitions/` is a sealed room: all transition logic lives there and is reached only through `transitions.api` (see `docs/reference/transition_contract.md`). Enforced by `tests/governance/test_transition_isolation.py`; to work on it alone run `python -m transitions.sandbox`. Contents: `api.py` (the doors), `service.py` (front door implementation), `manager.py` (mode/cohort/technique decisions), `director.py` (clock and auto timer), `engine.py` + `assets.py` (pixel blending), `mode_dna.py` (mode personalities), `fakes.py` + `sandbox.py` (headless development).
 * `config/`: Hardware profiles and configuration managers:
   * `app_config.json`: Global settings (`hardware_profile`, `HARDWARE_MODE`, `luminosity`, `sensibility`, `auto_transition_time`).
   * `segments_full.json` & `segments_small.json`: Unified single source of truth for physical hardware geometry and Web App UI layout.
@@ -82,7 +82,7 @@ An asynchronous Python orchestration server designed to run on a Raspberry Pi an
 9. **Decoupled Freewheeling Flywheel**: Decoupled beat phase from abrupt jump points, using confidence-adaptive soft-snaps (50% high, 15% moderate, 0% coasting) for smooth visual motion.
 10. **Advanced DSP Robustness**: Multiplicative Gaussian human priors, exponential recency decay buffer weighting, and high-energy transient peak detection.
 11. **Dynamic Audio Latency Tracking**: Real-world latency measured using `sounddevice` PortAudio `inputBufferAdcTime` timestamps, automatically self-calibrating back-projection delays.
-12. **Audio-Based Orchestration**: `Transition_Director.py` intelligently orchestrates playlist rotation and delays transitions during intense musical peaks.
+12. **Audio-Based Orchestration**: The `transitions/` sector decides when and how modes change from the live musical context (timer-driven today; see the contract for open gaps).
 13. **Dual Lookahead Audio Ingestion & Delay Queues**: 5-second lookahead audio buffer in `AudioAnalyzer` paired with `Listener` delayed queues perfectly aligns visualizer outputs with speaker audio.
 14. **JSON-Backed Web App Playlists & Configurations**: The React interface reads and writes presets through `/api/configurations`. `Connector.py` broadcasts `Mode_master.get_state_snapshot()` over `/ws`.
 15. **Topology LIVE vs Persist Architecture**: Interactive mode and direction changes in Topology send runtime WebSocket instructions (`select_segment_mode`, `toggle_segment_direction`). Presets persist to disk via `POST /api/configurations` from `MODIFY` or `BUILD` modes.
