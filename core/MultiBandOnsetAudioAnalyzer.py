@@ -55,7 +55,6 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         super().__init__(ingestion=ingestion, infos=inf, config=cfg)
         self.config: RhythmConfig = cfg
 
-        self.hardware_latency: float = float(inf.get("latency", 0.0))
         self.lookahead_seconds: float = float(inf.get("fakeDelay", 5.0))
         self.odf_fps: float = 60.0
         self.btrack_fps: float = self.odf_fps

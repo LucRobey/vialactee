@@ -228,7 +228,6 @@ class AudioAnalyzer(BaseAudioAnalyzer):
         self.config = config if config is not None else RhythmConfig()
         super().__init__(ingestion, infos, config=self.config)
 
-        self.hardware_latency = float(infos.get("latency", 0.0))
         self.decay_base = float(infos.get("decay_base", 0.98))
         self.lookahead_seconds = float(infos.get("fakeDelay", 5.0))
         self.odf_fps = 60.0

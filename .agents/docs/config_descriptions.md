@@ -64,7 +64,8 @@ The root configuration file governing server launch, audio ingestion, hardware d
 | `auto_transition_time` | int | `80` | $\ge 10$ (seconds) | `Mode_master`, `Transition_Director` | Interval between automatic playlist preset transitions. |
 | `analyzer_model` | string | `"MultiBandOnsetAudioAnalyzer"` | `"MultiBandOnsetAudioAnalyzer"`, `"AudioAnalyzer"` | `Listener`, `Mode_master`, `mode_studio`, `music_studio` | Active rhythm tracking model instantiated by `Listener`. `"MultiBandOnsetAudioAnalyzer"` provides 32-band onset derivatives and anti-phase disambiguation; `"AudioAnalyzer"` provides the single-ODF baseline. |
 | `log_level` | string | `"INFO"` | `"DEBUG"`, `"INFO"`, `"WARNING"`, `"ERROR"` | `Main.py` | Logger verbosity level for console and `vialactee.log` rotating file handler. |
-| `latency` | float | `0.0` | Seconds (float) | `AudioAnalyzer` | Hardware output latency offset added to phase calculation ($T_{\text{speaker}}$). |
+| `led_latency` | float | `0.0` | Seconds (float) | `BaseAudioAnalyzer` | LED pipeline lag: time between a frame command and the light being visible (ESP32 transport, strip refresh). Calibrated constant. |
+| `audio_output_latency` | float | `0.0` | Seconds (float) | `BaseAudioAnalyzer` | Speaker/DAC lag: time between the sample leaving the DAC and the sound being heard (e.g. wired ~0.01, Bluetooth ~0.15-0.25). The analyzers use the net `hardware_latency = led_latency - audio_output_latency` (see AXIOM-05). The former `latency` key is removed and ignored. |
 | `decay_base` | float | `0.98` | Float in $(0.90, 0.999)$ | `AudioAnalyzer` | Exponential decay rate applied to ODF peaks and running beat trust. |
 | `printCpuFpsInfo` | boolean | `false` | `true`, `false` | `Mode_master`, `Profiler` | If `true`, outputs execution metrics and FPS logs to stdout at profiler intervals. |
 | `profiler` | object | `{...}` | JSON object | `Profiler` | Detailed loop profiling configuration. See Section 5. |

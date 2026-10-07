@@ -31,7 +31,7 @@ graph TD
     subgraph Core [Core Orchestration Engine]
         ListenerFacade["Listener (Facade & 5.0s Lookahead Queue)"]
         AudioIngest["AudioIngestion (Dual-Res Mel: 8 & 32 Bands)"]
-        AudioAnalyz["MultiBandOnsetAudioAnalyzer (32-Band Onset Engine)"]
+        AudioAnalyz["DyadicMetricalAudioAnalyzer (32-Band Onset Engine + Metrical Sub-Pulse)"]
         ModeMaster["Mode_master (Central Orchestrator)"]
         TransDir["Transition_Director (State Machine)"]
     end
@@ -86,7 +86,7 @@ graph TD
    - Budget: 33.33 ms frame period, $\le 20.0\text{ ms}$ compute cap on Pi 4B (AXIOM-01).
    - Hot-path operations are zero-allocation NumPy slice assignments (AXIOM-02).
 2. **The 60.0 Hz Audio Onset Sampling:**
-   - Audio feature extraction in `core/MultiBandOnsetAudioAnalyzer.py` samples at 60 Hz to ensure precise onset detection.
+   - Audio feature extraction in `core/DyadicMetricalAudioAnalyzer.py` (on top of `core/MultiBandOnsetAudioAnalyzer.py`) samples at 60 Hz to ensure precise onset detection.
    - Lookahead buffer maintains a continuous 5.0-second delay queue, back-projecting beat phase to speaker time $T_{\text{speaker}}$ (AXIOM-05).
 3. **Decoupled Telemetry:**
    - `Connector.on_frame_tick()` executes in 0.0 ms when no clients are connected.

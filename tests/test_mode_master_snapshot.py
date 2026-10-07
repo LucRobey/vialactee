@@ -101,25 +101,6 @@ class TestModeMasterSnapshot(unittest.TestCase):
             self.assertIn(seg["direction"], ["UP", "DOWN"])
             self.assertIsInstance(seg["blocked"], bool)
 
-    def test_normalize_transition(self):
-        self.assertEqual(
-            self.mode_master._normalize_transition("CUT"),
-            {"type": "explosion", "duration": 0.0}
-        )
-        self.assertEqual(
-            self.mode_master._normalize_transition("CROSSFADE"),
-            {"type": "global_change", "duration": 3.0}
-        )
-        self.assertEqual(
-            self.mode_master._normalize_transition("FADE IN/OUT"),
-            {"type": "fade_in_out", "duration": 2.0}
-        )
-        # Unknown fallback
-        self.assertEqual(
-            self.mode_master._normalize_transition("CUSTOM_RANDOM"),
-            {"type": "fade_in_out", "duration": 2.0}
-        )
-
     def test_segment_name_from_id(self):
         self.assertEqual(self.mode_master._segment_name_from_id("v4"), "Segment v4")
         self.assertEqual(self.mode_master._segment_name_from_id("h00"), "Segment h00")

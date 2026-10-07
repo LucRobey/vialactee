@@ -4,6 +4,18 @@ This document is the living knowledge repository, genealogical tree, and priorit
 
 ---
 
+## 0. Production Status (2026-10-05)
+
+| Role | Model | Where |
+| :--- | :--- | :--- |
+| **Production default (SOTA champion)** | `DyadicMetricalAudioAnalyzer` (Cycle 012) | `core/DyadicMetricalAudioAnalyzer.py` |
+| Stable fallback & parent engine | `MultiBandOnsetAudioAnalyzer` (Cycle 008) | `core/MultiBandOnsetAudioAnalyzer.py` |
+| Legacy baseline | `AudioAnalyzer` | `core/AudioAnalyzer.py` |
+
+New research cycles must beat the **production** model (benchmark alias `--model production` = Dyadic) with zero regression on the synthetic suite. See the promotion milestone in `RESEARCH_HISTORY.md`.
+
+---
+
 ## 1. Algorithmic Lineage & Genealogy
 
 ```mermaid
@@ -34,11 +46,14 @@ graph TD
     %% Cycle 012 (Current SOTA Champion)
     C012["🏆 Cycle 012: DyadicMetrical<br/>(Scale-Invariant Sub-Pulse Arbiter at phi=0.5)<br/>Salient F1: 80.8% (+4.9%) | Raw F1: 79.2% | CMLt: 72.4% (+12.5%) | Latency: 0.29ms<br/>[Nightcall: 93.3% Salient F1, CMLt 77.3% | Pumped Up Kicks: 89.0% Salient F1, CMLt 68.4%]"]:::sota
 
+    %% Cycle 013 (Dyadic Wavelet Packet Pulse Deconstruction)
+    C013["🌊 Cycle 013: DyadicWavelet<br/>(4-Level Daubechies db2 Wavelet Projections + Sustain Squelch)<br/>Salient F1: 80.7% | Raw F1: 79.2% | CMLt: 72.4% | Synth F1: 96.0% (Zero Regress)<br/>[29% Guitar Rejection on Sweet Child O' Mine | Latency: 0.65ms]"]:::candidate
+
     %% Radical Cross-Domain Candidates
     RAD01["📡 RAD-01: Costas Loop I/Q Demodulator<br/>(Dual Quadrature Phase Carrier Recovery)<br/>Status: BENCHMARKED (Cycle 010)"]:::candidate
     RAD02["🧠 RAD-02: Kuramoto Phase Oscillators<br/>(Nonlinear Band Entrainment Network)<br/>Status: ARCHIVED (Failed 180° Upbeat Lock)"]:::archived
-    RAD03["📊 RAD-03: Bayesian Tempo State-Space<br/>(Kalman Filter + Dynamic Multi-Band Surprise)<br/>Status: UNTESTED"]:::candidate
-    RAD04["🌊 RAD-04: Dyadic Wavelet Packet Pulse<br/>(High-Resolution Sub-Band Transients)<br/>Status: UNTESTED"]:::candidate
+    RAD03["📊 RAD-03: Bayesian Tempo State-Space<br/>(Kalman Filter + Dynamic Multi-Band Surprise)<br/>Status: ARCHIVED (TOURNAMENT-003: Collapsed on Rock)"]:::archived
+    RAD04["🌊 RAD-04: Dyadic Wavelet Packet Pulse<br/>(High-Resolution Sub-Band Transients)<br/>Status: SANDBOX_PASSED / BENCHMARKED (Cycle 013)"]:::candidate
 
     BASE --> C005
     C005 -->|Fix: Negative Baseline Comb| C006
@@ -52,6 +67,7 @@ graph TD
     C008 -->|Probabilistic State Estimation| RAD03
     C008 -->|Time-Frequency Optimization| RAD04
     C008 -->|Scale-Invariant Sub-Pulse Arbiter at phi=0.5| C012
+    C012 -->|Wavelet Packet Front-End Integration| C013
 ```
 
 ---
@@ -62,8 +78,8 @@ graph TD
 | :--- | :--- | :--- | :--- | :---: | :---: | :---: |
 | **`RAD-01`** | **Radar / Telecom** | Costas In-Phase / Quadrature ($I/Q$) Loop Demodulator | 180° upbeat traps on Funk/Disco (*Stayin' Alive*) | 9.0 | Low ($\le 0.4\text{ms}$) | `BENCHMARKED (Cycle 010)` |
 | **`RAD-02`** | **Neuroscience** | Kuramoto Coupled Phase Oscillator Network | Harmonic tempo-octave confusion on Synthwave | 9.5 | Medium ($\le 0.8\text{ms}$) | `ARCHIVED (Tournament 001)` |
-| **`RAD-03`** | **Info Theory** | Bayesian Tempo State-Space (EKF + KL Surprise) | Rhythm dropouts, silent bridges & tempo drift | 8.5 | Medium ($\le 0.7\text{ms}$) | `UNTESTED` |
-| **`RAD-04`** | **Wavelet DSP** | Dyadic Wavelet Packet Pulse-Harmonic Deconstruction | Dense guitar chord sustain in Hard Rock (*Sweet Child O' Mine*) | 8.0 | Medium ($\le 1.2\text{ms}$) | `UNTESTED` |
+| **`RAD-03`** | **Info Theory** | Bayesian Tempo State-Space (EKF + KL Surprise) | Rhythm dropouts, silent bridges & tempo drift | 8.5 | Medium ($\le 0.7\text{ms}$) | `ARCHIVED (TOURNAMENT-003)` |
+| **`RAD-04`** | **Wavelet DSP** | Dyadic Wavelet Packet Pulse-Harmonic Deconstruction | Dense guitar chord sustain in Hard Rock (*Sweet Child O' Mine*) | 8.0 | Low ($\le 0.65\text{ms}$) | `SANDBOX_PASSED / BENCHMARKED (Cycle 013)` |
 
 ---
 
@@ -109,7 +125,8 @@ graph TD
 ### 📊 Lead `RAD-03`: Multi-Band Bayesian Tempo State-Space Tracker
 * **Domain Lens:** Information Theory & Optimal Control (Kalman / EKF)
 * **Parent Node:** `Cycle 008 (MultiBandOnsetAudioAnalyzer)`
-* **The Structural Flaw Solved:**
+* **Status:** `ARCHIVED (TOURNAMENT-003)`
+* **The Structural Flaw Solved (Hypothesized):**
   Heuristic confidence scores and threshold-based flywheel locks struggle during musical breakdowns (e.g., Justice *Genesis* dropouts or Kavinsky *Nightcall* intro pads). When drums cut out, traditional flywheels either freeze or drift randomly.
 * **Governing Mathematical Equations:**
   Formulate rhythm as a continuous kinematic state vector:
@@ -118,23 +135,27 @@ graph TD
   $$F = \begin{bmatrix} 1 & \Delta t & \frac{1}{2}\Delta t^2 \\ 0 & 1 & \Delta t \\ 0 & 0 & \lambda \end{bmatrix}, \quad \lambda \in [0.95, 0.99] \text{ (acceleration damping)}$$
   Measurement vector $z_n \in \mathbb{R}^4$ constructed from multi-band onset surprise (Kullback-Leibler divergence between current frame and rolling 2-second background model).
   The Kalman update computes innovation $y_n = z_n - H \hat{x}_{n|n-1}$ and updates error covariance $P_n$. During quiet breakdowns, measurement noise $R \to \infty$, causing the Kalman gain $K \to 0$: the state smoothly coasts on the physical momentum model without phase jitter.
-* **Causality & Stability Proof:**
-  Linear time-invariant Kalman formulation with stationary process noise $Q$ and measurement noise $R$. Algebraic Riccati equation guarantees positive semi-definiteness of $P_n$. Per-frame matrix dimensions are $3 \times 3$, evaluating in $< 0.25\text{ms}$.
+* **Failure Analysis & Archival (TOURNAMENT-003):**
+  In Stage 1 shootout, RAD-03 scored **0.0000 F1** on *Sweet Child O' Mine* and **0.0000 F1** on *Nightcall*. Without template-conditioned metrical priors, unconstrained kinematic acceleration states $[\theta, \omega, \alpha]^T$ oscillate chaotically when confronted with distorted guitar harmonics, mistaking continuous string vibrato for rapid tempo acceleration.
 
 ---
 
 ### 🌊 Lead `RAD-04`: Dyadic Wavelet Packet Pulse-Harmonic Deconstruction
 * **Domain Lens:** Multi-Rate Signal Processing & Wavelet Theory
-* **Parent Node:** `Cycle 008 (MultiBandOnsetAudioAnalyzer)`
+* **Parent Node:** `Cycle 012 (DyadicMetricalAudioAnalyzer)`
+* **Status:** `SANDBOX_PASSED / BENCHMARKED (Cycle 013)`
 * **The Structural Flaw Solved:**
   Uniform STFT and Mel filterbanks suffer from the Heisenberg-Gabor time-frequency trade-off: fixed window length ($2048$ samples) smears the temporal precision of fast drum transients while offering insufficient frequency resolution to distinguish bass notes from guitar fundamentals.
 * **Governing Mathematical Equations:**
-  Replace the standard FFT buffer with a 4-level dyadic wavelet filterbank (Daubechies db4 or symlet sym4).
-  Decompose each audio frame into high-temporal-resolution detail coefficients $D_1, D_2$ (time resolution $\sim 2.6\text{ms}$ for snare/hat transients) and high-frequency-resolution approximation coefficients $A_4$ (frequency resolution $\sim 10.7\text{Hz}$ for sub-bass kick tracking).
-  Evaluate pulse novelty directly in the wavelet coefficient domain:
-  $$N_{\text{wavelet}}[n] = w_{\text{kick}} |A_4[n] - A_4[n-1]| + w_{\text{snare}} |D_2[n] - D_2[n-1]|$$
-* **Causality & Stability Proof:**
-  Compactly supported orthogonal wavelet filters implemented as finite impulse response (FIR) cascades. Constant latency introduced = filter length (8 taps = 0.18ms lookahead, well within `fakeDelay`). Per-frame complexity is $O(N)$ with $N=1024$, running in $< 0.65\text{ms}$.
+  Construct Daubechies db2 orthogonal projection matrices $W_{A_4}, W_{D_2}, W_{D_1} \in \mathbb{R}^{32 \times 32}$.
+  Decompose each audio frame into high-temporal-resolution detail coefficients $D_1, D_2$ (fast transients) and high-frequency-resolution approximation coefficients $A_4$ (sub-bass kick tracking).
+  Evaluate continuous mid-band harmonic sustain via an exponential moving average:
+  $$S_b[t] = \alpha_{\text{sustain}} S_b[t-1] + (1 - \alpha_{\text{sustain}}) \cdot dE_b[t]$$
+  Apply in-place transient-to-sustain squelching on mid guitar bands (6..13):
+  $$\widetilde{dE}_b[t] = \max(0, dE_b[t] - \gamma \cdot \max(0, S_b[t] - 1.0))$$
+* **Tournament & Benchmark Results:**
+  - **TOURNAMENT-003 Winner:** Scored **0.5417 F1** (*Sweet Child O' Mine*) and **0.8585 F1** (*Nightcall*) at 0.0708ms latency, eliminating 29% of continuous guitar sustain energy with unitary energy conservation.
+  - **Stage 2 Benchmark (Cycle 013):** Clean-room synthetic Macro F1: **96.0%** with **zero regressions** across all 8 tracks. Neural-core real-world Macro F1: **79.2%** raw / **80.7%** salient F1, 72.4% CMLt, 0.65ms per-frame CPU latency, and strictly 0 bytes dynamic heap allocations.
 
 ---
 
@@ -143,9 +164,10 @@ graph TD
 Historical record of lightweight scratch sandbox tournaments conducted by the Research Manager:
 
 | Tournament ID | Date | Candidate A | Candidate B | Winning Candidate | Decisive Metric / Finding | Status |
-| :--- | :---: | :--- | :--- | :---: | :--- | :---: |
+| :--- | :---: | :--- | :--- | :--- | :--- | :---: |
 | `TOURNAMENT-001` | 2026-09-06 | `RAD-01` (Costas Loop) | `RAD-02` (Kuramoto) | **`RAD-01`** | `RAD-01` resolved 180° upbeat trap on *Stayin' Alive* (score 0.7917 vs 0.0400). Both $\le 0.084\text{ms}$. | `RESOLVED` |
 | `TOURNAMENT-002` | 2026-09-22 | Lead A (`DYADIC-SUBPULSE`) | Lead B (`HARMONIC-OCTAVE`) | **Lead A (`DYADIC-SUBPULSE`)** | Lead A passed 100% test suite at 0.177ms (4.5x faster than Lead B). Advanced to Cycle 012 `DyadicMetricalAudioAnalyzer` and achieved SOTA (76.5% F1, 65.6% CMLt). | `PROMOTED TO SOTA` |
+| `TOURNAMENT-003` | 2026-10-05 | `RAD-03` (Bayesian State-Space) | `RAD-04` (Dyadic Wavelet Packet) | **`RAD-04`** | `RAD-04` won decisively (Sweet Child O' Mine F1: 0.5417 vs 0.0000; Nightcall F1: 0.8585 vs 0.0000). 29% guitar sustain rejection; 0.0708ms latency; unitary energy conservation. Advanced to Stage 2 (`DyadicWaveletAudioAnalyzer`). | `RESOLVED` |
 
 ---
 

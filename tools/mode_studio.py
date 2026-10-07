@@ -45,9 +45,12 @@ def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAn
     """
     if model_name in ("AudioAnalyzer", "baseline"):
         return AudioAnalyzer
-    if model_name in ("MultiBandOnsetAudioAnalyzer", "production", "default"):
+    if model_name == "MultiBandOnsetAudioAnalyzer":
         from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
         return MultiBandOnsetAudioAnalyzer
+    if model_name in ("DyadicMetricalAudioAnalyzer", "production", "default"):
+        from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+        return DyadicMetricalAudioAnalyzer
 
     models_dir = os.path.join(repo_root, "research", "experiments", "models")
     discovered_classes: Dict[str, Type[BaseAudioAnalyzer]] = {}
@@ -419,7 +422,7 @@ class StudioApp:
     REGIME_BG_COLORS = SCENE_BG_COLORS
     REGIME_ICONS = SCENE_ICONS
 
-    def __init__(self, song_path: str, initial_mode_name: Optional[str] = None, nb_leds: int = 80, model_name: str = "MultiBandOnsetAudioAnalyzer"):
+    def __init__(self, song_path: str, initial_mode_name: Optional[str] = None, nb_leds: int = 80, model_name: str = "DyadicMetricalAudioAnalyzer"):
         pygame.init()
         pygame.font.init()
 
@@ -470,7 +473,6 @@ class StudioApp:
         listener_infos = {
             "useMicrophone": True,
             "fakeDelay": 5.0,
-            "latency": 0.0,
             "luminosity": 100,
             "sensibility": 100,
             "nb_of_fft_band": self.nb_bands,
@@ -1688,8 +1690,8 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="MultiBandOnsetAudioAnalyzer",
-        help="Rhythm analyzer model class (e.g. MultiBandOnsetAudioAnalyzer, AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
+        default="DyadicMetricalAudioAnalyzer",
+        help="Rhythm analyzer model class (e.g. DyadicMetricalAudioAnalyzer (default), MultiBandOnsetAudioAnalyzer (fallback), AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
     )
     args = parser.parse_args()
 

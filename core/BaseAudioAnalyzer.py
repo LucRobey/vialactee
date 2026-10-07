@@ -7,9 +7,28 @@ Listener facade and the immutable Benchmark Harness.
 """
 
 from __future__ import annotations
+import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
+
+logger = logging.getLogger(__name__)
+
+
+def resolve_hardware_latency(infos: Dict[str, Any]) -> float:
+    """
+    Net visual lag (seconds) used by the AXIOM-05 speaker back-projection:
+        hardware_latency = led_latency - audio_output_latency
+    - led_latency: command issued -> light visible (LED pipeline lag).
+    - audio_output_latency: sample emitted by the DAC -> sound heard (speaker/DAC lag).
+    A positive result means the lights appear later than the sound, so the phase leads.
+    The legacy ambiguous `latency` key is ignored (with a warning when it is non-zero).
+    """
+    if float(infos.get("latency", 0.0) or 0.0) != 0.0:
+        logger.warning(
+            "Config key 'latency' is no longer used (value ignored); set 'led_latency' and 'audio_output_latency' instead."
+        )
+    return float(infos.get("led_latency", 0.0)) - float(infos.get("audio_output_latency", 0.0))
 
 
 class BaseAudioAnalyzer(ABC):
@@ -24,7 +43,7 @@ class BaseAudioAnalyzer(ABC):
         self.infos = infos
         self.config = config
         self.lookahead_seconds: float = float(infos.get("fakeDelay", 5.0))
-        self.hardware_latency: float = float(infos.get("latency", 0.0))
+        self.hardware_latency: float = resolve_hardware_latency(infos)
 
         # 1. Rhythmic & Metronome State Defaults
         self.bpm: float = 120.0

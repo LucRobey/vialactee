@@ -36,7 +36,6 @@ class TestLocalAudioFile(unittest.TestCase):
         self.infos = {
             "useMicrophone": False,
             "fakeDelay": 5.0,
-            "latency": 0.0,
             "onRaspberry": False,
             "HARDWARE_MODE": "simulation",
             "sample_rate": 44100,

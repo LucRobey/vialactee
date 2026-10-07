@@ -144,7 +144,7 @@ def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
         "--model",
         type=str,
         default=None,
-        help="Rhythm analyzer model class override (e.g. MultiBandOnsetAudioAnalyzer, AudioAnalyzer)"
+        help="Rhythm analyzer model class override (e.g. DyadicMetricalAudioAnalyzer (default), MultiBandOnsetAudioAnalyzer (fallback), AudioAnalyzer)"
     )
     parser.add_argument(
         "--server",
@@ -178,7 +178,7 @@ async def main(cli_args: Optional[argparse.Namespace] = None) -> Optional[str]:
             "startServer"     : False,
             "useMicrophone"   : True,
             "printCpuFpsInfo" : False,
-            "HARDWARE_MODE"   : "simulation", # 'auto', 'rpi', or 'simulation'
+            "HARDWARE_MODE"   : "auto", # 'auto', 'rpi', or 'simulation'
             "log_level"       : "INFO",
             "show_music_analyser_panel" : True,
             "profiler": {

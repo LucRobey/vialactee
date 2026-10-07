@@ -69,9 +69,12 @@ def load_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]
     """
     if model_name == "AudioAnalyzer":
         return AudioAnalyzer
-    if model_name in ("MultiBandOnsetAudioAnalyzer", "production"):
+    if model_name == "MultiBandOnsetAudioAnalyzer":
         from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
         return MultiBandOnsetAudioAnalyzer
+    if model_name in ("DyadicMetricalAudioAnalyzer", "production"):
+        from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+        return DyadicMetricalAudioAnalyzer
 
     models_dir = os.path.join(repo_root, "research", "experiments", "models")
     discovered_classes: Dict[str, Type[BaseAudioAnalyzer]] = {}

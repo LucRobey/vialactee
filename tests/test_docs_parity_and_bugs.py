@@ -16,7 +16,6 @@ class TestDocsParityAndBugs(unittest.TestCase):
         self.infos_full = {
             "useMicrophone": False,
             "fakeDelay": 0.5,
-            "latency": 0.0,
             "onRaspberry": False,
             "HARDWARE_MODE": "simulation",
             "hardware_profile": "full",
@@ -24,7 +23,6 @@ class TestDocsParityAndBugs(unittest.TestCase):
         self.infos_small = {
             "useMicrophone": False,
             "fakeDelay": 0.5,
-            "latency": 0.0,
             "onRaspberry": False,
             "HARDWARE_MODE": "simulation",
             "hardware_profile": "small",

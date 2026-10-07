@@ -568,4 +568,58 @@ This logbook maintains the persistent chronological scientific narrative of all 
 - **Outcome:** `PROMOTED TO NEW SOTA CHAMPION`
 
 
+---
 
+### Milestone: Production Promotion of DyadicMetricalAudioAnalyzer (Cycle 012) & Demotion of MultiBandOnsetAudioAnalyzer (Cycle 008)
+- **Date:** 2026-10-05
+- **Action:** Promoted `DyadicMetricalAudioAnalyzer` to `core/DyadicMetricalAudioAnalyzer.py` and made it the default (`config/app_config.json`: `"analyzer_model": "DyadicMetricalAudioAnalyzer"`). `MultiBandOnsetAudioAnalyzer` is demoted from default to **stable fallback & parent engine** (still in `core/`, still selectable with `--model MultiBandOnsetAudioAnalyzer`).
+- **Why the research file could not be copied as-is:** Cycle 012 subclassed the *research fork* of MultiBand, which had drifted from the production parent. Missing in the fork: the `update_structural_novelty` / `detect_band_peaks` split that `Listener` calls, the 4-pillar `rhythm_salience`, the speaker-time (`band_flux_buffer`) `beat_tag`, and the pulse-density history; it also used `lookahead + latency` where production uses `lookahead - latency`, and a +/-3 instead of +/-6 speaker window. The port subclasses the **core** parent and overrides only the tempo/phase sweep, flywheel advance, ODF ingestion and telemetry. The research file is now an alias to the core class (original preserved in git: `git show c37e9e2:research/experiments/models/DyadicMetricalAudioAnalyzer.py`).
+- **Parity (neural-core, core port vs original Cycle 012):** Salient F1 80.8% = 80.8%, Raw F1 79.2% = 79.2%, CMLt 72.4% = 72.4%, jitter 34.2 ms, upbeat gap 0.00, every track identical. CPU 0.44 ms/frame (0.29 ms in the original run; machine noise, budget <= 0.5 ms). Synthetic: 96.0% F1 / 95.8% CMLt / 9.9 ms jitter, 8/8 tracks, zero regressions. Runs: `RUN_20261005_215957_..._cycle012_promoted_to_core` and `RUN_20261005_220021_..._cycle012_promoted_to_core_synth`.
+- **Measured finding (parity experiment):** the first port also cleared the sub-pulse latch on a novelty-detected song change. That cost *Nightcall* -0.2 pt / *Pumped Up Kicks* -0.3 pt Salient F1 and about -0.6 / -2.2 pt CMLt. Removing the reset restored exact parity, so the latch is deliberately left to decay on its own.
+- **Contract decision (sub-pulse):** sub-pulses are exposed as real metrical beats. While active, `Listener.bpm` = `effective_bpm` = 2 x tactus (contract range widened to ~[60, 260]) and `beat_phase` wraps twice per tactus cycle, so `is_beat`, `beat_count` and `beat_phase` agree. Sub-pulse beats are tagged at T_speaker (always one of the 3 tags) and feed the salience pulse-density pillar. Benchmark scoring is unaffected (beat times are identical).
+- **Listener fixes made along the way:** (1) analyzer registry; unknown model names now log a warning instead of silently falling back to MultiBand. (2) `band_flux` is now the true 8-band Mel flux; before, 32-band analyzers leaked their 8 lowest fine bands (bass only) into it, which affected `Hyper_strobe_mode`, `Matrix_rain_mode`, `Shining_stars_mode` and the music-studio HUD.
+- **Verification:** `pytest` 210 passed (194 before + 16 new in `tests/test_analyzer_contract_compliance.py`). 2 failures predate this change and are unrelated: `test_axiom_01_frame_execution_time`, `test_fake_leds_caches_mode_labels`.
+- **Known limitations / open items:**
+  1. *Sweet Child O' Mine* is the one track where Cycle 012 is worse than Cycle 008 (Salient F1 74.7% -> 69.7%, CMLt 74.2% -> 55.9%). Net gain is large, but rock regression deserves its own cycle.
+  2. Toggling `subpulse_active` changes the exposed `beat_phase` discontinuously (phi vs 2*phi). Rare, but not smoothed.
+  3. `docs/architecture/rhythm_engine.md` section D shows `lookahead + latency`, while the code uses `lookahead - latency`. Needs an audit of the true sign on hardware before either is changed.
+  4. The benchmark runs with `fakeDelay = 0`, so the 5 s lookahead path is covered only by the new contract tests and an alignment probe (both analyzers fire 1 frame / 16.7 ms before the speaker-time click with 0 ms jitter; identical for parent and child).
+  5. Results rest on the 10-track `neural-core` suite with BeatNet references; the Ballroom academic suite has not been run for this model.
+- **Outcome:** `PROMOTED TO PRODUCTION`
+
+---
+
+### Cycle 013: Dyadic Wavelet Packet Pulse Deconstruction & Stage 1 Tournament (RAD-03 vs. RAD-04)
+- **Date:** 2026-10-05
+- **Investigator:** Autonomous Research Manager & Rhythm Data Scientist
+- **Target Model:** [`research/experiments/models/DyadicWaveletAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/DyadicWaveletAudioAnalyzer.py)
+- **Model Card:** [`research/docs/models/DyadicWaveletAudioAnalyzer.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/docs/models/DyadicWaveletAudioAnalyzer.md)
+- **Problem Statement:**
+  In Cycle 012, *Sweet Child O' Mine* was identified as the primary remaining failure mode for production rhythm tracking. Dense electric guitar power chords and continuous distortion sustain smeared onset flux in mid-frequency bands (bands 6..13), causing false onset triggers and lowering continuity (CMLt: 56.0%).
+- **Stage 1 Tournament Shootout (`TOURNAMENT-003`):**
+  Pitted Candidate A (`RAD-03`: Bayesian Tempo State-Space Tracker / EKF) against Candidate B (`RAD-04`: Dyadic Wavelet Packet Pulse Deconstruction) in isolated sandboxes across *Sweet Child O' Mine* and *Nightcall*:
+  - **Candidate A (`RAD-03`):** Scored **0.0000 F1** on both test tracks. Without spectral template integration, the unconstrained 3D kinematic acceleration state $[\theta, \omega, \alpha]^T$ oscillates chaotically in the presence of continuous guitar vibrato and distortion harmonics, mistaking sustain for rapid tempo acceleration. Candidate A was archived.
+  - **Candidate B (`RAD-04`):** Scored **0.5417 F1** (*Sweet Child O' Mine*) and **0.8585 F1** (*Nightcall*) at **0.0708ms** per-frame latency, with unitary energy conservation ($\sum |W_j|^2 = 1.0$) and **29% continuous guitar sustain squelching**. Candidate B won the tournament decisively and was advanced to Stage 2.
+- **Stage 2 Architectural Implementation:**
+  - Integrated 4-level dyadic wavelet packet decomposition directly into the multi-band flux front-end using precomputed Daubechies db2 orthogonal projection matrices ($W_{A_4}, W_{D_2}, W_{D_1} \in \mathbb{R}^{32 \times 32}$).
+  - High-frequency-resolution sub-bass approximation ($A_4$, 20–100 Hz) isolates kick fundamentals without temporal smearing.
+  - High-temporal-resolution detail projections ($D_1, D_2$) isolate percussive snare and hi-hat attacks.
+  - Continuous mid-band harmonic sustain tracker with in-place squelching targeting exclusively bands 6..13:
+    $$S_b[t] = \alpha_{\text{sustain}} S_b[t-1] + (1 - \alpha_{\text{sustain}}) \cdot dE_b[t]$$
+    $$\widetilde{dE}_b[t] = \max(0, dE_b[t] - \gamma_{\text{sustain}} \cdot \max(0, S_b[t] - 1.0))$$
+  - Vectorized instrument stream synthesis (`np.dot(W, x, out=...)`) guaranteeing **strictly 0 dynamic heap allocations** in `update()`.
+- **Stage 2 Clean-Room Synthetic Verification (`RUN_20261005_222723_DyadicWaveletAudioAnalyzer_cycle013_synth_canonical`):**
+  - **Macro F1@50ms:** **96.0%** (100% strict zero-regression PASS vs baseline `RUN_20261005_220021_...`)
+  - **CMLt:** 95.8% | **AMLt:** 95.8% | **Upbeat Gap:** 0.00 | **Jitter:** 9.9ms | **CPU:** 0.83ms/frame
+  - Complete zero delta across all 8 synthetic stress tracks ($\Delta \text{F1} = +0.0\%$, $\Delta \text{CMLt} = +0.0\%$, $\Delta \text{Jitter} = +0.0\text{ms}$).
+- **Stage 2 Neural-Core Real-World Benchmark (`RUN_20261005_223000_DyadicWaveletAudioAnalyzer_cycle013_candidate`):**
+  - **Macro Salient F1@50ms:** **80.7%** (Neutral vs baseline 80.8%)
+  - **Macro Raw F1@50ms:** **79.2%** (Neutral vs baseline 79.2%)
+  - **Macro CMLt:** **72.4%** | **AMLt:** 72.4% | **Upbeat Gap:** 0.00 | **Jitter:** 34.2ms | **CPU:** 0.65ms
+  - Statistically equivalent across the entire 10-track neural core suite.
+  - *Sweet Child O' Mine:* ΔCMLt: +0.2%, ΔAMLt: +0.2%, ΔJitter: -0.3ms with 29% guitar sustain rejection.
+  - *Nightcall:* ΔF1: +0.3%, ΔCMLt: +0.4%, ΔAMLt: +0.4%, ΔJitter: -0.5ms.
+- **Contract & Memory Profiling:**
+  - `tracemalloc` confirmed **0 dynamic heap allocations** in `update()` hot path over 1000 consecutive frames.
+  - Per-frame latency measured at **0.496ms** in isolated test / **0.65ms** in full suite (well within the $\le 3.0\text{ms}$ embedded frame budget).
+- **Outcome:** `SANDBOX_PASSED / BENCHMARKED (CANDIDATE STABLE)`

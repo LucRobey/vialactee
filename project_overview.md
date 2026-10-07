@@ -33,7 +33,7 @@ graph TD
         Config["Configuration_manager"]
         ListenerFacade["Listener (Facade & 5s Delay Buffer)"]
         AudioIngest["AudioIngestion (Dual-Res Mel Filterbanks: 8/32 Bands)"]
-        AudioAnalyz["MultiBandOnsetAudioAnalyzer (Production 32-Band Onset Engine)<br/><i>Fallback: AudioAnalyzer (Legacy Single-ODF)</i>"]
+        AudioAnalyz["DyadicMetricalAudioAnalyzer (Production 32-Band Onset + Metrical Sub-Pulse Engine)<br/><i>Fallbacks: MultiBandOnsetAudioAnalyzer (stable parent), AudioAnalyzer (Legacy Single-ODF)</i>"]
         ModeMaster["Mode_master (Orchestrator)"]
         TransDir["Transition_Director"]
     end
@@ -88,7 +88,7 @@ graph TD
 
 Here is a breakdown of the core directories in this project:
 
-- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `MultiBandOnsetAudioAnalyzer`, `comb_kernels`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `BeatGridQuantizer`, `Webapp_instruction_logger`, and `Transition_Director`.
+- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `comb_kernels`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `BeatGridQuantizer`, `Webapp_instruction_logger`, and `Transition_Director`.
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
 - **`/config`**: JSON files and managers detailing hardware profiles (`hardware_profile`: `"full"` vs `"small"` in `app_config.json`), unified physical geometry + Web App UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
 - **`/connectors`**: External communication handlers: `Connector.py` (HTTP/WebSocket server on port 8080 exposing `/ws`, `/api/topology`, and `/api/configurations`) and `Local_Microphone.py` (analog audio push stream).

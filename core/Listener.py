@@ -7,27 +7,43 @@ import numpy as np
 from core.AudioIngestion import AudioIngestion
 from core.AudioAnalyzer import AudioAnalyzer
 from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 from core.MusicalContextEngine import MusicalContextEngine
 
 logger = logging.getLogger(__name__)
+
+# Production analyzers selectable through infos["analyzer_model"] (config/app_config.json or --model).
+ANALYZER_REGISTRY = {
+    "AudioAnalyzer": AudioAnalyzer,
+    "MultiBandOnsetAudioAnalyzer": MultiBandOnsetAudioAnalyzer,  # stable fallback / parent engine
+    "DyadicMetricalAudioAnalyzer": DyadicMetricalAudioAnalyzer,  # production default (Cycle 012)
+}
+DEFAULT_ANALYZER_MODEL = "DyadicMetricalAudioAnalyzer"
+
+
+def resolve_analyzer_class(spec: Any) -> Any:
+    """Resolves a class or registry name to an analyzer class; unknown names warn and use the default."""
+    if spec is None:
+        return ANALYZER_REGISTRY[DEFAULT_ANALYZER_MODEL]
+    if isinstance(spec, str):
+        if spec in ANALYZER_REGISTRY:
+            return ANALYZER_REGISTRY[spec]
+        logger.warning(
+            "Unknown analyzer model %r (available: %s); falling back to %s",
+            spec, sorted(ANALYZER_REGISTRY), DEFAULT_ANALYZER_MODEL,
+        )
+        return ANALYZER_REGISTRY[DEFAULT_ANALYZER_MODEL]
+    return spec
+
 
 class Listener:
     def __init__(self, infos: Dict[str, Any], analyzer_class: Optional[Any] = None) -> None:
         self.ingestion = AudioIngestion(infos)
         
-        # Resolve analyzer class: explicit parameter > infos["analyzer_class"] > infos["analyzer_model"] > MultiBandOnsetAudioAnalyzer
-        resolved_class = analyzer_class or infos.get("analyzer_class")
-        if resolved_class is None:
-            model_name = infos.get("analyzer_model", "MultiBandOnsetAudioAnalyzer")
-            if model_name == "AudioAnalyzer":
-                resolved_class = AudioAnalyzer
-            else:
-                resolved_class = MultiBandOnsetAudioAnalyzer
-        elif isinstance(resolved_class, str):
-            if resolved_class == "AudioAnalyzer":
-                resolved_class = AudioAnalyzer
-            else:
-                resolved_class = MultiBandOnsetAudioAnalyzer
+        # Resolve analyzer class: explicit parameter > infos["analyzer_class"] > infos["analyzer_model"] > default
+        resolved_class = resolve_analyzer_class(
+            analyzer_class or infos.get("analyzer_class") or infos.get("analyzer_model")
+        )
 
         self.analyzer = resolved_class(self.ingestion, infos)
 
@@ -57,6 +73,8 @@ class Listener:
         self._ring_novelty_gm = np.zeros(self._ring_capacity, dtype=np.float64)
         self._ring_rhythm_salience = np.zeros(self._ring_capacity, dtype=np.float64)
         self._ring_beat_trust = np.zeros(self._ring_capacity, dtype=np.float64)
+        self._prev_coarse_fft = np.zeros(nb_fft, dtype=np.float64)
+        self._coarse_flux = np.zeros(nb_fft, dtype=np.float64)
 
         self._ring_write = 0  # Next write position
         self._ring_read = 0   # Next read position
@@ -101,7 +119,7 @@ class Listener:
 
         for d_buf in (self._delayed_fft_band_values, self._delayed_chroma_values, self._delayed_smoothed_fft_band_values,
                       self._delayed_smoothed_chroma_values, self._delayed_asserved_fft_band, self._delayed_band_proportion,
-                      self._delayed_band_means, self._delayed_band_flux):
+                      self._delayed_band_means, self._delayed_band_flux, self._prev_coarse_fft, self._coarse_flux):
             d_buf.fill(0)
 
         self._delayed_smoothed_total_power = 0.0
@@ -227,9 +245,16 @@ class Listener:
         self._ring_smoothed_total_power[w] = self.ingestion.smoothed_total_power
         self._ring_asserved_total_power[w] = self.ingestion.asserved_total_power
         nb_fft = self.ingestion.nb_of_fft_band
-        if hasattr(self.analyzer, 'band_flux') and self.analyzer.band_flux is not None:
-            active_f = min(len(self.analyzer.band_flux), nb_fft)
-            self._ring_band_flux[w, :active_f] = self.analyzer.band_flux[:active_f]
+        # Contract: band_flux is the 8-band Mel half-wave-rectified onset flux. Fine-resolution analyzers
+        # (e.g. 32 bands) expose a different width, so derive the coarse flux directly from ingestion.
+        analyzer_flux = getattr(self.analyzer, 'band_flux', None)
+        np.subtract(self.ingestion.fft_band_values, self._prev_coarse_fft, out=self._coarse_flux)
+        np.maximum(self._coarse_flux, 0.0, out=self._coarse_flux)
+        np.copyto(self._prev_coarse_fft, self.ingestion.fft_band_values)
+        if analyzer_flux is not None and len(analyzer_flux) == nb_fft:
+            self._ring_band_flux[w, :] = analyzer_flux
+        else:
+            self._ring_band_flux[w, :] = self._coarse_flux
         self._ring_is_song_change[w] = getattr(self.analyzer, 'is_song_change', False)
         self._ring_is_verse_chorus_change[w] = getattr(self.analyzer, 'is_verse_chorus_change', False)
         self._ring_asserved_novelty[w] = getattr(self.analyzer, 'asserved_novelty', 0.0)
@@ -381,7 +406,7 @@ class Listener:
     def novelty_gm(self): return self._delayed_novelty_gm
 
     @property
-    def bpm(self): return self.analyzer.bpm
+    def bpm(self): return getattr(self.analyzer, 'effective_bpm', self.analyzer.bpm)
 
     @property
     def standalone_bpm(self): return self.analyzer.standalone_bpm

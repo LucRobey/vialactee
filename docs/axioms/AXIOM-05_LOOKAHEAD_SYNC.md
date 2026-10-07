@@ -2,7 +2,7 @@
 
 **Tier:** Tier 0 (Untouchable Golden Axiom)  
 **Status:** Inviolable Law  
-**Enforcement:** `tests/test_audio_pipeline.py`, `core/Listener.py`, `core/MultiBandOnsetAudioAnalyzer.py`  
+**Enforcement:** `tests/test_audio_pipeline.py`, `core/Listener.py`, `core/DyadicMetricalAudioAnalyzer.py`, `core/MultiBandOnsetAudioAnalyzer.py`  
 
 ---
 
@@ -15,11 +15,12 @@
    Audio ingestion maintains a 5.0-second non-causal circular lookahead buffer. Feature extraction, onset detection, and beat tracking execute ahead of time within this lookahead horizon.
 3. **Speaker Time ($T_{\text{speaker}}$) Back-Projection Formula:**
    Visual animations must never align to the raw ingest timestamp $T_{\text{ingest}}$. Phase ($\theta$) and beat arrival timestamps must be mathematically back-projected to real-world speaker cone emission time:
-   $$T_{\text{speaker}} = T_{\text{ingest}} - 5.0\text{ s} - \Delta t_{\text{dynamic\_latency}} - \Delta t_{\text{hardware\_latency}}$$
+   $$T_{\text{speaker}} = T_{\text{ingest}} - D_{\text{net}}, \qquad D_{\text{net}} = 5.0\text{ s} - \Delta t_{\text{dynamic\_latency}} - \Delta t_{\text{hardware\_latency}}$$
    where:
-   - $5.0\text{ s}$: Fixed lookahead delay buffer.
-   - $\Delta t_{\text{dynamic\_latency}}$: Measured dynamically via PortAudio `inputBufferAdcTime` timestamps.
-   - $\Delta t_{\text{hardware\_latency}}$: Calibrated physical audio interface and DAC latency.
+   - $5.0\text{ s}$: Fixed lookahead delay buffer (the speakers emit each sample 5.0 s after capture). **Added** to the back-shift.
+   - $\Delta t_{\text{dynamic\_latency}}$: **Age of the analysed audio** (`now - newest sample time` from PortAudio `inputBufferAdcTime`, plus the half-FFT-window delay). The ingest phase is already stale by this amount, so it **reduces** the back-shift.
+   - $\Delta t_{\text{hardware\_latency}}$ (config keys `led_latency` and `audio_output_latency`): **Net visual lag** $= L_{\text{LED}} - L_{\text{audio out}}$, i.e. how much later the lights appear than the sound is heard (positive = lights late, so we lead). It **reduces** the back-shift.
+   - Derivation: the sound heard at time $t$ is the music from $t - 5.0 - L_{\text{audio out}}$, the LEDs show at $t + L_{\text{LED}}$, and the ingest phase describes the music at $t - \Delta t_{\text{dyn}}$; hence $D_{\text{net}} = 5.0 - \Delta t_{\text{dyn}} + L_{\text{audio out}} - L_{\text{LED}}$.
 4. **Phase Continuity Invariant:**
    The continuous phase variable $\theta \in [0.0, 1.0)$ presented to modes via `listener.beat_phase` must continuously advance relative to $T_{\text{speaker}}$ without abrupt discontinuities.
 
@@ -34,7 +35,7 @@ Raw Audio Ingestion (T_ingest)
 5.0s Lookahead Ring Buffer (DSP & MIR Beat Tracking Ahead of Time)
         │
         ▼
-Back-Projection Equation: T_speaker = T_ingest - 5.0s - Δt_dyn - Δt_hw
+Back-Projection Equation: T_speaker = T_ingest - (5.0s - Δt_dyn - Δt_hw)
         │
         ▼
 Physical LED Flash ◄── <50ms AV Sync ──► Speaker Acoustic Waveform

@@ -20,7 +20,7 @@ graph LR
     Bands8 --> ADSR["Vectorized ADSR Envelopes<br/>(Attack/Decay Smoothing)"]
     ADSR --> DelayQueue["5.0s Lookahead Delay Queue<br/>(Listener Facade)"]
     DelayQueue --> VisualModes["Visual Modes (Segment.rgb_list)"]
-    Bands32 --> MultiBand["MultiBandOnsetAudioAnalyzer"]
+    Bands32 --> MultiBand["DyadicMetricalAudioAnalyzer (extends MultiBandOnsetAudioAnalyzer)"]
 ```
 
 ---
@@ -33,7 +33,7 @@ Implemented in `core/AudioIngestion.py`:
    - Vectorized matrix multiplications map power spectrum bins into Mel frequency bins.
 2. **Dual-Resolution Mel Filterbanks:**
    - **8 Bands (`fft_band_values`):** Preserved for visual lighting modes in `modes/` (Sub-bass, Bass, Low-Mid, Mid, High-Mid, Treble, Brilliance, Air).
-   - **32 Bands (`multiband_fft_values`):** Fed into `MultiBandOnsetAudioAnalyzer` to isolate fine-grained transients:
+   - **32 Bands (`multiband_fft_values`):** Fed into `DyadicMetricalAudioAnalyzer` (via its `MultiBandOnsetAudioAnalyzer` parent) to isolate fine-grained transients:
      - Sub-bass: 20–80 Hz
      - Kick fundamental: 60–120 Hz
      - Snare body and crack: 200–4000 Hz

@@ -38,7 +38,6 @@ class TestBaseAudioAnalyzerContract(unittest.TestCase):
             "HARDWARE_MODE": "simulation",
             "onRaspberry": False,
             "fakeDelay": 5.0,
-            "latency": 0.0,
         }
         self.ingestion = AudioIngestion(self.infos)
 

@@ -147,6 +147,5 @@ class Transition_Director:
                 self.next_change_time = current_time + self.configuration_duration
                 return
             self.logger.info(f"(TD) Timer Expired")
-            transition_config = getattr(self.mode_master, 'selected_transition_config', None)
-            await self.mode_master.change_configuration(transition_config)
+            await self.mode_master.change_configuration(None)
             self.next_change_time = current_time + self.configuration_duration

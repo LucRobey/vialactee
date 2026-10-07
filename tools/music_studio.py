@@ -44,9 +44,12 @@ def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAn
     """
     if model_name in ("AudioAnalyzer", "baseline"):
         return AudioAnalyzer
-    if model_name in ("MultiBandOnsetAudioAnalyzer", "production", "default"):
+    if model_name == "MultiBandOnsetAudioAnalyzer":
         from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
         return MultiBandOnsetAudioAnalyzer
+    if model_name in ("DyadicMetricalAudioAnalyzer", "production", "default"):
+        from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+        return DyadicMetricalAudioAnalyzer
 
     models_dir = os.path.join(repo_root, "research", "experiments", "models")
     discovered_classes: Dict[str, Type[BaseAudioAnalyzer]] = {}
@@ -315,7 +318,7 @@ class MusicStudioApp:
     CHROMA_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     BAND_NAMES = ["Sub-Bass", "Bass", "Low-Mid", "Mid", "High-Mid", "Presence", "Brilliance", "Air"]
 
-    def __init__(self, song_path: str, nb_leds: int = 80, model_name: str = "MultiBandOnsetAudioAnalyzer"):
+    def __init__(self, song_path: str, nb_leds: int = 80, model_name: str = "DyadicMetricalAudioAnalyzer"):
         pygame.init()
         pygame.font.init()
 
@@ -358,7 +361,6 @@ class MusicStudioApp:
             "sensi": 1.0,
             "luminosite": 1.0,
             "fakeDelay": 5.0,
-            "latency": 0.0,
             "useMicrophone": True,
             "nb_of_fft_band": self.nb_bands,
             "nb_of_chroma": 12,
@@ -1833,8 +1835,8 @@ def main():
     parser.add_argument(
         "--model", "-m",
         type=str,
-        default="MultiBandOnsetAudioAnalyzer",
-        help="Rhythm analyzer model class (e.g. MultiBandOnsetAudioAnalyzer, AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
+        default="DyadicMetricalAudioAnalyzer",
+        help="Rhythm analyzer model class (e.g. DyadicMetricalAudioAnalyzer (default), MultiBandOnsetAudioAnalyzer (fallback), AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
     )
     args = parser.parse_args()
 

@@ -137,7 +137,6 @@ class TestAudioAnalyzerIntegration(unittest.TestCase):
             "HARDWARE_MODE": "simulation",
             "onRaspberry": False,
             "fakeDelay": 5.0,
-            "latency": 0.0,
             "analyzer_model": "AudioAnalyzer",
         }
         self.listener = Listener(self.infos, analyzer_class=AudioAnalyzer)
@@ -206,7 +205,6 @@ class TestMultiBandOnsetAudioAnalyzerIntegration(unittest.TestCase):
             "HARDWARE_MODE": "simulation",
             "onRaspberry": False,
             "fakeDelay": 5.0,
-            "latency": 0.0,
             "analyzer_model": "MultiBandOnsetAudioAnalyzer",
         }
         self.listener = Listener(self.infos)

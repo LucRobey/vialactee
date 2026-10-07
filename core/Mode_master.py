@@ -50,7 +50,6 @@ class Mode_master:
         self.segments_names_to_index: Dict[str, int] = {}
         self.activ_configuration: Dict[str, Any] = {}
         self.transition_locked = False
-        self.selected_transition_config: Optional[Dict[str, Any]] = None
         self.queued_configuration_name: Optional[str] = None
         self.mode_settings_catalog: Dict[str, Dict[str, Any]] = {}
         self.pending_system_action: Optional[str] = None
@@ -133,18 +132,6 @@ class Mode_master:
                 "error",
                 f"Reboot failed: {exc}",
             )
-
-    def _selected_transition_label(self) -> str:
-        if self.selected_transition_config is None:
-            return "DYNAMIC"
-        transition_type = self.selected_transition_config.get("type")
-        if transition_type == "explosion":
-            return "CUT"
-        if transition_type == "global_change":
-            return "CROSSFADE"
-        if transition_type == "fade_in_out":
-            return "FADE IN/OUT"
-        return str(transition_type or "DYNAMIC")
 
     def _copy_mode_settings_map(self, mode_settings: Any) -> Dict[str, Dict[str, Any]]:
         if not isinstance(mode_settings, dict):
@@ -307,7 +294,7 @@ class Mode_master:
             "enabledPlaylists": [],
             "activeConfiguration": self.activ_configuration.get("name", "Live Random DNA"),
             "queuedConfiguration": None,
-            "selectedTransition": self._selected_transition_label(),
+            "selectedTransition": "DYNAMIC",
             "transitionLocked": self.transition_locked,
             "transitionState": getattr(self.transition_director, "state", None),
             "transitionProgress": getattr(self.transition_director, "transition_progress", 0.0),
@@ -477,21 +464,6 @@ class Mode_master:
             transition_config=transition_config,
             quantize_downbeat=True
         )
-
-    def _normalize_transition(self, transition_name: Any) -> Optional[Dict[str, Any]]:
-        if not isinstance(transition_name, str):
-            return {"type": "fade_in_out", "duration": 2.0}
-
-        normalized = transition_name.strip().upper()
-        if normalized in ("DYNAMIC", "AUTO"):
-            return None
-        if normalized == "CUT":
-            return {"type": "explosion", "duration": 0.0}
-        if normalized == "CROSSFADE":
-            return {"type": "global_change", "duration": 3.0}
-        if normalized == "FADE IN/OUT":
-            return {"type": "fade_in_out", "duration": 2.0}
-        return {"type": "fade_in_out", "duration": 2.0}
 
     def _segment_name_from_id(self, segment_id: Any) -> Optional[str]:
         if not isinstance(segment_id, str) or len(segment_id.strip()) == 0:

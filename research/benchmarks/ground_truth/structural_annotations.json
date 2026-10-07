@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0",
+  "annotator": "human_expert",
+  "tracks": {
+    "Genesis": {
+      "duration_sec": 234.965,
+      "status": "reviewed",
+      "has_climaxes": true,
+      "events": [
+        {
+          "id": "evt_001",
+          "type": "BUILDUP_OR_RISER",
+          "time_sec": 44.78,
+          "raw_tap_sec": 44.88,
+          "snapped_to_downbeat": true,
+          "snap_delta_ms": -100.0,
+          "pair_id": "drop_1",
+          "note": "Horn fanfare crescendo leading to main electro-bass drop"
+        },
+        {
+          "id": "evt_002",
+          "type": "CLIMAX_OR_DROP",
+          "time_sec": 53.0,
+          "raw_tap_sec": 53.12,
+          "snapped_to_downbeat": true,
+          "snap_delta_ms": -120.0,
+          "pair_id": "drop_1",
+          "note": "Main distorted electro-bass drop"
+        },
+        {
+          "id": "evt_003",
+          "type": "BREAKDOWN_OR_SOLO",
+          "time_sec": 95.84,
+          "raw_tap_sec": 95.95,
+          "snapped_to_downbeat": true,
+          "snap_delta_ms": -110.0,
+          "pair_id": null,
+          "note": "Breakdown into atmospheric choir and pads"
+        }
+      ]
+    },
+    "Bohemian Rhapsody - Remastered 2011": {
+      "duration_sec": 354.326,
+      "status": "reviewed",
+      "has_climaxes": false,
+      "events": [
+        {
+          "id": "evt_001",
+          "type": "SECTION_CHANGE",
+          "time_sec": 48.95,
+          "raw_tap_sec": 49.05,
+          "snapped_to_downbeat": false,
+          "snap_delta_ms": 0.0,
+          "pair_id": null,
+          "note": "Intro to Ballad section ('Mama, just killed a man')"
+        },
+        {
+          "id": "evt_002",
+          "type": "SECTION_CHANGE",
+          "time_sec": 183.12,
+          "raw_tap_sec": 183.22,
+          "snapped_to_downbeat": false,
+          "snap_delta_ms": 0.0,
+          "pair_id": null,
+          "note": "Opera section into Hard Rock section"
+        }
+      ]
+    },
+    "Nightcall": {
+      "duration_sec": 258.432,
+      "status": "unreviewed",
+      "has_climaxes": true,
+      "events": [
+        {
+          "id": "evt_001",
+          "type": "SECTION_CHANGE",
+          "time_sec": 32.273,
+          "raw_tap_sec": 32.273,
+          "snapped_to_downbeat": false,
+          "snap_delta_ms": 0.0,
+          "pair_id": null,
+          "note": ""
+        },
+        {
+          "id": "evt_002",
+          "type": "SECTION_CHANGE",
+          "time_sec": 75.251,
+          "raw_tap_sec": 75.351,
+          "snapped_to_downbeat": false,
+          "snap_delta_ms": 0.0,
+          "pair_id": null,
+          "note": ""
+        },
+        {
+          "id": "evt_003",
+          "type": "SECTION_CHANGE",
+          "time_sec": 117.513,
+          "raw_tap_sec": 117.613,
+          "snapped_to_downbeat": false,
+          "snap_delta_ms": 0.0,
+          "pair_id": null,
+          "note": ""
+        }
+      ]
+    },
+    "Roadgame": {
+      "duration_sec": 224.363,
+      "status": "unreviewed",
+      "has_climaxes": true,
+      "events": []
+    },
+    "Flashback": {
+      "duration_sec": 267.563,
+      "status": "unreviewed",
+      "has_climaxes": true,
+      "events": []
+    },
+    "Sweet Child O' Mine": {
+      "duration_sec": 354.539,
+      "status": "unreviewed",
+      "has_climaxes": true,
+      "events": []
+    },
+    "Under Pressure - Remastered 2011": {
+      "duration_sec": 248.448,
+      "status": "unreviewed",
+      "has_climaxes": true,
+      "events": []
+    },
+    "Pumped Up Kicks": {
+      "duration_sec": 239.616,
+      "status": "unreviewed",
+      "has_climaxes": false,
+      "events": []
+    },
+    "Palladium": {
+      "duration_sec": 373.867,
+      "status": "unreviewed",
+      "has_climaxes": false,
+      "events": []
+    },
+    "Sugar (feat. Francesco Yates)": {
+      "duration_sec": 219.051,
+      "status": "unreviewed",
+      "has_climaxes": true,
+      "events": []
+    }
+  }
+}

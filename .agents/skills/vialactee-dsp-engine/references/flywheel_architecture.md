@@ -36,11 +36,11 @@ Harmonic checks test $1:2$, $2:1$, and $3:2$ (perfect fifth) ratios before commi
 
 ### Total System Latency
 Audio delay is dynamically computed per frame:
-$$\Delta t_{\text{total}} = t_{\text{lookahead}} + \Delta t_{\text{dynamic\_audio\_latency}} + \Delta t_{\text{hardware\_latency}}$$
+$$\Delta t_{\text{total}} = t_{\text{lookahead}} - \Delta t_{\text{dynamic\_audio\_latency}} - \Delta t_{\text{hardware\_latency}}$$
 where:
 - $t_{\text{lookahead}} = 5.0\text{ s}$
-- $\Delta t_{\text{dynamic\_audio\_latency}} = \Delta t_{\text{adc}} + \Delta t_{\text{algorithmic}}$ (queried from PortAudio C-level `time_info.inputBufferAdcTime` plus the Hanning window algorithmic center $\frac{N_{\text{fft}}}{2 \cdot f_s} \approx 46.4\text{ ms}$).
-- $\Delta t_{\text{hardware\_latency}}$ is the configured speaker/DAC output delay (default 0.0s).
+- $\Delta t_{\text{dynamic\_audio\_latency}} = \Delta t_{\text{adc}} + \Delta t_{\text{algorithmic}}$ (queried from PortAudio C-level `time_info.inputBufferAdcTime` plus the Hanning window algorithmic center $\frac{N_{\text{fft}}}{2 \cdot f_s} \approx 46.4\text{ ms}$). It is the **age of the analysed audio**: the ingest phase is already stale by this amount, so it is **subtracted**.
+- $\Delta t_{\text{hardware\_latency}} = $ `led_latency` $-$ `audio_output_latency` (default 0.0s): net visual lag, positive when the lights appear later than the sound (LED pipeline lag minus speaker/DAC lag). It is **subtracted**: a late light must lead.
 
 ### Phase Back-Projection to Speaker Time ($T_{\text{speaker}}$)
 When the lookahead estimate yields future phase $\phi_{\text{ingest}}$, the phase at the physical speaker boundary is:

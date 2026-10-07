@@ -116,8 +116,7 @@ async def _handle_set_auto_transition_time(mm: Any, payload: Dict[str, Any]) -> 
 
 @router.register("live_deck", "select_transition")
 async def _handle_select_transition(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    mm.selected_transition_config = mm._normalize_transition(payload.get("transition"))
-    return {"applied": True}
+    return {"applied": False, "reason": "transition_selection_retired"}
 
 
 @router.register("live_deck", "select_configuration")
@@ -143,10 +142,7 @@ async def _handle_select_mood(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any
 
 @router.register("live_deck", "go_to_next_configuration")
 async def _handle_go_to_next_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    if payload.get("transition"):
-        mm.selected_transition_config = mm._normalize_transition(payload.get("transition"))
     mm.local_transition_manager.schedule_transition(
-        transition_config=mm.selected_transition_config,
         quantize_downbeat=True
     )
     return {"applied": True}

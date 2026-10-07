@@ -40,3 +40,11 @@
 | 2026-09-22 | `RUN_20260922_223430_DyadicMetricalAudioAnalyzer_cycle012_candidate` | `neural-core` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **76.5%** | 65.6% | 75.0% | 0.09 | 34.3ms | 0.70ms |
 | 2026-09-22 | `RUN_20260922_232634_DyadicMetricalAudioAnalyzer_cycle012_synth_v2` | `synthetic` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **96.0%** | 95.8% | 95.8% | 0.00 | 9.9ms | 0.20ms |
 | 2026-09-22 | `RUN_20260922_232749_DyadicMetricalAudioAnalyzer_cycle012_candidate_v2` | `neural-core` | **DyadicMetricalAudioAnalyzer** | `f529c14` | **79.2%** | 72.4% | 72.4% | 0.00 | 34.2ms | 0.29ms |
+| 2026-10-05 | `RUN_20261005_215957_DyadicMetricalAudioAnalyzer_cycle012_promoted_to_core` | `neural-core` | **DyadicMetricalAudioAnalyzer** | `8ad5fc5` | **79.2%** | 72.4% | 72.4% | 0.00 | 34.2ms | 0.44ms |
+| 2026-10-05 | `RUN_20261005_220021_DyadicMetricalAudioAnalyzer_cycle012_promoted_to_core_synth` | `synthetic` | **DyadicMetricalAudioAnalyzer** | `8ad5fc5` | **96.0%** | 95.8% | 95.8% | 0.00 | 9.9ms | 0.48ms |
+| 2026-10-05 | `RUN_20261005_222202_DyadicWaveletAudioAnalyzer_cycle013_synth` | `synthetic` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **95.8%** | 95.8% | 95.8% | 0.00 | 10.5ms | 0.33ms |
+| 2026-10-05 | `RUN_20261005_222234_DyadicWaveletAudioAnalyzer_cycle013_synth_v2` | `synthetic` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **95.8%** | 95.8% | 95.8% | 0.00 | 10.5ms | 0.36ms |
+| 2026-10-05 | `RUN_20261005_222325_DyadicWaveletAudioAnalyzer_cycle013_synth_v3` | `synthetic` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **95.8%** | 95.8% | 95.8% | 0.00 | 10.5ms | 0.62ms |
+| 2026-10-05 | `RUN_20261005_222426_DyadicWaveletAudioAnalyzer_cycle013_synth_final` | `synthetic` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **95.8%** | 95.8% | 95.8% | 0.00 | 10.5ms | 0.90ms |
+| 2026-10-05 | `RUN_20261005_222723_DyadicWaveletAudioAnalyzer_cycle013_synth_canonical` | `synthetic` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **96.0%** | 95.8% | 95.8% | 0.00 | 9.9ms | 0.83ms |
+| 2026-10-05 | `RUN_20261005_223000_DyadicWaveletAudioAnalyzer_cycle013_candidate` | `neural-core` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **79.2%** | 72.4% | 72.4% | 0.00 | 34.2ms | 0.65ms |
