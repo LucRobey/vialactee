@@ -48,6 +48,7 @@ class Segment:
         self.global_rgb_list = None
         
         self.coords_array = None
+        self._reversed_coords_array = None
         self._load_coordinates()
         
         self.isBlocked = False
@@ -57,6 +58,10 @@ class Segment:
 
         self.is_in_transition = False
         self.target_mode_name = None
+        self.transition_technique: Optional[str] = None
+        self.transition_duration: float = 2.0
+        self.transition_start_offset: float = 0.0
+        self.transition_elapsed: float = 0.0
 
         self.modes = {}
         self.initiate_modes(orientation)
@@ -74,10 +79,11 @@ class Segment:
             self.logger.warning(f"Coordinate length mismatch for {self.name}. Expected {self.nb_of_leds}, got {len(coords_list)}")
         else:
             self.coords_array = np.array(coords_list[:self.nb_of_leds])
+            self._reversed_coords_array = self.coords_array[::-1]
 
 
 
-    def update(self, status: Any, blend: Any) -> None:
+    def update(self, status: Any, blend: Any, dt: Optional[float] = None) -> None:
         """
         Update the current active mode and handle any ongoing visual transitions.
         
@@ -85,8 +91,6 @@ class Segment:
         if a transition is in progress, and finally flushes the local buffer to 
         the global hardware LED array.
         """
-        
-        #sécurité, enlevable
         if self.modes[self.activ_mode].isActiv:
             self.modes[self.activ_mode].update()
         else:
@@ -95,38 +99,86 @@ class Segment:
         # State machine for transitions
         if self.is_in_transition:
             target_mode = self.modes.get(self.target_mode_name)
-            prog = float(status.progress)
+            activ_mode_obj = self.modes.get(self.activ_mode)
+            has_custom = activ_mode_obj is not None and getattr(activ_mode_obj, "has_custom_transition", False)
+            status_state = getattr(status, "state", None)
+
+            if dt is not None:
+                self.transition_elapsed += dt
+                dur = self.transition_duration if self.transition_duration > 0.0 else 1e-6
+                offset = self.transition_start_offset
+
+                if self.transition_elapsed < offset:
+                    # Before start_offset: remain entirely in active mode
+                    self.update_leds()
+                    if hasattr(self.leds, "set_segment_mode"):
+                        self.leds.set_segment_mode(self.name, self.activ_mode, self.target_mode_name)
+                    return
+                elif self.transition_elapsed >= offset + dur or has_custom:
+                    if activ_mode_obj is not None:
+                        activ_mode_obj.terminate()
+                    self.activ_mode = self.target_mode_name
+                    self.is_in_transition = False
+                    self.target_mode_name = None
+                    self.transition_technique = None
+                    self.transition_elapsed = 0.0
+                    new_activ_obj = self.modes.get(self.activ_mode)
+                    if new_activ_obj is not None and new_activ_obj.isActiv:
+                        if hasattr(new_activ_obj, "render"):
+                            new_activ_obj.render(self.rgb_list)
+                        else:
+                            new_activ_obj.rgb_list = self.rgb_list
+                            new_activ_obj.update()
+                    self.update_leds()
+                    if hasattr(self.leds, "set_segment_mode"):
+                        self.leds.set_segment_mode(self.name, self.activ_mode, None)
+                    return
+                else:
+                    prog = (self.transition_elapsed - offset) / dur
+                    prog = 1.0 if prog > 1.0 else (0.0 if prog < 0.0 else prog)
+            else:
+                # dt is None: backwards compatibility mode
+                prog = float(getattr(status, "progress", 0.0))
+                if status_state == "PASSATION" or has_custom or prog >= 1.0:
+                    if activ_mode_obj is not None:
+                        activ_mode_obj.terminate()
+                    self.activ_mode = self.target_mode_name
+                    self.is_in_transition = False
+                    self.target_mode_name = None
+                    self.transition_technique = None
+                    self.transition_elapsed = 0.0
+                    new_activ_obj = self.modes.get(self.activ_mode)
+                    if new_activ_obj is not None and new_activ_obj.isActiv:
+                        if hasattr(new_activ_obj, "render"):
+                            new_activ_obj.render(self.rgb_list)
+                        else:
+                            new_activ_obj.rgb_list = self.rgb_list
+                            new_activ_obj.update()
+                    self.update_leds()
+                    if hasattr(self.leds, "set_segment_mode"):
+                        self.leds.set_segment_mode(self.name, self.activ_mode, None)
+                    return
+
+            # Segment is rendering dual buffer transition
             if target_mode is not None and hasattr(target_mode, "on_transition_enter"):
                 target_mode.on_transition_enter(prog)
-            activ_mode_obj = self.modes.get(self.activ_mode)
             if activ_mode_obj is not None and hasattr(activ_mode_obj, "on_transition_exit"):
                 activ_mode_obj.on_transition_exit(prog)
-            if status.state == "TRANSITION_DUAL":
-                if activ_mode_obj is not None and not getattr(activ_mode_obj, "has_custom_transition", False):
-                    
-                    # --- UPDATE NEW MODE INTO SECONDARY BUFFER ---
-                    if target_mode is not None and target_mode.isActiv:
-                        if hasattr(target_mode, "render"):
-                            target_mode.render(self.dual_rgb_list)
-                        else:
-                            target_mode.rgb_list = self.dual_rgb_list
-                            target_mode.update()
-                            target_mode.rgb_list = self.rgb_list
 
-                    # --- SPATIAL MIX BOTH BUFFERS INTO PRIMARY BUFFER ---
-                    active_coords = self.coords_array
-                    if self.way == "DOWN" and self.coords_array is not None:
-                        active_coords = self.coords_array[::-1]
+            if activ_mode_obj is not None and not has_custom:
+                # --- UPDATE NEW MODE INTO SECONDARY BUFFER ---
+                if target_mode is not None and target_mode.isActiv:
+                    if hasattr(target_mode, "render"):
+                        target_mode.render(self.dual_rgb_list)
+                    else:
+                        target_mode.rgb_list = self.dual_rgb_list
+                        target_mode.update()
+                        target_mode.rgb_list = self.rgb_list
 
-                    blend(self.rgb_list, self.dual_rgb_list, status.progress, status.technique, active_coords)
-
-                
-            if status.state == "PASSATION" or (activ_mode_obj is not None and getattr(activ_mode_obj, "has_custom_transition", False)):
-                # Execution complete! Swap the modes and terminate old one.
-                if activ_mode_obj is not None:
-                    activ_mode_obj.terminate()
-                self.activ_mode = self.target_mode_name
-                self.is_in_transition = False
+                # --- SPATIAL MIX BOTH BUFFERS INTO PRIMARY BUFFER ---
+                active_coords = self._reversed_coords_array if (self.way == "DOWN" and self._reversed_coords_array is not None) else self.coords_array
+                tech = self.transition_technique or getattr(status, "technique", None) or "fade_in_out"
+                blend(self.rgb_list, self.dual_rgb_list, prog, tech, active_coords)
         
         self.update_leds()
 
@@ -231,18 +283,21 @@ class Segment:
         Args:
             mode_name (str): The name of the target mode to switch to.
         """
-        if self.is_in_transition:
-            return
-            
         mode_name = self._normalize_mode_name(mode_name)
         if mode_name not in self.modes:
             self.logger.warning(f"ALERTE CE MODE :{mode_name} n'existe pas pour {self.name}")
             return
-            
-        if mode_name == self.activ_mode:
-            return
+
+        if self.is_in_transition:
+            if self.target_mode_name and self.target_mode_name in self.modes:
+                self.modes[self.target_mode_name].terminate()
 
         self.is_in_transition = False
+        self.target_mode_name = None
+        self.transition_technique = None
+        self.transition_duration = 2.0
+        self.transition_start_offset = 0.0
+        self.transition_elapsed = 0.0
         # On terminate l'ancien mode
         self.modes[self.activ_mode].terminate()
         
@@ -261,27 +316,52 @@ class Segment:
                 duration of the transition. Defaults to None (instant swap).
         """
         if not self.isBlocked:
-            if self.is_in_transition:
-                # Ignore new requests entirely if a transition is in progress
+            target_name = self._normalize_mode_name(mode_name)
+            if target_name not in self.modes:
+                self.logger.warning(f"ALERTE CE MODE :{target_name} n'existe pas pour {self.name}")
+                return
+
+            is_forced = bool(transition_config and transition_config.get("force", False))
+
+            if self.is_in_transition and not is_forced:
+                if target_name == self.target_mode_name:
+                    return
+                if target_name == self.activ_mode:
+                    if self.target_mode_name and self.target_mode_name in self.modes:
+                        self.modes[self.target_mode_name].terminate()
+                    self.is_in_transition = False
+                    self.target_mode_name = None
+                    self.transition_technique = None
+                    self.transition_elapsed = 0.0
+                    return
                 self.logger.debug(f"(S) Transition already in progress for {self.name}, ignoring request to {mode_name}")
                 return
-                
-            if transition_config is not None:
-                # Resolve target index
-                target_name = self._normalize_mode_name(mode_name)
-                if target_name not in self.modes:
-                    self.logger.warning(f"ALERTE CE MODE :{target_name} n'existe pas pour {self.name}")
-                    return
-                
-                self.target_mode_name = target_name
 
-                if self.target_mode_name == self.activ_mode:
+            if transition_config is not None:
+                if target_name == self.activ_mode:
+                    if self.is_in_transition:
+                        if self.target_mode_name and self.target_mode_name in self.modes:
+                            self.modes[self.target_mode_name].terminate()
+                        self.is_in_transition = False
+                        self.target_mode_name = None
+                        self.transition_technique = None
+                        self.transition_elapsed = 0.0
                     return
+
+                # If overriding ongoing transition (forced or interrupted)
+                if self.is_in_transition and self.target_mode_name and self.target_mode_name in self.modes:
+                    self.modes[self.target_mode_name].terminate()
+
+                self.target_mode_name = target_name
 
                 # Pre-start the incoming mode so it processes data immediately
                 if not self.modes[self.target_mode_name].isActiv:
                     self.modes[self.target_mode_name].start()
 
+                self.transition_technique = str(transition_config.get("type", transition_config.get("technique", "fade_in_out")))
+                self.transition_duration = float(transition_config.get("duration", 2.0))
+                self.transition_start_offset = float(transition_config.get("start_offset", 0.0))
+                self.transition_elapsed = 0.0
                 self.is_in_transition = True
             else:
                 self.execute_mode_swap(mode_name)
@@ -295,7 +375,16 @@ class Segment:
         Args:
             mode_name (str): The name of the target mode.
         """
+        if self.is_in_transition:
+            if self.target_mode_name and self.target_mode_name in self.modes:
+                self.modes[self.target_mode_name].terminate()
+
         self.is_in_transition = False
+        self.target_mode_name = None
+        self.transition_technique = None
+        self.transition_duration = 2.0
+        self.transition_start_offset = 0.0
+        self.transition_elapsed = 0.0
             
         mode_name = self._normalize_mode_name(mode_name)
         if mode_name not in self.modes:
@@ -305,8 +394,7 @@ class Segment:
         if mode_name == self.activ_mode:
             return
 
-        self.is_in_transition = False
-        #On terminate l'ancien mode
+        # On terminate l'ancien mode
         self.modes[self.activ_mode].terminate()
         
         # On change l'index et on start

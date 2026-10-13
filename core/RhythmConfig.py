@@ -25,6 +25,7 @@ class RhythmConfig:
     # --- Structural Novelty & Song Change ---
     song_novelty_asserved_th: float = 0.8
     structural_cooldown_seconds: float = 20.0
+    structural_warmup_frames: int = 60
     gm_shock_multiplier: float = 1.5
     stm_retention_base: float = 0.98
     ltm_retention_base: float = 0.9985

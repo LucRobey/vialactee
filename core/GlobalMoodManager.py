@@ -190,7 +190,7 @@ class GlobalMoodManager:
         self._blend_progress = progress
 
         # Cosine crossfade weighting: 0.5 * (1.0 - cos(pi * progress))
-        w = np.float32(0.5 * (1.0 - math.cos(math.pi * progress)))
+        w = 0.5 * (1.0 - math.cos(math.pi * progress))
 
         # Zero-allocation arithmetic: mood = from + diff * w
         np.multiply(self._diff_colors, w, out=self._blend_scratch)

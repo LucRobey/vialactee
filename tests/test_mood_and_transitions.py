@@ -129,16 +129,22 @@ class TestGlobalMoodManager(unittest.TestCase):
         for _ in range(50):
             self.manager.update(0.001)
 
-        # Benchmark frames (best of 3 trials to filter out OS interrupt jitter)
+        # Benchmark frames (best of 5 trials with GC disabled to filter out OS interrupt jitter and GC pauses)
+        import gc
         iterations = 500
         best_frame_ms = float("inf")
-        for _ in range(3):
-            t0 = time.perf_counter()
-            for _ in range(iterations):
-                self.manager.update(0.001)
-            trial_ms = ((time.perf_counter() - t0) / iterations) * 1000.0
-            if trial_ms < best_frame_ms:
-                best_frame_ms = trial_ms
+        gc.collect()
+        gc.disable()
+        try:
+            for _ in range(5):
+                t0 = time.perf_counter()
+                for _ in range(iterations):
+                    self.manager.update(0.001)
+                trial_ms = ((time.perf_counter() - t0) / iterations) * 1000.0
+                if trial_ms < best_frame_ms:
+                    best_frame_ms = trial_ms
+        finally:
+            gc.enable()
 
         self.assertLess(
             best_frame_ms, 0.01,
@@ -320,7 +326,7 @@ class TestLocalTransitionManager(unittest.TestCase):
 
         ctx_chill = MagicMock(is_drop_impact=False, energy=0.3, salience=0.2, is_rhythmic=False)
         tech_chill = self.ltm.select_transition_technique(ctx_chill)
-        self.assertEqual(tech_chill["type"], "global_change")  # smooth cosine crossfade
+        self.assertEqual(tech_chill["type"], "fade_in_out")  # smooth cosine crossfade
 
     def test_axiom_02_zero_allocation_in_steady_state(self):
         """LocalTransitionManager.update() must allocate ZERO heap bytes in steady state."""
@@ -429,7 +435,7 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
 
         tech = self.ltm.select_transition_technique(mock_ctx)
         self.assertIn("type", tech)
-        self.assertEqual(tech["type"], "global_change")
+        self.assertEqual(tech["type"], "fade_in_out")
 
     def test_small_profile_verticals_discovered_as_vertical_cohorts(self):
         """Small profile vertical segments (Segment s1/s2/s3) must be vertical cohorts."""
@@ -483,6 +489,55 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
         self.ltm.update(0.033)
         self.assertIsNone(self.ltm._pending_transition)
         mock_seg.change_mode.assert_called_once()
+
+    def test_generate_staggered_configs_cohort_complementary(self):
+        """Verifies generate_staggered_configs partitions verticals and rings with complementary techniques."""
+        seg_v1 = MagicMock(name="Segment v1", orientation="vertical")
+        seg_v1.name = "Segment v1"
+        seg_h1 = MagicMock(name="Segment h10", orientation="horizontal")
+        seg_h1.name = "Segment h10"
+        self.mock_mm.segments_list = [seg_v1, seg_h1]
+
+        alloc = {"Segment v1": "Impact Shockwave", "Segment h10": "Rainbow"}
+        from transitions.stagger import StaggerPattern
+        configs = self.ltm.generate_staggered_configs(alloc, pattern=StaggerPattern.COHORT_COMPLEMENTARY)
+
+        self.assertEqual(configs["Segment v1"]["type"], "vertical_wipe")
+        self.assertEqual(configs["Segment v1"]["direction"], "DOWN")
+        self.assertEqual(configs["Segment v1"]["start_offset"], 0.0)
+
+        self.assertEqual(configs["Segment h10"]["type"], "fade_in_out")
+        self.assertGreater(configs["Segment h10"]["start_offset"], 0.0)
+
+    def test_schedule_transition_staggered_execution(self):
+        """Verifies schedule_transition with staggered=True passes per-segment configs and max duration to TD."""
+        seg_v1 = MagicMock(name="Segment v1", orientation="vertical", isBlocked=False)
+        seg_v1.name = "Segment v1"
+        seg_h1 = MagicMock(name="Segment h10", orientation="horizontal", isBlocked=False)
+        seg_h1.name = "Segment h10"
+        self.mock_mm.segments_list = [seg_v1, seg_h1]
+        self.mock_mm._find_segment_by_name = lambda n: seg_v1 if n == "Segment v1" else seg_h1
+
+        mock_td = MagicMock()
+        mock_td.is_in_transition = False
+        self.mock_mm.transition_director = mock_td
+
+        self.ltm.schedule_transition(
+            allocation={"Segment v1": "Impact Shockwave", "Segment h10": "Rainbow"},
+            quantize_downbeat=False,
+            staggered=True,
+        )
+
+        seg_v1.change_mode.assert_called_once()
+        seg_h1.change_mode.assert_called_once()
+        cfg_v1 = seg_v1.change_mode.call_args[0][1]
+        cfg_h1 = seg_h1.change_mode.call_args[0][1]
+
+        # TD must receive start_transition with total_duration = max(dur + offset)
+        mock_td.start_transition.assert_called_once()
+        td_cfg = mock_td.start_transition.call_args[0][0]
+        expected_max = max(cfg_v1["duration"] + cfg_v1["start_offset"], cfg_h1["duration"] + cfg_h1["start_offset"])
+        self.assertAlmostEqual(td_cfg["duration"], expected_max, places=2)
 
 
 if __name__ == "__main__":

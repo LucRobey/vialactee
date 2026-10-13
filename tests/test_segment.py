@@ -138,6 +138,125 @@ class TestSegment(unittest.TestCase):
         self.segment.update_leds()
         np.testing.assert_array_equal(self.global_leds[self.indexes], self.segment.rgb_list[::-1])
 
+    def test_local_timing_staggered_lifecycle(self):
+        """Verifies start_offset delay, local progress calculation, and completion."""
+        start_mode = "Rainbow"
+        target_mode = "Plasma Fire"
+        self.segment.execute_mode_swap(start_mode)
+
+        # Transition with 0.5s offset, 1.0s duration, vertical_wipe technique
+        self.segment.change_mode(target_mode, {
+            "type": "vertical_wipe",
+            "duration": 1.0,
+            "start_offset": 0.5,
+        })
+        self.assertTrue(self.segment.is_in_transition)
+        self.assertEqual(self.segment.transition_start_offset, 0.5)
+        self.assertEqual(self.segment.transition_duration, 1.0)
+        self.assertEqual(self.segment.transition_technique, "vertical_wipe")
+
+        blend = MagicMock()
+        status = TransitionStatus(state="TRANSITION_DUAL", progress=0.1, technique="fade_in_out")
+
+        # 1. Before start_offset (elapsed = 0.3 < 0.5): remains in active mode, no blend
+        self.segment.update(status, blend, dt=0.3)
+        blend.assert_not_called()
+        self.assertTrue(self.segment.is_in_transition)
+        self.assertEqual(self.segment.activ_mode, start_mode)
+
+        # 2. During transition (elapsed = 0.3 + 0.4 = 0.7s, offset=0.5, dur=1.0)
+        # Local progress p = (0.7 - 0.5) / 1.0 = 0.20
+        self.segment.update(status, blend, dt=0.4)
+        blend.assert_called_once()
+        call_args = blend.call_args[0]
+        # args: (rgb_list, dual_rgb_list, progress, technique, coords)
+        self.assertAlmostEqual(call_args[2], 0.20, places=2)
+        self.assertEqual(call_args[3], "vertical_wipe")
+        self.assertEqual(self.segment.activ_mode, start_mode)
+        self.assertTrue(self.segment.is_in_transition)
+
+        # 3. Midway (elapsed = 0.7 + 0.5 = 1.2s, p = (1.2 - 0.5)/1.0 = 0.70)
+        blend.reset_mock()
+        self.segment.update(status, blend, dt=0.5)
+        blend.assert_called_once()
+        self.assertAlmostEqual(blend.call_args[0][2], 0.70, places=2)
+
+        # 4. Past completion (elapsed = 1.2 + 0.4 = 1.6s >= 1.5s total)
+        blend.reset_mock()
+        self.segment.update(status, blend, dt=0.4)
+        blend.assert_not_called()
+        self.assertFalse(self.segment.is_in_transition)
+        self.assertEqual(self.segment.activ_mode, target_mode)
+
+    def test_local_timing_not_aborted_by_idle_director_passation(self):
+        """Transition must NOT abort on frame 1 when Director is in PASSATION (idle)."""
+        start_mode = "Rainbow"
+        target_mode = "Plasma Fire"
+        self.segment.execute_mode_swap(start_mode)
+
+        self.segment.change_mode(target_mode, {"type": "fade_in_out", "duration": 1.0, "start_offset": 0.0})
+        self.assertTrue(self.segment.is_in_transition)
+
+        idle_status = TransitionStatus(state="PASSATION", progress=0.0)
+        blend = MagicMock()
+
+        # Frame 1: dt=0.1. Must remain in transition!
+        self.segment.update(idle_status, blend, dt=0.1)
+        self.assertTrue(self.segment.is_in_transition)
+        blend.assert_called_once()
+        self.assertAlmostEqual(blend.call_args[0][2], 0.10, places=2)
+
+        # Advance to completion: dt=0.95 -> total 1.05s >= 1.0s
+        blend.reset_mock()
+        self.segment.update(idle_status, blend, dt=0.95)
+        self.assertFalse(self.segment.is_in_transition)
+        self.assertEqual(self.segment.activ_mode, target_mode)
+
+    def test_forced_interruption_and_mode_cancel(self):
+        """Forced transition interrupts ongoing transition; requesting active mode cancels transition."""
+        start_mode = "Rainbow"
+        mid_mode = "Plasma Fire"
+        self.segment.execute_mode_swap(start_mode)
+
+        self.segment.change_mode(mid_mode, {"type": "fade_in_out", "duration": 2.0})
+        self.assertTrue(self.segment.is_in_transition)
+        self.assertEqual(self.segment.target_mode_name, mid_mode)
+
+        # Non-forced request to a different mode while transitioning is ignored
+        self.segment.change_mode("Hyper Strobe", {"type": "fade_in_out", "duration": 2.0})
+        self.assertEqual(self.segment.target_mode_name, mid_mode)
+
+        # Forced request overrides ongoing transition (e.g. drop explosion)
+        self.segment.change_mode("Hyper Strobe", {"type": "explosion", "duration": 0.4, "force": True})
+        self.assertTrue(self.segment.is_in_transition)
+        self.assertEqual(self.segment.target_mode_name, "Hyper Strobe")
+        self.assertEqual(self.segment.transition_technique, "explosion")
+        self.assertFalse(self.segment.modes[mid_mode].isActiv)  # mid_mode terminated
+
+        # Requesting active mode cancels transition and stays on active mode
+        self.segment.change_mode(start_mode, {"type": "fade_in_out", "duration": 2.0})
+        self.assertFalse(self.segment.is_in_transition)
+        self.assertIsNone(self.segment.target_mode_name)
+        self.assertEqual(self.segment.activ_mode, start_mode)
+        self.assertTrue(self.segment.modes[start_mode].isActiv)
+
+    def test_target_mode_rendered_on_completion_frame(self):
+        """On the exact frame of passation completion, target mode is rendered into rgb_list."""
+        start_mode = "Rainbow"
+        target_mode = "Plasma Fire"
+        self.segment.execute_mode_swap(start_mode)
+
+        self.segment.change_mode(target_mode, {"type": "fade_in_out", "duration": 0.2, "start_offset": 0.0})
+        status = TransitionStatus(state="TRANSITION_DUAL", progress=0.5)
+        blend = MagicMock()
+
+        # Step to completion in 1 step: dt=0.25 >= 0.20
+        self.segment.update(status, blend, dt=0.25)
+        self.assertFalse(self.segment.is_in_transition)
+        self.assertEqual(self.segment.activ_mode, target_mode)
+        # Verify the target mode is active and running
+        self.assertTrue(self.segment.modes[target_mode].isActiv)
+
 
 if __name__ == '__main__':
     unittest.main()

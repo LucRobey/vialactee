@@ -362,11 +362,12 @@ class Mode_master:
 
         transition_status = self.transitions.get_status()
         blend = self.transitions.blend
+        dt = frame_dt or 0.033
         with self.profiler.measure("modes_render"):
             if getattr(self.profiler, "track_slowest_mode", False) and getattr(self.profiler, "active", False):
                 for seg in self.segments_list:
                     t0 = time.perf_counter()
-                    seg.update(transition_status, blend)
+                    seg.update(transition_status, blend, dt=dt)
                     t_seg = time.perf_counter() - t0
                     if t_seg > slowest_seg_time:
                         slowest_seg_time = t_seg
@@ -374,14 +375,13 @@ class Mode_master:
                         slowest_mode_name = getattr(seg, "activ_mode", "unknown")
             else:
                 for seg in self.segments_list:
-                    seg.update(transition_status, blend)
+                    seg.update(transition_status, blend, dt=dt)
 
         if slowest_seg is not None:
             self.profiler.record_slowest_mode(slowest_seg, slowest_mode_name, slowest_seg_time)
 
         self.current_time = time.time()
         with self.profiler.measure("transitions"):
-            dt = frame_dt or 0.033
             self.mood_manager.update(dt)
             orders = self.transitions.update(dt, TransitionBridge.build_music_snapshot(self.listener))
             if orders is not None:

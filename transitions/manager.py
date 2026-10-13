@@ -1,23 +1,7 @@
 """
 transitions/manager.py - Music Matchmaker, Probabilistic Cohort Allocator, & Downbeat Quantizer.
-
-Central orchestrator for intelligent, non-rigid visual transitions:
-1. Music Matchmaker: Evaluates live musical context (energy, salience, beat_trust, novelty)
-   from MusicalContextEngine into target mode DNA (energy, punch, rhythm, complexity).
-2. Weighted Lottery: Probabilistically selects mode candidates according to DNA distance,
-   ensuring high musical affinity while preserving freshness and surprise.
-3. Flexible Cohort Allocation: Partitions segments into natural cohorts (e.g. 4 vertical pillars,
-   horizontal rings) and applies non-rigid probabilistic patterns:
-   - DIVERSE: Independent lottery draws per segment.
-   - SYMMETRIC_PAIRS: Symmetric pairings (e.g. ABAB or ABBA for 4 pillars, ABA for 3-rings).
-   - UNISON: All segments in the cohort run identical modes (heightened during drops/impacts).
-4. Downbeat Quantization: Aligns transitions to the musical downbeat (listener.beat_phase < 0.05).
-5. Clean Transition Techniques: Selects smooth cosine crossfades, directional wipes, or transient blips.
-
-Guarantees:
-- AXIOM-01: Execution time <= 0.01 ms per frame in steady-state.
-- AXIOM-02: Zero dynamic heap allocations in hot-path update().
-- AXIOM-07: Code length <= 500 lines.
+Evaluates musical context, allocates modes with weighted lotteries, and quantizes transitions.
+Guarantees: AXIOM-01 (<= 0.01 ms), AXIOM-02 (zero heap alloc), AXIOM-07 (<= 500 lines).
 """
 
 from typing import Dict, List, Any, Optional, Tuple
@@ -27,6 +11,12 @@ import random
 import time
 
 from transitions.mode_dna import MODE_DNA, DEFAULT_MODE_DNA, get_mode_dna
+from transitions.stagger import (
+    StaggerPattern,
+    discover_segment_cohorts,
+    generate_staggered_configs,
+    select_stagger_pattern,
+)
 
 
 class CohortPattern(str, Enum):
@@ -37,7 +27,7 @@ class CohortPattern(str, Enum):
 
 
 TRANSITION_TECHNIQUES: Dict[str, Dict[str, Any]] = {
-    "smooth_cosine_crossfade": {"type": "global_change", "duration": 2.0},
+    "smooth_cosine_crossfade": {"type": "fade_in_out", "duration": 2.0},
     "directional_wipe": {"type": "vertical_wipe", "duration": 1.2},
     "transient_blip": {"type": "explosion", "duration": 0.4},
 }
@@ -100,8 +90,9 @@ class LocalTransitionManager:
             self._pending_transition["elapsed"] = self._pending_transition.get("elapsed", 0.0) + dt
             elapsed = self._pending_transition["elapsed"]
 
-            # Trigger condition: downbeat hit (phase < 0.05), beat impulse, or timeout fallback
-            if phase < 0.05 or is_beat or elapsed >= self._downbeat_timeout:
+            is_beat_trustworthy = _safe_float(getattr(self.listener, "beat_trust", 0.0), 0.0) >= 0.20
+            downbeat_hit = (phase < 0.05 and is_beat_trustworthy) or is_beat
+            if downbeat_hit or elapsed >= self._downbeat_timeout:
                 allocation = self._pending_transition["allocation"]
                 config = self._pending_transition["config"]
                 self._pending_transition = None
@@ -354,7 +345,7 @@ class LocalTransitionManager:
         Picks a clean transition technique based on audio kinetics:
         - Transient blip (0.4s cut/explosion) on high energy or drop impacts.
         - Directional wipe (1.2s vertical/lateral wipe) on rhythmic grooves.
-        - Smooth cosine crossfade (2.0s global change) on ambient/chill sections.
+        - Smooth cosine crossfade (2.0s fade_in_out) on ambient/chill sections.
         """
         ctx = context or getattr(self.listener, "context", None)
         if ctx is not None:
@@ -369,22 +360,58 @@ class LocalTransitionManager:
 
         return dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
 
+    def generate_staggered_configs(
+        self,
+        allocation: Dict[str, str],
+        base_config: Optional[Dict[str, Any]] = None,
+        pattern: Optional[StaggerPattern] = None,
+        step_delay: float = 0.15,
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Builds per-segment transition configurations with staggered start offsets
+        and/or cohort-specific techniques.
+        """
+        cfg = base_config or self.select_transition_technique()
+        base_tech = cfg.get("type", "fade_in_out")
+        base_dur = float(cfg.get("duration", 2.0))
+        stagger_pat = pattern or select_stagger_pattern(getattr(self.listener, "context", None))
+        verts, rings = self._discover_segment_cohorts()
+        return generate_staggered_configs(
+            allocation=allocation,
+            verticals=verts,
+            rings=rings,
+            base_technique=base_tech,
+            base_duration=base_dur,
+            pattern=stagger_pat,
+            step_delay=step_delay,
+        )
+
     def schedule_transition(
         self,
         allocation: Optional[Dict[str, str]] = None,
-        transition_config: Optional[Dict[str, Any]] = None,
+        transition_config: Optional[Any] = None,
         quantize_downbeat: bool = True,
+        staggered: bool = False,
+        stagger_pattern: Optional[StaggerPattern] = None,
     ) -> None:
         """
         Queues or immediately triggers an installation mode transition.
 
         Args:
             allocation: Mapping of {segment_name: mode_name}. Defaults to allocate_all_segments().
-            transition_config: Transition parameters dict. Defaults to select_transition_technique().
+            transition_config: Single transition config dict OR mapping of {seg_name: config_dict}.
             quantize_downbeat: If True, waits for listener.beat_phase < 0.05 before firing.
+            staggered: If True, generates staggered timing across cohorts.
+            stagger_pattern: Optional StaggerPattern override when staggered=True.
         """
         target_alloc = allocation if allocation is not None else self.allocate_all_segments()
-        target_cfg = transition_config if transition_config is not None else self.select_transition_technique()
+        if staggered:
+            base_cfg = transition_config if (isinstance(transition_config, dict) and "type" in transition_config) else None
+            target_cfg = self.generate_staggered_configs(target_alloc, base_config=base_cfg, pattern=stagger_pattern)
+        elif transition_config is not None:
+            target_cfg = transition_config
+        else:
+            target_cfg = self.select_transition_technique()
 
         if not quantize_downbeat:
             self._execute_transition(target_alloc, target_cfg)
@@ -397,15 +424,30 @@ class LocalTransitionManager:
             "elapsed": 0.0,
         }
 
-    def _execute_transition(self, allocation: Dict[str, str], transition_config: Dict[str, Any]) -> None:
+    def _execute_transition(self, allocation: Dict[str, str], transition_config: Any) -> None:
         """Dispatches mode updates to physical segments and kicks Transition_Director."""
         if not allocation:
             return
 
+        is_per_seg = isinstance(transition_config, dict) and any(k in allocation for k in transition_config)
+        max_duration = 0.0
+        primary_tech = "fade_in_out"
+
         for seg_name, mode_name in allocation.items():
             segment = getattr(self.mode_master, "_find_segment_by_name", lambda n: None)(seg_name)
             if segment is not None and getattr(segment, "isBlocked", False) is not True:
-                segment.change_mode(mode_name, transition_config)
+                seg_cfg = transition_config[seg_name] if (is_per_seg and seg_name in transition_config) else (transition_config or {})
+                segment.change_mode(mode_name, seg_cfg)
+                if hasattr(segment, "change_way") and seg_cfg.get("direction"):
+                    segment.change_way(seg_cfg["direction"])
+
+                dur = float(seg_cfg.get("duration", 2.0))
+                offset = float(seg_cfg.get("start_offset", 0.0))
+                if offset + dur > max_duration:
+                    max_duration = offset + dur
+                if primary_tech == "fade_in_out" and seg_cfg.get("type"):
+                    primary_tech = seg_cfg["type"]
+
                 if isinstance(getattr(self.mode_master, "activ_configuration", None), dict):
                     modes_dict = self.mode_master.activ_configuration.setdefault("modes", {})
                     modes_dict[seg_name] = mode_name
@@ -415,7 +457,10 @@ class LocalTransitionManager:
 
         td = getattr(self.mode_master, "transition_director", None)
         if td is not None and hasattr(td, "start_transition"):
-            td.start_transition(transition_config)
+            if is_per_seg:
+                td.start_transition({"type": primary_tech, "duration": max_duration, "total_duration": max_duration})
+            else:
+                td.start_transition(transition_config)
 
         self._dwell_timer = 0.0
 
@@ -425,27 +470,7 @@ class LocalTransitionManager:
 
     def _discover_segment_cohorts(self) -> Tuple[List[str], List[List[str]]]:
         """Discovers vertical pillars and horizontal rings from Mode_master segments."""
-        segments = getattr(self.mode_master, "segments_list", [])
-        verticals: List[str] = []
-        rings_dict: Dict[str, List[str]] = {}
-
-        for seg in segments:
-            name = getattr(seg, "name", "")
-            orientation = getattr(seg, "orientation", "")
-            # Vertical detection: orientation == "vertical", 'Segment v', or 'Segment s' (small profile verticals)
-            if orientation == "vertical" or " v" in name or " s" in name:
-                verticals.append(name)
-            elif orientation == "horizontal" or " h" in name:
-                # Ring grouping: 'Segment h10', 'Segment h11' -> 'h1'
-                prefix = name.split()[1][:2] if len(name.split()) > 1 and len(name.split()[1]) >= 2 else "h"
-                rings_dict.setdefault(prefix, []).append(name)
-            else:
-                rings_dict.setdefault("other", []).append(name)
-
-        # Sort for stable geometric indexing
-        verticals.sort()
-        rings = [sorted(group) for group in rings_dict.values()]
-        return verticals, rings
+        return discover_segment_cohorts(getattr(self.mode_master, "segments_list", []))
 
     def _get_candidate_pool_for_segments(self, segment_names: List[str]) -> List[str]:
         """Aggregates mode names loaded across the given segments."""

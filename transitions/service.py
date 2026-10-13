@@ -86,7 +86,10 @@ class DefaultTransitionService(TransitionService):
     """Synchronous front door of the transition sector."""
 
     def __init__(self, infos: Optional[Dict[str, Any]] = None, segments_path: Optional[str] = None) -> None:
-        self._director = Transition_Director(infos or {}, segments_path)
+        service_infos = dict(infos or {})
+        if "min_time_between_transitions" not in service_infos:
+            service_infos["min_time_between_transitions"] = 5.0
+        self._director = Transition_Director(service_infos, segments_path)
         self._host = _Host(self._director)
         self._music = _MusicView()
         self._manager = LocalTransitionManager(self._host, self._music)
@@ -105,8 +108,10 @@ class DefaultTransitionService(TransitionService):
         self._clock += dt
         self._music.set(music)
         if self._director.update(self._clock, music):
-            self._reason = "timer"
-            self._manager.schedule_transition(quantize_downbeat=True)
+            self._reason = getattr(self._director, "last_trigger_reason", "timer") or "timer"
+            cfg = getattr(self._director, "pending_transition_config", None)
+            quantize = getattr(self._director, "pending_quantize_downbeat", True)
+            self._manager.schedule_transition(transition_config=cfg, quantize_downbeat=quantize)
         self._manager.update(dt)
         return self._drain()
 
@@ -122,12 +127,26 @@ class DefaultTransitionService(TransitionService):
 
     # --- requests ------------------------------------------------------------
 
-    def request_next(self, technique: Optional[str] = None) -> None:
+    def request_next(
+        self,
+        technique: Optional[str] = None,
+        staggered: bool = False,
+        stagger_pattern: Optional[Any] = None,
+    ) -> None:
         self._reason = "request_next"
-        self._manager.schedule_transition(transition_config=self._resolve(technique), quantize_downbeat=True)
+        self._director.reset_cooldown()
+        self._director.is_pending = True
+        self._manager.schedule_transition(
+            transition_config=self._resolve(technique),
+            quantize_downbeat=True,
+            staggered=staggered,
+            stagger_pattern=stagger_pattern,
+        )
 
     def request_drop(self) -> None:
         self._reason = "request_drop"
+        self._director.reset_cooldown()
+        self._director.is_pending = True
         self._manager.schedule_transition(transition_config=dict(DROP_TECHNIQUE), quantize_downbeat=False)
 
     def set_locked(self, locked: bool) -> None:
@@ -154,9 +173,11 @@ class DefaultTransitionService(TransitionService):
             state=d.state,
             progress=float(d.transition_progress),
             is_in_transition=d.is_in_transition,
+            is_cooling_down=d.is_cooling_down,
             is_locked=d.locked,
             auto_interval=float(d.configuration_duration),
             technique=d.transition_type,
+            cooldown_remaining=float(getattr(d, "cooldown_remaining", 0.0)),
         )
 
     # --- internals -----------------------------------------------------------
@@ -173,14 +194,26 @@ class DefaultTransitionService(TransitionService):
         if not self._host.recorded:
             return None
         orders = []
+        max_duration = 0.0
         for seg, mode, cfg in self._host.recorded:
             cfg = cfg or {}
+            dur = float(cfg.get("duration", 2.0))
+            offset = float(cfg.get("start_offset", 0.0))
+            if offset + dur > max_duration:
+                max_duration = offset + dur
             orders.append(SegmentOrder(
                 segment=seg,
                 target_mode=mode,
                 technique=str(cfg.get("type", "fade_in_out")),
-                duration=float(cfg.get("duration", 2.0)),
+                duration=dur,
+                direction=cfg.get("direction"),
+                start_offset=offset,
             ))
             self._last_orders[seg] = mode
         self._host.recorded = []
-        return TransitionOrders(orders=tuple(orders), reason=self._reason)
+        if max_duration > 0 and self._director.is_in_transition:
+            if max_duration > self._director.transition_duration:
+                self._director.set_duration(max_duration)
+        reason = self._reason
+        self._reason = ""
+        return TransitionOrders(orders=tuple(orders), reason=reason)

@@ -48,9 +48,13 @@ class MusicSnapshot:
     is_locked: bool = False
     is_rhythmic: bool = False
     is_silent: bool = False
+    is_song_change: bool = False
+    is_verse_chorus_change: bool = False
     live_is_song_change: bool = False
     live_is_verse_chorus_change: bool = False
     lookahead_seconds: float = 5.0
+    drop_countdown: float = 0.0
+    is_drop_imminent: bool = False
 
 
 # =============================================================================
@@ -121,9 +125,11 @@ class TransitionStatus:
     state: str = "PASSATION"                       # "PASSATION" (idle) | "TRANSITION_DUAL"
     progress: float = 0.0                          # 0.0 .. 1.0
     is_in_transition: bool = False
+    is_cooling_down: bool = False
     is_locked: bool = False
     auto_interval: float = 20.0
     technique: Optional[str] = None
+    cooldown_remaining: float = 0.0
 
 
 # =============================================================================
@@ -155,7 +161,12 @@ class TransitionService:
 
     # --- requests ------------------------------------------------------------
 
-    def request_next(self, technique: Optional[str] = None) -> None:
+    def request_next(
+        self,
+        technique: Optional[str] = None,
+        staggered: bool = False,
+        stagger_pattern: Optional[Any] = None,
+    ) -> None:
         """Ask for the next transition (beat-aligned). Technique None = sector decides."""
         raise NotImplementedError
 

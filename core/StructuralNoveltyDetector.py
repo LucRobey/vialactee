@@ -47,6 +47,30 @@ class StructuralNoveltyDetector:
         self.is_verse_chorus_change = False
         self.is_song_change = False
 
+        # Warmup and startup initialization
+        self.warmup_frames_total = int(getattr(self.config, 'structural_warmup_frames', 60))
+        self._warmup_frames_remaining = self.warmup_frames_total
+        self._is_first_frame = True
+
+    def reset(self) -> None:
+        """Resets memory envelopes, event history, and warmup countdown."""
+        self.stm_timbre.fill(0.0)
+        self.ltm_timbre.fill(0.0)
+        self.stm_power = 0.0
+        self.ltm_power = 0.0
+        self.novelty_lm = 0.5
+        self.novelty_gm = 0.5
+        self.asserved_novelty = 0.0
+        self.combined_novelty = 0.0
+        self.song_changes_times.clear()
+        self.structural_changes_times.clear()
+        self.last_structural_change_time = 0.0
+        self.silence_frames = 0
+        self.is_verse_chorus_change = False
+        self.is_song_change = False
+        self._warmup_frames_remaining = self.warmup_frames_total
+        self._is_first_frame = True
+
     def update(
         self,
         current_timbre: np.ndarray,
@@ -59,9 +83,18 @@ class StructuralNoveltyDetector:
         Processes instantaneous timbre and power to update memory envelopes
         and detect structural events.
         """
+        # 0. First-frame dynamic timestamp anchoring
+        if self._is_first_frame:
+            self.last_structural_change_time = current_time
+            self._is_first_frame = False
+
         # 1. Reset per-frame triggers
         self.is_verse_chorus_change = False
         self.is_song_change = False
+
+        in_warmup = self._warmup_frames_remaining > 0
+        if in_warmup:
+            self._warmup_frames_remaining -= 1
 
         # 2. Update Short-Term and Long-Term Memory (STM/LTM)
         stm_retention = self.config.stm_retention_base ** fps_ratio
@@ -101,7 +134,7 @@ class StructuralNoveltyDetector:
 
         # 5. Event Classification
         # A. Seamless Crossfade / Song Drop
-        if self.asserved_novelty > self.config.song_novelty_asserved_th:
+        if self.asserved_novelty > self.config.song_novelty_asserved_th and not in_warmup:
             if (
                 len(self.song_changes_times) == 0
                 or (current_time - self.song_changes_times[-1]) > self.config.structural_cooldown_seconds
@@ -114,7 +147,7 @@ class StructuralNoveltyDetector:
                 self.ltm_power = self.stm_power
 
         # B. Verse / Chorus Boundary
-        elif passed_gm:
+        elif passed_gm and not in_warmup:
             if (current_time - self.last_structural_change_time) > self.config.structural_cooldown_seconds:
                 self.structural_changes_times.append(current_time)
                 self.last_structural_change_time = current_time

@@ -346,6 +346,19 @@ class Local_AudioFile:
             self.listener._ring_timestamps[r] = now - self.lookahead_seconds + (i / 60.0)
         self.listener.last_env_time = now
 
+        # Flush any false triggers and novelty transients generated during fast-forward warmup
+        if hasattr(self.listener, "_ring_is_song_change"):
+            self.listener._ring_is_song_change.fill(False)
+            self.listener._ring_is_verse_chorus_change.fill(False)
+            self.listener._ring_asserved_novelty.fill(0.0)
+            self.listener._ring_combined_novelty.fill(0.0)
+            self.listener._delayed_is_song_change = False
+            self.listener._delayed_is_verse_chorus_change = False
+            self.listener._delayed_asserved_novelty = 0.0
+            self.listener._delayed_combined_novelty = 0.0
+        if hasattr(self.listener, 'context'):
+            self.listener.context.reset()
+
     def advance_ingest_frame(self, sync_offset_seconds: float = 0.0) -> int:
         """
         Advances ingestion in exact 735-sample increments to match actual speaker playback.

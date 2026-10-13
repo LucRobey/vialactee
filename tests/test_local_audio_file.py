@@ -164,6 +164,46 @@ class TestLocalAudioFile(unittest.TestCase):
         strip.set_audio_player(player)
         self.assertIs(vis.audio_player, player)
 
+    def test_startup_transition_stability_and_ring_buffer_cleanliness(self):
+        """Verifies that prime_analyzer leaves zero false triggers and Transition_Director experiences zero startup transitions."""
+        from transitions.director import Transition_Director
+        from core.TransitionBridge import build_music_snapshot
+
+        infos = dict(self.infos)
+        infos["startup_grace_period"] = 3.0
+        listener = Listener(infos)
+        director = Transition_Director(infos)
+
+        player = Local_AudioFile(listener, infos, song_path=self.test_wav_path)
+        player.prime_analyzer()
+
+        # 1. Verify ring buffers and delayed triggers are pristine after pre-roll
+        self.assertFalse(np.any(listener._ring_is_song_change))
+        self.assertFalse(np.any(listener._ring_is_verse_chorus_change))
+        self.assertFalse(listener._delayed_is_song_change)
+        self.assertFalse(listener._delayed_is_verse_chorus_change)
+
+        # 2. Simulate 180 frames (3.0 seconds) of speaker playback
+        t_start = 1000.0
+        dt = 1.0 / 60.0
+        transitions_fired = 0
+
+        for f in range(180):
+            current_time = t_start + f * dt
+            # Step the audio player ingestion
+            player.speaker_sample_pos = f * player.hop_samples
+            player.advance_ingest_frame()
+
+            # Create snapshot for Transition_Director
+            music = build_music_snapshot(listener)
+            if director.update(current_time, music):
+                transitions_fired += 1
+
+        self.assertEqual(transitions_fired, 0, f"No transitions should fire during the 3.0s startup grace window, got reason={director.last_trigger_reason}")
+        self.assertFalse(director._song_change_armed)
+        self.assertFalse(director._structural_change_armed)
+        self.assertFalse(director._drop_buildup_armed)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -36,6 +36,7 @@ def fake_music(t: float, bpm: float = 120.0) -> MusicSnapshot:
         if start <= loop_t < end:
             break
     drop = DROP_AT <= loop_t < DROP_AT + 1.0 / 30.0
+    drop_countdown = max(0.0, DROP_AT - loop_t) if scene == "BUILDUP" else 0.0
     return MusicSnapshot(
         beat_phase=phase,
         is_beat=is_beat,
@@ -50,6 +51,8 @@ def fake_music(t: float, bpm: float = 120.0) -> MusicSnapshot:
         is_locked=trust >= 0.5,
         is_rhythmic=rhythmic,
         is_silent=False,
+        drop_countdown=drop_countdown,
+        is_drop_imminent=bool(0.0 < drop_countdown <= 0.40),
     )
 
 

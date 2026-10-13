@@ -13,11 +13,13 @@ class TestMusicSnapshot(unittest.TestCase):
                               power=0.5, scene=SimpleNamespace(value="GROOVE"), is_drop_impact=True,
                               is_syncopated=False, is_locked=True, is_rhythmic=True, is_silent=False)
         listener = SimpleNamespace(context=ctx, beat_phase=0.25, is_beat=True,
+                                   is_song_change=True, is_verse_chorus_change=False,
                                    live_is_song_change=True, live_is_verse_chorus_change=False,
                                    analyzer=SimpleNamespace(lookahead_seconds=4.0))
         m = bridge.build_music_snapshot(listener)
         self.assertEqual((m.energy, m.salience, m.scene), (0.8, 0.6, "GROOVE"))
-        self.assertTrue(m.is_drop_impact and m.live_is_song_change and m.is_rhythmic)
+        self.assertTrue(m.is_drop_impact and m.live_is_song_change and m.is_rhythmic and m.is_song_change)
+        self.assertFalse(m.is_verse_chorus_change)
         self.assertEqual((m.beat_phase, m.lookahead_seconds), (0.25, 4.0))
 
     def test_falls_back_without_context(self):

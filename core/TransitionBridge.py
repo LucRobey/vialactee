@@ -45,9 +45,13 @@ def build_music_snapshot(listener: Any) -> MusicSnapshot:
             energy=_f(getattr(listener, "asserved_total_power", 0.5), 0.5),
             salience=_f(getattr(listener, "rhythm_salience", 0.5), 0.5),
             beat_trust=_f(getattr(listener, "beat_trust", 0.5), 0.5),
+            is_song_change=bool(getattr(listener, "is_song_change", False)),
+            is_verse_chorus_change=bool(getattr(listener, "is_verse_chorus_change", False)),
             live_is_song_change=bool(getattr(listener, "live_is_song_change", False)),
             live_is_verse_chorus_change=bool(getattr(listener, "live_is_verse_chorus_change", False)),
             lookahead_seconds=lookahead,
+            drop_countdown=_f(getattr(listener, "drop_countdown", 0.0)),
+            is_drop_imminent=bool(getattr(listener, "is_drop_imminent", False)),
         )
 
     return MusicSnapshot(
@@ -65,9 +69,13 @@ def build_music_snapshot(listener: Any) -> MusicSnapshot:
         is_locked=bool(getattr(ctx, "is_locked", False)),
         is_rhythmic=bool(getattr(ctx, "is_rhythmic", False)),
         is_silent=bool(getattr(ctx, "is_silent", False)),
+        is_song_change=bool(getattr(listener, "is_song_change", getattr(ctx, "is_song_change", False))),
+        is_verse_chorus_change=bool(getattr(listener, "is_verse_chorus_change", getattr(ctx, "is_verse_chorus_change", False))),
         live_is_song_change=bool(getattr(listener, "live_is_song_change", False)),
         live_is_verse_chorus_change=bool(getattr(listener, "live_is_verse_chorus_change", False)),
         lookahead_seconds=lookahead,
+        drop_countdown=_f(getattr(ctx, "drop_countdown", 0.0)),
+        is_drop_imminent=bool(getattr(ctx, "is_drop_imminent", False)),
     )
 
 
@@ -108,7 +116,12 @@ def apply_orders(mode_master: Any, orders: TransitionOrders) -> OrderAck:
         if segment is None or getattr(segment, "isBlocked", False) is True:
             refused.append(order.segment)
             continue
-        segment.change_mode(order.target_mode, {"type": order.technique, "duration": order.duration})
+        cfg = {"type": order.technique, "duration": order.duration}
+        if getattr(order, "start_offset", 0.0):
+            cfg["start_offset"] = order.start_offset
+        if orders.reason in ("drop_impact", "request_drop"):
+            cfg["force"] = True
+        segment.change_mode(order.target_mode, cfg)
         if order.direction is not None:
             segment.change_way(order.direction)
         if modes is not None:

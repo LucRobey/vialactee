@@ -119,7 +119,7 @@ Evaluated top to bottom, first match wins:
 | :--- | :--- | :--- | :-: |
 | `is_drop_impact` or `energy ≥ 0.85` | `transient_blip` | `explosion` | 0.4 s |
 | `is_rhythmic` (GROOVE/DROP_IMPACT) or `salience ≥ 0.50` | `directional_wipe` | `vertical_wipe` | 1.2 s |
-| otherwise | `smooth_cosine_crossfade` | `global_change` | 2.0 s |
+| otherwise | `smooth_cosine_crossfade` | `fade_in_out` | 2.0 s |
 
 Engine types available in `Transition_Engine.apply_transition`: `fade_in_out`, `global_change`, `vertical_wipe`, `wipe_left_to_right`, `wipe_right_to_left`, `box_wipe`, `spiral`, `gravity_drop`, `weird_glitch`, `explosion`, plus a PNG-mask fallback. Only 3 are ever chosen automatically.
 
@@ -129,12 +129,16 @@ Engine types available in `Transition_Engine.apply_transition`: `fade_in_out`, `
 
 | Source | Path | Quantized to beat | Technique |
 | :--- | :--- | :-: | :--- |
-| Director timer (`auto_transition_time`, default 20 s), skipped if `transition_locked` | `change_configuration(None)` | yes | auto |
+| Director timer (`auto_transition_time`, default 20 s), skipped if `transition_locked` | `update()` (reason: `timer`) | yes | auto |
+| Song change countdown arrival at speakers (`upcoming_song_change_countdown <= 0.0`) | `update()` (reason: `song_change`) | no | auto |
+| Structural change countdown arrival at speakers (`upcoming_structural_change_countdown <= 0.0`) | `update()` (reason: `structural_change`) | no | auto |
+| Pre-drop lookahead alignment (`drop_countdown > 0` or `scene == BUILDUP`) | `update()` (reason: `pre_drop_buildup`) | no | `explosion` ($D = \text{lookahead} / 0.80$) |
+| Real-time drop impact transient (`is_drop_impact = True`) | `update()` (reason: `drop_impact`) | no | `explosion` 0.4 s (snaps active explosion to $\ge 0.80$) |
 | UI `go_to_next_configuration` | `schedule_transition` | yes | auto |
 | UI `manual_drop` | `schedule_transition` | no | forced `explosion` 0.4 s |
 | UI `select_transition` | retired | n/a | n/a |
 
-**[GAP]** Nothing is triggered by the music itself. The commented-out block in `transitions/director.py` `update` was the song-change hook. The Director computes `upcoming_song_change_countdown` and `upcoming_structural_change_countdown` but nothing reads them.
+Music-driven triggers execute immediately at the speaker boundary time without waiting for downbeat quantization, deferring the periodic fallback timer to avoid collisions.
 
 ---
 
@@ -169,7 +173,7 @@ Engine types available in `Transition_Engine.apply_transition`: `fade_in_out`, `
 | Per-mode enter/exit behavior | **[GAP]** Hooks exist, and **no mode implements them**. |
 | Per-cohort or per-segment technique or staggering | **[GAP]** Not supported by the single-progress Director. |
 | Automatic palette change on transitions | **[GAP]** Palette changes only via the UI `select_mood`. |
-| Dwell and cooldown policy between transitions | **[GAP]** `_dwell_timer` is incremented and reset but never read. |
+| Dwell and cooldown policy between transitions | Done. Minimum security cooldown of 5.0 seconds enforced post-transition across timer and musical triggers; urgent drop impacts and manual UI requests bypass and reset. |
 | Silence and standby behavior | **[GAP]** `silence_threshold`, `silence_duration_trigger` and `is_in_standby` are initialized in the Director and unused. |
 | Tests | `tests/transitions/` (contracts, service, sandbox, engine, director), `test_mood_and_transitions`, `test_transition_bridge`, and the wall test `governance/test_transition_isolation`. |
 

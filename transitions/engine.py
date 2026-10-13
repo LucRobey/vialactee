@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+import math
 from typing import Optional
 
 from transitions.assets import spatial_images, load_spatial_images
@@ -24,15 +25,16 @@ def set_room_bounds(max_x: float, max_y: float) -> None:
 
 
 def apply_dual_fade(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float) -> None:
-    """ Crossfades old mode softly into new mode """
-    progress = max(0.0, min(1.0, progress))
-    if progress == 0.0: return
-    if progress == 1.0:
+    """ Crossfades old mode softly into new mode using smooth cosine curve. """
+    progress = max(0.0, min(1.0, float(progress)))
+    if progress <= 0.0: return
+    if progress >= 1.0:
         np.copyto(rgb_list_old, rgb_list_new)
         return
         
-    np.multiply(rgb_list_old, 1.0 - progress, out=rgb_list_old, casting='unsafe')
-    np.add(rgb_list_old, rgb_list_new * progress, out=rgb_list_old, casting='unsafe')
+    w = 0.5 * (1.0 - math.cos(math.pi * progress))
+    np.multiply(rgb_list_old, 1.0 - w, out=rgb_list_old, casting='unsafe')
+    np.add(rgb_list_old, rgb_list_new * w, out=rgb_list_old, casting='unsafe')
 
 def apply_colorful_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float) -> None:
     """ A 'not smooth', blocky, colorful rave flash to mask the mode transition. """
@@ -435,7 +437,7 @@ def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progres
     """ 
     Route transition requests to specifically written geometric handlers or PNG spatial maps.
     """
-    if transition_name in ("fade_to_black", "fade_in_out"):
+    if transition_name in ("fade_to_black", "fade_in_out", "smooth_cosine_crossfade", "cosine_fade"):
         apply_dual_fade(rgb_list_old, rgb_list_new, progress)
     elif transition_name == "global_change":
         apply_colorful_glitch(rgb_list_old, rgb_list_new, progress)
