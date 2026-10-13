@@ -184,19 +184,17 @@ class TestLocalAudioFile(unittest.TestCase):
         self.assertFalse(listener._delayed_is_verse_chorus_change)
 
         # 2. Simulate 180 frames (3.0 seconds) of speaker playback
-        t_start = 1000.0
         dt = 1.0 / 60.0
         transitions_fired = 0
 
         for f in range(180):
-            current_time = t_start + f * dt
             # Step the audio player ingestion
             player.speaker_sample_pos = f * player.hop_samples
             player.advance_ingest_frame()
 
             # Create snapshot for Transition_Director
             music = build_music_snapshot(listener)
-            if director.update(current_time, music):
+            if director.update(dt, music):
                 transitions_fired += 1
 
         self.assertEqual(transitions_fired, 0, f"No transitions should fire during the 3.0s startup grace window, got reason={director.last_trigger_reason}")

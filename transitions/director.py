@@ -1,6 +1,5 @@
 from typing import Dict, Any, Optional
 import logging
-import json
 
 
 class Transition_Director:
@@ -9,29 +8,23 @@ class Transition_Director:
 
     Tracks the global transition state machine (PASSATION <-> TRANSITION_DUAL and its
     0..1 progress), the live lookahead countdowns, and the auto-transition timer.
-    It never commands anyone: update() only reports whether the auto timer expired.
+    It never commands anyone: update() only reports whether a trigger or timer fired.
     """
 
-    def __init__(self, infos: Dict[str, Any], segments_path: Optional[str] = None) -> None:
+    def __init__(self, infos: Optional[Dict[str, Any]] = None) -> None:
         """
         Initialize the Transition_Director.
 
         Args:
-            infos (dict): Configuration dictionary containing settings like
-                silence thresholds.
-            segments_path (str, optional): Path of the segments layout file,
-                provided by the caller. None leaves the geometry maps empty.
+            infos (dict, optional): Configuration dictionary containing timer settings.
         """
+        infos = infos or {}
         self.infos = infos
         self.logger = logging.getLogger("Transition_Director")
-        self.silence_threshold = infos.get("silence_threshold", 150)
-        self.silence_duration_trigger = infos.get("silence_duration_trigger", 10.0)
-
-        self.silence_start_time = None
-        self.is_in_standby = False
 
         self.locked = False
         self.configuration_duration = float(infos.get("auto_transition_time", 20.0))
+        self._clock: float = 0.0
         self.next_change_time: Optional[float] = None  # armed on the first update()
         self.min_time_between_transitions = float(infos.get("min_time_between_transitions", 5.0))
         self.cooldown_remaining = max(0.0, float(infos.get("startup_grace_period", 0.0)))
@@ -39,7 +32,7 @@ class Transition_Director:
 
         self.state = "PASSATION"
         self.transition_progress = 0.0
-        self.transition_step = 0.0
+        self.transition_duration = 0.0
         self.transition_type = None
 
         self.upcoming_song_change_countdown = 0.0
@@ -50,46 +43,6 @@ class Transition_Director:
         self.last_trigger_reason = ""
         self.pending_transition_config: Optional[Dict[str, Any]] = None
         self.pending_quantize_downbeat = True
-        self.last_update_time = None
-
-        # Discover segment geometry
-        self.verticals = []
-        self.horizontals = []
-        self.all_segments = []
-        self.segments_path = segments_path
-        self._load_segments()
-
-    def _load_segments(self) -> None:
-        """
-        Read the segments configuration to understand the hardware layout.
-
-        Parses the active segments file to classify available segments into
-        vertical and horizontal groups for geometric-based logic.
-        """
-        if self.segments_path is None:
-            return
-        try:
-            config_path = self.segments_path
-            with open(config_path, "r") as f:
-                data = json.load(f)
-                if isinstance(data.get("segments"), list):
-                    segment_lists = [data["segments"]]
-                else:
-                    segment_lists = [value for value in data.values() if isinstance(value, list)]
-
-                for segment_list in segment_lists:
-                    for seg in segment_list:
-                        if not isinstance(seg, dict) or "name" not in seg:
-                            continue
-                        name = seg["name"]
-                        self.all_segments.append(name)
-                        if seg.get("orientation") == "vertical":
-                            self.verticals.append(name)
-                        else:
-                            self.horizontals.append(name)
-            self.logger.info(f"(TD) Instantiated geometry maps: {len(self.verticals)} Verticals, {len(self.horizontals)} Horizontals")
-        except Exception as e:
-            self.logger.error(f"(TD) Failed to load segments configuration: {e}")
 
     @property
     def is_in_transition(self) -> bool:
@@ -122,15 +75,13 @@ class Transition_Director:
         self.transition_type = transition_config["type"]
         duration = float(transition_config.get("total_duration", transition_config.get("duration", 2.0)))
         self.transition_duration = duration
-        self.transition_step = (1.0 / 30.0) / duration if duration > 0 else 1.0
         self.cooldown_remaining = 0.0
         self.is_pending = False
 
     def set_duration(self, duration: float) -> None:
         """Update active transition duration to accommodate staggered segments."""
         if duration > 0:
-            self.transition_duration = max(getattr(self, "transition_duration", 0.0), float(duration))
-            self.transition_step = (1.0 / 30.0) / self.transition_duration
+            self.transition_duration = max(self.transition_duration, float(duration))
 
     def cancel_transition(self) -> None:
         """ Abort a transition that no segment accepted: back to idle. """
@@ -140,26 +91,22 @@ class Transition_Director:
         self.cooldown_remaining = 0.0
         self.is_pending = False
 
-    def update(self, current_time: float, music: Optional[Any] = None) -> bool:
+    def update(self, dt: float, music: Optional[Any] = None) -> bool:
         """
-        Advance the global transition progress and the countdowns.
+        Advance the global transition progress and the countdowns by dt seconds.
 
         Args:
-            current_time (float): Monotonic clock of the sector, in seconds.
+            dt (float): Elapsed time since the previous frame, in seconds.
             music: Optional MusicSnapshot, read for the live lookahead events.
 
         Returns:
             True when an audio trigger or the auto-transition timer fired and
             the director is not locked (the caller should schedule a transition).
         """
+        dt = max(0.0, float(dt))
         if self.next_change_time is None:
-            self.next_change_time = current_time + self.configuration_duration
-
-        if self.last_update_time is None:
-            dt = 1.0 / 30.0
-        else:
-            dt = max(0.0, current_time - self.last_update_time)
-        self.last_update_time = current_time
+            self.next_change_time = self._clock + self.configuration_duration
+        self._clock += dt
 
         # Advance lookahead countdowns and cooldown timer
         if self.cooldown_remaining > 0.0:
@@ -182,42 +129,42 @@ class Transition_Director:
 
         # Advance active transition progress
         if self.state == "TRANSITION_DUAL":
-            duration = getattr(self, "transition_duration", 2.0)
+            duration = self.transition_duration
             step = (dt / duration) if duration > 0 else 1.0
             self.transition_progress += step
             if self.transition_progress >= 1.0:
                 self.transition_progress = 1.0
                 self.state = "PASSATION"
                 self.transition_type = None
-                self.is_pending = False
                 self.cooldown_remaining = self.min_time_between_transitions
-                self.next_change_time = max(self.next_change_time or 0.0, current_time + self.configuration_duration)
+                self.next_change_time = max(self.next_change_time or 0.0, self._clock + self.configuration_duration)
 
         # 1. Real-time Drop Impact (speaker time) - urgent bypass
         is_drop_impact = bool(music is not None and getattr(music, "is_drop_impact", False))
         if is_drop_impact:
             self._drop_buildup_armed = False
-            self.is_pending = False
             if self.is_in_transition:
                 # If buildup explosion was running, snap to explosion climax (progress >= 0.80)
                 if self.transition_type == "explosion":
                     if self.transition_progress < 0.80:
                         self.transition_progress = 0.80
                 elif not self.locked:
+                    self.is_pending = False
                     self.transition_progress = 1.0
                     self.state = "PASSATION"
                     self.last_trigger_reason = "drop_impact"
                     self.pending_transition_config = {"type": "explosion", "duration": 0.4}
                     self.pending_quantize_downbeat = False
-                    self.next_change_time = current_time + self.configuration_duration
+                    self.next_change_time = self._clock + self.configuration_duration
                     self.cooldown_remaining = 0.0
                     self.logger.info("(TD) Drop impact interrupted non-explosion transition -> immediate explosion")
                     return True
             elif not self.locked:
+                self.is_pending = False
                 self.last_trigger_reason = "drop_impact"
                 self.pending_transition_config = {"type": "explosion", "duration": 0.4}
                 self.pending_quantize_downbeat = False
-                self.next_change_time = current_time + self.configuration_duration
+                self.next_change_time = self._clock + self.configuration_duration
                 self.cooldown_remaining = 0.0
                 self.logger.info("(TD) Real-time drop impact -> immediate explosion transition")
                 return True
@@ -234,7 +181,7 @@ class Transition_Director:
                 self.last_trigger_reason = "song_change"
                 self.pending_transition_config = None
                 self.pending_quantize_downbeat = False
-                self.next_change_time = current_time + self.configuration_duration
+                self.next_change_time = self._clock + self.configuration_duration
                 self.logger.info("(TD) Song change boundary arrived at speakers -> triggering transition")
                 return True
 
@@ -250,7 +197,7 @@ class Transition_Director:
                 self.last_trigger_reason = "structural_change"
                 self.pending_transition_config = None
                 self.pending_quantize_downbeat = False
-                self.next_change_time = current_time + self.configuration_duration
+                self.next_change_time = self._clock + self.configuration_duration
                 self.logger.info("(TD) Structural change boundary arrived at speakers -> triggering transition")
                 return True
 
@@ -280,7 +227,7 @@ class Transition_Director:
                     self.last_trigger_reason = "pre_drop_buildup"
                     self.pending_transition_config = {"type": "explosion", "duration": duration}
                     self.pending_quantize_downbeat = False
-                    self.next_change_time = current_time + self.configuration_duration
+                    self.next_change_time = self._clock + self.configuration_duration
                     self.logger.info(
                         f"(TD) Pre-drop lookahead detected! Scheduling buildup duration={duration}s for impact in {lookahead}s"
                     )
@@ -289,8 +236,8 @@ class Transition_Director:
             self._drop_buildup_armed = False
 
         # 5. Standard transitions based on the internal timer
-        if current_time > self.next_change_time:
-            self.next_change_time = current_time + self.configuration_duration
+        if self._clock > self.next_change_time:
+            self.next_change_time = self._clock + self.configuration_duration
             if self.locked:
                 return False
             # Defer periodic timer if a musical transition is already armed

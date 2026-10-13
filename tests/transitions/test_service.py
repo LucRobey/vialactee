@@ -355,7 +355,111 @@ class TestFrontDoorBehavior(unittest.TestCase):
         self.assertIsNotNone(orders_fired)
         self.assertEqual(orders_fired.reason, "request_next", "Manual request must not be displaced by automatic triggers")
 
+    def test_all_blocked_segments_do_not_desync_director_into_transition_dual(self):
+        """When all segments are blocked, firing a transition must not leave the director stuck in TRANSITION_DUAL."""
+        all_blocked = tuple(f"Segment v{i}" for i in range(1, 5))
+        self.svc.set_installation(installation(blocked=all_blocked))
+
+        # 1. Immediate drop request while all segments are blocked
+        self.svc.request_drop()
+        orders = self.svc.update(0.033, beat_music())
+        self.assertIsNone(orders)
+        status = self.svc.get_status()
+        self.assertEqual(status.state, "PASSATION")
+        self.assertFalse(status.is_in_transition)
+
+        # 2. Beat-quantized request_next while all segments are blocked
+        self.svc.request_next()
+        orders = self.svc.update(0.033, beat_music())
+        self.assertIsNone(orders)
+        status = self.svc.get_status()
+        self.assertEqual(status.state, "PASSATION")
+        self.assertFalse(status.is_in_transition)
+        self.assertFalse(self.svc._director.is_pending)
+
+        # 3. Unblock one segment: subsequent transition fires cleanly
+        self.svc.set_installation(installation(blocked=all_blocked[1:]))
+        self.svc.request_next()
+        orders_unblocked = self.svc.update(0.033, beat_music())
+        self.assertIsNotNone(orders_unblocked)
+        self.assertEqual(len(orders_unblocked.orders), 1)
+        self.assertEqual(orders_unblocked.orders[0].segment, "Segment v1")
+        self.assertTrue(self.svc.get_status().is_in_transition)
+
+    def test_segments_blocked_during_downbeat_wait_window_do_not_desync_director(self):
+        """If segments are unblocked when queued (quantize_downbeat=True) and all become blocked before the beat, director stays in PASSATION."""
+        self.svc.request_next()
+        # Off-beat tick: still waiting for beat
+        self.assertIsNone(self.svc.update(0.033, MusicSnapshot(beat_phase=0.5, is_beat=False)))
+        self.assertTrue(self.svc._director.is_pending)
+
+        # All segments become blocked during the downbeat wait window
+        all_blocked = tuple(f"Segment v{i}" for i in range(1, 5))
+        self.svc.set_installation(installation(blocked=all_blocked))
+
+        # Beat arrives: _execute_transition runs with 0 unblocked segments
+        orders = self.svc.update(0.033, beat_music())
+        self.assertIsNone(orders)
+        status = self.svc.get_status()
+        self.assertEqual(status.state, "PASSATION")
+        self.assertFalse(status.is_in_transition)
+        self.assertFalse(self.svc._director.is_pending)
+        self.assertEqual(self.svc._reason, "")
+
+    def test_immediate_drop_supersedes_pending_downbeat_transition(self):
+        """An immediate transition (request_drop or drop_impact) while waiting for a beat must cancel the stale pending transition."""
+        # Queue beat-quantized transition while off-beat
+        self.svc.request_next()
+        self.assertIsNone(self.svc.update(0.033, MusicSnapshot(beat_phase=0.5, is_beat=False)))
+
+        # Immediate drop arrives before beat
+        self.svc.request_drop()
+        drop_orders = self.svc.update(0.033, MusicSnapshot(beat_phase=0.5, is_beat=False))
+        self.assertIsNotNone(drop_orders)
+        self.assertEqual(drop_orders.reason, "request_drop")
+        self.assertEqual(self.svc.get_status().progress, 0.0)
+        self.svc.acknowledge(OrderAck(accepted=tuple(o.segment for o in drop_orders.orders)))
+
+        # Complete the 0.4s drop transition
+        for _ in range(15):
+            self.svc.update(0.033, MusicSnapshot(beat_phase=0.5, is_beat=False))
+        self.assertFalse(self.svc.get_status().is_in_transition)
+        self.assertTrue(self.svc.get_status().is_cooling_down)
+
+        # Next beat arrives during cooldown: stale pending transition must NOT fire
+        self.assertIsNone(self.svc.update(0.033, beat_music()))
+        self.assertTrue(self.svc.get_status().is_cooling_down)
+
+    def test_duplicate_request_drop_emits_one_order_per_segment(self):
+        """Calling request_drop multiple times before update() must emit only one order per segment."""
+        self.svc.request_drop()
+        self.svc.request_drop()
+        orders = self.svc.update(0.033, beat_music())
+        self.assertIsNotNone(orders)
+        self.assertEqual(len(orders.orders), 4)
+
+    def test_request_next_queued_during_active_transition_preserves_reason(self):
+        """A request_next queued during TRANSITION_DUAL preserves its reason across transition completion until the beat."""
+        self.svc.request_drop()
+        drop_orders = self.svc.update(0.033, beat_music())
+        self.svc.acknowledge(OrderAck(accepted=tuple(o.segment for o in drop_orders.orders)))
+        self.assertTrue(self.svc.get_status().is_in_transition)
+
+        # Queue request_next while drop transition is still running
+        self.svc.request_next()
+
+        # Advance off-beat until drop transition finishes
+        for _ in range(15):
+            self.assertIsNone(self.svc.update(0.033, MusicSnapshot(beat_phase=0.5, is_beat=False)))
+        self.assertFalse(self.svc.get_status().is_in_transition)
+
+        # Now beat arrives: queued request_next fires with its reason intact
+        next_orders = self.svc.update(0.033, beat_music())
+        self.assertIsNotNone(next_orders)
+        self.assertEqual(next_orders.reason, "request_next")
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

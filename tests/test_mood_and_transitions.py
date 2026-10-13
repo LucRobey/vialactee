@@ -32,6 +32,8 @@ import numpy as np
 
 import transitions.mode_dna as mode_dna
 from core.GlobalMoodManager import GlobalMoodManager, PALETTES
+from transitions.api import MusicSnapshot, SegmentDescriptor
+from transitions.director import Transition_Director
 from transitions.manager import (
     LocalTransitionManager,
     CohortPattern,
@@ -201,18 +203,15 @@ class TestGlobalMoodManager(unittest.TestCase):
 class TestLocalTransitionManager(unittest.TestCase):
     def setUp(self):
         GlobalMoodManager.reset_instance()
-        self.mock_listener = MagicMock()
-        self.mock_listener.beat_phase = 0.50
-        self.mock_listener.is_beat = False
-        self.mock_listener.asserved_total_power = 0.60
-        self.mock_listener.rhythm_salience = 0.70
-        self.mock_listener.beat_trust = 0.80
-
-        self.mock_mm = MagicMock()
-        self.mock_mm.segments_list = []
-        self.mock_mm.activ_configuration = {"modes": {}}
-
-        self.ltm = LocalTransitionManager(self.mock_mm, self.mock_listener)
+        self.director = Transition_Director()
+        self.music = MusicSnapshot(
+            beat_phase=0.50,
+            is_beat=False,
+            energy=0.60,
+            salience=0.70,
+            beat_trust=0.80,
+        )
+        self.ltm = LocalTransitionManager(director=self.director, music=self.music)
 
     def test_music_matchmaker_dna_evaluation(self):
         """Translates live audio context into normalized target DNA."""
@@ -285,14 +284,18 @@ class TestLocalTransitionManager(unittest.TestCase):
 
     def test_downbeat_quantization_lifecycle(self):
         """Transitions do not fire mid-beat; they wait for beat_phase < 0.05 or beat hit."""
-        mock_seg = MagicMock()
-        mock_seg.name = "Segment v1"
-        mock_seg.isBlocked = False
-        self.mock_mm._find_segment_by_name = MagicMock(return_value=mock_seg)
+        self.ltm.set_installation([
+            SegmentDescriptor(
+                name="Segment v1",
+                orientation="vertical",
+                available_modes=("Rainbow", "Impact Shockwave"),
+                active_mode="Rainbow",
+                is_blocked=False,
+            )
+        ])
 
         # 1. Queue transition while beat_phase is mid-beat (0.45)
-        self.mock_listener.beat_phase = 0.45
-        self.mock_listener.is_beat = False
+        self.ltm.music = MusicSnapshot(beat_phase=0.45, is_beat=False, beat_trust=0.80)
 
         self.ltm.schedule_transition(
             allocation={"Segment v1": "Impact Shockwave"},
@@ -303,16 +306,17 @@ class TestLocalTransitionManager(unittest.TestCase):
         # Update mid-beat: should NOT trigger
         self.ltm.update(0.033)
         self.assertIsNotNone(self.ltm._pending_transition)
-        mock_seg.change_mode.assert_not_called()
+        self.assertEqual(self.ltm.pop_orders(), ())
 
         # 2. Advance to downbeat hit (phase = 0.02)
-        self.mock_listener.beat_phase = 0.02
-        self.ltm.update(0.033)
+        self.ltm.update(0.033, MusicSnapshot(beat_phase=0.02, is_beat=False, beat_trust=0.80))
 
         # Should execute and clear pending
         self.assertIsNone(self.ltm._pending_transition)
-        mock_seg.change_mode.assert_called_once()
-        self.assertEqual(mock_seg.change_mode.call_args[0][0], "Impact Shockwave")
+        orders = self.ltm.pop_orders()
+        self.assertEqual(len(orders), 1)
+        self.assertEqual(orders[0].segment, "Segment v1")
+        self.assertEqual(orders[0].target_mode, "Impact Shockwave")
 
     def test_clean_transition_techniques(self):
         """Technique selector routes based on audio kinetics."""
@@ -379,19 +383,15 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
     def setUp(self):
         GlobalMoodManager.reset_instance()
         self.gmm = GlobalMoodManager.get_instance(initial_palette="Cyberpunk")
-
-        self.mock_listener = MagicMock()
-        self.mock_listener.beat_phase = 0.50
-        self.mock_listener.is_beat = False
-        self.mock_listener.asserved_total_power = 0.50
-        self.mock_listener.rhythm_salience = 0.50
-        self.mock_listener.beat_trust = 0.50
-
-        self.mock_mm = MagicMock()
-        self.mock_mm.segments_list = []
-        self.mock_mm.activ_configuration = {"modes": {}}
-
-        self.ltm = LocalTransitionManager(self.mock_mm, self.mock_listener)
+        self.director = Transition_Director()
+        self.music = MusicSnapshot(
+            beat_phase=0.50,
+            is_beat=False,
+            energy=0.50,
+            salience=0.50,
+            beat_trust=0.50,
+        )
+        self.ltm = LocalTransitionManager(director=self.director, music=self.music)
 
     def test_palette_no_stall_on_repeated_requests(self):
         """Repeated set_palette calls for active target must not reset crossfade timer."""
@@ -439,14 +439,11 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
 
     def test_small_profile_verticals_discovered_as_vertical_cohorts(self):
         """Small profile vertical segments (Segment s1/s2/s3) must be vertical cohorts."""
-        seg1 = MagicMock(name="Segment s1", orientation="vertical")
-        seg1.name = "Segment s1"
-        seg2 = MagicMock(name="Segment s2", orientation="vertical")
-        seg2.name = "Segment s2"
-        seg3 = MagicMock(name="Segment s3", orientation="vertical")
-        seg3.name = "Segment s3"
-
-        self.mock_mm.segments_list = [seg1, seg2, seg3]
+        self.ltm.set_installation([
+            SegmentDescriptor(name="Segment s1", orientation="vertical"),
+            SegmentDescriptor(name="Segment s2", orientation="vertical"),
+            SegmentDescriptor(name="Segment s3", orientation="vertical"),
+        ])
         verts, rings = self.ltm._discover_segment_cohorts()
 
         self.assertEqual(len(verts), 3)
@@ -457,23 +454,25 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
 
     def test_symmetric_pairs_produces_contrasting_modes(self):
         """SYMMETRIC_PAIRS must choose distinct modes A and B when candidate pool has > 1 mode."""
-        pool = ["Rainbow", "Beat Runner"]
-        self.mock_mm._find_segment_by_name = MagicMock(return_value=MagicMock(modes={m: MagicMock() for m in pool}))
+        pool = ("Rainbow", "Beat Runner")
+        self.ltm.set_installation([
+            SegmentDescriptor(name="Segment v1", orientation="vertical", available_modes=pool),
+            SegmentDescriptor(name="Segment v2", orientation="vertical", available_modes=pool),
+        ])
 
         alloc = self.ltm.allocate_cohort_modes(["Segment v1", "Segment v2"], pattern=CohortPattern.SYMMETRIC_PAIRS)
         self.assertNotEqual(alloc["Segment v1"], alloc["Segment v2"])
 
     def test_queued_transition_waits_for_active_transition(self):
         """Queued downbeat transition must wait until TD is no longer in transition."""
-        mock_td = MagicMock()
-        mock_td.is_in_transition = True
-        self.mock_mm.transition_director = mock_td
+        self.director.start_transition({"type": "fade_in_out", "duration": 2.0})
+        self.assertTrue(self.director.is_in_transition)
 
-        mock_seg = MagicMock()
-        mock_seg.isBlocked = False
-        self.mock_mm._find_segment_by_name = MagicMock(return_value=mock_seg)
+        self.ltm.set_installation([
+            SegmentDescriptor(name="Segment v1", orientation="vertical", is_blocked=False),
+        ])
+        self.ltm.music = MusicSnapshot(beat_phase=0.01, is_beat=True, beat_trust=0.80)
 
-        self.mock_listener.beat_phase = 0.01  # downbeat ready
         self.ltm.schedule_transition(
             allocation={"Segment v1": "Impact Shockwave"},
             quantize_downbeat=True
@@ -482,21 +481,22 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
         # Update while TD is in transition: must wait
         self.ltm.update(0.033)
         self.assertIsNotNone(self.ltm._pending_transition)
-        mock_seg.change_mode.assert_not_called()
+        self.assertEqual(self.ltm.pop_orders(), ())
 
         # Finish TD transition
-        mock_td.is_in_transition = False
+        self.director.cancel_transition()
         self.ltm.update(0.033)
         self.assertIsNone(self.ltm._pending_transition)
-        mock_seg.change_mode.assert_called_once()
+        orders = self.ltm.pop_orders()
+        self.assertEqual(len(orders), 1)
+        self.assertEqual(orders[0].segment, "Segment v1")
 
     def test_generate_staggered_configs_cohort_complementary(self):
         """Verifies generate_staggered_configs partitions verticals and rings with complementary techniques."""
-        seg_v1 = MagicMock(name="Segment v1", orientation="vertical")
-        seg_v1.name = "Segment v1"
-        seg_h1 = MagicMock(name="Segment h10", orientation="horizontal")
-        seg_h1.name = "Segment h10"
-        self.mock_mm.segments_list = [seg_v1, seg_h1]
+        self.ltm.set_installation([
+            SegmentDescriptor(name="Segment v1", orientation="vertical"),
+            SegmentDescriptor(name="Segment h10", orientation="horizontal"),
+        ])
 
         alloc = {"Segment v1": "Impact Shockwave", "Segment h10": "Rainbow"}
         from transitions.stagger import StaggerPattern
@@ -510,17 +510,11 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
         self.assertGreater(configs["Segment h10"]["start_offset"], 0.0)
 
     def test_schedule_transition_staggered_execution(self):
-        """Verifies schedule_transition with staggered=True passes per-segment configs and max duration to TD."""
-        seg_v1 = MagicMock(name="Segment v1", orientation="vertical", isBlocked=False)
-        seg_v1.name = "Segment v1"
-        seg_h1 = MagicMock(name="Segment h10", orientation="horizontal", isBlocked=False)
-        seg_h1.name = "Segment h10"
-        self.mock_mm.segments_list = [seg_v1, seg_h1]
-        self.mock_mm._find_segment_by_name = lambda n: seg_v1 if n == "Segment v1" else seg_h1
-
-        mock_td = MagicMock()
-        mock_td.is_in_transition = False
-        self.mock_mm.transition_director = mock_td
+        """Verifies schedule_transition with staggered=True emits per-segment orders and sets max duration on TD."""
+        self.ltm.set_installation([
+            SegmentDescriptor(name="Segment v1", orientation="vertical", is_blocked=False),
+            SegmentDescriptor(name="Segment h10", orientation="horizontal", is_blocked=False),
+        ])
 
         self.ltm.schedule_transition(
             allocation={"Segment v1": "Impact Shockwave", "Segment h10": "Rainbow"},
@@ -528,17 +522,66 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
             staggered=True,
         )
 
-        seg_v1.change_mode.assert_called_once()
-        seg_h1.change_mode.assert_called_once()
-        cfg_v1 = seg_v1.change_mode.call_args[0][1]
-        cfg_h1 = seg_h1.change_mode.call_args[0][1]
+        orders = self.ltm.pop_orders()
+        self.assertEqual(len(orders), 2)
+        by_seg = {o.segment: o for o in orders}
 
-        # TD must receive start_transition with total_duration = max(dur + offset)
-        mock_td.start_transition.assert_called_once()
-        td_cfg = mock_td.start_transition.call_args[0][0]
-        expected_max = max(cfg_v1["duration"] + cfg_v1["start_offset"], cfg_h1["duration"] + cfg_h1["start_offset"])
-        self.assertAlmostEqual(td_cfg["duration"], expected_max, places=2)
+        # TD must be in TRANSITION_DUAL with transition_duration = max(dur + offset)
+        self.assertTrue(self.director.is_in_transition)
+        expected_max = max(
+            by_seg["Segment v1"].duration + by_seg["Segment v1"].start_offset,
+            by_seg["Segment h10"].duration + by_seg["Segment h10"].start_offset,
+        )
+        self.assertAlmostEqual(self.director.transition_duration, expected_max, places=2)
+
+    def test_all_blocked_segments_do_not_start_director_transition(self):
+        """When all targeted segments are blocked, _execute_transition must not start Transition_Director."""
+        self.ltm.set_installation([
+            SegmentDescriptor(name="Segment v1", orientation="vertical", is_blocked=True),
+            SegmentDescriptor(name="Segment v2", orientation="vertical", is_blocked=True),
+        ])
+        self.director.is_pending = True
+
+        self.ltm.schedule_transition(
+            allocation={"Segment v1": "Impact Shockwave", "Segment v2": "Rainbow"},
+            quantize_downbeat=False,
+        )
+
+        self.assertEqual(self.ltm.pop_orders(), ())
+        self.assertFalse(self.director.is_in_transition)
+        self.assertEqual(self.director.state, "PASSATION")
+        self.assertFalse(self.director.is_pending)
+
+    def test_immediate_schedule_transition_clears_pending_and_replaces_undrained_orders(self):
+        """schedule_transition(quantize_downbeat=False) clears _pending_transition and does not duplicate un-popped orders."""
+        self.ltm.set_installation([
+            SegmentDescriptor(name="Segment v1", orientation="vertical", is_blocked=False),
+            SegmentDescriptor(name="Segment v2", orientation="vertical", is_blocked=False),
+        ])
+
+        # 1. Queue a beat-quantized transition
+        self.ltm.schedule_transition(
+            allocation={"Segment v1": "Rainbow", "Segment v2": "Rainbow"},
+            quantize_downbeat=True,
+        )
+        self.assertIsNotNone(self.ltm._pending_transition)
+
+        # 2. Fire two immediate transitions before pop_orders()
+        self.ltm.schedule_transition(
+            allocation={"Segment v1": "Beat Runner", "Segment v2": "Beat Runner"},
+            quantize_downbeat=False,
+        )
+        self.ltm.schedule_transition(
+            allocation={"Segment v1": "Impact Shockwave", "Segment v2": "Impact Shockwave"},
+            quantize_downbeat=False,
+        )
+
+        self.assertIsNone(self.ltm._pending_transition)
+        orders = self.ltm.pop_orders()
+        self.assertEqual(len(orders), 2)
+        self.assertEqual({o.target_mode for o in orders}, {"Impact Shockwave"})
 
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -2,11 +2,9 @@
 transitions/service.py - Default implementation of the front door (TransitionService).
 
 Wires the sector's internals (director clock, manager decisions, engine blending)
-behind the doors defined in transitions/api.py. The manager still reads its world
-through duck-typed views; this module builds those views from the door snapshots,
-so nothing outside the room is ever touched.
+directly behind the doors defined in transitions/api.py.
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -15,7 +13,6 @@ from transitions.api import (
     InstallationSnapshot,
     MusicSnapshot,
     OrderAck,
-    SegmentOrder,
     TransitionOrders,
     TransitionService,
     TransitionStatus,
@@ -26,62 +23,6 @@ from transitions.manager import LocalTransitionManager, TRANSITION_TECHNIQUES
 DROP_TECHNIQUE: Dict[str, Any] = {"type": "explosion", "duration": 0.4}
 
 
-class _MusicView:
-    """What the manager reads as its 'listener': the latest MusicSnapshot, no allocation per frame."""
-    __slots__ = ("beat_phase", "is_beat", "context")
-
-    def __init__(self) -> None:
-        self.context = MusicSnapshot()
-        self.beat_phase = 0.0
-        self.is_beat = False
-
-    def set(self, music: MusicSnapshot) -> None:
-        self.context = music
-        self.beat_phase = music.beat_phase
-        self.is_beat = music.is_beat
-
-
-class _SegmentView:
-    """A segment as the manager sees it. change_mode() records an order instead of acting."""
-    __slots__ = ("name", "orientation", "modes", "activ_mode", "isBlocked", "_host")
-
-    def __init__(self, host: "_Host", name: str, orientation: str, modes: Dict[str, None],
-                 activ_mode: str, blocked: bool) -> None:
-        self._host = host
-        self.name = name
-        self.orientation = orientation
-        self.modes = modes
-        self.activ_mode = activ_mode
-        self.isBlocked = blocked
-
-    def change_mode(self, mode_name: str, transition_config: Optional[Dict[str, Any]] = None) -> None:
-        self._host.recorded.append((self.name, mode_name, transition_config))
-
-
-class _Host:
-    """The installation as the manager sees it, built from an InstallationSnapshot."""
-
-    def __init__(self, director: Transition_Director) -> None:
-        self.segments_list: List[_SegmentView] = []
-        self._by_name: Dict[str, _SegmentView] = {}
-        self.activ_configuration: Dict[str, Any] = {"modes": {}}
-        self._state_dirty = False
-        self.transition_director = director
-        self.recorded: List[Any] = []
-
-    def _find_segment_by_name(self, name: str) -> Optional[_SegmentView]:
-        return self._by_name.get(name)
-
-    def load(self, installation: InstallationSnapshot) -> None:
-        self.segments_list = []
-        self._by_name = {}
-        for d in installation.segments:
-            view = _SegmentView(self, d.name, d.orientation, {m: None for m in d.available_modes},
-                                d.active_mode, d.is_blocked)
-            self.segments_list.append(view)
-            self._by_name[d.name] = view
-
-
 class DefaultTransitionService(TransitionService):
     """Synchronous front door of the transition sector."""
 
@@ -89,38 +30,40 @@ class DefaultTransitionService(TransitionService):
         service_infos = dict(infos or {})
         if "min_time_between_transitions" not in service_infos:
             service_infos["min_time_between_transitions"] = 5.0
-        self._director = Transition_Director(service_infos, segments_path)
-        self._host = _Host(self._director)
-        self._music = _MusicView()
-        self._manager = LocalTransitionManager(self._host, self._music)
-        self._clock = 0.0
+        self._director = Transition_Director(service_infos)
+        self._manager = LocalTransitionManager(self._director)
         self._reason = ""
+        self._drop_requested = False
         self._last_orders: Dict[str, str] = {}
 
     # --- inputs --------------------------------------------------------------
 
     def set_installation(self, installation: InstallationSnapshot) -> None:
-        self._host.load(installation)
+        self._manager.set_installation(installation.segments)
         if installation.room_bounds is not None:
             engine.set_room_bounds(*installation.room_bounds)
 
     def update(self, dt: float, music: MusicSnapshot) -> Optional[TransitionOrders]:
-        self._clock += dt
-        self._music.set(music)
-        if self._director.update(self._clock, music):
-            self._reason = getattr(self._director, "last_trigger_reason", "timer") or "timer"
-            cfg = getattr(self._director, "pending_transition_config", None)
-            quantize = getattr(self._director, "pending_quantize_downbeat", True)
-            self._manager.schedule_transition(transition_config=cfg, quantize_downbeat=quantize)
-        self._manager.update(dt)
+        self._manager.music = music
+        director_fired = self._director.update(dt, music)
+        if self._drop_requested:
+            self._drop_requested = False
+            self._reason = "request_drop"
+            self._manager.schedule_transition(transition_config=dict(DROP_TECHNIQUE), quantize_downbeat=False)
+        elif director_fired:
+            self._reason = self._director.last_trigger_reason or "timer"
+            self._manager.schedule_transition(
+                transition_config=self._director.pending_transition_config,
+                quantize_downbeat=self._director.pending_quantize_downbeat,
+            )
+        self._manager.update(dt, music)
         return self._drain()
 
     def acknowledge(self, ack: OrderAck) -> None:
         for name in ack.accepted:
-            view = self._host._find_segment_by_name(name)
             target = self._last_orders.get(name)
-            if view and target:
-                view.activ_mode = target
+            if target:
+                self._manager.set_active_mode(name, target)
         if not ack.accepted and self._director.is_in_transition:
             self._director.cancel_transition()
         self._last_orders = {}
@@ -133,6 +76,7 @@ class DefaultTransitionService(TransitionService):
         staggered: bool = False,
         stagger_pattern: Optional[Any] = None,
     ) -> None:
+        self._drop_requested = False
         self._reason = "request_next"
         self._director.reset_cooldown()
         self._director.is_pending = True
@@ -144,10 +88,11 @@ class DefaultTransitionService(TransitionService):
         )
 
     def request_drop(self) -> None:
+        self._drop_requested = True
         self._reason = "request_drop"
         self._director.reset_cooldown()
         self._director.is_pending = True
-        self._manager.schedule_transition(transition_config=dict(DROP_TECHNIQUE), quantize_downbeat=False)
+        self._manager._pending_transition = None
 
     def set_locked(self, locked: bool) -> None:
         self._director.locked = bool(locked)
@@ -177,7 +122,7 @@ class DefaultTransitionService(TransitionService):
             is_locked=d.locked,
             auto_interval=float(d.configuration_duration),
             technique=d.transition_type,
-            cooldown_remaining=float(getattr(d, "cooldown_remaining", 0.0)),
+            cooldown_remaining=float(d.cooldown_remaining),
         )
 
     # --- internals -----------------------------------------------------------
@@ -191,29 +136,13 @@ class DefaultTransitionService(TransitionService):
         return {"type": technique, "duration": 2.0}
 
     def _drain(self) -> Optional[TransitionOrders]:
-        if not self._host.recorded:
+        orders = self._manager.pop_orders()
+        if not orders:
+            if not self._director.is_pending and self._manager._pending_transition is None and not self._drop_requested:
+                self._reason = ""
             return None
-        orders = []
-        max_duration = 0.0
-        for seg, mode, cfg in self._host.recorded:
-            cfg = cfg or {}
-            dur = float(cfg.get("duration", 2.0))
-            offset = float(cfg.get("start_offset", 0.0))
-            if offset + dur > max_duration:
-                max_duration = offset + dur
-            orders.append(SegmentOrder(
-                segment=seg,
-                target_mode=mode,
-                technique=str(cfg.get("type", "fade_in_out")),
-                duration=dur,
-                direction=cfg.get("direction"),
-                start_offset=offset,
-            ))
-            self._last_orders[seg] = mode
-        self._host.recorded = []
-        if max_duration > 0 and self._director.is_in_transition:
-            if max_duration > self._director.transition_duration:
-                self._director.set_duration(max_duration)
+        for o in orders:
+            self._last_orders[o.segment] = o.target_mode
         reason = self._reason
         self._reason = ""
-        return TransitionOrders(orders=tuple(orders), reason=reason)
+        return TransitionOrders(orders=orders, reason=reason)

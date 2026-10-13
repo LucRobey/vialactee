@@ -1,6 +1,9 @@
 """
 transitions/stagger.py - Staggered Offsets & Per-Cohort Transition Techniques.
 
+# Note: not wired into automatic transitions yet; only reachable when a caller
+# explicitly passes staggered=True to request_next() / schedule_transition().
+
 Provides spatial and cohort-aware timing patterns:
 1. Cascading ripples (top-down / bottom-up / center-out)
 2. Complementary techniques across cohorts (e.g. vertical wipes on pillars,
@@ -81,6 +84,15 @@ def discover_segment_cohorts(segments: List[Any]) -> Tuple[List[str], List[List[
     return verticals, rings
 
 
+def _step_distance(idx: int, total: int, pattern: StaggerPattern) -> float:
+    """Computes the cohort step multiplier for a given index and stagger pattern."""
+    if pattern == StaggerPattern.CASCADE_UP:
+        return float(total - 1 - idx)
+    if pattern == StaggerPattern.CENTER_OUT:
+        return abs(idx - (total - 1) / 2.0)
+    return float(idx)
+
+
 def generate_staggered_configs(
     allocation: Dict[str, str],
     verticals: List[str],
@@ -94,26 +106,10 @@ def generate_staggered_configs(
     """
     Builds per-segment transition configurations with staggered start offsets
     and/or complementary techniques across physical cohorts.
-
-    Args:
-        allocation: Mapping of {segment_name: target_mode_name}.
-        verticals: List of vertical pillar segment names.
-        rings: List of horizontal ring cohorts (each is a list of segment names).
-        base_technique: Fallback technique name (e.g., 'fade_in_out').
-        base_duration: Base duration in seconds for each segment.
-        pattern: Selected StaggerPattern.
-        step_delay: Time step delay in seconds between successive cohorts.
-        pillar_wipe: If True, uses 'vertical_wipe' for vertical pillars.
-
-    Returns:
-        Dict mapping segment_name to transition config dictionary.
     """
     configs: Dict[str, Dict[str, Any]] = {}
     if not allocation:
         return configs
-
-    vert_set = set(verticals)
-    has_rings = len(rings) > 0 and any(len(r) > 0 for r in rings)
 
     if pattern == StaggerPattern.SIMULTANEOUS:
         for seg in allocation:
@@ -125,150 +121,52 @@ def generate_staggered_configs(
             }
         return configs
 
-    if pattern == StaggerPattern.COHORT_COMPLEMENTARY:
-        # Vertical pillars wipe vertically; horizontal rings fade with staggered delay
-        vert_tech = "vertical_wipe" if pillar_wipe else base_technique
-        vert_dur = min(base_duration, 1.2)
-        ring_tech = "fade_in_out" if base_technique in ("vertical_wipe", "explosion") else base_technique
+    has_rings = any(len(r) > 0 for r in rings)
+    is_complementary = pattern == StaggerPattern.COHORT_COMPLEMENTARY
+    vert_tech = "vertical_wipe" if pillar_wipe else base_technique
+    vert_dur = min(base_duration, 1.2) if is_complementary else base_duration
+    ring_tech = (
+        ("fade_in_out" if base_technique in ("vertical_wipe", "explosion") else base_technique)
+        if is_complementary
+        else base_technique
+    )
+    vert_dir = (
+        "UP" if pattern == StaggerPattern.CASCADE_UP
+        else (None if pattern == StaggerPattern.CENTER_OUT else "DOWN")
+    )
+    ring_start_base = 0.20 if (is_complementary and verticals) else 0.0
 
+    if has_rings:
         for seg in verticals:
             if seg in allocation:
                 configs[seg] = {
                     "type": vert_tech,
                     "duration": vert_dur,
                     "start_offset": 0.0,
-                    "direction": "DOWN",
+                    "direction": vert_dir,
                 }
-
-        ring_start_base = 0.20 if verticals else 0.0
-        if has_rings:
-            for ring_idx, ring in enumerate(rings):
-                offset = round(ring_start_base + (ring_idx * step_delay), 3)
-                for seg in ring:
-                    if seg in allocation:
-                        configs[seg] = {
-                            "type": ring_tech,
-                            "duration": base_duration,
-                            "start_offset": offset,
-                            "direction": None,
-                        }
-        else:
-            # If no rings, stagger verticals after the first
-            for idx, seg in enumerate(verticals):
+        num_rings = len(rings)
+        for ring_idx, ring in enumerate(rings):
+            offset = round(ring_start_base + _step_distance(ring_idx, num_rings, pattern) * step_delay, 3)
+            for seg in ring:
                 if seg in allocation:
                     configs[seg] = {
-                        "type": vert_tech,
-                        "duration": vert_dur,
-                        "start_offset": round(idx * step_delay, 3),
-                        "direction": "DOWN",
-                    }
-
-    elif pattern == StaggerPattern.CASCADE_DOWN:
-        # Top-down cascade: rings ripple downward from top ring to bottom ring
-        vert_tech = "vertical_wipe" if pillar_wipe else base_technique
-        for seg in verticals:
-            if seg in allocation:
-                configs[seg] = {
-                    "type": vert_tech,
-                    "duration": base_duration,
-                    "start_offset": 0.0,
-                    "direction": "DOWN",
-                }
-
-        if has_rings:
-            for ring_idx, ring in enumerate(rings):
-                offset = round(ring_idx * step_delay, 3)
-                for seg in ring:
-                    if seg in allocation:
-                        configs[seg] = {
-                            "type": base_technique,
-                            "duration": base_duration,
-                            "start_offset": offset,
-                            "direction": None,
-                        }
-        else:
-            for idx, seg in enumerate(verticals):
-                if seg in allocation:
-                    configs[seg] = {
-                        "type": vert_tech,
+                        "type": ring_tech,
                         "duration": base_duration,
-                        "start_offset": round(idx * step_delay, 3),
-                        "direction": "DOWN",
-                    }
-
-    elif pattern == StaggerPattern.CASCADE_UP:
-        # Bottom-up cascade: rings ripple upward from bottom ring to top ring
-        vert_tech = "vertical_wipe" if pillar_wipe else base_technique
-        for seg in verticals:
-            if seg in allocation:
-                configs[seg] = {
-                    "type": vert_tech,
-                    "duration": base_duration,
-                    "start_offset": 0.0,
-                    "direction": "UP",
-                }
-
-        if has_rings:
-            num_rings = len(rings)
-            for ring_idx, ring in enumerate(rings):
-                offset = round((num_rings - 1 - ring_idx) * step_delay, 3)
-                for seg in ring:
-                    if seg in allocation:
-                        configs[seg] = {
-                            "type": base_technique,
-                            "duration": base_duration,
-                            "start_offset": offset,
-                            "direction": None,
-                        }
-        else:
-            num_v = len(verticals)
-            for idx, seg in enumerate(verticals):
-                if seg in allocation:
-                    configs[seg] = {
-                        "type": vert_tech,
-                        "duration": base_duration,
-                        "start_offset": round((num_v - 1 - idx) * step_delay, 3),
-                        "direction": "UP",
-                    }
-
-    elif pattern == StaggerPattern.CENTER_OUT:
-        # Center-out ripple: center ring ripples outward symmetrically
-        vert_tech = "vertical_wipe" if pillar_wipe else base_technique
-        for seg in verticals:
-            if seg in allocation:
-                configs[seg] = {
-                    "type": vert_tech,
-                    "duration": base_duration,
-                    "start_offset": 0.0,
-                    "direction": None,
-                }
-
-        if has_rings:
-            num_rings = len(rings)
-            mid = (num_rings - 1) / 2.0
-            for ring_idx, ring in enumerate(rings):
-                dist = abs(ring_idx - mid)
-                offset = round(dist * step_delay, 3)
-                for seg in ring:
-                    if seg in allocation:
-                        configs[seg] = {
-                            "type": base_technique,
-                            "duration": base_duration,
-                            "start_offset": offset,
-                            "direction": None,
-                        }
-        else:
-            num_v = len(verticals)
-            mid_v = (num_v - 1) / 2.0
-            for idx, seg in enumerate(verticals):
-                if seg in allocation:
-                    dist = abs(idx - mid_v)
-                    configs[seg] = {
-                        "type": vert_tech,
-                        "duration": base_duration,
-                        "start_offset": round(dist * step_delay, 3),
+                        "start_offset": offset,
                         "direction": None,
                     }
+    else:
+        num_v = len(verticals)
+        for idx, seg in enumerate(verticals):
+            if seg in allocation:
+                offset = round(_step_distance(idx, num_v, pattern) * step_delay, 3)
+                configs[seg] = {
+                    "type": vert_tech,
+                    "duration": vert_dur,
+                    "start_offset": offset,
+                    "direction": vert_dir,
+                }
 
     # Catch any remaining segments not belonging to verticals or rings
     for seg in allocation:
