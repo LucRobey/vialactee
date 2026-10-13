@@ -134,7 +134,7 @@ async def _handle_select_mood(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any
     palette = payload.get("palette") or payload.get("mood")
     if not isinstance(palette, str):
         return {"applied": False, "reason": "invalid_palette"}
-    success = mm.mood_manager.set_palette(palette)
+    success = mm.mood.request_palette(palette)
     if success:
         return {"applied": True, "mood": palette}
     return {"applied": False, "reason": "unknown_palette"}

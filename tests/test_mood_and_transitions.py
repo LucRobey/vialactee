@@ -5,12 +5,7 @@ Tests:
 1. config/mode_dna.py:
    - DNA metric bounds in [0.0, 1.0] and valid spatial roles.
    - Normalized lookup and fallback to DEFAULT_MODE_DNA.
-2. core/GlobalMoodManager.py:
-   - Curated master palettes and RGB boundaries [0, 255].
-   - 2.0s smooth cosine crossfade mathematics.
-   - AXIOM-01: Execution time <= 0.01 ms.
-   - AXIOM-02: Zero dynamic heap allocations in hot-path update().
-   - Facade properties and scene-based palette selection.
+2. mood/ (sealed sector): see tests/test_mood_sector.py for palettes, crossfade and AXIOM-01/02.
 3. core/LocalTransitionManager.py:
    - Music Matchmaker: Evaluates live audio context to target DNA.
    - Weighted Lottery: Probabilistic selection according to DNA distance.
@@ -31,7 +26,8 @@ from unittest.mock import MagicMock
 import numpy as np
 
 import transitions.mode_dna as mode_dna
-from core.GlobalMoodManager import GlobalMoodManager, PALETTES
+from mood.api import create_mood_service
+from mood.palettes import PALETTES
 from transitions.api import MusicSnapshot, SegmentDescriptor
 from transitions.director import Transition_Director
 from transitions.manager import (
@@ -77,132 +73,8 @@ class TestModeDNA(unittest.TestCase):
         self.assertEqual(fallback, mode_dna.DEFAULT_MODE_DNA)
 
 
-class TestGlobalMoodManager(unittest.TestCase):
-    def setUp(self):
-        GlobalMoodManager.reset_instance()
-        self.manager = GlobalMoodManager.get_instance(initial_palette="Cyberpunk")
-
-    def test_curated_palettes_validity(self):
-        """Curated palettes must exist and have 4 valid RGB triplets [0, 255]."""
-        required = ["Cyberpunk", "Solar Ember", "Deep Ocean", "Ethereal", "Neon Acid", "Monochrome Chrome"]
-        for pal in required:
-            self.assertIn(pal, PALETTES)
-            colors = PALETTES[pal]
-            self.assertEqual(len(colors), 4)
-            for rgb in colors:
-                self.assertEqual(len(rgb), 3)
-                for c in rgb:
-                    self.assertTrue(0 <= c <= 255)
-
-    def test_smooth_cosine_crossfade_progression(self):
-        """Palette crossfade must strictly follow cosine curve and complete in 2.0s."""
-        self.assertEqual(self.manager.current_palette, "Cyberpunk")
-        self.assertFalse(self.manager.is_transitioning)
-
-        # Trigger transition to Solar Ember (duration = 2.0s)
-        self.assertTrue(self.manager.set_palette("Solar Ember", duration=2.0))
-        self.assertTrue(self.manager.is_transitioning)
-        self.assertEqual(self.manager.target_palette, "Solar Ember")
-
-        cyber_colors = np.array(PALETTES["Cyberpunk"], dtype=np.float32)
-        solar_colors = np.array(PALETTES["Solar Ember"], dtype=np.float32)
-
-        # Halfway at 1.0s (progress = 0.5):
-        # w = 0.5 * (1 - cos(pi * 0.5)) = 0.5 * (1 - 0) = 0.5
-        self.manager.update(1.0)
-        self.assertTrue(self.manager.is_transitioning)
-        self.assertAlmostEqual(self.manager.blend_progress, 0.5, places=2)
-
-        expected_mid = 0.5 * cyber_colors + 0.5 * solar_colors
-        np.testing.assert_allclose(self.manager.mood_colors, expected_mid, atol=2.0)
-
-        # Finish transition at 2.0s total
-        self.manager.update(1.0)
-        self.assertFalse(self.manager.is_transitioning)
-        self.assertEqual(self.manager.current_palette, "Solar Ember")
-        self.assertEqual(self.manager.blend_progress, 1.0)
-        np.testing.assert_array_equal(self.manager.mood_colors, PALETTES["Solar Ember"])
-
-    def test_axiom_01_frame_budget(self):
-        """GlobalMoodManager.update() must execute in <= 0.01 ms per frame."""
-        self.manager.set_palette("Neon Acid", duration=2.0)
-
-        # Warmup
-        for _ in range(50):
-            self.manager.update(0.001)
-
-        # Benchmark frames (best of 5 trials with GC disabled to filter out OS interrupt jitter and GC pauses)
-        import gc
-        iterations = 500
-        best_frame_ms = float("inf")
-        gc.collect()
-        gc.disable()
-        try:
-            for _ in range(5):
-                t0 = time.perf_counter()
-                for _ in range(iterations):
-                    self.manager.update(0.001)
-                trial_ms = ((time.perf_counter() - t0) / iterations) * 1000.0
-                if trial_ms < best_frame_ms:
-                    best_frame_ms = trial_ms
-        finally:
-            gc.enable()
-
-        self.assertLess(
-            best_frame_ms, 0.01,
-            f"AXIOM-01 violation: GlobalMoodManager update took {best_frame_ms:.4f} ms > 0.01 ms"
-        )
-
-    def test_axiom_02_zero_allocation_in_update(self):
-        """GlobalMoodManager.update() must allocate ZERO dynamic heap memory during crossfade."""
-        self.manager.set_palette("Deep Ocean", duration=2.0)
-
-        # Warm up
-        self.manager.update(0.01)
-
-        tracemalloc.start()
-        snapshot_start = tracemalloc.take_snapshot()
-
-        for _ in range(50):
-            self.manager.update(0.033)
-
-        snapshot_end = tracemalloc.take_snapshot()
-        tracemalloc.stop()
-
-        stats = snapshot_end.compare_to(snapshot_start, "lineno")
-        # Filter for allocations inside GlobalMoodManager.py
-        gmm_allocations = [
-            stat for stat in stats
-            if "GlobalMoodManager.py" in stat.traceback[0].filename
-        ]
-        total_gmm_bytes = sum(stat.size_diff for stat in gmm_allocations)
-        self.assertEqual(
-            total_gmm_bytes, 0,
-            f"AXIOM-02 violation: {total_gmm_bytes} bytes allocated in GlobalMoodManager.update(): {gmm_allocations}"
-        )
-
-    def test_facade_properties_and_scene_switch(self):
-        """Test primary, secondary, accent, background properties and scene mapping."""
-        self.manager.set_palette("Cyberpunk", duration=0.01)
-        self.manager.update(0.02)
-
-        self.assertEqual(self.manager.mood_colors.shape, (4, 3))
-        np.testing.assert_array_equal(self.manager.primary_color, PALETTES["Cyberpunk"][0])
-        np.testing.assert_array_equal(self.manager.secondary_color, PALETTES["Cyberpunk"][1])
-        np.testing.assert_array_equal(self.manager.accent_color, PALETTES["Cyberpunk"][2])
-        np.testing.assert_array_equal(self.manager.background_color, PALETTES["Cyberpunk"][3])
-
-        # Test scene mapping
-        self.assertTrue(self.manager.set_palette_for_scene("CHILL"))
-        self.assertEqual(self.manager.target_palette, "Deep Ocean")
-
-        self.assertTrue(self.manager.set_palette_for_scene("DROP_IMPACT"))
-        self.assertEqual(self.manager.target_palette, "Neon Acid")
-
-
 class TestLocalTransitionManager(unittest.TestCase):
     def setUp(self):
-        GlobalMoodManager.reset_instance()
         self.director = Transition_Director()
         self.music = MusicSnapshot(
             beat_phase=0.50,
@@ -360,14 +232,22 @@ class TestLocalTransitionManager(unittest.TestCase):
 
 
 class TestModeDelegationAndHooks(unittest.TestCase):
+    def tearDown(self):
+        Mode.Mode.reset_mood_colors()
+
     def test_mode_mood_colors_delegation(self):
-        """Every mode must expose mood_colors property returning GlobalMoodManager palette."""
+        """Every mode must expose mood_colors: static fallback by default, the live mood view once bound."""
         mode_instance = Mode.Mode(
             "TestMode", "Segment v1", None, None, [0, 1, 2], np.zeros((3, 3), dtype=np.int32), {}
         )
         mood = mode_instance.mood_colors
         self.assertEqual(mood.shape, (4, 3))
         self.assertEqual(mood.dtype, np.int32)
+
+        service = create_mood_service(initial_palette="Neon Acid")
+        Mode.Mode.bind_mood_colors(service.colors())
+        self.assertIs(mode_instance.mood_colors, service.colors())
+        np.testing.assert_array_equal(mode_instance.mood_colors, PALETTES["Neon Acid"])
 
     def test_mode_transition_hooks_exist_and_callable(self):
         """Default on_transition_exit and on_transition_enter hooks exist on Mode."""
@@ -381,8 +261,6 @@ class TestModeDelegationAndHooks(unittest.TestCase):
 
 class TestRobustnessAndEdgeCases(unittest.TestCase):
     def setUp(self):
-        GlobalMoodManager.reset_instance()
-        self.gmm = GlobalMoodManager.get_instance(initial_palette="Cyberpunk")
         self.director = Transition_Director()
         self.music = MusicSnapshot(
             beat_phase=0.50,
@@ -392,21 +270,6 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
             beat_trust=0.50,
         )
         self.ltm = LocalTransitionManager(director=self.director, music=self.music)
-
-    def test_palette_no_stall_on_repeated_requests(self):
-        """Repeated set_palette calls for active target must not reset crossfade timer."""
-        self.gmm.set_palette("Solar Ember", duration=2.0)
-        self.gmm.update(0.5)  # 25% progress
-        self.assertAlmostEqual(self.gmm.blend_progress, 0.25, places=2)
-
-        # Repeated request while already transitioning to Solar Ember
-        self.assertTrue(self.gmm.set_palette("Solar Ember", duration=2.0))
-        # Timer should NOT be wiped back to 0
-        self.assertAlmostEqual(self.gmm.blend_progress, 0.25, places=2)
-
-        # Advance further
-        self.gmm.update(0.5)  # 50% progress
-        self.assertAlmostEqual(self.gmm.blend_progress, 0.50, places=2)
 
     def test_evaluate_target_dna_robust_to_none_attributes(self):
         """evaluate_target_dna must not raise TypeError when context metrics are None."""

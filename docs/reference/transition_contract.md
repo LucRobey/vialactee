@@ -20,7 +20,7 @@ Sibling of [`audio_analyzer_contract.md`](audio_analyzer_contract.md). The trans
 | 6 | Blending | out | `blend(dest, incoming, progress, technique, coords)` | **In place**, returns nothing, zero allocation per frame. |
 | 7 | Progress | out | `TransitionStatus.progress` | Used by the optional mode enter/exit hooks and the UI. |
 | 8 | Status | out | `get_status()` → `TransitionStatus` | State, progress, locked, interval, current technique. |
-| 9 | Palette request | out | `TransitionOrders.palette` (`PaletteRequest`) | The palette manager (`GlobalMoodManager`) stays **outside** the room. |
+| 9 | Palette request | out | `TransitionOrders.palette` (`PaletteRequest`) | The mood sector (`mood/`, see [mood_contract.md](mood_contract.md)) stays **outside** the room; `TransitionBridge.apply_orders` forwards the request to `mood.api`. |
 
 **Ownership.** The room owns: when to transition, what to play where, how it looks, and timing. The outside owns: segments and their buffers, modes, the palette manager, and the UI. Modes never decide when or how they are replaced; the optional `on_transition_enter/exit` hooks stay on the mode side and receive progress from the caller.
 
@@ -41,7 +41,7 @@ Source files (all but the last four inside the room):
 [`transitions/mode_dna.py`](../../transitions/mode_dna.py) (mode fingerprints) ·
 [`core/TransitionBridge.py`](../../core/TransitionBridge.py) (outside glue) ·
 [`core/Segment.py`](../../core/Segment.py) (per-segment dual buffer + local timing) ·
-[`core/GlobalMoodManager.py`](../../core/GlobalMoodManager.py) (palettes) ·
+[`mood/api.py`](../../mood/api.py) (palettes, separate sealed sector) ·
 [`modes/Mode.py`](../../modes/Mode.py) (lifecycle hooks)
 
 ---
@@ -155,7 +155,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | `Mode_master.activ_configuration["modes"]` | Updated by `TransitionBridge.apply_orders()` with the new allocation; sets `_state_dirty = True`. |
 | `Transition_Director` | `state` (`PASSATION` or `TRANSITION_DUAL`), `transition_progress` [0..1], `transition_type`, `transition_duration`, `is_in_transition`, `cooldown_remaining`. Exposed via `TransitionService.get_status()`. |
 | Modes (optional hooks) | `on_transition_exit(progress)` on the outgoing mode and `on_transition_enter(progress)` on the incoming mode, called every frame; `has_custom_transition=True` makes the Segment skip the engine blend and swap immediately. |
-| `GlobalMoodManager` | Cosine palette crossfade (default 2 s), ticked by `Mode_master` (outside the room). |
+| `mood.api.MoodService` | Cosine palette crossfade (default 2 s), ticked by `Mode_master` (outside the room). |
 
 ### Invariants
 - One transition at a time installation-wide. The Director holds a single `state` and `transition_progress` spanning the maximum `(start_offset + duration)` of the emitted orders.
@@ -177,7 +177,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | Lookahead / pre-drop scheduling | Done (`live_is_song_change`, `live_is_verse_chorus_change` countdowns and `pre_drop_buildup` duration scaling $D = \text{lookahead} / 0.80$). |
 | Per-mode enter/exit behavior | **[GAP]** Hooks exist on `Mode`, and **no mode implements them**. |
 | Per-cohort or per-segment technique or staggering | Engine/manager/segment support is built and tested (`transitions/stagger.py`, `Segment` local offsets, Director max-duration sync), but **[GAP]** `staggered=True` is not wired into automatic transitions or `CommandRouter` yet. |
-| Automatic palette change on transitions | **[GAP]** `PaletteRequest` door exists on `TransitionOrders`, but transitions do not emit palette changes yet (palette changes only via UI `select_mood`). |
+| Automatic palette change on transitions | **[GAP]** `PaletteRequest` door exists on `TransitionOrders`, and `TransitionBridge.apply_orders` now forwards it to the mood sector, but transitions do not emit palette changes yet (palette changes only via UI `select_mood`). |
 | Dwell and cooldown policy between transitions | Done. Minimum security cooldown of 5.0 seconds enforced post-transition across timer and musical triggers; urgent drop impacts and manual UI requests bypass and reset. |
 | Silence and standby behavior | **[GAP]** `MusicSnapshot.is_silent` crosses the door, but no silence/standby policy is implemented in the transition sector yet (dead `silence_*` / `is_in_standby` fields removed from `Transition_Director`). |
 | Tests | `tests/transitions/` (contracts, service, sandbox, engine, director, stagger), `test_mood_and_transitions`, `test_transition_bridge`, and the wall test `governance/test_transition_isolation`. |

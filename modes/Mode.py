@@ -10,14 +10,30 @@ import time
 import numpy as np
 from typing import List, Dict, Any, Tuple, Union, Optional
 import logging
-from core.GlobalMoodManager import GlobalMoodManager
 
 ModeSettingValue = Union[str, int, float, bool]
+
+# Fallback palette (Cyberpunk) for modes used without Mode_master, e.g. in tests.
+_FALLBACK_MOOD_COLORS = np.array(
+    [(0, 240, 255), (255, 0, 128), (60, 0, 180), (0, 100, 255)], dtype=np.int32
+)
+_FALLBACK_MOOD_COLORS.flags.writeable = False
 
 class Mode:
 
     listener = None
     white = (255, 255, 255)
+    _mood_colors: np.ndarray = _FALLBACK_MOOD_COLORS
+
+    @classmethod
+    def bind_mood_colors(cls, colors: np.ndarray) -> None:
+        """Bind the live (4, 3) int32 mood colour view, shared by every mode."""
+        Mode._mood_colors = colors
+
+    @classmethod
+    def reset_mood_colors(cls) -> None:
+        """Testing utility: restore the static fallback palette."""
+        Mode._mood_colors = _FALLBACK_MOOD_COLORS
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         self.name = name
@@ -238,10 +254,10 @@ class Mode:
     @property
     def mood_colors(self) -> np.ndarray:
         """
-        Global curated palette colors provided by GlobalMoodManager.
-        Shape: (4, 3) np.ndarray of dtype np.int32.
+        Global curated palette colors provided by the mood sector (bound via bind_mood_colors).
+        Shape: (4, 3) np.ndarray of dtype np.int32, read-only.
         """
-        return GlobalMoodManager.get_instance().mood_colors
+        return Mode._mood_colors
 
     def on_transition_exit(self, progress: float) -> None:
         """

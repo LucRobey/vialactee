@@ -13,6 +13,7 @@ Use this skill as the primary architectural authority for the Vialactée music-r
 
 * `Main.py`: The asynchronous orchestration entry point.
 * `transitions/`: `transitions/` is a sealed room: all transition logic lives there and is reached only through `transitions.api` (see `docs/reference/transition_contract.md`). Enforced by `tests/governance/test_transition_isolation.py`; to work on it alone run `python -m transitions.sandbox`.
+* `mood/`: `mood/` is a sealed room (curated palettes, cosine crossfade, scene rules) reached only through `mood.api` (see `docs/reference/mood_contract.md`). Enforced by `tests/governance/test_mood_isolation.py`. Modes read colours via `Mode.mood_colors`, bound by `Mode_master`.
 * `core/`: The math and execution engine (`Mode_master.py`, `CommandRouter.py`, `PresetRepository.py`, `TransitionBridge.py`, `Listener.py`, `MusicalContextEngine.py`, `AudioAnalyzer.py`, `AudioIngestion.py`, `Segment.py`).
 * `modes/`: Visual light animation modes inheriting from `modes.Mode`.
 * `config/`: Hardware profiles (`hardware_profile` in `app_config.json`), unified physical geometry + UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).

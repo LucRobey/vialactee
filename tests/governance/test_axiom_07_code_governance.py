@@ -21,7 +21,7 @@ class TestAxiom07CodeGovernance(unittest.TestCase):
         os.path.normpath("core/MultiBandOnsetAudioAnalyzer.py"): 621,
     }
 
-    PRODUCTION_DIRS = ["core", "hardware", "modes", "config", "connectors", "transitions"]
+    PRODUCTION_DIRS = ["core", "hardware", "modes", "config", "connectors", "transitions", "mood"]
     PRODUCTION_ROOT_FILES = ["Main.py"]
 
     def test_file_line_counts_and_ratchet(self):

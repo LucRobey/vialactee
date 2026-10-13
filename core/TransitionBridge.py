@@ -7,7 +7,8 @@ project object and the rest of the project never sees sector internals.
 
 - build_music_snapshot:        Listener            -> MusicSnapshot   (Music door)
 - build_installation_snapshot: Segment list        -> InstallationSnapshot (Installation door)
-- apply_orders:                TransitionOrders    -> OrderAck        (Orders + Acknowledgement doors)
+- apply_orders:                TransitionOrders    -> OrderAck        (Orders + Acknowledgement doors;
+                                                                   also forwards orders.palette to the mood sector)
 """
 from typing import Any, List, Optional, Tuple
 
@@ -130,4 +131,7 @@ def apply_orders(mode_master: Any, orders: TransitionOrders) -> OrderAck:
 
     if hasattr(mode_master, "_state_dirty"):
         mode_master._state_dirty = True
+    mood = getattr(mode_master, "mood", None)
+    if orders.palette is not None and mood is not None:
+        mood.request_palette(orders.palette.palette, orders.palette.duration)
     return OrderAck(accepted=tuple(accepted), refused=tuple(refused))

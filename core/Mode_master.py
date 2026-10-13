@@ -13,7 +13,8 @@ import core.Listener as Listener
 import core.TransitionBridge as TransitionBridge
 from config.room_bounds import compute_room_bounds
 from transitions.api import create_transition_service
-from core.GlobalMoodManager import GlobalMoodManager
+from mood.api import create_mood_service
+from modes.Mode import Mode
 from config.Configuration_manager import resolve_segments_file_path
 import utils.Profiler as Profiler
 from core.CommandRouter import router as command_router
@@ -66,7 +67,8 @@ class Mode_master:
         self.initiate_segments()
         self.mode_settings_catalog = self._build_mode_settings_catalog()
         self.transitions = create_transition_service(self.infos, resolve_segments_file_path(self.infos))
-        self.mood_manager = GlobalMoodManager.get_instance()
+        self.mood = create_mood_service(auto_scene=True)  # auto_scene is a code default (off) in mood.api
+        Mode.bind_mood_colors(self.mood.colors())
         self.initiate_configuration()
         self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
 
@@ -307,8 +309,8 @@ class Mode_master:
             "autoTransitionTime": int(round(transition_status.auto_interval)),
             "playlists": [],
             "availableModes": available_modes,
-            "activeMood": getattr(self.mood_manager, "current_palette", "Cyberpunk"),
-            "availableMoods": getattr(self.mood_manager, "palette_names", []),
+            "activeMood": self.mood.get_status().palette,
+            "availableMoods": list(self.mood.get_status().available_palettes),
             "segments": segments,
             "modeSettingsCatalog": list(self.mode_settings_catalog.values()),
             "modeSettings": self._get_effective_mode_settings(),
@@ -382,8 +384,9 @@ class Mode_master:
 
         self.current_time = time.time()
         with self.profiler.measure("transitions"):
-            self.mood_manager.update(dt)
-            orders = self.transitions.update(dt, TransitionBridge.build_music_snapshot(self.listener))
+            music = TransitionBridge.build_music_snapshot(self.listener)
+            self.mood.update(dt, music.scene)
+            orders = self.transitions.update(dt, music)
             if orders is not None:
                 self.transitions.acknowledge(TransitionBridge.apply_orders(self, orders))
         with self.profiler.measure("connector"):

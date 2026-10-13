@@ -39,7 +39,7 @@ class TestModeMasterSnapshot(unittest.TestCase):
         self.assertEqual(len(self.mode_master.activ_configuration.get("modes", {})), 11)
         self.assertEqual(len(self.mode_master.activ_configuration.get("way", {})), 11)
         self.assertIsNotNone(self.mode_master.transitions)
-        self.assertIsNotNone(self.mode_master.mood_manager)
+        self.assertIsNotNone(self.mode_master.mood)
 
     def test_get_state_snapshot_schema(self):
         snapshot = self.mode_master.get_state_snapshot()

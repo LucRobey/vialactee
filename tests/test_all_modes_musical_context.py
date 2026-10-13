@@ -3,7 +3,7 @@ Unit & Governance Tests for all 23 visual animation modes in modes/.
 Verifies:
 1. Instantiation and execution of all 23 modes.
 2. Responsiveness to MusicalContextEngine scenes (CHILL, GROOVE, BUILDUP, DROP_IMPACT) and badges (is_real_beat, is_silent, is_drop_impact).
-3. Delegation and harmonization with GlobalMoodManager mood_colors.
+3. Delegation and harmonization with the mood sector's mood_colors.
 4. Edge cases: 0 LEDs, 1 LED, None listener, None context.
 5. AXIOM-01: Execution timing <= 0.05 ms per mode frame.
 6. AXIOM-02: Zero dynamic heap allocations in hot-path run() loop via tracemalloc.
@@ -15,7 +15,9 @@ import time
 import tracemalloc
 
 from core.MusicalContextEngine import MusicalContextEngine, MusicalScene
-from core.GlobalMoodManager import GlobalMoodManager, PALETTES
+from mood.api import create_mood_service
+from mood.palettes import PALETTES
+from modes.Mode import Mode as BaseMode
 
 from modes.Hyper_strobe_mode import Hyper_strobe_mode
 from modes.Metronome_mode import Metronome_mode
@@ -100,8 +102,9 @@ class MockListener:
 
 class TestAllModesMusicalContext(unittest.TestCase):
     def setUp(self):
-        GlobalMoodManager.reset_instance()
-        self.mood_manager = GlobalMoodManager.get_instance(initial_palette="Cyberpunk")
+        self.mood = create_mood_service(initial_palette="Cyberpunk")
+        BaseMode.bind_mood_colors(self.mood.colors())
+        self.addCleanup(BaseMode.reset_mood_colors)
         self.listener = MockListener()
         self.engine = MusicalContextEngine(self.listener)
         self.listener.context = self.engine
@@ -120,7 +123,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
         )
 
     def test_all_23_modes_instantiation_and_mood_colors(self):
-        """All 23 modes must instantiate and expose mood_colors matching GlobalMoodManager."""
+        """All 23 modes must instantiate and expose mood_colors matching the mood service."""
         self.assertEqual(len(ALL_MODE_CLASSES), 23)
         for mode_cls in ALL_MODE_CLASSES:
             mode = self._instantiate_mode(mode_cls, num_leds=40)
