@@ -95,7 +95,7 @@ def test_shining_stars_mode_zero_heap_allocation():
 
     mock_listener = MagicMock()
     mock_listener.nb_of_fft_band = 8
-    # All 8 bands breach threshold to trigger 8 lightUp() calls per frame
+    # All 8 bands breach threshold to trigger 8 star flashes per frame
     mock_listener.band_flux = np.array([50.0] * 8)
 
     rgb = np.zeros((100, 3), dtype=np.int32)
@@ -107,7 +107,7 @@ def test_shining_stars_mode_zero_heap_allocation():
 
     tracemalloc.start()
     s1 = tracemalloc.take_snapshot()
-    # 300 frames * 8 bands = 2,400 lightUp invocations (wrapping through 256 pool > 9 times)
+    # 300 frames * 8 bands = 2,400 star flashes (wrapping through 256 pool > 9 times)
     for _ in range(300):
         mode.run()
     s2 = tracemalloc.take_snapshot()

@@ -108,9 +108,6 @@ def apply_orders(mode_master: Any, orders: TransitionOrders) -> OrderAck:
     """
     accepted: List[str] = []
     refused: List[str] = []
-    modes = None
-    if isinstance(getattr(mode_master, "activ_configuration", None), dict):
-        modes = mode_master.activ_configuration.setdefault("modes", {})
 
     for order in orders.orders:
         segment = mode_master._find_segment_by_name(order.segment)
@@ -125,8 +122,6 @@ def apply_orders(mode_master: Any, orders: TransitionOrders) -> OrderAck:
         segment.change_mode(order.target_mode, cfg)
         if order.direction is not None:
             segment.change_way(order.direction)
-        if modes is not None:
-            modes[order.segment] = order.target_mode
         (accepted if getattr(segment, "is_in_transition", False) else refused).append(order.segment)
 
     if hasattr(mode_master, "_state_dirty"):

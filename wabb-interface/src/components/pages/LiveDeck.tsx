@@ -66,7 +66,6 @@ export const LiveDeck = () => {
   const [isHold, setIsHold] = useState(false);
   const [selectedTransition, setSelectedTransition] = useState('CUT');
   const [currentMood, setCurrentMood] = useState('Cyberpunk');
-  const [currentConfiguration, setCurrentConfiguration] = useState('Live Random DNA');
   const [systemTelemetry, setSystemTelemetry] = useState(EMPTY_SYSTEM);
   const bridgeStatus = useBridgeStatus();
 
@@ -118,9 +117,6 @@ export const LiveDeck = () => {
 
       if (state.activeMood) {
         setCurrentMood(state.activeMood);
-      }
-      if (state.activeConfiguration) {
-        setCurrentConfiguration(state.activeConfiguration);
       }
       setSystemTelemetry({
         cpuTempC: state.system?.cpuTempC ?? null,
@@ -393,7 +389,7 @@ export const LiveDeck = () => {
             <div className="status-item" style={{ textAlign: 'center' }}>
               <span className="status-label" style={{ fontSize: '0.7rem' }}>DNA REGIME</span>
               <span className="status-value" style={{ fontSize: '1.1rem', color: 'var(--lego-purple)', fontWeight: 800, letterSpacing: '1px' }}>
-                {currentConfiguration || '--'}
+                Live Random DNA
               </span>
             </div>
             <div className="status-item" style={{ textAlign: 'right' }}>
@@ -448,7 +444,7 @@ export const LiveDeck = () => {
               padding: '0 15px', boxShadow: '2px 2px 5px rgba(0,0,0,0.4)', borderRadius: '2px'
             }}>
               <span style={{ color: '#000', fontWeight: '900', fontSize: '0.9rem', letterSpacing: '1px', pointerEvents: 'none' }}>
-                {currentConfiguration || 'Live Random DNA'}
+                Live Random DNA
               </span>
             </div>
           </div>

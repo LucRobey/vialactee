@@ -151,8 +151,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 
 | Area | Effect |
 | :--- | :--- |
-| `Segment.change_mode` | Invoked by `TransitionBridge.apply_orders()`. Starts the target mode in a second buffer with local timing (`duration`, `start_offset`, `technique`). Blocked segments are skipped. |
-| `Mode_master.activ_configuration["modes"]` | Updated by `TransitionBridge.apply_orders()` with the new allocation; sets `_state_dirty = True`. |
+| `Segment.change_mode` | Invoked by `TransitionBridge.apply_orders()`. Starts the target mode in a second buffer with local timing (`duration`, `start_offset`, `technique`). Blocked segments are skipped. `TransitionBridge` also sets `Mode_master._state_dirty = True` so WebSocket clients receive the updated segment states. |
 | `Transition_Director` | `state` (`PASSATION` or `TRANSITION_DUAL`), `transition_progress` [0..1], `transition_type`, `transition_duration`, `is_in_transition`, `cooldown_remaining`. Exposed via `TransitionService.get_status()`. |
 | Modes (optional hooks) | `on_transition_exit(progress)` on the outgoing mode and `on_transition_enter(progress)` on the incoming mode, called every frame; `has_custom_transition=True` makes the Segment skip the engine blend and swap immediately. |
 | `mood.api.MoodService` | Cosine palette crossfade (default 2 s), ticked by `Mode_master` (outside the room). |
@@ -176,7 +175,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | Music-driven triggers | Done (`song_change`, `structural_change`, `pre_drop_buildup`, `drop_impact`). |
 | Lookahead / pre-drop scheduling | Done (`live_is_song_change`, `live_is_verse_chorus_change` countdowns and `pre_drop_buildup` duration scaling $D = \text{lookahead} / 0.80$). |
 | Per-mode enter/exit behavior | **[GAP]** Hooks exist on `Mode`, and **no mode implements them**. |
-| Per-cohort or per-segment technique or staggering | Engine/manager/segment support is built and tested (`transitions/stagger.py`, `Segment` local offsets, Director max-duration sync), but **[GAP]** `staggered=True` is not wired into automatic transitions or `CommandRouter` yet. |
+| Per-cohort or per-segment technique or staggering | Done. Automatic director triggers `timer`, `song_change` and `structural_change` are **staggered** (`DefaultTransitionService.update` -> `schedule_transition(staggered=True)`, pattern chosen from the music by `select_stagger_pattern`; vertical pillars use `vertical_wipe`). `drop_impact` and `pre_drop_buildup` are deliberately **not** staggered (their timing is aligned to the drop reaching the speakers), and manual `request_next()` / `request_drop()` / `CommandRouter` actions stay instant unless `request_next(staggered=True)` is requested. |
 | Automatic palette change on transitions | **[GAP]** `PaletteRequest` door exists on `TransitionOrders`, and `TransitionBridge.apply_orders` now forwards it to the mood sector, but transitions do not emit palette changes yet (palette changes only via UI `select_mood`). |
 | Dwell and cooldown policy between transitions | Done. Minimum security cooldown of 5.0 seconds enforced post-transition across timer and musical triggers; urgent drop impacts and manual UI requests bypass and reset. |
 | Silence and standby behavior | **[GAP]** `MusicSnapshot.is_silent` crosses the door, but no silence/standby policy is implemented in the transition sector yet (dead `silence_*` / `is_in_standby` fields removed from `Transition_Director`). |

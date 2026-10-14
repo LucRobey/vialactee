@@ -11,7 +11,6 @@ import unittest
 
 from config.Configuration_manager import (
     resolve_segments_file_path,
-    resolve_configurations_file_path,
 )
 
 

@@ -209,7 +209,7 @@ class Transition_Director:
             music is not None and (
                 drop_countdown > 0.0
                 or getattr(music, "is_drop_imminent", False)
-                or scene_str in ("BUILDUP", "PRE_DROP_BUILDUP")
+                or scene_str == "BUILDUP"
                 or getattr(music, "is_buildup", False)
                 or getattr(music, "live_is_drop", False)
             )

@@ -1,5 +1,5 @@
 """
-core/PresetRepository.py - Application Configuration & Debounced Atomic Storage.
+core/AppConfigStore.py - Application Configuration & Debounced Atomic Storage.
 
 Manages persistent storage for app_config.json with non-blocking debounced atomic I/O.
 Offloads disk operations via asyncio's run_in_executor to protect the 30 FPS render loop.
@@ -21,7 +21,7 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 
-class PresetRepository:
+class AppConfigStore:
     """
     Manages persistent storage for app_config.json.
     Non-blocking atomic disk persistence with debounce protection.
@@ -58,7 +58,7 @@ class PresetRepository:
                         raise
             return False
         except Exception as e:
-            logger.error(f"(PR) Atomic write failed for {file_path}: {e}")
+            logger.error(f"(ACS) Atomic write failed for {file_path}: {e}")
             if os.path.exists(tmp_path):
                 try:
                     os.remove(tmp_path)
@@ -82,7 +82,7 @@ class PresetRepository:
                         if isinstance(loaded, dict):
                             data = loaded
                 except Exception as e:
-                    logger.warning(f"(PR) Failed reading app_config.json for cache: {e}")
+                    logger.warning(f"(ACS) Failed reading app_config.json for cache: {e}")
             self._app_config_cache = data
         return self._app_config_cache
 

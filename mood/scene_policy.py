@@ -7,13 +7,8 @@ from typing import Dict, Optional
 
 SCENE_TO_PALETTE: Dict[str, str] = {
     "CHILL": "Deep Ocean",
-    "DEEP_AMBIENT": "Deep Ocean",
-    "FLOATING_PULSE": "Deep Ocean",
     "GROOVE": "Cyberpunk",
-    "THE_POCKET": "Cyberpunk",
-    "CHAOTIC_FILL": "Cyberpunk",
     "BUILDUP": "Solar Ember",
-    "PRE_DROP_BUILDUP": "Solar Ember",
     "DROP_IMPACT": "Neon Acid",
 }
 

@@ -35,39 +35,13 @@ function getSegmentsPath(): string {
   return full;
 }
 
-function getConfigurationsPath(): string {
-  const profile = getHardwareProfile();
-  if (profile === 'small') {
-    const p = path.resolve(__dirname, '../data/configurations_small.json');
-    if (fs.existsSync(p)) return p;
-  }
-  const full = path.resolve(__dirname, '../data/configurations_full.json');
-  if (fs.existsSync(full)) return full;
-  return path.resolve(__dirname, '../data/configurations.json');
-}
-
-// Custom Vite plugin to handle saving configurations
-const configurationApiPlugin = () => ({
-  name: 'configuration-api',
+// Custom Vite plugin to serve dynamic topology in dev mode
+const topologyApiPlugin = () => ({
+  name: 'topology-api',
   configureServer(server: ViteDevServer) {
-    // We use express-like middleware for the Vite dev server
     server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
-      const configPath = getConfigurationsPath();
       const segmentsPath = getSegmentsPath();
       const pathname = (req.url || '').split('?')[0];
-
-      // GET /api/configurations
-      if (pathname === '/api/configurations' && req.method === 'GET') {
-        try {
-          const data = fs.readFileSync(configPath, 'utf-8');
-          res.setHeader('Content-Type', 'application/json');
-          res.end(data);
-        } catch {
-          res.statusCode = 500;
-          res.end(JSON.stringify({ error: "Could not read configurations file" }));
-        }
-        return;
-      }
 
       // GET /api/topology
       if (pathname === '/api/topology' && req.method === 'GET') {
@@ -97,36 +71,6 @@ const configurationApiPlugin = () => ({
         return;
       }
 
-      // POST /api/configurations
-      if (pathname === '/api/configurations' && req.method === 'POST') {
-        let body = '';
-        req.on('data', (chunk: Buffer) => {
-          body += chunk.toString();
-        });
-        req.on('end', () => {
-          try {
-            // Validate it's valid JSON before saving
-            const data = JSON.parse(body);
-            if (
-              !data ||
-              !data.configurations ||
-              typeof data.configurations !== 'object' ||
-              Array.isArray(data.configurations)
-            ) {
-              throw new Error('Invalid configurations schema');
-            }
-            const sanitized = { configurations: data.configurations };
-            fs.writeFileSync(configPath, `${JSON.stringify(sanitized, null, 2)}\n`, 'utf-8');
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: true }));
-          } catch {
-            res.statusCode = 400;
-            res.end(JSON.stringify({ error: "Invalid JSON provided" }));
-          }
-        });
-        return;
-      }
-
       next();
     });
   }
@@ -134,5 +78,5 @@ const configurationApiPlugin = () => ({
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), configurationApiPlugin()],
+  plugins: [react(), topologyApiPlugin()],
 })

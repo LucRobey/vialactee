@@ -13,9 +13,8 @@
    - `config/segments_full.json` (Full Profile: 1,304 LEDs, 11 segments, 2 SPI/UDP channels)
    - `config/segments_small.json` (Small Profile: 249 LEDs, 3 segments, 1 channel)
 2. **Dynamic Path Resolution:**
-   No code in the repository may hardcode path strings to `segments_full.json` or `configurations_full.json`. All paths must be dynamically resolved via `config/Configuration_manager.py` functions:
+   No code in the repository may hardcode path strings to `segments_full.json` or `segments_small.json`. All segment layout paths must be dynamically resolved via `config/Configuration_manager.py`:
    - `resolve_segments_file_path(infos)`
-   - `resolve_configurations_file_path(infos)`
 3. **The Vertical Invariant:**
    Physical vertical chandelier strips (`v1` through `v4` in full profile, `s1` through `s3` in small profile) are physically wired **bottom-to-top**:
    - Starting point: Lowest physical altitude ($Y_{\text{start}}$).

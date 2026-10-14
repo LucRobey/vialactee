@@ -162,9 +162,11 @@ class TestFrontDoorBehavior(unittest.TestCase):
             self.assertEqual(o.technique, "explosion")
             self.assertAlmostEqual(o.duration, 0.4)
 
-    def test_chill_technique_is_fade_in_out(self):
+    def test_chill_timer_transition_ripples_center_out(self):
         self.svc.set_auto_interval(0.1)
         chill_music = MusicSnapshot(scene="CHILL", energy=0.2, salience=0.1, beat_phase=0.0, is_beat=True)
+        # The scene-level technique choice is still a soft fade...
+        self.assertEqual(self.svc._manager.select_transition_technique(chill_music)["type"], "fade_in_out")
         # Advance until timer fires
         orders = None
         for _ in range(10):
@@ -173,8 +175,12 @@ class TestFrontDoorBehavior(unittest.TestCase):
                 break
         self.assertIsNotNone(orders)
         self.assertEqual(orders.reason, "timer")
+        # ...but automatic transitions are staggered: the 4 vertical pillars ripple center-out
+        offsets = sorted(o.start_offset for o in orders.orders)
+        self.assertEqual(offsets, [0.075, 0.075, 0.225, 0.225])
         for o in orders.orders:
-            self.assertEqual(o.technique, "fade_in_out")
+            self.assertEqual(o.technique, "vertical_wipe")
+            self.assertIsNone(o.direction)
             self.assertAlmostEqual(o.duration, 2.0)
 
 
@@ -196,6 +202,54 @@ class TestFrontDoorBehavior(unittest.TestCase):
         orders = self.svc.update(0.06, MusicSnapshot(beat_phase=0.7, is_beat=False))
         self.assertIsNotNone(orders)
         self.assertEqual(orders.reason, "song_change")
+
+    # --- staggering policy: automatic = staggered, manual / drop = instant -------
+
+    def test_auto_timer_transition_is_staggered(self):
+        self.svc.set_auto_interval(0.1)
+        orders = None
+        for _ in range(10):
+            orders = self.svc.update(0.05, beat_music())
+            if orders is not None:
+                break
+        self.assertIsNotNone(orders)
+        self.assertEqual(orders.reason, "timer")
+        self.assertTrue(any(o.start_offset > 0.0 for o in orders.orders))
+
+    def test_song_change_transition_is_staggered(self):
+        self.svc.update(0.033, MusicSnapshot(live_is_song_change=True, lookahead_seconds=0.10))
+        self.assertIsNone(self.svc.update(0.05, MusicSnapshot(beat_phase=0.5)))
+        orders = self.svc.update(0.06, beat_music())
+        self.assertIsNotNone(orders)
+        self.assertEqual(orders.reason, "song_change")
+        self.assertTrue(any(o.start_offset > 0.0 for o in orders.orders))
+
+    def test_structural_change_transition_is_staggered(self):
+        self.svc.update(0.033, MusicSnapshot(live_is_verse_chorus_change=True, lookahead_seconds=0.08))
+        self.assertIsNone(self.svc.update(0.04, MusicSnapshot(beat_phase=0.5)))
+        orders = self.svc.update(0.05, beat_music())
+        self.assertIsNotNone(orders)
+        self.assertEqual(orders.reason, "structural_change")
+        self.assertTrue(any(o.start_offset > 0.0 for o in orders.orders))
+
+    def test_manual_request_next_stays_instant(self):
+        self.svc.request_next()
+        orders = self.svc.update(0.01, beat_music())
+        self.assertIsNotNone(orders)
+        self.assertEqual(orders.reason, "request_next")
+        self.assertTrue(all(o.start_offset == 0.0 for o in orders.orders))
+
+    def test_drop_triggers_are_never_staggered(self):
+        """Drop alignment (climax lands when the drop hits the speakers) needs simultaneous starts."""
+        buildup = self.svc.update(0.033, beat_music(scene="BUILDUP", drop_countdown=4.0, lookahead_seconds=4.0))
+        self.assertEqual(buildup.reason, "pre_drop_buildup")
+        self.assertTrue(all(o.start_offset == 0.0 for o in buildup.orders))
+
+        svc = create_transition_service({"auto_transition_time": 20.0})
+        svc.set_installation(installation())
+        impact = svc.update(0.033, MusicSnapshot(is_drop_impact=True, beat_phase=0.60, is_beat=False))
+        self.assertEqual(impact.reason, "drop_impact")
+        self.assertTrue(all(o.start_offset == 0.0 for o in impact.orders))
 
     def test_request_next_staggered_timing_and_director_sync(self):
         """Verifies staggered request produces staggered offsets and keeps director active until max time."""

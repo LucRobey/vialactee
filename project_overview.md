@@ -40,14 +40,14 @@ graph TD
 
     Mic -->|Raw PCM Push| ListenerFacade
     Conn -->|Overrides / Requests| ModeMaster
-    ModeMaster -->|Active playlist/config/segments| Conn
+    ModeMaster -->|Active mood/modes/segments| Conn
     ListenerFacade -->|Routes Audio| AudioIngest
     AudioIngest -->|32-Band Mel Energies| AudioAnalyz
     AudioIngest -->|8-Band Smoothed FFT / Power| ListenerFacade
     ListenerFacade -->|Delayed Smoothed 8-Band FFT / Power| ModeMaster
     AudioAnalyz -->|BPM / Phase| ModeMaster
     AudioAnalyz -->|Structural Music Drops| TransDir
-    TransDir -->|Commands Configuration Changes| ModeMaster
+    TransDir -->|Commands Mode Transitions| ModeMaster
 
     %% Animation and Visuals
     subgraph Visuals [Visual Algorithms]
@@ -57,7 +57,6 @@ graph TD
 
     Config -->|Loads app_config.json| ModeMaster
     Config -->|Resolves segments config (full/small)| ModeMaster
-    Config -->|Resolves segments config (full/small)| TransDir
 
     ModeMaster -->|Calls segment update| Seg
     Seg -->|Queries State and Progress| TransDir
@@ -88,13 +87,14 @@ graph TD
 
 Here is a breakdown of the core directories in this project:
 
-- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `comb_kernels`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `BeatGridQuantizer`, `Webapp_instruction_logger`, and `TransitionBridge` (the only glue to the transition sector).
+- **`/core`**: The brain of the project. Contains the algorithmic engines, asynchronous managers, the Audio Pipeline (`AudioIngestion`, `DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `comb_kernels`, `AudioAnalyzer`, `StructuralNoveltyDetector`, `RhythmConfig`, and the `Listener` facade), `Webapp_instruction_logger`, and `TransitionBridge` (the only glue to the transition sector).
 - **`/transitions`**: The sealed transition sector (when and how modes change). `transitions/` is a sealed room: all transition logic lives there and is reached only through `transitions.api` (see `docs/reference/transition_contract.md`). Enforced by `tests/governance/test_transition_isolation.py`; to work on it alone run `python -m transitions.sandbox`.
+- **`/mood`**: The sealed mood & scene policy sector (maps 4 canonical scenes `CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT` to curated mode pools and handles manual mood/mode overrides via `mood.api`).
 - **`/modes`**: The visual behavior library. Each file here defines a unique lighting animation pattern powered by numpy matrix math.
-- **`/config`**: JSON files and managers detailing hardware profiles (`hardware_profile`: `"full"` vs `"small"` in `app_config.json`), unified physical geometry + Web App UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
-- **`/connectors`**: External communication handlers: `Connector.py` (HTTP/WebSocket server on port 8080 exposing `/ws`, `/api/topology`, and `/api/configurations`) and `Local_Microphone.py` (analog audio push stream).
+- **`/config`**: JSON files and managers detailing hardware profiles (`hardware_profile`: `"full"` vs `"small"` and `mode_settings` in `app_config.json`), unified physical geometry + Web App UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
+- **`/connectors`**: External communication handlers: `Connector.py` (HTTP/WebSocket server on port 8080 exposing `/ws` and `/api/topology`) and `Local_Microphone.py` (analog audio push stream).
 - **`/hardware`**: Hardware abstractions. Dynamically provisions channels via `HardwareFactory._get_channel_specs()`, streaming UDP frames via `Udp_Sender` to either `Fake_ESP32` (Pygame visualizer) or physical ESP32 controllers, with `Rpi_NeoPixels` as a legacy direct GPIO fallback.
-- **`/wabb-interface`**: A React-based web application serving as the remote controller. Loads segment layout dynamically from `/api/topology`, and playlists/configurations from the active profile via `/api/configurations`.
+- **`/wabb-interface`**: A React-based web application serving as the remote controller. Loads segment layout dynamically from `/api/topology` and exchanges live state and control commands over `/ws`.
 - **`/research`**: The offline MIR laboratory. Houses immutable evaluation benchmark suites (`run_benchmark.py`, synthetic stress tests, BeatNet neural references, Ballroom academic dataset) and the iterative experiment ledger (`LEADERBOARD.md`, candidate models in `research/experiments/models/`). Kept strictly separate from the live embedded Raspberry Pi runtime.
 - **`/.agents`**: Core context, constitution, and specialized skills (`.agents/skills/`) for AI agents working on the codebase.
 - **`/work_history`**: Permanent chronological audit trail and memory ledger where agents and developers log sessions using `TEMPLATE.md` to prevent agent amnesia. Master index is kept in `work_history/README.md`.
@@ -130,10 +130,10 @@ Do not guess how the architecture works. Depending on the task you have been giv
 - **If you are working on Music Events (Drops, Verse/Chorus detection):**
   - 👉 Read [`docs/architecture/structural_novelty.md`](docs/architecture/structural_novelty.md).
 - **If you are working on Transitions between modes:**
-  - 👉 Read [`docs/architecture/transition_director.md`](docs/architecture/transition_director.md) and [`docs/reference/transition_contract.md`](docs/reference/transition_contract.md); the code is in [`transitions/`](transitions/).
+  - 👉 Read [`docs/reference/transition_contract.md`](docs/reference/transition_contract.md); the code is in [`transitions/`](transitions/).
 - **If you are touching Hardware, Network, or Output Drivers:**
   - 👉 Read [`docs/architecture/hardware_abstraction.md`](docs/architecture/hardware_abstraction.md) and [`docs/axioms/AXIOM-04_NETWORK_PROTOCOLS.md`](docs/axioms/AXIOM-04_NETWORK_PROTOCOLS.md).
-- **If you are modifying Web App playlists, configurations, Mode Settings, Live Deck, or Topology state:**
+- **If you are modifying Web App Mode Settings, Live Deck, Topology, or System state:**
   - 👉 Read [`docs/architecture/api_and_wire_protocol.md`](docs/architecture/api_and_wire_protocol.md), [`docs/reference/configuration_schemas.md`](docs/reference/configuration_schemas.md), and `wabb-interface/README.md`.
 - **If you are deploying or configuring the Raspberry Pi 4:**
   - 👉 Read [`docs/manuals/raspberry_pi_deployment.md`](docs/manuals/raspberry_pi_deployment.md).

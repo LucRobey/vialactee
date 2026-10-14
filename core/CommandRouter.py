@@ -8,6 +8,8 @@ by (page, action) pair.
 import logging
 from typing import Dict, Any, Callable, Awaitable, Optional, Tuple
 
+from modes.Mode import Mode
+
 logger = logging.getLogger(__name__)
 
 # Type alias for handler functions
@@ -119,16 +121,6 @@ async def _handle_select_transition(mm: Any, payload: Dict[str, Any]) -> Dict[st
     return {"applied": False, "reason": "transition_selection_retired"}
 
 
-@router.register("live_deck", "select_configuration")
-async def _handle_select_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"applied": False, "reason": "playlists_retired"}
-
-
-@router.register("live_deck", "select_playlist")
-async def _handle_select_playlist(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"applied": False, "reason": "playlists_retired"}
-
-
 @router.register("live_deck", "select_mood")
 async def _handle_select_mood(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
     palette = payload.get("palette") or payload.get("mood")
@@ -163,16 +155,6 @@ async def _handle_lock_current_configuration(mm: Any, payload: Dict[str, Any]) -
 # PAGE: topology
 # ========================
 
-@router.register("topology", "select_playlist_slot")
-async def _handle_topology_select_playlist_slot(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"applied": False, "reason": "playlists_retired"}
-
-
-@router.register("topology", "select_configuration")
-async def _handle_topology_select_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"applied": False, "reason": "playlists_retired"}
-
-
 @router.register("topology", "select_segment_mode")
 async def _handle_topology_select_segment_mode(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
     segment_name = mm._segment_name_from_id(payload.get("segmentId"))
@@ -200,26 +182,6 @@ async def _handle_topology_toggle_segment_direction(mm: Any, payload: Dict[str, 
     return {"applied": True}
 
 
-@router.register("topology", "build_configuration")
-async def _handle_topology_build_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"applied": False, "reason": "playlists_retired"}
-
-
-@router.register("topology", "modify_configuration")
-async def _handle_topology_modify_configuration(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"applied": False, "reason": "playlists_retired"}
-
-
-@router.register("topology", "set_editor_mode")
-async def _handle_topology_set_editor_mode(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"applied": True}
-
-
-@router.register("topology", "select_segment")
-async def _handle_topology_select_segment(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {"applied": True}
-
-
 # ========================
 # PAGE: mode_settings
 # ========================
@@ -235,17 +197,17 @@ async def _handle_set_mode_setting(mm: Any, payload: Dict[str, Any]) -> Dict[str
     if descriptor is None:
         return {"applied": False, "reason": "unknown_mode_setting"}
 
-    normalized_value, ok = mm._normalize_mode_setting_value(descriptor, payload.get("value"))
+    normalized_value, ok = Mode.normalize_setting_value(descriptor, payload.get("value"))
     if not ok:
         return {"applied": False, "reason": "invalid_setting_value"}
 
-    current_mode_settings = mm._copy_mode_settings_map(mm.activ_configuration.get("modeSettings", {}))
+    current_mode_settings = mm._copy_mode_settings_map(mm.mode_settings)
     current_mode_settings.setdefault(mode_name, {})
     current_mode_settings[mode_name][setting_key] = normalized_value
-    mm.activ_configuration["modeSettings"] = current_mode_settings
+    mm.mode_settings = current_mode_settings
 
     mm._apply_active_mode_settings()
-    persisted = mm._persist_active_configuration_mode_settings()
+    persisted = mm._persist_mode_settings()
 
     return {
         "applied": True,

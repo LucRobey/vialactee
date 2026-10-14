@@ -34,7 +34,7 @@ import pygame
 from core.Listener import Listener
 from core.BaseAudioAnalyzer import BaseAudioAnalyzer
 from core.AudioAnalyzer import AudioAnalyzer, bpm_to_class
-from core.MusicalContextEngine import MusicalScene, MusicalRegime
+from core.MusicalContextEngine import MusicalScene
 from modes.Mode import Mode
 
 
@@ -399,7 +399,6 @@ class StudioApp:
         MusicalScene.GROOVE: (40, 240, 120),      # Emerald Green
         MusicalScene.BUILDUP: (255, 40, 130),     # Vivid Crimson
         MusicalScene.DROP_IMPACT: (255, 230, 80), # Blinding White/Gold
-        MusicalScene.STRUCTURAL_CHANGE: (255, 145, 0), # Vibrant Orange
     }
 
     SCENE_BG_COLORS = {
@@ -407,7 +406,6 @@ class StudioApp:
         MusicalScene.GROOVE: (16, 55, 32),
         MusicalScene.BUILDUP: (65, 15, 35),
         MusicalScene.DROP_IMPACT: (70, 60, 20),
-        MusicalScene.STRUCTURAL_CHANGE: (60, 35, 10),
     }
 
     SCENE_ICONS = {
@@ -415,12 +413,7 @@ class StudioApp:
         MusicalScene.GROOVE: "●",
         MusicalScene.BUILDUP: "▲",
         MusicalScene.DROP_IMPACT: "💥",
-        MusicalScene.STRUCTURAL_CHANGE: "⚡",
     }
-
-    REGIME_COLORS = SCENE_COLORS
-    REGIME_BG_COLORS = SCENE_BG_COLORS
-    REGIME_ICONS = SCENE_ICONS
 
     def __init__(self, song_path: str, initial_mode_name: Optional[str] = None, nb_leds: int = 80, model_name: str = "DyadicMetricalAudioAnalyzer"):
         pygame.init()

@@ -162,6 +162,19 @@ class TestTransitionEngine(unittest.TestCase):
         TE.apply_spiral_transition(old, self.new_rgb, self.coords, progress=0.5)
         self.assertEqual(old.shape, (self.num_leds, 3))
 
+    def test_apply_transition_forwards_beam_thickness_to_spiral(self):
+        """The dispatcher must pass beam_thickness to the spiral wipe like it does for the other wipes."""
+        via_dispatcher = self.old_rgb.copy()
+        TE.apply_transition(via_dispatcher, self.new_rgb, 0.5, "spiral", self.coords, beam_thickness=0.5)
+
+        direct = self.old_rgb.copy()
+        TE.apply_spiral_transition(direct, self.new_rgb, self.coords, 0.5, 0.5)
+        np.testing.assert_array_equal(via_dispatcher, direct)
+
+        default_width = self.old_rgb.copy()
+        TE.apply_transition(default_width, self.new_rgb, 0.5, "spiral", self.coords)
+        self.assertFalse(np.array_equal(via_dispatcher, default_width))
+
     def test_apply_transition_dispatcher_all_names(self):
         """Verify that every transition known to the system executes safely without raising exceptions."""
         all_transitions = [

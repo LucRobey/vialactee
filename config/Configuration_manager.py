@@ -32,34 +32,10 @@ def resolve_segments_file_path(infos=None):
     return full_path
 
 
-def resolve_configurations_file_path(infos=None):
-    profile = "full"
-    if isinstance(infos, dict):
-        profile = infos.get("hardware_profile", "full")
-    else:
-        try:
-            app_cfg_path = os.path.join(os.path.dirname(__file__), "app_config.json")
-            if os.path.exists(app_cfg_path):
-                with open(app_cfg_path, "r", encoding="utf-8") as f:
-                    cfg = json.load(f)
-                    profile = cfg.get("hardware_profile", "full")
-        except Exception:
-            profile = "full"
-
-    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
-    if profile == "small":
-        small_path = os.path.join(data_dir, "configurations_small.json")
-        if os.path.exists(small_path):
-            return small_path
-
-    full_path = os.path.join(data_dir, "configurations_full.json")
-    if os.path.exists(full_path):
-        return full_path
-
-    return os.path.join(data_dir, "configurations.json")
-
-
 class Configurations_manager:
+    # Parsed segment coordinates shared by every manager: {(abs_path, mtime_ns): {name: coords}}
+    _COORDS_CACHE = {}
+
     def __init__(self, infos=None):
         self.infos = infos
         self._segment_coords_by_name = None
@@ -79,6 +55,11 @@ class Configurations_manager:
 
     def _load_segments_locations(self):
         config_path = resolve_segments_file_path(self.infos)
+        cache_key = (os.path.abspath(config_path), os.stat(config_path).st_mtime_ns)
+        cached = Configurations_manager._COORDS_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
+
         with open(config_path, "r", encoding="utf-8") as file:
             payload = json.load(file)
 
@@ -95,6 +76,8 @@ class Configurations_manager:
             step_y = int(segment["step"]["y"])
             coords_by_name[name] = self._build_line_coordinates(length, start_x, start_y, step_x, step_y)
 
+        Configurations_manager._COORDS_CACHE.clear()  # keep only the latest layout
+        Configurations_manager._COORDS_CACHE[cache_key] = coords_by_name
         return coords_by_name
 
     def get_segment_coordinates(self, segment_name):

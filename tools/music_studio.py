@@ -34,7 +34,7 @@ from core.Listener import Listener
 from core.RhythmConfig import RhythmConfig
 from core.BaseAudioAnalyzer import BaseAudioAnalyzer
 from core.AudioAnalyzer import AudioAnalyzer, bpm_to_class
-from core.MusicalContextEngine import MusicalScene, MusicalRegime
+from core.MusicalContextEngine import MusicalScene
 
 
 def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]:
@@ -292,7 +292,6 @@ class MusicStudioApp:
         MusicalScene.GROOVE: (40, 240, 120),      # Emerald Green
         MusicalScene.BUILDUP: (255, 40, 130),     # Vivid Crimson
         MusicalScene.DROP_IMPACT: (255, 230, 80), # Blinding White/Gold
-        MusicalScene.STRUCTURAL_CHANGE: (255, 145, 0), # Vibrant Orange
     }
 
     SCENE_BG_COLORS = {
@@ -300,7 +299,6 @@ class MusicStudioApp:
         MusicalScene.GROOVE: (16, 55, 32),
         MusicalScene.BUILDUP: (65, 15, 35),
         MusicalScene.DROP_IMPACT: (70, 60, 20),
-        MusicalScene.STRUCTURAL_CHANGE: (60, 35, 10),
     }
 
     SCENE_ICONS = {
@@ -308,12 +306,7 @@ class MusicStudioApp:
         MusicalScene.GROOVE: "●",
         MusicalScene.BUILDUP: "▲",
         MusicalScene.DROP_IMPACT: "💥",
-        MusicalScene.STRUCTURAL_CHANGE: "⚡",
     }
-
-    REGIME_COLORS = SCENE_COLORS
-    REGIME_BG_COLORS = SCENE_BG_COLORS
-    REGIME_ICONS = SCENE_ICONS
 
     CHROMA_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     BAND_NAMES = ["Sub-Bass", "Bass", "Low-Mid", "Mid", "High-Mid", "Presence", "Brilliance", "Air"]
@@ -816,19 +809,19 @@ class MusicStudioApp:
         self.screen.blit(grad_surf, (hx, bar_y + 12))
         hx += grad_surf.get_width() + 18
 
-        # Canonical Musical Regime Badge
+        # Canonical Musical Scene Badge
         context = getattr(self.listener, 'context', None)
         if context is not None:
-            curr_reg = context.current_regime
-            reg_col = self.REGIME_COLORS.get(curr_reg, self.TEXT_MAIN)
-            reg_icon = self.REGIME_ICONS.get(curr_reg, "●")
+            curr_reg = context.scene
+            reg_col = self.SCENE_COLORS.get(curr_reg, self.TEXT_MAIN)
+            reg_icon = self.SCENE_ICONS.get(curr_reg, "●")
             reg_name = getattr(curr_reg, 'value', str(curr_reg))
             reg_surf = self.get_text(self.font_small, f"[{reg_icon} {reg_name}]", reg_col)
             self.screen.blit(reg_surf, (hx, bar_y + 12))
             hx += reg_surf.get_width() + 18
 
             countdown = float(context.drop_countdown)
-            if countdown > 0.0 or curr_reg == MusicalRegime.PRE_DROP_BUILDUP:
+            if countdown > 0.0 or curr_reg == MusicalScene.BUILDUP:
                 alert_surf = self.get_text(self.font_main, f"⚠️ DROP IN {countdown:.1f}s!", self.ACCENT_MAGENTA)
                 self.screen.blit(alert_surf, (hx, bar_y + 10))
 
@@ -1298,20 +1291,20 @@ class MusicStudioApp:
         # Context state extraction
         context = getattr(self.listener, 'context', None)
         if context is not None:
-            curr_reg = context.current_regime
-            prev_reg = context.previous_regime
-            blend = float(context.regime_blend)
-            dwell = float(context.regime_dwell_time)
+            curr_reg = context.scene
+            prev_reg = context.previous_scene
+            blend = float(context.scene_blend)
+            dwell = float(context.scene_dwell_time)
             countdown = float(context.drop_countdown)
             dwell_min = getattr(context, 'min_dwell_time', 1.0)
             is_locked = dwell < dwell_min
             is_rhythmic = bool(context.is_rhythmic)
             is_in_pocket = bool(context.is_in_pocket)
             is_buildup = bool(context.is_buildup)
-            is_structural_change = bool(context.is_structural_change)
+            is_structural_cut = bool(context.is_structural_cut)
         else:
-            curr_reg = MusicalRegime.DEEP_AMBIENT
-            prev_reg = MusicalRegime.DEEP_AMBIENT
+            curr_reg = MusicalScene.CHILL
+            prev_reg = MusicalScene.CHILL
             blend = 1.0
             dwell = 0.0
             countdown = 0.0
@@ -1320,11 +1313,11 @@ class MusicStudioApp:
             is_rhythmic = False
             is_in_pocket = False
             is_buildup = False
-            is_structural_change = False
+            is_structural_cut = False
 
-        reg_col = self.REGIME_COLORS.get(curr_reg, self.TEXT_MAIN)
-        reg_bg = self.REGIME_BG_COLORS.get(curr_reg, (20, 24, 34))
-        reg_icon = self.REGIME_ICONS.get(curr_reg, "●")
+        reg_col = self.SCENE_COLORS.get(curr_reg, self.TEXT_MAIN)
+        reg_bg = self.SCENE_BG_COLORS.get(curr_reg, (20, 24, 34))
+        reg_icon = self.SCENE_ICONS.get(curr_reg, "●")
 
         # Header Title
         head_surf = self.get_text(self.font_main, "STRUCTURAL NOVELTY & REGIME STATE", self.ACCENT_CYAN)
@@ -1593,8 +1586,8 @@ class MusicStudioApp:
         c3 = self.ACCENT_MAGENTA if is_buildup else self.TEXT_MUTED
         self.screen.blit(self.get_text(self.font_tiny, f3, c3), (col1_x + 130, y1 + 5))
 
-        f4 = "● STRUCT CUT" if is_structural_change else "○ NO CUT"
-        c4 = self.ACCENT_PURPLE if is_structural_change else self.TEXT_MUTED
+        f4 = "● STRUCT CUT" if is_structural_cut else "○ NO CUT"
+        c4 = self.ACCENT_PURPLE if is_structural_cut else self.TEXT_MUTED
         self.screen.blit(self.get_text(self.font_tiny, f4, c4), (col1_x + 130, y1 + 18))
 
         # =============================================================
@@ -1730,8 +1723,8 @@ class MusicStudioApp:
             banner_h = 22
             banner_x = grid_x + 12
             banner_y = grid_y + grid_h // 2 - banner_h // 2
-            b_bg = self.REGIME_BG_COLORS.get(curr_reg, (65, 15, 35))
-            b_border = self.REGIME_COLORS.get(curr_reg, self.ACCENT_MAGENTA)
+            b_bg = self.SCENE_BG_COLORS.get(curr_reg, (65, 15, 35))
+            b_border = self.SCENE_COLORS.get(curr_reg, self.ACCENT_MAGENTA)
             pygame.draw.rect(self.screen, b_bg, (banner_x, banner_y, banner_w, banner_h), border_radius=4)
             pygame.draw.rect(self.screen, b_border, (banner_x, banner_y, banner_w, banner_h), width=1, border_radius=4)
 

@@ -22,62 +22,12 @@ from typing import Dict, Any, Optional
 import math
 
 
-_CHILL_ALIASES = frozenset(("DEEP_AMBIENT", "FLOATING_PULSE"))
-_GROOVE_ALIASES = frozenset(("THE_POCKET", "CHAOTIC_FILL"))
-_BUILDUP_ALIASES = frozenset(("PRE_DROP_BUILDUP",))
-
-
 class MusicalScene(str, Enum):
     """4 canonical macro musical scenes."""
     CHILL = "CHILL"
     GROOVE = "GROOVE"
     BUILDUP = "BUILDUP"
     DROP_IMPACT = "DROP_IMPACT"
-
-    def __eq__(self, other: Any) -> bool:
-        if self is other:
-            return True
-        if isinstance(other, str):
-            v = self.value
-            if v == other:
-                return True
-            if v == "CHILL" and other in _CHILL_ALIASES:
-                return True
-            if v == "GROOVE" and other in _GROOVE_ALIASES:
-                return True
-            if v == "BUILDUP" and other in _BUILDUP_ALIASES:
-                return True
-        return False
-
-    def __hash__(self) -> int:
-        return hash(self.value)
-
-    @classmethod
-    def _missing_(cls, value: object) -> Any:
-        legacy_map = {
-            "DEEP_AMBIENT": cls.CHILL, "FLOATING_PULSE": cls.CHILL,
-            "THE_POCKET": cls.GROOVE, "CHAOTIC_FILL": cls.GROOVE,
-            "PRE_DROP_BUILDUP": cls.BUILDUP,
-        }
-        if isinstance(value, str):
-            val_upper = value.upper()
-            if val_upper in legacy_map:
-                return legacy_map[val_upper]
-        return super()._missing_(value)
-
-
-# Backward compatibility aliases for legacy 6-regime code
-class _LegacyRegime(str):
-    value = property(lambda self: str(self))
-
-MusicalScene.DEEP_AMBIENT = MusicalScene.CHILL  # type: ignore[attr-defined]
-MusicalScene.FLOATING_PULSE = MusicalScene.CHILL  # type: ignore[attr-defined]
-MusicalScene.THE_POCKET = MusicalScene.GROOVE  # type: ignore[attr-defined]
-MusicalScene.CHAOTIC_FILL = MusicalScene.GROOVE  # type: ignore[attr-defined]
-MusicalScene.PRE_DROP_BUILDUP = MusicalScene.BUILDUP  # type: ignore[attr-defined]
-MusicalScene.STRUCTURAL_CHANGE = _LegacyRegime("STRUCTURAL_CHANGE")  # type: ignore[attr-defined]
-
-MusicalRegime = MusicalScene
 
 
 class MusicalContextEngine:
@@ -331,20 +281,13 @@ class MusicalContextEngine:
 
         self._update_modulation_facade()
 
-    def _switch_scene(self, new_scene: MusicalScene | str) -> None:
+    def _switch_scene(self, new_scene: MusicalScene) -> None:
         """Internal helper to switch scenes and reset crossfade progression."""
-        if new_scene == "STRUCTURAL_CHANGE":
-            self._structural_cut_timer = self.structural_dwell_time
-            self._is_structural_cut = True
-            return
-        scene_enum = MusicalScene(new_scene) if not isinstance(new_scene, MusicalScene) else new_scene
-        if scene_enum is not self._current_scene:
+        if new_scene is not self._current_scene:
             self._previous_scene = self._current_scene
-            self._current_scene = scene_enum
+            self._current_scene = new_scene
             self._scene_blend = 0.0
             self._scene_dwell_time = 0.0
-
-    _switch_regime = _switch_scene
 
     def _update_modulation_facade(self) -> None:
         """Updates drop_progress, is_drop_imminent, and tension without dynamic allocation."""
@@ -375,39 +318,6 @@ class MusicalContextEngine:
     def scene_blend(self) -> float: return float(self._scene_blend)
     @property
     def scene_dwell_time(self) -> float: return float(self._scene_dwell_time)
-
-    # Legacy regime aliases
-    @property
-    def current_regime(self) -> MusicalScene | _LegacyRegime: return MusicalScene.STRUCTURAL_CHANGE if self._is_structural_cut else self.scene
-    @property
-    def previous_regime(self) -> MusicalScene | _LegacyRegime: return self.previous_scene
-    @property
-    def regime_blend(self) -> float: return self.scene_blend
-    @property
-    def regime_dwell_time(self) -> float: return self.scene_dwell_time
-
-    @property
-    def _current_regime(self) -> MusicalScene | _LegacyRegime: return MusicalScene.STRUCTURAL_CHANGE if self._is_structural_cut else self._current_scene
-    @_current_regime.setter
-    def _current_regime(self, value: Any) -> None:
-        if value == "STRUCTURAL_CHANGE":
-            self._structural_cut_timer = self.structural_dwell_time
-            self._is_structural_cut = True
-        else:
-            self._current_scene = MusicalScene(value) if not isinstance(value, MusicalScene) else value
-    @property
-    def _previous_regime(self) -> MusicalScene | str: return self._previous_scene
-    @_previous_regime.setter
-    def _previous_regime(self, value: Any) -> None:
-        self._previous_scene = MusicalScene(value) if not isinstance(value, MusicalScene) else value
-    @property
-    def _regime_blend(self) -> float: return self._scene_blend
-    @_regime_blend.setter
-    def _regime_blend(self, value: float) -> None: self._scene_blend = float(value)
-    @property
-    def _regime_dwell_time(self) -> float: return self._scene_dwell_time
-    @_regime_dwell_time.setter
-    def _regime_dwell_time(self, value: float) -> None: self._scene_dwell_time = float(value)
 
     @property
     def drop_countdown(self) -> float: return float(self._drop_countdown)
@@ -467,26 +377,20 @@ class MusicalContextEngine:
     def is_in_pocket(self) -> bool: return self._current_scene == MusicalScene.GROOVE and self.is_locked
     @property
     def is_buildup(self) -> bool: return self._current_scene == MusicalScene.BUILDUP
-    @property
-    def is_structural_change(self) -> bool: return self.is_structural_cut
 
     def get_state_snapshot(self) -> Dict[str, Any]:
         """Provides a complete serializable state snapshot for diagnostics and telemetry."""
         cur = self._current_scene.value if hasattr(self._current_scene, "value") else str(self._current_scene)
         prev = self._previous_scene.value if hasattr(self._previous_scene, "value") else str(self._previous_scene)
-        reg_cur = "STRUCTURAL_CHANGE" if self._is_structural_cut else cur
         return {
             "scene": cur, "previous_scene": prev,
             "scene_blend": round(self._scene_blend, 4), "scene_dwell_time": round(self._scene_dwell_time, 3),
-            "current_regime": reg_cur, "previous_regime": prev,
-            "regime_blend": round(self._scene_blend, 4), "regime_dwell_time": round(self._scene_dwell_time, 3),
             "is_locked": self._is_locked, "is_syncopated": self._is_syncopated,
             "is_real_beat": self._is_real_beat, "is_silent": self._is_silent,
             "is_drop_impact": self._is_drop_impact, "is_drop_imminent": self._is_drop_imminent,
             "is_structural_cut": self._is_structural_cut,
             "is_ambient": self.is_ambient, "is_rhythmic": self.is_rhythmic,
             "is_buildup": self.is_buildup, "is_in_pocket": self.is_in_pocket,
-            "is_structural_change": self.is_structural_change,
             "energy": round(self._energy, 4), "tension": round(self._tension, 4),
             "drop_progress": round(self._drop_progress, 4), "drop_countdown": round(self._drop_countdown, 3),
             "salience_gradient": round(self._salience_gradient, 4), "power_gradient": round(self._power_gradient, 4),

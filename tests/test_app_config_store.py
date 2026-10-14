@@ -1,18 +1,18 @@
 import asyncio
 import json
 import pytest
-from core.PresetRepository import PresetRepository
+from core.AppConfigStore import AppConfigStore
 
 
 def test_preset_repository_init():
-    repo = PresetRepository({"hardware_profile": "full"})
+    repo = AppConfigStore({"hardware_profile": "full"})
     assert repo.infos == {"hardware_profile": "full"}
     assert repo._app_config_flush_task is None
     assert repo._pending_app_config_snapshot is None
 
 
 def test_atomic_write(tmp_path):
-    repo = PresetRepository({"hardware_profile": "full"})
+    repo = AppConfigStore({"hardware_profile": "full"})
     target = str(tmp_path / "test_file.json")
     content = '{"key": "value"}\n'
 
@@ -24,7 +24,7 @@ def test_atomic_write(tmp_path):
 
 @pytest.mark.anyio
 async def test_persist_app_config_debounced_async(tmp_path, monkeypatch):
-    repo = PresetRepository({"hardware_profile": "full"})
+    repo = AppConfigStore({"hardware_profile": "full"})
     test_file = str(tmp_path / "app_config_test.json")
     monkeypatch.setattr(repo, "_resolve_app_config_path", lambda: test_file)
 
@@ -53,7 +53,7 @@ async def test_persist_app_config_debounced_async(tmp_path, monkeypatch):
 
 
 def test_persist_app_config_sync(tmp_path, monkeypatch):
-    repo = PresetRepository({"hardware_profile": "full"})
+    repo = AppConfigStore({"hardware_profile": "full"})
     test_file = str(tmp_path / "app_config_sync.json")
     monkeypatch.setattr(repo, "_resolve_app_config_path", lambda: test_file)
 
@@ -66,7 +66,7 @@ def test_persist_app_config_sync(tmp_path, monkeypatch):
 
 @pytest.mark.anyio
 async def test_flush_sync_immediate_persistence(tmp_path, monkeypatch):
-    repo = PresetRepository({"hardware_profile": "full"})
+    repo = AppConfigStore({"hardware_profile": "full"})
     app_file = str(tmp_path / "app_config_flush.json")
     monkeypatch.setattr(repo, "_resolve_app_config_path", lambda: app_file)
 
@@ -85,7 +85,7 @@ async def test_flush_sync_immediate_persistence(tmp_path, monkeypatch):
 
 def test_concurrent_atomic_writes(tmp_path):
     import concurrent.futures
-    repo = PresetRepository({"hardware_profile": "full"})
+    repo = AppConfigStore({"hardware_profile": "full"})
     target = str(tmp_path / "concurrent_output.json")
 
     def worker(i):
@@ -103,7 +103,7 @@ def test_concurrent_atomic_writes(tmp_path):
 @pytest.mark.anyio
 async def test_persist_app_config_debounced_no_disk_reads_during_slider_updates(tmp_path, monkeypatch):
     import builtins
-    repo = PresetRepository({"hardware_profile": "full"})
+    repo = AppConfigStore({"hardware_profile": "full"})
     test_file = str(tmp_path / "app_config_reads_test.json")
     monkeypatch.setattr(repo, "_resolve_app_config_path", lambda: test_file)
 

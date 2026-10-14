@@ -24,6 +24,7 @@ Whenever an agent performs work on this repository:
    - Note non-obvious design decisions, trade-offs, and lessons learned.
    - List any unfinished tasks under *Open Items & Next Steps*.
 4. **Update Master Index:** Add your new entry to the chronological table below.
+5. **Commit & Push:** Commit the code **and** the session log together, push, then record the commit hash(es) in the log's `Commits` field. See the *Commit & Push Protocol* in [`vialactee-project/SKILL.md`](../.agents/skills/vialactee-project/SKILL.md).
 
 ---
 
@@ -31,6 +32,9 @@ Whenever an agent performs work on this repository:
 
 | Date | Session File | Agent / Author | Topic / Goal | Status |
 | :--- | :--- | :--- | :--- | :--- |
+| **2026-10-14** | [`2026-10-14_architectural_simplification_and_config_removal.md`](2026-10-14_architectural_simplification_and_config_removal.md) | Antigravity | Architectural simplification (5 steps): 4-scene migration, `BeatGridQuantizer` & `band_peak` removal, `Segment` caching & transition deduplication, staggered auto-transitions, and complete removal of presets/playlists/configurations (`AppConfigStore`) | **COMPLETED** |
+| **2026-10-14** | [`2026-10-14_skills_audit_pruning_and_eval_engine.md`](2026-10-14_skills_audit_pruning_and_eval_engine.md) | Antigravity | Skills audit across 223 past conversations, pruning redundant skills to archive, harmonizing Research Manager & Researcher, building automated skill governance test & eval engine | **COMPLETED** |
+| **2026-10-14** | [`2026-10-14_agent_environment_cleanup.md`](2026-10-14_agent_environment_cleanup.md) | Antigravity | Agent environment cleanup: reconcile 30 FPS budget, slim `AGENT.md`, split researcher skill, fix `hardware-deploy` YAML frontmatter | **COMPLETED** |
 | **2026-10-13** | [`2026-10-13_transitions_sector_cleanup_and_desync_fix.md`](2026-10-13_transitions_sector_cleanup_and_desync_fix.md) | Antigravity | Transitions sector cleanup: fix all-blocked director desync, delete dead director state & pass `dt` directly, remove `_Host`/`_SegmentView`/`_MusicView` shim, deduplicate `engine.py`/`stagger.py`, update `transition_contract.md` | **COMPLETED** |
 | **2026-10-13** | [`2026-10-13_startup_transition_instability_defense.md`](2026-10-13_startup_transition_instability_defense.md) | Antigravity | Startup Transition Instability: 5-layer multi-tier defense eliminating cold-start novelty spikes, ring buffer contamination, premature buildup triggers, and zero-phase downbeat fallthrough | **COMPLETED** |
 | **2026-10-07** | [`2026-10-07_priority_3_per_segment_and_staggered_transitions.md`](2026-10-07_priority_3_per_segment_and_staggered_transitions.md) | Antigravity | Priority 3: Per-Segment & Staggered Transitions with local segment timing, director completion sync, cohort staggering patterns (`transitions/stagger.py`), and AXIOM-01/02 zero-allocation compliance | **COMPLETED** |

@@ -40,12 +40,12 @@ Off by default (code default of `create_mood_service(auto_scene=False)`; no conf
 
 | Scene | Palette | Dwell |
 | :--- | :--- | :-: |
-| `CHILL`, `DEEP_AMBIENT`, `FLOATING_PULSE` | Deep Ocean | 3 s |
-| `GROOVE`, `THE_POCKET`, `CHAOTIC_FILL` | Cyberpunk | 3 s |
-| `BUILDUP`, `PRE_DROP_BUILDUP` | Solar Ember | 3 s |
+| `CHILL` | Deep Ocean | 3 s |
+| `GROOVE` | Cyberpunk | 3 s |
+| `BUILDUP` | Solar Ember | 3 s |
 | `DROP_IMPACT` | Neon Acid | 0 s |
 
-There is **no manual hold**: a manual `select_mood` always works at once, and the next scene change lets auto-mode take over again. Scenes with no entry (e.g. `STRUCTURAL_CHANGE`) change nothing.
+There is **no manual hold**: a manual `select_mood` always works at once, and the next scene change lets auto-mode take over again. Scenes with no entry (any name other than the 4 above) change nothing.
 
 ### Guarantees
 - AXIOM-01: `update` <= 0.01 ms. AXIOM-02: zero allocation in `update`. Both covered by `tests/test_mood_sector.py`.

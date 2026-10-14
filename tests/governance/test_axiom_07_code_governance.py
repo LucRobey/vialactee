@@ -17,7 +17,6 @@ class TestAxiom07CodeGovernance(unittest.TestCase):
 
     GRANDFATHERED_RATCHET = {
         os.path.normpath("core/AudioAnalyzer.py"): 598,
-        os.path.normpath("core/Mode_master.py"): 613,
         os.path.normpath("core/MultiBandOnsetAudioAnalyzer.py"): 621,
     }
 

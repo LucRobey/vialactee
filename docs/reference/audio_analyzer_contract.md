@@ -82,7 +82,7 @@ Every analyzer must satisfy the checklist executed by `tests/test_analyzer_contr
 | **`beat_tag`** | `str` | **$T_{\text{speaker}}$ via ring** | **High** | Transient classification: `'Bass/Kick'`, `'Snare/Mid'`, `'Hi-hat/Cymbal'`. | Evaluated using circular `band_flux_buffer` at the speaker playback offset ($T_{\text{speaker}}$), classifying the acoustic transient playing out of the speakers at the beat instant. Applies to every beat, including Dyadic sub-pulse beats (always one of the three tags). |
 | **`rhythm_salience`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$ via ring** | **High** | Normalized rhythmic prominence & groove saliency at speaker playback time. Differentiates driving percussive passages from ambient/unmetered sections. | Multi-pillar composite metric delayed by 5.0s ring buffer to align with $T_{\text{speaker}}$. Combines 4 acoustic pillars: transient ratio $\rho_{\text{trans}} = \frac{\Phi_{\text{drum}}}{\Phi_{\text{drum}} + 0.4 P_{\text{total}}}$ (0.30), percussive crest factor $C_{\text{norm}}$ (0.25), flywheel consensus $\gamma_{\text{conf}}$ (0.25), and pulse density $D_{\text{pulse}}$ (0.20), smoothed via asymmetric envelope (~50ms attack, ~1.5s release). |
 | **`live_rhythm_salience`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{lookahead}}$**<br>(+5.0s future) | **High** | Anticipatory rhythmic salience evaluated on incoming microphone stream before delay buffer. Allows pre-drop visual build-up and predictive transitions. | Evaluated directly from unbuffered `analyzer.live_rhythm_salience` before ring buffer delay. Leads `rhythm_salience` by lookahead delay (`fakeDelay`, typically 5.0s). |
-| **`salience_gradient`** | `float`<br>$[-1.0, 1.0]$ | **Differential** | **High** | Difference between lookahead salience and speaker salience ($\Delta R = R_{\text{live}} - R_{\text{speaker}}$). | Evaluated by `MusicalContextEngine`. When $\Delta R \ge +0.40$, indicates an upcoming rhythmic explosion or drop, arming `PRE_DROP_BUILDUP`. |
+| **`salience_gradient`** | `float`<br>$[-1.0, 1.0]$ | **Differential** | **High** | Difference between lookahead salience and speaker salience ($\Delta R = R_{\text{live}} - R_{\text{speaker}}$). | Evaluated by `MusicalContextEngine`. When $\Delta R \ge +0.40$, indicates an upcoming rhythmic explosion or drop, arming `BUILDUP`. |
 | **`standalone_phase`** / **`standalone_bpm`** | `float` | **$T_{\text{speaker}}$** | **High** | Backward-compatibility aliases for `beat_phase` and `bpm`. | Direct facade getters returning `beat_phase` and `bpm`. |
 
 ---
@@ -151,12 +151,10 @@ Accessible directly via `self.listener.context` ([`core/MusicalContextEngine.py`
 | **`drop_progress`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{lookahead}}$** | **High** | Smooth buildup countdown curve ($0.0 \to 1.0$). | Normalized countdown progression during `BUILDUP`. |
 | **`spectral_tilt`** | `float`<br>$[-1.0, 1.0]$ | **$T_{\text{speaker}}$** | **High** | Bass vs treble spectral balance across 8 bands. | $-1.0 =$ pure bass, $+1.0 =$ pure treble, $0.0 =$ balanced/silence. |
 | **`vertical_center`** | `float`<br>$[0.0, 1.0]$ | **$T_{\text{speaker}}$** | **High** | Spectral center of gravity across 8 bands. | $0.0 =$ bottom strip, $1.0 =$ top strip, $0.5 =$ neutral center. |
-| **`current_regime`** | `MusicalScene` | **Hybrid** | **Maximum** | Legacy alias to `scene`. | Complete backward compatibility with legacy regime branching. |
 | **`is_ambient`** | `bool` | **Current** | **Maximum** | True if in `CHILL`. | Convenient boolean for ambient volume-breathing modes. |
 | **`is_rhythmic`** | `bool` | **Current** | **Maximum** | True if in `GROOVE` or `DROP_IMPACT`. | Convenient boolean for percussive modes. |
 | **`is_buildup`** | `bool` | **Current** | **Maximum** | True if in `BUILDUP`. | Convenient boolean for drop-anticipation tension builds. |
 | **`is_in_pocket`** | `bool` | **Current** | **Maximum** | True if in `GROOVE` and `is_locked`. | Convenient boolean for full drum groove animations. |
-| **`is_structural_change`** | `bool` | **Current** | **Maximum** | Legacy alias to `is_structural_cut`. | Convenient boolean for sectional reset animations. |
 
 ---
 
@@ -193,27 +191,27 @@ speed_px_per_sec = float(self.num_leds) / dt_beat
 self.position = (self.position + speed_px_per_sec * dt) % self.num_leds
 ```
 
-### Pattern 4: Declarative Musical Regime Handling (Modern Architecture)
-Instead of hardcoding complex threshold checks, modern modes branch declaratively on `self.listener.context.current_regime` and interpolate with `self.listener.context.regime_blend`:
+### Pattern 4: Declarative Musical Scene Handling (Modern Architecture)
+Instead of hardcoding complex threshold checks, modern modes branch declaratively on `self.listener.context.scene` (one of `CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) and interpolate with `self.listener.context.scene_blend`:
 ```python
 ctx = self.listener.context
-regime = ctx.current_regime
-blend = ctx.regime_blend
+scene = ctx.scene
+blend = ctx.scene_blend
 
-if regime == "THE_POCKET":
+if scene == "GROOVE":
     # Snappy quantized percussion
     intensity = (1.0 - self.listener.beat_phase) ** 3.0
-elif regime == "PRE_DROP_BUILDUP":
+elif scene == "BUILDUP":
     # Build tension as drop countdown approaches 0.0
     intensity = (5.0 - ctx.drop_countdown) / 5.0
-elif regime == "FLOATING_PULSE":
-    # Soft undulating wave
-    intensity = 0.5 * (1.0 + np.sin(2.0 * np.pi * self.listener.beat_phase))
+elif scene == "DROP_IMPACT":
+    # Full-strip impact flash
+    intensity = 1.0
 else:
-    # DEEP_AMBIENT or CHAOTIC_FILL: Smooth acoustic volume breathing
+    # CHILL: Smooth acoustic volume breathing
     intensity = float(self.listener.asserved_total_power)
 
-# Smooth crossfade during regime transitions
+# Smooth crossfade during scene transitions
 if blend < 1.0:
     intensity = (1.0 - blend) * self._prev_intensity + blend * intensity
 self._prev_intensity = intensity

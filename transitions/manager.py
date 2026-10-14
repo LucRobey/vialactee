@@ -208,15 +208,15 @@ class LocalTransitionManager:
         p_div = 0.45
 
         if ctx is not None:
-            raw_scene = getattr(ctx, "scene", getattr(ctx, "current_regime", None))
+            raw_scene = getattr(ctx, "scene", None)
             scene_str = str(getattr(raw_scene, "value", raw_scene) or "").upper()
             if getattr(ctx, "is_drop_impact", False):
                 p_unison, p_sym, p_div = 0.55, 0.30, 0.15
-            elif scene_str in ("BUILDUP", "PRE_DROP_BUILDUP"):
+            elif scene_str == "BUILDUP":
                 p_unison, p_sym, p_div = 0.40, 0.40, 0.20
             elif getattr(ctx, "is_syncopated", False) or getattr(ctx, "is_locked", False):
                 p_unison, p_sym, p_div = 0.15, 0.45, 0.40
-            elif scene_str in ("CHILL", "DEEP_AMBIENT", "FLOATING_PULSE"):
+            elif scene_str == "CHILL":
                 p_unison, p_sym, p_div = 0.10, 0.40, 0.50
 
         return random.choices(

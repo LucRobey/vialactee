@@ -31,7 +31,7 @@ Rather than requiring every mode to invent its own ad-hoc fallback logic, [`core
 
 Modes can smoothly blend between macro scenes using `self.listener.context.scene_blend` $\in [0.0, 1.0]$ or modulate continuously using Tier 1 kinetic scalars (`energy`, `tension`). When the analyzer is lost or the music shifts to ambient breakdown, the mode does **not** fail—it smoothly dissolves into an organic ambient visual.
 
-For backward compatibility, `self.listener.context.current_regime` and `regime_blend` remain available, cleanly mapping macro states (`CHILL`, `GROOVE`, `BUILDUP`) and micro cuts (`STRUCTURAL_CHANGE`).
+Use only the canonical scene API (`scene`, `previous_scene`, `scene_blend`, `scene_dwell_time`). The legacy `current_regime` / `regime_blend` properties and the 6 old regime names no longer exist; a structural cut is the separate `is_structural_cut` badge, never a scene.
 
 ---
 

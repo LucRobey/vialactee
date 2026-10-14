@@ -9,7 +9,7 @@
 ## 1. Specification
 
 1. **Hot-Path Heap Allocation Prohibition:**
-   In the active render loop (`Mode_master.update()`, `Segment.update()`, `Mode.render()`, `Transition_Engine.apply_transition()`) and in the PortAudio audio stream callback (`Local_Microphone`), dynamic object instantiation is strictly prohibited.
+   In the active render loop (`Mode_master.update()`, `Segment.update()`, `Mode.render()`, `transitions/engine.py:apply_transition()`) and in the PortAudio audio stream callback (`Local_Microphone`), dynamic object instantiation is strictly prohibited.
 2. **Prohibited Operations Inside Hot Loop:**
    - Instantiation of NumPy arrays via `np.zeros()`, `np.empty()`, `np.ones()`, `np.array()`, `np.where()`.
    - Python heap allocations: list comprehensions, dictionary creation, dynamic string formatting (`f"..."`, `str(type(...))`), set mutations.

@@ -1,8 +1,8 @@
 # Mode_master Internal Architecture
 
-The `Mode_master` acts as the central conductor for the entire installation. It manages global state, configurations, playlists, segments, configuration-scoped mode settings, and external commands. 
+`Mode_master` is the central conductor of the installation. It owns the physical `Segment`s, runs the 30 FPS render loop, hands transition decisions to the sealed `transitions/` sector and palette decisions to the sealed `mood/` sector, routes web-app instructions to `CommandRouter`, and publishes JSON state snapshots for the web app.
 
-Here is a visual breakdown of how it operates internally, followed by a detailed explanation of its core mechanisms.
+It does **not** manage presets or playlists: on every start the installation begins from random segment modes and directions (`initiate_modes`), and everything after that is driven live by the music and by operator actions.
 
 ## 1. Flowchart & Architecture
 
@@ -12,71 +12,41 @@ graph TD
     classDef init fill:#2d3748,stroke:#4fd1c5,stroke-width:2px,color:#fff;
 
     subgraph init_phase [Initialization Phase]
-        A[__init__]:::init
-        B[load_configurations]:::init
-        C[initiate_segments]:::init
-        D[initiate_configuration]:::init
-        E[Instantiate Transition_Director]:::init
-        
-        A --> B
-        B --> C
-        C --> D
-        D --> E
+        A["__init__"]:::init
+        B["AppConfigStore(infos)<br/><i>app_config.json persistence</i>"]:::init
+        C["compute_room_bounds(infos)"]:::init
+        D["initiate_segments"]:::init
+        E["_build_mode_settings_catalog"]:::init
+        F["create_transition_service(infos)"]:::init
+        G["create_mood_service + Mode.bind_mood_colors"]:::init
+        H["initiate_modes<br/><i>random mode + direction per segment</i>"]:::init
+        I["SystemStatus"]:::init
+
+        A --> B --> C --> D --> E --> F --> G --> H --> I
     end
 ```
 
-### Main Execution & Configuration
+### Main Execution Loop
 ```mermaid
 graph TD
     classDef loop fill:#1a365d,stroke:#63b3ed,stroke-width:2px,color:#fff;
-    classDef decision fill:#742a2a,stroke:#fc8181,stroke-width:2px,color:#fff;
-    classDef action fill:#276749,stroke:#68d391,stroke-width:2px,color:#fff;
+    classDef sector fill:#276749,stroke:#68d391,stroke-width:2px,color:#fff;
 
-    subgraph main_loop [Main Execution Loop at 30 FPS]
-        F[update_forever]:::loop
-        G[update]:::loop
-        H["1. listener.update()"]:::loop
-        I["2. leds.show() <br/><i>(Flushes previous frame)</i>"]:::loop
-        J["3. segments.update(transition_director)"]:::loop
-        K["4. transition_director.update(current_time)"]:::loop
-        BCAST["5. Broadcast state if changed"]:::loop
-        L{"Interval expired or trigger fired?"}:::decision
-        N[change_configuration]:::action
-        P[End of Frame / Wait]:::loop
-        
-        F --> G
-        G --> H
-        H --> I
-        I --> J
-        J --> K
-        K --> L
-        K --> BCAST
-        
-        L -->|Yes: New Config| N
-        L -->|No| P
-        
-        N --> P
-        BCAST --> P
-        P --> F
-    end
+    subgraph main_loop [update_forever, paced to the target FPS]
+        L1["1. listener.update()<br/><i>skipped when externally clocked</i>"]:::loop
+        L2["2. leds.show()<br/><i>flushes the previous frame</i>"]:::loop
+        L3["3. segment.update(status, blend, dt) for every Segment"]:::loop
+        L4["4. TransitionBridge.build_music_snapshot(listener)"]:::sector
+        L5["5. mood.update(dt, scene)"]:::sector
+        L6["6. transitions.update(dt, music) -> orders?"]:::sector
+        L7["TransitionBridge.apply_orders + transitions.acknowledge"]:::sector
+        L8["7. connector.on_frame_tick(self)<br/><i>broadcast snapshot if dirty</i>"]:::loop
+        L9["8. profiler.tick()"]:::loop
 
-    subgraph config_management [Configuration Management]
-        Q[pick_a_random_conf]:::action
-        R{"Shuffle Bag Empty?"}:::decision
-        S["Refill & Shuffle Bag from active playlists"]:::action
-        T[Pop Configuration]:::action
-        U[update_segments_modes]:::action
-        V[Apply to unblocked Segments]:::action
-        
-        N --> Q
-        M --> U
-        
-        Q --> R
-        R -->|Yes| S
-        R -->|No| T
-        S --> T
-        T --> U
-        U --> V
+        L1 --> L2 --> L3 --> L4 --> L5 --> L6
+        L6 -->|orders| L7 --> L8
+        L6 -->|none| L8
+        L8 --> L9 --> L1
     end
 ```
 
@@ -86,70 +56,71 @@ graph TD
     classDef external fill:#5f370e,stroke:#f6ad55,stroke-width:2px,color:#fff;
 
     subgraph external_inputs [External Inputs and Web App State]
-        W[Wabb Web App]:::external
+        W["Wabb Web App"]:::external
         X["Connector /ws JSON instructions"]:::external
-        API["Connector /api/configurations"]:::external
+        Y["process_instruction"]:::external
+        R["CommandRouter handlers"]:::external
         SNAP["get_state_snapshot"]:::external
-        Y[process_instruction]:::external
-        Z["Apply Actions: playlists, configurations, segment modes, direction, sensitivity"]:::external
         PUSH["mode_master_state broadcast"]:::external
-        
-        W --> X
-        W --> API
-        API -->|"save JSON + reload"| Y
-        X --> Y
-        Y --> Z
-        SNAP --> PUSH
-        PUSH --> W
+
+        W --> X --> Y --> R
+        SNAP --> PUSH --> W
     end
 ```
 
 ## 2. Internal Workflow Explained
 
 ### 1. Initialization (`__init__`)
-When `Mode_master` starts, it sets up the environment:
-*   **Hardware Profile**: Reads `hardware_profile` from `infos` (default `"full"`).
-*   **`load_configurations()`**: Uses `resolve_configurations_file_path(self.infos)` to read `data/configurations_full.json` (or `data/configurations_small.json`) to load available visual modes, per-configuration `modeSettings`, and playlists into memory. (Global application settings are read from `config/app_config.json`).
-*   **`initiate_segments()`**: Uses `resolve_segments_file_path(self.infos)` to read `config/segments_full.json` (or `config/segments_small.json`) and creates `Segment` objects for every defined physical hardware strip (`v4`, `h32`, etc., for `full`, or `s1`–`s3` for `small`).
-*   **`initiate_configuration()`**: Seeds the system with an initial random configuration by drawing from the configuration shuffle bag.
-*   **`Transition_Director`**: Bootstraps the director responsible for deciding exactly *when* configurations should change based on audio analysis.
+*   **Hardware profile**: reads `hardware_profile` from `infos` (default `"full"`).
+*   **`AppConfigStore`**: persists `config/app_config.json` (see section 3).
+*   **`initiate_segments()`**: uses `resolve_segments_file_path(self.infos)` to read `config/segments_full.json` (or `segments_small.json`) and creates one `Segment` per physical strip (`v1`-`v4`, `h00`...`h32` for `full`, `s1`-`s3` for `small`). The segment layout and `config/modes.json` are parsed once per process and shared by all segments.
+*   **Mode settings catalog**: `_build_mode_settings_catalog()` introspects the `Mode` instances held by the segments (see section 3).
+*   **`create_transition_service(infos)`**: builds the transition front door. All timing and technique decisions live inside `transitions/`; see [`docs/reference/transition_contract.md`](../../docs/reference/transition_contract.md).
+*   **`create_mood_service(...)`** and **`Mode.bind_mood_colors(...)`**: build the palette sector and give every mode a read-only view of the current palette; see [`docs/reference/mood_contract.md`](../../docs/reference/mood_contract.md).
+*   **`initiate_modes()`**: picks a random available mode and a random direction (`UP`/`DOWN`) for every segment, initializes `self.mode_settings`, applies the effective mode settings, and pushes the installation description to the transition sector.
 
 ### 2. The Main Update Loop (`update()`)
-Running at approximately 30 frames per second (`update_forever`), the core loop is strictly ordered:
-1.  **Audio Sync**: `listener.update()` fetches the latest audio FFT and volume data.
-2.  **Hardware Flush**: `leds.show()` flushes the **previous frame's** buffer to the physical LED strips to ensure minimum latency.
-3.  **Segment Execution**: Iterates over `segments_list` calling `update(transition_director)` on each. Segments calculate their new pixel data and perform dual-buffer mixing using the synchronized global transition progress.
-4.  **Global Transitions Check**: Ticks `transition_director.update(current_time)` to advance any ongoing transition progress and evaluate audio context. The `Transition_Director` has full autonomy to command the `Mode_master` to change configurations (e.g., via `change_configuration()`) when a music event or timer occurs. The `Mode_master` strictly obeys.
-5.  **Web State Snapshot**: If a connector is attached, `get_state_snapshot()` is serialized and broadcast only when the visible state changes. This keeps Live Deck and Topology synchronized with automatic transitions without streaming every rendered frame.
+Paced by `update_forever` (default target 30 FPS), the loop is strictly ordered:
+1.  **Audio sync**: `listener.update()` fetches the latest FFT and rhythm state (skipped when the listener is clocked externally, e.g. by the local-file connector).
+2.  **Hardware flush**: `leds.show()` flushes the **previous frame's** buffer to the strips to minimise latency (on a Raspberry Pi the blocking `show()` runs in an executor).
+3.  **Segment execution**: every `Segment.update(transition_status, blend, dt=dt)` renders its active mode and, during a transition, mixes the dual buffers.
+4.  **Music snapshot**: `TransitionBridge.build_music_snapshot(listener)` freezes what the sectors need to know about the music this frame.
+5.  **Mood tick**: `mood.update(dt, music.scene)` (scene-driven palettes are off by default).
+6.  **Transition tick**: `transitions.update(dt, music)` may return `TransitionOrders`. `TransitionBridge.apply_orders` executes them on the real segments (and forwards any palette request to the mood sector), then `transitions.acknowledge` reports which segments accepted.
+7.  **Web state snapshot**: `connector.on_frame_tick(self)` broadcasts `get_state_snapshot()` when `_state_dirty` is set, and at most every 0.1 s while a transition runs. It costs nothing when no client is connected.
 
-### 3. Configuration Management (The Shuffle Bag)
-Configuration storage, playlist querying, and rotation are encapsulated in `PresetRepository` (`core/PresetRepository.py`). To ensure that all configurations in the allowed playlists are seen before repeating, it uses a **Shuffle Bag** (`pick_a_random_conf()`):
-*   It dumps all available configurations into a list and randomizes it.
-*   It pops one configuration at a time.
-*   When the bag is empty, it refills and reshuffles it.
-Once a configuration is picked, `update_segments_modes()` first reapplies the active configuration's effective `modeSettings` to every live mode instance across the segments, then passes the new mode/direction targets to the segments, skipping any segments that are currently marked as `isBlocked`.
+`Mode_master` never decides *when* or *how* to transition: it only obeys the orders the sector returns.
 
-### 4. External Web App Instructions & Command Routing
-At any time, the Wabb web app can send JSON instructions through `Connector.py` and `/ws`. `Mode_master.process_instruction()` delegates directly to `CommandRouter` (`core/CommandRouter.py`), which uses a modular decorator-based dispatch table (`@router.register(page, action)`) for `live_deck`, `topology`, `mode_settings`, and `system`.
+### 3. Mode settings and persistence
+*   **Catalog**: `Mode_master` builds a catalog by introspecting each loaded `Mode`'s settings schema.
+*   **Effective values** are merged in this order, later wins: catalog defaults, then the persisted `mode_settings` key of `app_config.json` (loaded into `infos`), then `self.mode_settings`. Every value is validated and clamped by `Mode.normalize_setting_value`.
+*   **Live edit**: for `page: "mode_settings", action: "set_mode_setting"`, `CommandRouter` validates the request against the catalog with `Mode.normalize_setting_value`, updates `self.mode_settings`, re-applies the effective values to every segment instance of that mode, and persists them.
+*   **Non-blocking persistence**: `_persist_app_config_value(key, value)` updates `infos` and calls `AppConfigStore.persist_app_config_debounced`, which serializes an immutable snapshot immediately, debounces for 0.5 s, then writes `app_config.json` atomically (temp file + `os.replace`) in `run_in_executor`, so slider changes never stall the render loop. `flush_sync()` writes any pending snapshot on shutdown. Mode settings are stored under the `mode_settings` key; luminosity, sensibility and the automatic transition interval use the same path.
 
-The web app never owns playlist or configuration names. Both Python and React load them dynamically from the active profile's configuration file via `resolve_configurations_file_path()`. Topology **persists** presets only through `POST /api/configurations` from `MODIFY` / `BUILD`; after a save, `Mode_master.load_configurations()` refreshes the in-memory playlist list and the connector broadcasts a fresh snapshot.
+### 4. External instructions & command routing
+`Mode_master.process_instruction()` delegates to `CommandRouter` (`core/CommandRouter.py`), a decorator-based dispatch table (`@router.register(page, action)`):
 
-**Topology runtime overrides:** `page: "topology"`, `action: "select_segment_mode"` / `"toggle_segment_direction"` call `Segment.execute_mode_swap()` / `change_way()` on the live instances. They do **not** mutate disk configuration stores or the in-memory playlist tables.
+| Page | Actions |
+| :--- | :--- |
+| `live_deck` | `set_luminosity`, `set_sensibility`, `set_auto_transition_time`, `select_mood`, `go_to_next_configuration` (asks the sector for the next transition), `manual_drop`, `lock_current_configuration`, `select_transition` (retired stub) |
+| `topology` | `select_segment_mode` and `toggle_segment_direction` (act directly on the live `Segment`: `execute_mode_swap()` / `change_way()`) |
+| `mode_settings` | `set_mode_setting` |
+| `system` | `restart_python_loop`, `restart_raspberry_pi` |
 
-**Active configuration isolation:** When a configuration is applied (`_apply_configuration`, initial pick, or `change_configuration`), `Mode_master` stores a shallow copy of that preset’s `modes`, `way`, and `modeSettings` dicts on `activ_configuration`. Live segment swaps and live mode-setting edits therefore cannot accidentally rewrite the shared configuration objects loaded from disk.
-
-**Mode Settings runtime fan-out & Non-Blocking Persistence:** `Mode_master` builds a settings catalog by introspecting the loaded `Mode` instances held inside each `Segment`. When the web app sends `page: "mode_settings", action: "set_mode_setting"`, the `CommandRouter` validates the request against that catalog, updates the active configuration's `modeSettings`, reapplies the effective values to every segment instance for that mode, and persists the active configuration back into the resolved configuration JSON file via `_persist_configurations_store()`. Both `_persist_configurations_store()` and `_persist_app_config_value()` offload synchronous disk writes (`json.dump`) to background threads via `loop.run_in_executor()`, ensuring slider adjustments never cause frame drops in the 30 FPS rendering loop.
+A result with `applied: true` marks the state dirty so the next frame broadcasts a fresh snapshot.
 
 ### 5. State Snapshot Contract
 `get_state_snapshot()` returns a JSON-safe view of:
 
-* `hardwareProfile`: Active profile string (`"full"` or `"small"`).
-* Active playlist and enabled playlists.
-* Active and queued configuration names.
-* Selected transition label and transition lock/progress.
-* Luminosity and sensibility values.
-* Every segment's id, name, active mode, direction, blocked flag, target mode, and transition status.
-* The `modeSettingsCatalog` for every loaded mode that exposes settings.
-* The active configuration's effective `modeSettings` values.
+* `hardwareProfile`: active profile string (`"full"` or `"small"`).
+* `selectedTransition`: `"DYNAMIC"`.
+* `transitionLocked`, `transitionState`, `transitionProgress`, `autoTransitionTime`: from `transitions.get_status()`.
+* `luminosity`, `sensibility`: 0-100 integers from the listener.
+* `availableModes`: sorted union of every mode name loaded by the segments.
+* `activeMood`, `availableMoods`: from the mood service.
+* `segments`: for each segment `id`, `name`, `mode`, `direction`, `blocked`, `targetMode`, `inTransition`.
+* `modeSettingsCatalog`: every loaded mode that exposes settings.
+* `modeSettings`: the effective values.
+* `system`: runtime and hardware status from `SystemStatus`.
 
-This snapshot is sent as a `mode_master_state` WebSocket message and is the authoritative source for what the Live Deck telemetry, Topology map, and Mode Settings page display.
+The snapshot is sent as a `mode_master_state` WebSocket message and is the authoritative source for the Live Deck telemetry, Topology map and Mode Settings page.

@@ -258,5 +258,102 @@ class TestSegment(unittest.TestCase):
         self.assertTrue(self.segment.modes[target_mode].isActiv)
 
 
+class TestSegmentStartupCaching(unittest.TestCase):
+    """modes.json and the segment layout must be parsed once per process, not once per Segment."""
+
+    def setUp(self):
+        from config.Configuration_manager import Configurations_manager
+        self.Configurations_manager = Configurations_manager
+        Segment._MODES_CONFIG_CACHE.clear()
+        Configurations_manager._COORDS_CACHE.clear()
+
+    def _make_segment(self, name):
+        listener = MagicMock()
+        listener.nb_of_fft_band = 8
+        listener.asserved_fft_band = np.zeros(8)
+        listener.smoothed_fft_band_values = np.zeros(8)
+        return Segment(name, listener, np.zeros((100, 3), dtype=np.int32), list(range(10)), "vertical", {})
+
+    def test_startup_json_files_are_read_once_for_many_segments(self):
+        import builtins
+        opened = []
+        original_open = builtins.open
+
+        def counting_open(file, *args, **kwargs):
+            opened.append(str(file))
+            return original_open(file, *args, **kwargs)
+
+        builtins.open = counting_open
+        try:
+            for i in range(5):
+                self._make_segment(f"Segment v{i + 1}")
+        finally:
+            builtins.open = original_open
+
+        self.assertEqual(sum(p.endswith("modes.json") for p in opened), 1)
+        self.assertEqual(sum(p.endswith("segments_full.json") for p in opened), 1)
+
+    def test_modes_cache_is_refreshed_when_file_changes(self):
+        seg = self._make_segment("Segment v1")
+        self.assertEqual(len(Segment._MODES_CONFIG_CACHE), 1)
+        (key,) = Segment._MODES_CONFIG_CACHE.keys()
+
+        # Simulate an edit on disk: a different mtime must produce a different cache key
+        stale_value = Segment._MODES_CONFIG_CACHE.pop(key)
+        Segment._MODES_CONFIG_CACHE[(key[0], key[1] - 1)] = stale_value
+        seg.initiate_modes("vertical")
+        self.assertEqual(list(Segment._MODES_CONFIG_CACHE.keys()), [key])
+        self.assertGreater(len(seg.modes), 0)
+
+
+class TestSegmentTransitionReset(unittest.TestCase):
+    def setUp(self):
+        listener = MagicMock()
+        listener.nb_of_fft_band = 8
+        listener.asserved_fft_band = np.zeros(8)
+        listener.smoothed_fft_band_values = np.zeros(8)
+        self.segment = Segment("Segment v4", listener, np.zeros((100, 3), dtype=np.int32),
+                               list(range(20)), "vertical", {})
+        self.segment.execute_mode_swap("Rainbow")
+        self.segment.change_mode("Plasma Fire", {"type": "fade_in_out", "duration": 3.5, "start_offset": 0.75})
+        self.assertTrue(self.segment.is_in_transition)
+
+    def _assert_clean(self):
+        self.assertFalse(self.segment.is_in_transition)
+        self.assertIsNone(self.segment.target_mode_name)
+        self.assertIsNone(self.segment.transition_technique)
+        self.assertEqual(self.segment.transition_elapsed, 0.0)
+        self.assertEqual(self.segment.transition_duration, 2.0)
+        self.assertEqual(self.segment.transition_start_offset, 0.0)
+
+    def test_execute_mode_swap_clears_transition_and_timing(self):
+        incoming = self.segment.modes["Plasma Fire"]
+        self.segment.execute_mode_swap("Rainbow")
+        self._assert_clean()
+        self.assertFalse(incoming.isActiv)  # the incoming mode was terminated
+        self.assertEqual(self.segment.activ_mode, "Rainbow")
+        self.assertTrue(self.segment.modes["Rainbow"].isActiv)
+
+    def test_force_mode_clears_transition_and_timing(self):
+        incoming = self.segment.modes["Plasma Fire"]
+        self.segment.force_mode("Metronome")
+        self._assert_clean()
+        self.assertFalse(incoming.isActiv)
+        self.assertEqual(self.segment.activ_mode, "Metronome")
+
+    def test_invalid_name_keeps_transition_for_swap_but_clears_it_for_force(self):
+        """Preserved legacy difference: swap validates before clearing, force clears first."""
+        self.segment.execute_mode_swap("No Such Mode")
+        self.assertTrue(self.segment.is_in_transition)
+
+        self.segment.force_mode("No Such Mode")
+        self._assert_clean()
+
+    def test_force_mode_to_active_mode_is_a_noop_swap(self):
+        self.segment.force_mode("Rainbow")
+        self._assert_clean()
+        self.assertEqual(self.segment.activ_mode, "Rainbow")
+
+
 if __name__ == '__main__':
     unittest.main()

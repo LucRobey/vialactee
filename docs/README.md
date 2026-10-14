@@ -38,7 +38,7 @@ Authoritative blueprints for each architectural domain:
 - [Audio Ingestion & Feature Pipeline](./architecture/audio_pipeline.md)
 - [Rhythm Tracking & Anticipation Flywheel ("Oracle")](./architecture/rhythm_engine.md)
 - [Structural Novelty & Drop Detection](./architecture/structural_novelty.md)
-- [Transition Director & Spatial Engine](./architecture/transition_director.md)
+- [Transition Sector Contract & Pipeline](./reference/transition_contract.md)
 - [Hardware Abstraction & Dynamic Profiles](./architecture/hardware_abstraction.md)
 - [API, WebSocket & Wire Protocol](./architecture/api_and_wire_protocol.md)
 

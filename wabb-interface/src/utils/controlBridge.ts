@@ -86,10 +86,6 @@ export type SystemStatus = {
 
 export type ModeMasterState = {
   hardwareProfile?: string;
-  activePlaylist: string | null;
-  enabledPlaylists: string[];
-  activeConfiguration: string | null;
-  queuedConfiguration: string | null;
   selectedTransition: string;
   transitionLocked: boolean;
   transitionState: string | null;
@@ -97,7 +93,6 @@ export type ModeMasterState = {
   luminosity: number;
   sensibility: number;
   autoTransitionTime: number;
-  playlists: string[];
   availableModes: string[];
   activeMood?: string | null;
   availableMoods?: string[];
@@ -222,10 +217,6 @@ export const normalizeModeMasterState = (value: unknown): ModeMasterState | null
 
   return {
     hardwareProfile: typeof value.hardwareProfile === 'string' ? value.hardwareProfile : undefined,
-    activePlaylist: typeof value.activePlaylist === 'string' ? value.activePlaylist : null,
-    enabledPlaylists: Array.isArray(value.enabledPlaylists) ? value.enabledPlaylists.filter((p): p is string => typeof p === 'string') : [],
-    activeConfiguration: typeof value.activeConfiguration === 'string' ? value.activeConfiguration : null,
-    queuedConfiguration: typeof value.queuedConfiguration === 'string' ? value.queuedConfiguration : null,
     selectedTransition: typeof value.selectedTransition === 'string' ? value.selectedTransition : 'CUT',
     transitionLocked: Boolean(value.transitionLocked),
     transitionState: typeof value.transitionState === 'string' ? value.transitionState : null,
@@ -233,7 +224,6 @@ export const normalizeModeMasterState = (value: unknown): ModeMasterState | null
     luminosity: typeof value.luminosity === 'number' ? value.luminosity : 60,
     sensibility: typeof value.sensibility === 'number' ? value.sensibility : 70,
     autoTransitionTime: typeof value.autoTransitionTime === 'number' ? value.autoTransitionTime : 20,
-    playlists: Array.isArray(value.playlists) ? value.playlists.filter((p): p is string => typeof p === 'string') : [],
     availableModes: Array.isArray(value.availableModes) ? value.availableModes.filter((m): m is string => typeof m === 'string') : [],
     activeMood: typeof value.activeMood === 'string' ? value.activeMood : null,
     availableMoods: Array.isArray(value.availableMoods) ? value.availableMoods.filter((m): m is string => typeof m === 'string') : [],

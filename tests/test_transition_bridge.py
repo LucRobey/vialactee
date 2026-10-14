@@ -48,7 +48,6 @@ class TestInstallationSnapshot(unittest.TestCase):
 class TestApplyOrders(unittest.TestCase):
     def _mm(self, segments):
         mm = MagicMock()
-        mm.activ_configuration = {"modes": {}}
         mm._find_segment_by_name = lambda n: segments.get(n)
         return mm
 
@@ -69,7 +68,6 @@ class TestApplyOrders(unittest.TestCase):
         ok.change_mode.assert_called_once_with("Rainbow", {"type": "global_change", "duration": 2.0})
         ok.change_way.assert_called_once_with("DOWN")
         blocked.change_mode.assert_not_called()
-        self.assertEqual(mm.activ_configuration["modes"], {"a": "Rainbow", "b": "Rainbow"})
         self.assertTrue(mm._state_dirty)
 
 

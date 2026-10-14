@@ -139,11 +139,6 @@ class Listener:
         if hasattr(self.analyzer, 'reset'):
             self.analyzer.reset()
 
-    async def update_forever(self) -> None:
-        while True:
-            self.update()
-            await asyncio.sleep(1/60)
-
     def update(self, fixed_dt: Optional[float] = None) -> None:
         self._delayed_is_song_change = False
         self._delayed_is_verse_chorus_change = False
@@ -160,24 +155,13 @@ class Listener:
             self.fps_ratio = max(0.001, self.dt * 60.0)
         self.last_env_time = current_time
 
-        if self.ingestion.useMicrophone:
-            if self.ingestion.isSilenceCalibrating:
-                self.ingestion.calibrate_silence(self.fps_ratio)
-            elif self.ingestion.isBBCalibrating:
-                self.ingestion.calibrate_bb(self.fps_ratio)
-            else:
-                self.ingestion.update_band_means_and_smoothed_values(self.fps_ratio)
-                self.ingestion.asserv_fft_bands_2(self.fps_ratio)
-                self.ingestion.asserv_total_power(self.fps_ratio)
-                self.analyzer.update_structural_novelty(current_time, self.dt, self.fps_ratio)
-                self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
-        else:
+        if not self.ingestion.useMicrophone:
             self.ingestion.apply_fake_fft(self.fps_ratio)
-            self.ingestion.asserv_fft_bands_2(self.fps_ratio)
-            self.ingestion.update_band_means_and_smoothed_values(self.fps_ratio)
-            self.ingestion.asserv_total_power(self.fps_ratio)
-            self.analyzer.update_structural_novelty(current_time, self.dt, self.fps_ratio)
-            self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
+        self.ingestion.update_band_means_and_smoothed_values(self.fps_ratio)
+        self.ingestion.asserv_fft_bands_2(self.fps_ratio)
+        self.ingestion.asserv_total_power(self.fps_ratio)
+        self.analyzer.update_structural_novelty(current_time, self.dt, self.fps_ratio)
+        self.analyzer.detect_band_peaks(current_time, self.dt, self.fps_ratio)
 
         # ---- WRITE into ring buffer (zero allocation) ----
         self._update_ring_buffers(current_time)
@@ -209,16 +193,16 @@ class Listener:
                 break
 
         if expired_count > 0:
-            self._delayed_fft_band_values = self._ring_fft_band[best_idx].copy()
-            self._delayed_chroma_values = self._ring_chroma[best_idx].copy()
-            self._delayed_smoothed_fft_band_values = self._ring_smoothed_fft[best_idx].copy()
-            self._delayed_smoothed_chroma_values = self._ring_smoothed_chroma[best_idx].copy()
-            self._delayed_asserved_fft_band = self._ring_asserved_fft[best_idx].copy()
-            self._delayed_band_proportion = self._ring_band_proportion[best_idx].copy()
-            self._delayed_band_means = self._ring_band_means[best_idx].copy()
+            np.copyto(self._delayed_fft_band_values, self._ring_fft_band[best_idx])
+            np.copyto(self._delayed_chroma_values, self._ring_chroma[best_idx])
+            np.copyto(self._delayed_smoothed_fft_band_values, self._ring_smoothed_fft[best_idx])
+            np.copyto(self._delayed_smoothed_chroma_values, self._ring_smoothed_chroma[best_idx])
+            np.copyto(self._delayed_asserved_fft_band, self._ring_asserved_fft[best_idx])
+            np.copyto(self._delayed_band_proportion, self._ring_band_proportion[best_idx])
+            np.copyto(self._delayed_band_means, self._ring_band_means[best_idx])
             self._delayed_smoothed_total_power = float(self._ring_smoothed_total_power[best_idx])
             self._delayed_asserved_total_power = float(self._ring_asserved_total_power[best_idx])
-            self._delayed_band_flux = self._ring_band_flux[best_idx].copy()
+            np.copyto(self._delayed_band_flux, self._ring_band_flux[best_idx])
             self._delayed_is_song_change = any_song_change
             self._delayed_is_verse_chorus_change = any_verse_chorus_change
             self._delayed_asserved_novelty = float(self._ring_asserved_novelty[best_idx])
@@ -330,22 +314,6 @@ class Listener:
 
     @property
     def band_means(self): return self._delayed_band_means
-
-    # Calibrations
-    def start_silence_calibration(self) -> None: self.ingestion.start_silence_calibration(self.fps_ratio)
-    def stop_silence_calibration(self) -> None: self.ingestion.stop_silence_calibration(self.fps_ratio)
-    def start_bb_calibration(self) -> None: self.ingestion.start_bb_calibration(self.fps_ratio)
-    def stop_bb_calibration(self) -> None: self.ingestion.stop_bb_calibration(self.fps_ratio)
-
-    @property
-    def hasBeenSilenceCalibrated(self): return self.ingestion.hasBeenSilenceCalibrated
-    @hasBeenSilenceCalibrated.setter
-    def hasBeenSilenceCalibrated(self, val): self.ingestion.hasBeenSilenceCalibrated = val
-
-    @property
-    def hasBeenBBCalibrated(self): return self.ingestion.hasBeenBBCalibrated
-    @hasBeenBBCalibrated.setter
-    def hasBeenBBCalibrated(self, val): self.ingestion.hasBeenBBCalibrated = val
 
     # 2. Analyzer properties
     @property

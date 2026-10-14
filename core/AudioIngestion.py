@@ -16,7 +16,6 @@ class AudioIngestion:
 
         self.build_asserved_fft_lists()
         self.build_asserved_total_power()
-        self.prepare_for_calibration()
 
         # FFT Settings
         self.sample_rate = 44100
@@ -92,52 +91,6 @@ class AudioIngestion:
         self.asserved_total_power = 0
         self.total_power_gm = 100
         self.total_power_lm = 100
-
-    def prepare_for_calibration(self) -> None:
-        self.duration_of_calibration = 5
-        
-        self.isSilenceCalibrating = False
-        self.hasBeenSilenceCalibrated = False
-        self.time_of_start_silence_calibration = 0
-        self.time_of_end_silence_calibration = 0
-        self.nb_of_listen_silence = 0
-        self.mean_silence = np.zeros(self.nb_of_fft_band)
-        
-        self.isBBCalibrating = False
-        self.hasBeenBBCalibrated = False
-        self.time_of_start_bb_calibration = 0
-        self.time_of_end_bb_calibration = 0
-        self.nb_of_listen_bb = 0
-        self.mean_bb = np.zeros(self.nb_of_fft_band)
-        
-    def start_silence_calibration(self, fps_ratio: float) -> None:
-        self.isSilenceCalibrating = True
-        
-    def start_bb_calibration(self, fps_ratio: float) -> None:
-        self.isBBCalibrating = True
-        
-    def stop_silence_calibration(self, fps_ratio: float) -> None:
-        self.isSilenceCalibrating = False
-        self.hasBeenSilenceCalibrated = True
-        logger.debug(f"mean_silence = {self.mean_silence}")
-    
-    def stop_bb_calibration(self, fps_ratio: float) -> None:
-        self.isBBCalibrating = False
-        self.hasBeenBBCalibrated = True
-        logger.debug(f"mean_bb = {self.mean_bb}")
-            
-    def calibrate_silence(self, fps_ratio: float) -> None:
-        #on calcule la moyenne sur la durée de calibration
-        self.nb_of_listen_silence += 1
-        self.mean_silence = (1/(self.nb_of_listen_silence+1)) * (self.nb_of_listen_silence* self.mean_silence + self.fft_band_values)
-        logger.debug(f"{self.fft_band_values} {self.mean_silence}")
-                    
-        
-    def calibrate_bb(self, fps_ratio: float) -> None:
-        #on calcule la moyenne sur la durée de calibration
-        self.nb_of_listen_bb += 1
-        self.mean_bb = (1/(self.nb_of_listen_bb+1)) * (self.nb_of_listen_bb* self.mean_bb + self.fft_band_values)
-        
 
     def update_band_means_and_smoothed_values(self, fps_ratio: float) -> None:
         # ADSR Vectorization: Fast attack, slow release instead of static smooth_sensi

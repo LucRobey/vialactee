@@ -43,4 +43,4 @@ To guarantee robust event detection across varying genres and production volumes
    - Multiplies Global Max by 1.5x (`gm_shock_multiplier`) to absorb subsequent drop shocks.
 3. **Silence Drop (`is_song_change = True`):**
    - Fires when audio power remains below `silence_power_threshold` (5.0) for $> 1.5\text{ s}$.
-   - Triggers ambient/chill preset selection and resets beat phase.
+   - Triggers `CHILL` scene / mode transition and resets beat phase.

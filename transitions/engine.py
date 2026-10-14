@@ -457,7 +457,7 @@ def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progres
     elif transition_name == "box_wipe":
         apply_box_wipe(rgb_list_old, rgb_list_new, coords, progress, beam_thickness)
     elif transition_name == "spiral":
-        apply_spiral_transition(rgb_list_old, rgb_list_new, coords, progress)
+        apply_spiral_transition(rgb_list_old, rgb_list_new, coords, progress, beam_thickness)
     elif transition_name == "gravity_drop":
         apply_gravity_drop(rgb_list_old, rgb_list_new, coords, progress)
     elif transition_name == "weird_glitch":

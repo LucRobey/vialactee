@@ -156,19 +156,6 @@ class Shining_stars_mode(Mode.Mode):
                 random_pos = rand_val % max_offset
                 self.rgb_list[random_pos::step] = active_colors[band_index]
 
-    def lightUp(self, band_index: int) -> None:
-        if band_index < 0 or band_index >= len(self.colors):
-            return
-
-        max_offset = self.max_offset
-        if max_offset <= 0:
-            return
-
-        rand_val = self._rand_pool[self._rand_idx]
-        self._rand_idx = (self._rand_idx + 1) & 255
-        random_pos = rand_val % max_offset
-        self.rgb_list[random_pos::self.step] = self.colors[band_index]
-
 
 # Warmup Python interpreter code execution caches for zero-allocation hot-path guarantees
 _dummy_rgb = np.zeros((1, 3), dtype=np.int32)

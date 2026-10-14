@@ -18,16 +18,15 @@ from modes.Mode import Mode
 from config.Configuration_manager import resolve_segments_file_path
 import utils.Profiler as Profiler
 from core.CommandRouter import router as command_router
-from core.PresetRepository import PresetRepository
-from config.Configuration_manager import resolve_segments_file_path
+from core.AppConfigStore import AppConfigStore
 
 
 class Mode_master:
     """
-    Master controller for all visual segments, modes, and configurations.
+    Master controller for all visual segments and modes.
 
     Manages the global state, dynamic mode DNA allocation, and transitions
-    between configurations across the entire installation.
+    across the entire installation.
     """
 
     def __init__(self, listener: Any, infos: Dict[str, Any], *leds: Any) -> None:
@@ -52,24 +51,23 @@ class Mode_master:
         self.appli_connector = None
         self.segments_list: List[Segment.Segment] = []
         self.segments_names_to_index: Dict[str, int] = {}
-        self.activ_configuration: Dict[str, Any] = {}
-        self.queued_configuration_name: Optional[str] = None
+        self.mode_settings: Dict[str, Dict[str, Any]] = {}
         self.mode_settings_catalog: Dict[str, Dict[str, Any]] = {}
         self.pending_system_action: Optional[str] = None
         self._restart_requested = asyncio.Event()
         self._last_update_monotonic: Optional[float] = None
 
-        # Delegate app config persistence to PresetRepository
-        self._preset_repo = PresetRepository(infos)
+        # Delegate app config persistence to AppConfigStore
+        self._app_config_store = AppConfigStore(infos)
 
         self._room_bounds = compute_room_bounds(infos)
 
         self.initiate_segments()
         self.mode_settings_catalog = self._build_mode_settings_catalog()
-        self.transitions = create_transition_service(self.infos, resolve_segments_file_path(self.infos))
+        self.transitions = create_transition_service(self.infos)
         self.mood = create_mood_service(auto_scene=True)  # auto_scene is a code default (off) in mood.api
         Mode.bind_mood_colors(self.mood.colors())
-        self.initiate_configuration()
+        self.initiate_modes()
         self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
 
     def set_connector(self, connector: Any) -> None:
@@ -174,7 +172,7 @@ class Mode_master:
             key = descriptor.get("key")
             if not isinstance(key, str) or "default" not in descriptor:
                 continue
-            normalized_value, ok = self._normalize_mode_setting_value(descriptor, descriptor.get("default"))
+            normalized_value, ok = Mode.normalize_setting_value(descriptor, descriptor.get("default"))
             if ok:
                 defaults[key] = normalized_value
         return defaults
@@ -186,60 +184,22 @@ class Mode_master:
                 return descriptor
         return None
 
-    def _normalize_mode_setting_value(self, descriptor: Dict[str, Any], value: Any) -> Any:
-        value_type = descriptor.get("valueType")
-
-        if value_type == "boolean":
-            if not isinstance(value, bool):
-                return None, False
-            normalized_value = value
-        elif value_type == "number":
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                return None, False
-            normalized_value = float(value)
-            min_value = descriptor.get("min")
-            max_value = descriptor.get("max")
-            if isinstance(min_value, (int, float)):
-                normalized_value = max(float(min_value), normalized_value)
-            if isinstance(max_value, (int, float)):
-                normalized_value = min(float(max_value), normalized_value)
-            if descriptor.get("integer", False):
-                normalized_value = int(round(normalized_value))
-        else:
-            if not isinstance(value, str):
-                return None, False
-            normalized_value = value
-
-        options = descriptor.get("options")
-        if isinstance(options, list) and len(options) > 0:
-            allowed_values = [
-                option.get("value")
-                for option in options
-                if isinstance(option, dict) and "value" in option
-            ]
-            if len(allowed_values) > 0 and normalized_value not in allowed_values:
-                return None, False
-            return normalized_value, True
-
-        return normalized_value, True
-
-    def _get_effective_mode_settings(self, configuration: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[str, Any]]:
-        config = configuration if isinstance(configuration, dict) else self.activ_configuration
+    def _get_effective_mode_settings(self, overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Dict[str, Any]]:
+        override_map = overrides if isinstance(overrides, dict) else self.mode_settings
         effective: Dict[str, Dict[str, Any]] = {
             mode_name: self._mode_settings_defaults_for_mode(mode_name)
             for mode_name in self.mode_settings_catalog
         }
 
-        # Apply persisted overrides from infos["mode_settings"] and active config
+        # Apply persisted overrides from infos["mode_settings"] and active runtime overrides
         persisted = self.infos.get("mode_settings")
         if isinstance(persisted, dict):
             for mode_name, settings in persisted.items():
                 if mode_name in effective and isinstance(settings, dict):
                     effective[mode_name].update(settings)
 
-        overrides = config.get("modeSettings")
-        if isinstance(overrides, dict):
-            for mode_name, settings in overrides.items():
+        if isinstance(override_map, dict):
+            for mode_name, settings in override_map.items():
                 if mode_name not in self.mode_settings_catalog or not isinstance(settings, dict):
                     continue
                 merged = dict(effective.get(mode_name, {}))
@@ -247,7 +207,7 @@ class Mode_master:
                     key = descriptor.get("key")
                     if not isinstance(key, str) or key not in settings:
                         continue
-                    normalized_value, ok = self._normalize_mode_setting_value(descriptor, settings.get(key))
+                    normalized_value, ok = Mode.normalize_setting_value(descriptor, settings.get(key))
                     if ok:
                         merged[key] = normalized_value
                 effective[mode_name] = merged
@@ -266,8 +226,8 @@ class Mode_master:
     def _apply_active_mode_settings(self) -> None:
         self._apply_mode_settings_to_segments(self._get_effective_mode_settings())
 
-    def _persist_active_configuration_mode_settings(self) -> bool:
-        mode_settings = self._copy_mode_settings_map(self.activ_configuration.get("modeSettings", {}))
+    def _persist_mode_settings(self) -> bool:
+        mode_settings = self._copy_mode_settings_map(self.mode_settings)
         self._persist_app_config_value("mode_settings", mode_settings)
         return True
 
@@ -296,10 +256,6 @@ class Mode_master:
         transition_status = self.transitions.get_status()
         return {
             "hardwareProfile": self.hardware_profile,
-            "activePlaylist": None,
-            "enabledPlaylists": [],
-            "activeConfiguration": self.activ_configuration.get("name", "Live Random DNA"),
-            "queuedConfiguration": None,
             "selectedTransition": "DYNAMIC",
             "transitionLocked": transition_status.is_locked,
             "transitionState": transition_status.state,
@@ -307,7 +263,6 @@ class Mode_master:
             "luminosity": int(round(max(0.0, min(1.0, float(getattr(self.listener, "luminosite", 0.0)))) * 100)),
             "sensibility": int(round(max(0.0, float(getattr(self.listener, "sensi", 0.0))) * 100)),
             "autoTransitionTime": int(round(transition_status.auto_interval)),
-            "playlists": [],
             "availableModes": available_modes,
             "activeMood": self.mood.get_status().palette,
             "availableMoods": list(self.mood.get_status().available_palettes),
@@ -394,46 +349,19 @@ class Mode_master:
                 await self.appli_connector.on_frame_tick(self)
         self.profiler.tick()
 
-    def update_segments_modes(self) -> None:
+    def initiate_modes(self) -> None:
         """
-        Apply the active configuration to all relevant segments (instant swap).
+        Pure random startup: pick a valid mode and direction for every segment,
+        apply persisted mode settings, and push installation to transitions.
         """
-        self._apply_active_mode_settings()
-
-        active_modes = self.activ_configuration.get("modes", {})
-        active_way = self.activ_configuration.get("way", {})
-        for segment in self.segments_list:
-            if not segment.isBlocked:
-                mode_name = active_modes.get(segment.name)
-                if mode_name is not None:
-                    segment.change_mode(mode_name)
-                way = active_way.get(segment.name)
-                if way is not None:
-                    segment.change_way(way)
-        self._state_dirty = True
-
-    def initiate_configuration(self) -> None:
-        """
-        Pure random startup: pick a valid mode and direction for every segment.
-        Builds self.activ_configuration with 'Live Random DNA' and applies settings.
-        """
-        modes_dict: Dict[str, str] = {}
-        ways_dict: Dict[str, str] = {}
         for segment in self.segments_list:
             avail = list(segment.modes.keys())
             mode_name = random.choice(avail) if avail else "Rainbow"
             direction = random.choice(["UP", "DOWN"])
-            modes_dict[segment.name] = mode_name
-            ways_dict[segment.name] = direction
             segment.change_mode(mode_name)
             segment.change_way(direction)
 
-        self.activ_configuration = {
-            "name": "Live Random DNA",
-            "modes": modes_dict,
-            "way": ways_dict,
-            "modeSettings": self._get_effective_mode_settings({}),
-        }
+        self.mode_settings = self._get_effective_mode_settings({})
         self._apply_active_mode_settings()
         self._push_installation()
         self._state_dirty = True
@@ -476,35 +404,14 @@ class Mode_master:
                 return segment
         return None
 
-    def _detach_configuration_modes(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Shallow-copy modes/way so live segment swaps never mutate the original dict.
-        """
-        if not isinstance(config, dict):
-            return {}
-        modes = config.get("modes")
-        way = config.get("way")
-        mode_settings = config.get("modeSettings")
-        return {
-            **config,
-            "modes": dict(modes) if isinstance(modes, dict) else {},
-            "way": dict(way) if isinstance(way, dict) else {},
-            "modeSettings": self._copy_mode_settings_map(mode_settings),
-        }
-
-    def _apply_configuration(self, config: Dict[str, Any]) -> None:
-        self.activ_configuration = self._detach_configuration_modes(config)
-        self.update_segments_modes()
-        self._push_installation()
-
     def _persist_app_config_value(self, key: str, value: Any) -> None:
         self.infos[key] = value
-        self._preset_repo.persist_app_config_debounced(key, value)
+        self._app_config_store.persist_app_config_debounced(key, value)
         self._state_dirty = True
 
     def flush_sync(self) -> None:
-        """Flushes any pending snapshots in PresetRepository synchronously."""
-        self._preset_repo.flush_sync()
+        """Flushes any pending snapshots in AppConfigStore synchronously."""
+        self._app_config_store.flush_sync()
 
     async def process_instruction(self, instruction: Dict[str, Any]) -> Dict[str, Any]:
         """

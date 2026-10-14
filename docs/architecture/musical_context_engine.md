@@ -150,30 +150,17 @@ Modes no longer need to parse raw thresholds; they simply inspect deterministic 
 
 ---
 
-## 6. Backward Compatibility Layer
+## 6. Semantic Helpers & Snapshot
 
-To ensure seamless operation with legacy modes, visual tools, and tests, `core/MusicalContextEngine.py` provides an airtight compatibility facade:
+The legacy 6-regime compatibility layer (`MusicalRegime`, `current_regime`, `previous_regime`, `regime_blend`, `regime_dwell_time`, `is_structural_change`, the legacy regime names and the `STRUCTURAL_CHANGE` pseudo-scene) has been **removed**. `MusicalScene` is a plain `str` enum with exactly 4 members (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) and compares equal to its string value (`scene == "GROOVE"`). A sectional cut is reported only by the `is_structural_cut` badge; it never replaces the scene.
 
-- **Enum & String Compatibility:**
-  `MusicalRegime = MusicalScene` is aliased. Legacy regime names are mapped directly to corresponding scenes:
-  - `MusicalRegime.DEEP_AMBIENT` $\to$ `MusicalScene.CHILL`
-  - `MusicalRegime.FLOATING_PULSE` $\to$ `MusicalScene.CHILL`
-  - `MusicalRegime.THE_POCKET` $\to$ `MusicalScene.GROOVE`
-  - `MusicalRegime.CHAOTIC_FILL` $\to$ `MusicalScene.GROOVE`
-  - `MusicalRegime.PRE_DROP_BUILDUP` $\to$ `MusicalScene.BUILDUP`
-  - `MusicalRegime.STRUCTURAL_CHANGE` $\to$ `"STRUCTURAL_CHANGE"` (decoupled legacy string with `.value`, evaluates `!= MusicalScene.CHILL`)
-- **Equality Overrides:** Direct string equality `scene == "THE_POCKET"` or `scene == "DEEP_AMBIENT"` evaluates to `True`. `MusicalScene.CHILL == "STRUCTURAL_CHANGE"` evaluates to `False`.
-- **Legacy Properties:**
-  - `current_regime` $\to$ `"STRUCTURAL_CHANGE"` when `is_structural_cut` is active, and `scene` otherwise
-  - `previous_regime` $\to$ `previous_scene`
-  - `regime_blend` $\to$ `scene_blend`
-  - `regime_dwell_time` $\to$ `scene_dwell_time`
+Convenience properties derived from the scene:
   - `is_ambient` $\to$ `scene == MusicalScene.CHILL`
   - `is_rhythmic` $\to$ `scene in (MusicalScene.GROOVE, MusicalScene.DROP_IMPACT)`
   - `is_in_pocket` $\to$ `scene == MusicalScene.GROOVE and is_locked`
   - `is_buildup` $\to$ `scene == MusicalScene.BUILDUP`
-  - `is_structural_change` $\to$ `is_structural_cut`
-- **Telemetry Snapshots:** `get_state_snapshot()` exports both the new 3-tier keys (`scene`, `is_locked`, `is_syncopated`, `is_real_beat`, `is_structural_cut`, etc.) and all legacy regime keys.
+
+**Telemetry Snapshots:** `get_state_snapshot()` exports the 3-tier keys (`scene`, `previous_scene`, `scene_blend`, `scene_dwell_time`, `is_locked`, `is_syncopated`, `is_real_beat`, `is_structural_cut`, etc.) and the semantic helpers.
 
 ---
 

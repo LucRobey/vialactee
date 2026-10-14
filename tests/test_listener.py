@@ -8,6 +8,7 @@ import numpy as np
 import time
 
 from core.Listener import Listener
+from core.MusicalContextEngine import MusicalScene
 
 
 class TestListener(unittest.TestCase):
@@ -57,7 +58,7 @@ class TestListener(unittest.TestCase):
 
         # Context engine
         self.assertTrue(hasattr(self.listener, "context"))
-        self.assertEqual(self.listener.context.current_regime, "DEEP_AMBIENT")
+        self.assertEqual(self.listener.context.scene, "CHILL")
 
         # Status & tags
         self.assertIn(self.listener.beat_tag, ["Bass/Kick", "Snare/Mid", "Hi-hat/Cymbal"])
@@ -72,12 +73,6 @@ class TestListener(unittest.TestCase):
 
         self.listener.dynamic_audio_latency = 0.045
         self.assertAlmostEqual(self.listener.dynamic_audio_latency, 0.045)
-
-        self.listener.hasBeenSilenceCalibrated = True
-        self.assertTrue(self.listener.hasBeenSilenceCalibrated)
-
-        self.listener.hasBeenBBCalibrated = True
-        self.assertTrue(self.listener.hasBeenBBCalibrated)
 
     def test_update_fake_fft(self):
         # Run several updates with fake FFT synthesis
@@ -195,11 +190,11 @@ class TestListener(unittest.TestCase):
         self.assertAlmostEqual(self.listener.live_beat_trust, 0.82)
 
         # Calling reset clears beat_trust ring buffer and delayed state, and resets context
-        self.listener.context._current_regime = "THE_POCKET"
+        self.listener.context._current_scene = MusicalScene.GROOVE
         self.listener.reset()
         self.assertAlmostEqual(self.listener.beat_trust, 0.0)
         self.assertTrue(np.all(self.listener._ring_beat_trust == 0.0))
-        self.assertEqual(self.listener.context.current_regime, "DEEP_AMBIENT")
+        self.assertEqual(self.listener.context.scene, "CHILL")
 
 
 if __name__ == '__main__':

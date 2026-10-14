@@ -6,7 +6,7 @@ import time
 from typing import Optional
 from aiohttp import web
 from core.Webapp_instruction_logger import WebappInstructionLogger
-from config.Configuration_manager import resolve_configurations_file_path, resolve_segments_file_path
+from config.Configuration_manager import resolve_segments_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,6 @@ class Connector:
         """Start the aiohttp web server with websocket instruction endpoint."""
         app = web.Application()
         app.router.add_get("/", self.handle_index)
-        app.router.add_get("/api/configurations", self.handle_get_configurations)
-        app.router.add_post("/api/configurations", self.handle_post_configurations)
         app.router.add_get("/api/topology", self.handle_get_topology)
         app.router.add_get("/ws", self.websocket_handler)
 
@@ -72,13 +70,6 @@ class Connector:
                 return web.FileResponse(index_path)
         return web.Response(text="Web interface not found. Please build wabb-interface (npm run build).", status=404)
 
-    def configurations_file_path(self):
-        infos = getattr(self.mode_master, "infos", None)
-        return resolve_configurations_file_path(infos)
-
-    async def handle_get_configurations(self, request):
-        return web.json_response({"playlists": [], "configurations": {}})
-
     def segments_file_path(self):
         infos = getattr(self.mode_master, "infos", None)
         return resolve_segments_file_path(infos)
@@ -109,9 +100,6 @@ class Connector:
             "segments": segments,
             "cables": cables,
         })
-
-    async def handle_post_configurations(self, request):
-        return web.json_response({"applied": False, "reason": "playlists_retired"}, status=200)
 
     async def websocket_handler(self, request):
         ws = web.WebSocketResponse()

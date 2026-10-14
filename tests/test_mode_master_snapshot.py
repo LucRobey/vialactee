@@ -34,10 +34,9 @@ class TestModeMasterSnapshot(unittest.TestCase):
 
         self.mode_master = Mode_master(self.mock_listener, self.infos, self.leds1, self.leds2)
 
-    def test_initiate_configuration(self):
-        self.assertEqual(self.mode_master.activ_configuration.get("name"), "Live Random DNA")
-        self.assertEqual(len(self.mode_master.activ_configuration.get("modes", {})), 11)
-        self.assertEqual(len(self.mode_master.activ_configuration.get("way", {})), 11)
+    def test_initiate_modes(self):
+        self.assertEqual(len(self.mode_master.segments_list), 11)
+        self.assertIsInstance(self.mode_master.mode_settings, dict)
         self.assertIsNotNone(self.mode_master.transitions)
         self.assertIsNotNone(self.mode_master.mood)
 
@@ -46,10 +45,7 @@ class TestModeMasterSnapshot(unittest.TestCase):
         self.assertIsInstance(snapshot, dict)
 
         required_keys = [
-            "activePlaylist",
-            "enabledPlaylists",
-            "activeConfiguration",
-            "queuedConfiguration",
+            "hardwareProfile",
             "selectedTransition",
             "transitionLocked",
             "transitionState",
@@ -57,7 +53,6 @@ class TestModeMasterSnapshot(unittest.TestCase):
             "luminosity",
             "sensibility",
             "autoTransitionTime",
-            "playlists",
             "availableModes",
             "activeMood",
             "availableMoods",
@@ -69,12 +64,8 @@ class TestModeMasterSnapshot(unittest.TestCase):
         for key in required_keys:
             self.assertIn(key, snapshot, f"Snapshot missing required key: {key}")
 
-        # Playlist retirement invariants
-        self.assertIsNone(snapshot["activePlaylist"])
-        self.assertEqual(snapshot["enabledPlaylists"], [])
-        self.assertEqual(snapshot["playlists"], [])
-        self.assertIsNone(snapshot["queuedConfiguration"])
-        self.assertEqual(snapshot["activeConfiguration"], "Live Random DNA")
+        for retired_key in ("activePlaylist", "enabledPlaylists", "activeConfiguration", "queuedConfiguration", "playlists"):
+            self.assertNotIn(retired_key, snapshot)
 
         # Mood invariants
         self.assertEqual(snapshot["activeMood"], "Cyberpunk")

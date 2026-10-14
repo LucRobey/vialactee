@@ -36,7 +36,7 @@ python tools/mode_studio.py --leds 120
 
 3. **Live 5-Card Telemetry & Context HUD:**
    - **Card 0 (Flywheel & BPM):** Circular phase dial showing real-time `beat_phase` ($0.0 \to 1.0$), base tempo, lock status, Pearson confidence meter, and total beats.
-   - **Card 1 (Musical Regime Engine & 2x2 State Matrix):** Real-time canonical regime badge (`DEEP_AMBIENT`, `FLOATING_PULSE`, `THE_POCKET`, `CHAOTIC_FILL`, `PRE_DROP_BUILDUP`, `STRUCTURAL_CHANGE`), transition crossfade progress bar (`regime_blend`), dwell time with stability lock, pre-drop countdown alerts, and embedded **2x2 Regime State Matrix ($T \times S$ Phase Plane Mini-Grid)** showing real-time $(T, S)$ navigation, Schmitt hysteresis deadbands, and active quadrant highlights.
+   - **Card 1 (Musical Regime Engine & 2x2 State Matrix):** Real-time canonical regime badge (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`), transition crossfade progress bar (`scene_blend`), dwell time with stability lock, pre-drop countdown alerts, and embedded **2x2 Regime State Matrix ($T \times S$ Phase Plane Mini-Grid)** showing real-time $(T, S)$ navigation, Schmitt hysteresis deadbands, and active quadrant highlights.
    - **Card 2 (Salience & Trust Telemetry):** Rhythmic Salience ($S$) with dynamic Schmitt deadband shaded, Beat Trust ($T$) with dynamic Schmitt deadband shaded, Salience Gradient ($\Delta R$) bipolar gauge with pre-drop buildup trigger tick, and Telemetry Dynamics Summary box tracking speaker vs lookahead lead deltas and lock coupling states.
    - **Card 3 (Beat & Transient Tagging):** Flashing badges for `● REAL BEAT` vs `◐ DROPPED / BREAKDOWN`, plus `[Bass/Kick]`, `[Snare/Mid]`, `[Hi-hat/Cymbal]` tags, and mode authoring guidelines.
    - **Card 4 (Spectral Dynamics & Harmony):** N-Band Mel filterbank dynamics, total asserved power meter, and 12-tone chromagram dominant key class.
@@ -108,7 +108,7 @@ python tools/music_studio.py --model AudioAnalyzer
    - Visual bar heights and dominant key/chord badge.
 
 5. **Structural Novelty & Regime State Engine (Panel 5):**
-   - Header with Canonical Musical Regime badge (`[● THE_POCKET]`, `[▲ PRE_DROP_BUILDUP]`, etc.) and flashing `⚠️ DROP COUNTDOWN: X.XXs` alert.
+   - Header with Canonical Musical Regime badge (`[● GROOVE]`, `[▲ BUILDUP]`, etc.) and flashing `⚠️ DROP COUNTDOWN: X.XXs` alert.
    - Rolling real-time graph plotting Combined Novelty (Cyan), Local Max LM (Orange), and Global Max GM (Purple).
    - Expanded right-sidebar instrumentation:
      - **Asserved Novelty Meter:** Gauge ($0.0 \to 1.0$) with song drop threshold line.
@@ -117,7 +117,7 @@ python tools/music_studio.py --model AudioAnalyzer
      - **Salience Gradient ($\Delta R$) Gauge:** Bipolar $[-0.5, +0.5]$ meter with center tick, $+0.40$ buildup threshold line, and trigger alert.
      - **Semantic Context Flags:** Mini-card reporting `RHYTHMIC`, `IN POCKET`, `BUILDUP`, and `STRUCT CUT`.
      - **Regime Transition Crossfade:** Blend progress bar ($0.0 \to 1.0$), source regime readout, and dwell time with stability lock indicator.
-     - **2x2 Regime State Matrix ($T \times S$) Phase Plane Mini-Grid:** Visualizes musical navigation across $(T, S)$ state plane (`CHAOTIC_FILL`, `THE_POCKET`, `DEEP_AMBIENT`, `FLOATING_PULSE`), with active quadrant highlights, Schmitt hysteresis zones, crosshairs, coordinate readouts, and override alert banners.
+     - **2x2 Regime State Matrix ($T \times S$) Phase Plane Mini-Grid:** Visualizes musical navigation across $(T, S)$ state plane (`GROOVE (SYNCO)`, `GROOVE (LOCKED)`, `CHILL`, `GROOVE (PULSE)`), with active quadrant highlights, Schmitt hysteresis zones, crosshairs, coordinate readouts, and override alert banners.
 
 6. **Interactive Live Parameter Tuning Drawer (`[T]` Key):**
    - Press **`[T]`** to slide open the live parameter editor (dynamically sized, zero-overflow backdrop).

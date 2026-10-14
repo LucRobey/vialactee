@@ -11,32 +11,30 @@ Vialactée uses a centralized, dynamic configuration architecture. Configuration
 
 ```mermaid
 graph TD
-    AppConfig["config/app_config.json<br/>(Master Settings, Audio, Hardware, Profiler)"]
+    AppConfig["config/app_config.json<br/>(Master Settings, Audio, Hardware, Profiler, mode_settings)"]
     ModesConfig["config/modes.json<br/>(Mode Registry)"]
     SegmentsConfig["config/segments_full.json<br/>config/segments_small.json<br/>(Physical Geometry + UI Topology)"]
-    DataConfig["data/configurations_full.json<br/>data/configurations_small.json<br/>(Playlist Presets & Mode Settings)"]
 
     Mgr["config/Configuration_manager.py<br/>(Dynamic Path & Audio Resolver)"]
 
     AppConfig --> Mgr
-    ModesConfig --> ModeMaster["core/Mode_master.py"]
+    ModesConfig --> Segment["core/Segment.py"]
     SegmentsConfig --> Mgr
-    DataConfig --> Mgr
 
     Mgr --> Main["Main.py"]
     Main --> Listener["core/Listener.py"]
     Main --> AudioAnalyzer["core/AudioAnalyzer.py"]
     Main --> LocalMic["connectors/Local_Microphone.py"]
-    Main --> ModeMaster
+    Main --> ModeMaster["core/Mode_master.py"]
+    ModeMaster --> Segment
     Main --> HwFactory["hardware/HardwareFactory.py"]
 ```
 
 ### Invariant Rules
 1. **Never Hardcode File Paths:** Never import static strings like `"config/segments_full.json"`. Always use:
    * `Configuration_manager.resolve_segments_file_path(infos)`
-   * `Configuration_manager.resolve_configurations_file_path(infos)`
 2. **Synchronized `infos` Dictionary:** In `Main.py`, `app_config.json` is loaded into a dictionary (`infos`), passed to `Configuration_manager.resolve_audio_config(infos)`, and then passed into subsystems (`Listener`, `Local_Microphone`, `Mode_master`, `HardwareFactory`).
-3. **Live Deck Persistence:** Changes made to `luminosity` or `sensibility` via the Web UI or runtime are persisted back to `config/app_config.json` by `Mode_master`.
+3. **Live Persistence:** Changes made to `luminosity`, `sensibility`, `auto_transition_time` or the per-mode `mode_settings` via the Web UI are persisted back to `config/app_config.json` by `Mode_master` (debounced atomic write through `AppConfigStore`).
 
 ---
 
@@ -61,8 +59,8 @@ The root configuration file governing server launch, audio ingestion, hardware d
 | `show_music_analyser_panel` | boolean | `true` | `true`, `false` | `Main.py`, `Fake_leds` | In simulation, overlays the real-time DSP HUD (FFT bands, flux, BPM, beat triggers) on Pygame. |
 | `luminosity` | int | `50` | `0` to `100` | `AudioIngestion`, `Mode_master` | Master brightness percentage. Persisted across sessions when altered via Web UI. |
 | `sensibility` | int | `50` | `1` to `100` | `AudioIngestion`, `Mode_master` | Audio sensitivity gain percentage. Lower = less reactive, higher = triggers on quiet sounds. |
-| `auto_transition_time` | int | `80` | $\ge 10$ (seconds) | `Mode_master`, `Transition_Director` | Interval between automatic playlist preset transitions. |
-| `startup_grace_period` | float | `3.0` | $\ge 0.0$ (seconds) | `Transition_Director` | Initial stabilization grace period upon boot where automatic and musical transitions are suppressed. |
+| `auto_transition_time` | int | `80` | $\ge 10$ (seconds) | `Mode_master`, `transitions` (director) | Interval between automatic timer-driven transitions. Changed live from the Live Deck and persisted. |
+| `startup_grace_period` | float | `3.0` | $\ge 0.0$ (seconds) | `transitions` (director) | Initial stabilization grace period upon boot where automatic and musical transitions are suppressed. |
 | `analyzer_model` | string | `"DyadicMetricalAudioAnalyzer"` | `"DyadicMetricalAudioAnalyzer"`, `"MultiBandOnsetAudioAnalyzer"`, `"AudioAnalyzer"` | `Listener`, `Mode_master`, `mode_studio`, `music_studio` | Active rhythm tracking model instantiated by `Listener`. `"DyadicMetricalAudioAnalyzer"` (default) adds a metrical sub-pulse arbiter on top of the 32-band engine; `"MultiBandOnsetAudioAnalyzer"` provides 32-band onset derivatives and anti-phase disambiguation (stable fallback); unknown names log a warning and use the default; `"AudioAnalyzer"` provides the single-ODF baseline. |
 | `log_level` | string | `"INFO"` | `"DEBUG"`, `"INFO"`, `"WARNING"`, `"ERROR"` | `Main.py` | Logger verbosity level for console and `vialactee.log` rotating file handler. |
 | `led_latency` | float | `0.0` | Seconds (float) | `BaseAudioAnalyzer` | LED pipeline lag: time between a frame command and the light being visible (ESP32 transport, strip refresh). Calibrated constant. |
@@ -72,6 +70,7 @@ The root configuration file governing server launch, audio ingestion, hardware d
 | `song` | string / null | `null` | File path or track name | `Main.py`, `Local_AudioFile` | Path or name of local MP3/WAV file for direct audio playback with hardware parity. |
 | `audio_file` | string / null | `null` | File path or track name | `Main.py`, `Local_AudioFile` | Alias for `song`. |
 | `loop` | boolean | `false` | `true`, `false` | `Local_AudioFile` | If `true`, loops the current track indefinitely instead of cycling playlist. |
+| `mode_settings` | object | absent | `{"<Mode name>": {"<setting key>": value}}` | `Mode_master`, `AppConfigStore` | Optional. Live per-mode setting overrides written by the Mode Settings page and merged over each mode's declared defaults at startup. Created on first edit; see Section 8. |
 | `profiler` | object | `{...}` | JSON object | `Profiler` | Detailed loop profiling configuration. See Section 5. |
 
 ---
@@ -243,29 +242,20 @@ These files represent the **single source of truth** uniting physical LED mappin
 
 ---
 
-## 8. Presets & Playlists: `data/configurations_*.json`
+## 8. Persisted Mode Settings (`mode_settings`)
 
-Saved playlists and segment assignments live in:
-* `data/configurations_full.json` (for `hardware_profile: "full"`)
-* `data/configurations_small.json` (for `hardware_profile: "small"`)
+Presets and playlists no longer exist (`data/configurations*.json` and `Data_reader.py` have been removed). Every run starts from a random mode and direction per segment, and the `transitions/` sector changes modes live from the music.
 
-### Structure of a Configuration Entry:
+Live per-mode parameter tweaks (Mode Settings page, `set_mode_setting`) are persisted in `config/app_config.json` via `AppConfigStore` under the optional `mode_settings` key, created on the first edit:
+
 ```json
 {
-  "name": "Cosmic Drift",
-  "segments": {
-    "v1": { "mode": "Rainbow", "direction": 1 },
-    "v2": { "mode": "Rainbow", "direction": -1 },
-    "h00": { "mode": "Hyper Strobe", "direction": 1 }
-  },
-  "modeSettings": {
-    "Rainbow": { "speed": 1.5 },
-    "Hyper Strobe": { "strobe_flux_threshold": 0.65 }
+  "mode_settings": {
+    "<Mode name>": { "<setting key>": <value> }
   }
 }
 ```
-* `segments`: Maps each logical segment name to an active mode and animation direction (`1` for forward, `-1` for reversed).
-* `modeSettings`: Configuration-scoped parameter overrides passed to mode instances.
+* At startup the effective value of each setting is: the mode's declared default, overridden by `mode_settings`, then by any live edit in the running session. Values are validated and clamped by `Mode.normalize_setting_value`. See `core/precisions/mode_master.md` (section 4).
 
 ---
 

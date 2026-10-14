@@ -22,11 +22,18 @@ from transitions.manager import LocalTransitionManager, TRANSITION_TECHNIQUES
 
 DROP_TECHNIQUE: Dict[str, Any] = {"type": "explosion", "duration": 0.4}
 
+# Automatic (director-fired) triggers that ripple across the installation per segment.
+# Drop triggers (`drop_impact`, `pre_drop_buildup`) are deliberately NOT staggered: their
+# duration is scaled so the climax lands exactly when the drop reaches the speakers, and
+# per-segment start offsets would break that alignment. Manual requests (`request_next`,
+# `request_drop`) stay instant unless the caller asks for `staggered=True`.
+STAGGERED_AUTO_REASONS = frozenset(("timer", "song_change", "structural_change"))
+
 
 class DefaultTransitionService(TransitionService):
     """Synchronous front door of the transition sector."""
 
-    def __init__(self, infos: Optional[Dict[str, Any]] = None, segments_path: Optional[str] = None) -> None:
+    def __init__(self, infos: Optional[Dict[str, Any]] = None) -> None:
         service_infos = dict(infos or {})
         if "min_time_between_transitions" not in service_infos:
             service_infos["min_time_between_transitions"] = 5.0
@@ -55,6 +62,7 @@ class DefaultTransitionService(TransitionService):
             self._manager.schedule_transition(
                 transition_config=self._director.pending_transition_config,
                 quantize_downbeat=self._director.pending_quantize_downbeat,
+                staggered=self._reason in STAGGERED_AUTO_REASONS,
             )
         self._manager.update(dt, music)
         return self._drain()

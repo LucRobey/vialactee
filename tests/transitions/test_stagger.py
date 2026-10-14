@@ -210,7 +210,7 @@ class TestStagger(unittest.TestCase):
             energy=0.4,
             salience=0.3,
             is_rhythmic=False,
-            scene=MockSceneEnum("DEEP_AMBIENT"),
+            scene=MockSceneEnum("CHILL"),
         )
         self.assertEqual(select_stagger_pattern(ctx_enum), StaggerPattern.CENTER_OUT)
 

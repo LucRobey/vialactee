@@ -5,7 +5,7 @@ Unit tests and governance verification for core/MusicalContextEngine.py (Offer 4
   - Tier 1: Continuous Dynamic Kinetics (energy, tension, drop_progress, spectral_tilt, vertical_center, gradients)
   - Tier 2: 4 Macro Scenes (CHILL, GROOVE, BUILDUP, DROP_IMPACT) with Schmitt hysteresis, dwell locks, crossfading
   - Tier 3: Micro Physical Badges (is_locked, is_syncopated, is_real_beat, is_silent, is_drop_impact, is_drop_imminent, is_structural_cut)
-- Backward compatibility layer (MusicalRegime alias, legacy helpers, get_state_snapshot)
+- Semantic helpers (is_ambient, is_rhythmic, ...) and get_state_snapshot
 - AXIOM-01 frame budget (<= 0.15 ms) and AXIOM-02 zero dynamic heap allocation in steady state
 """
 
@@ -14,7 +14,7 @@ import time
 import tracemalloc
 import numpy as np
 
-from core.MusicalContextEngine import MusicalContextEngine, MusicalScene, MusicalRegime
+from core.MusicalContextEngine import MusicalContextEngine, MusicalScene
 from modes.Beat_runner_mode import Beat_runner_mode
 from modes.Impact_shockwave_mode import Impact_shockwave_mode
 from modes.Rhythm_breather_mode import Rhythm_breather_mode
@@ -75,37 +75,30 @@ class TestMusicalContextEngine(unittest.TestCase):
         self.assertFalse(self.engine.is_drop_imminent)
         self.assertFalse(self.engine.is_structural_cut)
 
-        # Backward compatibility properties
-        self.assertEqual(self.engine.current_regime, MusicalScene.CHILL)
-        self.assertEqual(self.engine.previous_regime, MusicalScene.CHILL)
-        self.assertEqual(self.engine.regime_blend, 1.0)
-        self.assertEqual(self.engine.regime_dwell_time, 0.0)
+        # Semantic helpers
         self.assertTrue(self.engine.is_ambient)
         self.assertFalse(self.engine.is_rhythmic)
         self.assertFalse(self.engine.is_buildup)
         self.assertFalse(self.engine.is_in_pocket)
-        self.assertFalse(self.engine.is_structural_change)
 
-    def test_backward_compatibility_layer_mappings(self) -> None:
-        """Verify legacy MusicalRegime enum aliases and string comparisons."""
-        self.assertIs(MusicalRegime, MusicalScene)
-        self.assertEqual(MusicalRegime.DEEP_AMBIENT, MusicalScene.CHILL)
-        self.assertEqual(MusicalRegime.FLOATING_PULSE, MusicalScene.CHILL)
-        self.assertEqual(MusicalRegime.THE_POCKET, MusicalScene.GROOVE)
-        self.assertEqual(MusicalRegime.CHAOTIC_FILL, MusicalScene.GROOVE)
-        self.assertEqual(MusicalRegime.PRE_DROP_BUILDUP, MusicalScene.BUILDUP)
-        self.assertEqual(MusicalRegime.STRUCTURAL_CHANGE, "STRUCTURAL_CHANGE")
-        self.assertEqual(MusicalRegime.STRUCTURAL_CHANGE.value, "STRUCTURAL_CHANGE")
-        self.assertEqual(MusicalScene.STRUCTURAL_CHANGE.value, "STRUCTURAL_CHANGE")
-        self.assertNotEqual(MusicalRegime.STRUCTURAL_CHANGE, MusicalScene.CHILL)
+    def test_scene_enum_is_exactly_four_canonical_scenes(self) -> None:
+        """MusicalScene has only the 4 canonical scenes and compares equal to its string value."""
+        self.assertEqual(
+            [s.value for s in MusicalScene],
+            ["CHILL", "GROOVE", "BUILDUP", "DROP_IMPACT"],
+        )
+        self.assertEqual(MusicalScene.CHILL, "CHILL")
+        self.assertEqual(MusicalScene.DROP_IMPACT, "DROP_IMPACT")
+        self.assertNotEqual(MusicalScene.CHILL, "GROOVE")
 
-        # String equality with legacy regime names
-        self.assertEqual(MusicalScene.CHILL, "DEEP_AMBIENT")
-        self.assertEqual(MusicalScene.CHILL, "FLOATING_PULSE")
-        self.assertNotEqual(MusicalScene.CHILL, "STRUCTURAL_CHANGE")
-        self.assertEqual(MusicalScene.GROOVE, "THE_POCKET")
-        self.assertEqual(MusicalScene.GROOVE, "CHAOTIC_FILL")
-        self.assertEqual(MusicalScene.BUILDUP, "PRE_DROP_BUILDUP")
+        # Legacy 6-regime names are gone entirely
+        for legacy in ("DEEP_AMBIENT", "FLOATING_PULSE", "THE_POCKET", "CHAOTIC_FILL",
+                       "PRE_DROP_BUILDUP", "STRUCTURAL_CHANGE"):
+            self.assertNotEqual(MusicalScene.CHILL, legacy)
+            self.assertNotEqual(MusicalScene.GROOVE, legacy)
+            self.assertNotEqual(MusicalScene.BUILDUP, legacy)
+            with self.assertRaises(ValueError):
+                MusicalScene(legacy)
 
     # =========================================================================
     # 2. TIER 1: CONTINUOUS DYNAMIC KINETICS
@@ -493,8 +486,7 @@ class TestMusicalContextEngine(unittest.TestCase):
         self.assertFalse(self.engine.is_buildup)
         self.assertEqual(self.engine.drop_countdown, 0.0)
         self.assertTrue(self.engine.is_structural_cut)
-        self.assertEqual(self.engine.current_regime, "STRUCTURAL_CHANGE")
-        self.assertEqual(self.engine.current_regime.value, "STRUCTURAL_CHANGE")
+        self.assertIn(self.engine.scene, (MusicalScene.CHILL, MusicalScene.GROOVE))
 
     def test_lookahead_song_change_prevents_false_buildup(self) -> None:
         """Verify live_is_song_change in lookahead audio prevents incoming track spikes from triggering BUILDUP."""
@@ -627,7 +619,6 @@ class TestMusicalContextEngine(unittest.TestCase):
         self.listener.is_song_change = True
         self.engine.update(dt)
         self.assertTrue(self.engine.is_structural_cut)
-        self.assertTrue(self.engine.is_structural_change)
 
         self.listener.is_song_change = False
         # Advance 1.0s (dwell not expired)
@@ -639,25 +630,22 @@ class TestMusicalContextEngine(unittest.TestCase):
         for _ in range(4):
             self.engine.update(dt)
         self.assertFalse(self.engine.is_structural_cut)
-        self.assertFalse(self.engine.is_structural_change)
 
     # =========================================================================
     # 5. STATE SNAPSHOT & TELEMETRY
     # =========================================================================
 
-    def test_state_snapshot_contains_all_tiers_and_legacy_keys(self) -> None:
-        """Verify get_state_snapshot() contains all Tier 1, 2, 3 and legacy keys."""
+    def test_state_snapshot_contains_all_tiers(self) -> None:
+        """Verify get_state_snapshot() contains all Tier 1, 2, 3 keys and no legacy regime keys."""
         snap = self.engine.get_state_snapshot()
         expected_keys = {
             # Tier 2 Macro Scenes
             "scene", "previous_scene", "scene_blend", "scene_dwell_time",
-            # Legacy regime keys
-            "current_regime", "previous_regime", "regime_blend", "regime_dwell_time",
             # Tier 3 Micro Physical Badges
             "is_locked", "is_syncopated", "is_real_beat", "is_silent",
             "is_drop_impact", "is_drop_imminent", "is_structural_cut",
-            # Legacy helpers
-            "is_ambient", "is_rhythmic", "is_buildup", "is_in_pocket", "is_structural_change",
+            # Semantic helpers
+            "is_ambient", "is_rhythmic", "is_buildup", "is_in_pocket",
             # Tier 1 Dynamic Kinetics & Ingested Scalars
             "energy", "tension", "drop_progress", "drop_countdown",
             "salience_gradient", "power_gradient", "salience", "beat_trust",

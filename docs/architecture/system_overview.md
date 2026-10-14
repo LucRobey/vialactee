@@ -23,7 +23,7 @@ graph TD
         Mic["Local_Microphone (PortAudio PCM Stream)"]
     end
 
-    Wabb -->|WebSocket Instructions / Presets| Conn
+    Wabb -->|WebSocket Instructions| Conn
     Conn -->|State Snapshots (<= 10Hz)| Wabb
     RoomAudio --> Mic
 
@@ -33,29 +33,32 @@ graph TD
         AudioIngest["AudioIngestion (Dual-Res Mel: 8 & 32 Bands)"]
         AudioAnalyz["DyadicMetricalAudioAnalyzer (32-Band Onset Engine + Metrical Sub-Pulse)"]
         ModeMaster["Mode_master (Central Orchestrator)"]
-        TransDir["Transition_Director (State Machine)"]
+        MoodDir["mood.api (MoodDirector & Scene Policy)"]
+        TransBridge["TransitionBridge -> transitions.api (TransitionService)"]
     end
 
     Mic -->|Raw PCM Push| ListenerFacade
     Conn -->|Commands & Overrides| ModeMaster
-    ModeMaster -->|State Dirty & Active Presets| Conn
+    ModeMaster -->|State Dirty & Snapshots| Conn
     ListenerFacade -->|PCM Chunks| AudioIngest
     AudioIngest -->|32-Band Mel Energies| AudioAnalyz
     AudioIngest -->|8-Band Smoothed FFT & Power| ListenerFacade
-    ListenerFacade -->|Delayed FFT & Beat Context| ModeMaster
+    ListenerFacade -->|Delayed FFT & MusicalContext| ModeMaster
     AudioAnalyz -->|BPM, Phase & Transients| ModeMaster
-    AudioAnalyz -->|Structural Changes & Drops| TransDir
-    TransDir -->|Commands Mode Transitions| ModeMaster
+    ModeMaster -->|MusicalContext| MoodDir
+    MoodDir -->|Target Scene & Mode Pool| TransBridge
+    AudioAnalyz -->|Structural Changes & Drops| TransBridge
+    TransBridge -->|Commands Mode Transitions| ModeMaster
 
     %% Visual Rendering Layer
     subgraph Visuals [Visual Animation Pipeline]
         Mode["Mode Subclasses (22 Active Modes)"]
         Seg["Segment (Logical LED Strip)"]
-        TransEng["Transition_Engine (Spatial Blends)"]
+        TransEng["transitions.engine (Spatial Blends)"]
     end
 
     ModeMaster -->|Update Ticks (30 FPS)| Seg
-    Seg -->|Queries Transition State| TransDir
+    Seg -->|Queries Transition State| TransBridge
     Seg -->|Renders Mode Animation| Mode
     Mode -->|Mutates RGB Buffer| Seg
     Seg -->|Applies Spatial Masks| TransEng

@@ -13,8 +13,6 @@ Implemented via `aiohttp` in `connectors/Connector.py`:
 | Method | Endpoint | Description | Response Schema |
 |:---:|:---|:---|:---|
 | `GET` | `/` | Serves compiled React web app (`wabb-interface/dist/index.html`) | HTML |
-| `GET` | `/api/configurations` | Returns all playlists and presets from active profile store | JSON object containing `playlists`, `configurations`, `blockedPlaylists` |
-| `POST` | `/api/configurations` | Overwrites presets in the active configuration JSON | `{"status": "saved"}` |
 | `GET` | `/api/topology` | Returns physical segment coordinates, lengths, orientations, and cables | `{"segments": [...], "cables": [...]}` |
 | `GET` | `/ws` | Upgrades connection to WebSocket for live bidirectional control | WebSocket protocol |
 
@@ -30,17 +28,23 @@ Broadcasts state snapshots to active browser clients.
 {
   "type": "mode_master_state",
   "payload": {
-    "current_playlist": "Cosmic",
-    "current_configuration": "Supernova",
-    "active_modes": { "v1": "Rainbow", "h00": "Hyper Strobe" },
-    "is_in_transition": false,
-    "transition_progress": 0.0,
+    "hardwareProfile": "full",
+    "selectedTransition": "DYNAMIC",
+    "transitionLocked": false,
+    "transitionState": "PASSATION",
+    "transitionProgress": 0.0,
     "luminosity": 50,
     "sensibility": 50,
-    "bpm": 124.0,
-    "beat_confidence": 0.88,
-    "is_beat": true,
-    "is_real_beat": true
+    "autoTransitionTime": 20,
+    "availableModes": ["Rainbow", "Hyper Strobe"],
+    "activeMood": "Cyberpunk",
+    "availableMoods": ["Cyberpunk", "Solar Ember"],
+    "segments": [
+      { "id": "v1", "name": "Segment v1", "mode": "Rainbow", "direction": "UP", "blocked": false, "targetMode": null, "inTransition": false }
+    ],
+    "modeSettingsCatalog": [...],
+    "modeSettings": { "Rainbow": { "smoothRatio": 0.5 } },
+    "system": { "...": "..." }
   }
 }
 ```
@@ -60,17 +64,17 @@ Supported Actions by Page:
 - **`live_deck`**:
   - `set_luminosity`: Sets master LED brightness percentage ($0\text{--}100$). Payload: `{"value": 80}`.
   - `set_sensibility`: Sets audio gain sensitivity ($1\text{--}100$). Payload: `{"value": 65}`.
-  - `set_auto_transition_time`: Sets configuration rotation interval (seconds). Payload: `{"value": 30}`.
-  - `select_transition`: Sets active transition preset. Payload: `{"transition": "CUT" | "CROSSFADE" | "FADE IN/OUT"}`.
-  - `select_configuration`: Queues configuration by name. Payload: `{"configuration": "name"}`.
-  - `select_playlist`: Activates single playlist and switches. Payload: `{"playlist": "name"}`.
-  - `go_to_next_configuration`: Triggers immediate transition to next configuration. Payload: `{"transition": ..., "configuration": ...}`.
-  - `manual_drop`: Triggers structural drop event or queued configuration transition.
-  - `lock_current_configuration`: Locks or unlocks automatic configuration rotation. Payload: `{"locked": true|false}`.
+  - `set_auto_transition_time`: Sets automatic transition interval (seconds). Payload: `{"value": 30}`.
+  - `select_mood`: Selects active mood palette. Payload: `{"palette": "Cyberpunk"}`.
+  - `select_transition`: **Retired** (still accepted; always replies `{"applied": false, "reason": "transition_selection_retired"}`).
+  - `go_to_next_configuration`: Triggers next DNA transition via `transitions.request_next()`.
+  - `manual_drop`: Triggers immediate drop transition via `transitions.request_drop()`.
+  - `lock_current_configuration`: Locks or unlocks automatic transitions. Payload: `{"locked": true|false}`.
 - **`topology`**:
   - `select_segment_mode`: Sets active mode on a logical strip. Payload: `{"segmentId": "v1", "mode": "Rainbow"}`.
   - `toggle_segment_direction`: Inverts strip rendering direction. Payload: `{"segmentId": "v1", "direction": "UP" | "DOWN"}`.
-  - `select_playlist_slot`: Selects single active playlist from topology view.
-  - `select_configuration`: Activates configuration with transition.
 - **`mode_settings`**:
-  - `set_mode_setting`: Live tunes dynamic mode parameter. Payload: `{"mode": "mode_name", "key": "setting_key", "value": val}`.
+  - `set_mode_setting`: Live tunes dynamic mode parameter and persists to `config/app_config.json`. Payload: `{"mode": "mode_name", "key": "setting_key", "value": val}`.
+- **`system`**:
+  - `restart_python_loop`: Triggers a controlled restart of the Python process.
+  - `restart_raspberry_pi`: Triggers host reboot on Linux Raspberry Pi systems.

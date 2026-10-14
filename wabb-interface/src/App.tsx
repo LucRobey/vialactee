@@ -9,8 +9,6 @@ import { TopologyEditor } from './components/pages/TopologyEditor'
 import { ModeSettings } from './components/pages/ModeSettings'
 import { SystemSetup } from './components/pages/SystemSetup'
 
-const TOPOLOGY_LIVE_MODES = ['LIVE'] as const
-
 const ROGUE_PIECES = [
   { color: 'dark-blue', col: 8, row: 10, w: 10, h: 8 },
   { color: 'dark-red', col: 28, row: 0, w: 40, h: 4 },
@@ -34,7 +32,7 @@ function App() {
 
   const tabs = useMemo(() => ([
     { name: 'Live Deck', component: <LiveDeck /> },
-    { name: 'Topology', component: <TopologyEditor allowedModes={TOPOLOGY_LIVE_MODES} /> },
+    { name: 'Topology', component: <TopologyEditor /> },
     { name: 'Mode Settings', component: <ModeSettings /> },
     { name: 'System', component: <SystemSetup /> },
   ]), [])

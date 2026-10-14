@@ -1,8 +1,9 @@
 """
 transitions/stagger.py - Staggered Offsets & Per-Cohort Transition Techniques.
 
-# Note: not wired into automatic transitions yet; only reachable when a caller
-# explicitly passes staggered=True to request_next() / schedule_transition().
+# Note: wired into the automatic `timer` / `song_change` / `structural_change` triggers
+# (see transitions/service.py STAGGERED_AUTO_REASONS); drop triggers stay simultaneous.
+# Manual requests stay instant unless a caller passes staggered=True.
 
 Provides spatial and cohort-aware timing patterns:
 1. Cascading ripples (top-down / bottom-up / center-out)
@@ -46,7 +47,7 @@ def select_stagger_pattern(context: Optional[Any] = None) -> StaggerPattern:
             return StaggerPattern.COHORT_COMPLEMENTARY
         raw_scene = getattr(context, "scene", "")
         scene = str(getattr(raw_scene, "value", getattr(raw_scene, "name", raw_scene)) or "").upper()
-        if scene in ("CHILL", "DEEP_AMBIENT", "FLOATING_PULSE"):
+        if scene == "CHILL":
             return StaggerPattern.CENTER_OUT
 
     return StaggerPattern.CASCADE_DOWN
