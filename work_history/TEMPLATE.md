@@ -4,7 +4,10 @@
 > **Session ID:** `<session-id-or-hash>`  
 > **Agent / Model:** Gemini 3.8 Flash / Claude 3.7 Sonnet / User  
 > **Primary Goal:** Brief 1-line summary of what this session aimed to accomplish.  
-> **Status:** [COMPLETED / IN PROGRESS / BLOCKED]
+> **Status:** [COMPLETED / IN PROGRESS / BLOCKED]  
+> **Commits:** `<short-hash>` `<short-hash>` (pushed: yes / no)  
+> **Skills Used:** none | `vialactee-mode-creator`, `vialactee-dsp-engine`  
+> **Skill Friction:** none | `<skill>: <what was missing, misleading, or unnecessary>`
 
 ---
 

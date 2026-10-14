@@ -1,0 +1,100 @@
+> [!WARNING]
+> **ARCHIVE (Tier 4) - historical snapshot, not system truth.** This is the verbatim content of
+> `.agents/AGENT.md` as of 2026-10-14, preserved before that file was reduced to a pointer.
+> The live sources of truth are `docs/architecture/`, `docs/reference/`, `docs/axioms/` and the
+> per-directory `README.md` files. The "Recent Upgrades" list is a changelog; going forward, such
+> history belongs in `work_history/` and git.
+
+---
+
+# Vialactée Agent Context (AGENT.md)
+
+This document contains the structural overview, recent changes, and outstanding architecture decisions for the Vialactée project. Use this context to quickly onboard AI agents to the codebase.
+
+## 🏗️ Architecture & Directory Overview
+
+An asynchronous Python orchestration server designed to run on a Raspberry Pi and control a 1,304-LED music-reactive chandelier.
+
+**Project Tree:**
+
+* `Main.py`: Entry point, parses configs, sets up hardware via `HardwareFactory`, and starts background asyncio loops.
+* `core/`: The main orchestration, transition, and DSP engine:
+  * `Listener.py`: Facade bridging audio ingestion, lookahead delay buffer, dynamic model selection (`analyzer_model`), and mode properties.
+  * `AudioIngestion.py`: Vectorized FFT, dual-resolution Mel filterbanks (8 bands for modes, 32 bands for multi-band rhythm analysis), Chromagram (12 notes), and ADSR smoothing.
+  * `MultiBandOnsetAudioAnalyzer.py`: Production 32-band onset derivative rhythm engine with 4 instrument separation streams and kick-conditioned anti-phase disambiguation.
+  * `comb_kernels.py`: Standalone compiled dense phase bank builder for sub-millisecond continuous tempo sweeps.
+  * `AudioAnalyzer.py`: Legacy single-ODF Anticipation Flywheel ("Oracle") baseline engine.
+  * `StructuralNoveltyDetector.py`: Dual STM/LTM timbre and energy novelty analysis for track drop and verse/chorus detection.
+  * `RhythmConfig.py`: Central dataclass for rhythm, confidence, and tempo search parameters.
+  * `Webapp_instruction_logger.py`: Diagnostic telemetry logger for incoming control instructions.
+  * `TransitionBridge.py`: The only glue between the project (Listener, Segments) and the sealed `transitions/` package.
+  * `Mode_master.py`: Central runtime orchestrator managing segments, modes, and WebSocket snapshots.
+  * `Segment.py`: Logical strip abstraction managing mode instances, transitions, and LED index mapping.
+* `transitions/`: The sealed transition sector. `transitions/` is a sealed room: all transition logic lives there and is reached only through `transitions.api` (see `docs/reference/transition_contract.md`). Enforced by `tests/governance/test_transition_isolation.py`; to work on it alone run `python -m transitions.sandbox`. Contents: `api.py` (the doors), `service.py` (front door implementation), `manager.py` (mode/cohort/technique decisions), `director.py` (clock and auto timer), `engine.py` + `assets.py` (pixel blending), `mode_dna.py` (mode personalities), `fakes.py` + `sandbox.py` (headless development).
+* `config/`: Hardware profiles and configuration managers:
+  * `app_config.json`: Global settings (`hardware_profile`, `HARDWARE_MODE`, `luminosity`, `sensibility`, `auto_transition_time`).
+  * `segments_full.json` & `segments_small.json`: Unified single source of truth for physical hardware geometry and Web App UI layout.
+  * `Configuration_manager.py`: Path resolution (`resolve_segments_file_path`, `resolve_configurations_file_path`, `Configurations_manager`).
+* `connectors/`:
+  * `Connector.py`: aiohttp server (Port 8080) exposing `/ws`, `/api/topology`, and `/api/configurations`.
+  * `Local_Microphone.py`: Native `sounddevice` input stream with PortAudio timestamp tracking.
+* `hardware/`: Physical abstractions and network drivers:
+  * `HardwareInterface.py`: Base interface for output drivers.
+  * `HardwareFactory.py`: Dynamically provisions channels from active segments JSON.
+  * `Udp_Sender.py`: Streams LED chunks over UDP to ESP32 or localhost visualizer.
+  * `Fake_ESP32.py`: Headless UDP listener subprocess rendering frames into `Fake_leds.py`.
+  * `Fake_leds.py`: Pygame graphical simulator reconstructing chandelier layout from active segment JSON.
+  * `Rpi_NeoPixels.py`: Legacy direct GPIO driver for Raspberry Pi.
+* `modes/`: Visual effect library (22 active mounted modes in `config/modes.json`, 1 unmounted game mode: `Alcool_randomer.py`).
+* `wabb-interface/`: React + Vite frontend remote control (Live Deck, Topology, Configurator, Mode Settings, System Setup).
+* `data/`: Profile-specific preset stores (`configurations_full.json` and `configurations_small.json`).
+
+**The Hardware:**
+
+* **Profiles**:
+  * **`full`**: 1,304 WS2812B LEDs across 11 Segments on 2 channels (`segs_1`: 785 LEDs, `segs_2`: 519 LEDs).
+  * **`small`**: 249 WS2812B LEDs across 3 Segments on 1 channel (`segs_1`: `s1` 49, `s2` 108, `s3` 92).
+* **Microphone**: Pure native Python `sounddevice` array chunking, processed through `np.fft.rfft()`.
+
+**The Math & Logic Engine:**
+
+* `Local_Microphone.py`: Maintains a continuous sliding buffer of audio input and asynchronously pushes raw PCM arrays to the `Listener` engine.
+* `AudioIngestion.py`: Executes pure `numpy` vectorization to compute FFTs, applies pre-computed **Mel Scale triangular filterbank** and **Chromagram matrices**, and guarantees real-time framerates. It also applies **ADSR (Attack/Release)** mathematical envelopes for smooth light trailing.
+* `Listener.py`: Acts as the transparent facade orchestrator. It manages a 5-second non-causal delay queue to perfectly align real-time spectral visualization data with the rhythmic lookahead triggers generated by the beat tracker.
+* `Mode_master.py`: Generates the modes mapped directly to `config/modes.json` and active segment orientations (`horizontal`/`vertical`) and handles frame flushes.
+
+---
+
+## 🎛️ DSP Engine Overview
+
+| Feature | Description |
+|---|---|
+| **Vectorized DSP Engine** | Replaced traditional Python indexing with compiled `numpy` matrices in `AudioIngestion.py`. Computes Spectral Flux, dual-resolution Mel filterbanks (8/32 bands), and ADSR envelopes natively. |
+| **12-dimensional Chromagram** | Real-time pitch harmonic analysis mapping acoustic energy to chromatic notes for synesthesia modes. |
+| **Anticipation Flywheel ("Oracle")** | Look-ahead Pearson template bank matching beats in advance and back-projecting phase to speaker time ($T_{\text{speaker}}$). |
+| **Multi-Band Separation & Anti-Phase Disambiguation** | 32-band onset derivative streams ($y_{\text{kick}}, y_{\text{snare}}, y_{\text{hat}}, y_{\text{mid}}$) in `MultiBandOnsetAudioAnalyzer` with kick-conditioned phase arbitration ($K_{\text{anti}} > 1.25 K_1$), eliminating 180° upbeat traps. |
+| **Circular Logarithmic Tempo Consensus** | Logarithmic tempo class octave folding ($f(\text{BPM}) = \log_2(\text{BPM}/60) \pmod 1$) with Gaussian human prior weighting. |
+
+---
+
+## 🔄 Recent Upgrades (Current Architecture State)
+
+1. **Geometric Pygame Simulator**: Running `Main.py` natively on Windows bypasses physical GPIO and renders a scaled 1300x900 physical simulation bounding all chandelier segments simultaneously.
+2. **Native Python Audio**: Sliding window 4096-sample buffer tracking per-band variance for smooth FFT bass extraction and beat detection without divide-by-zero crashes.
+3. **Optimized Threading**: Shifted hardware UDP network streaming and visualizer rendering off the main asyncio loop so it no longer blocks audio streaming ticks.
+4. **Local Testing Switch**: `startServer` in `config/app_config.json`. Setting to `False` disables the aiohttp connector on port 8080 to prevent socket collisions during standalone testing.
+5. **Decluttered Directory Structure**: Consolidated scripts into `core/`, `config/`, `hardware/`, and `connectors/` for clean modular architecture.
+6. **Vectorized Render Engine**: Shifted `Segment.py`'s `rgb_list` to continuous 2D `numpy` matrices `(nb_leds, 3)`. Modes operate via array slicing without slow Python loops.
+7. **Modes Architectural Overhaul**: Standardized mode subclasses to override `run()` rather than `update()`. Modes read dynamic tuning parameters from `self.infos` and expose schemas via `get_settings_schema()`.
+8. **Native Beat and Sub-beat Tracking**: Continuous speaker-time flywheel emits synchronized main-beats and sub-beats with breakdown dropout immunity (`is_real_beat` vs `is_dropped_beat`).
+9. **Decoupled Freewheeling Flywheel**: Decoupled beat phase from abrupt jump points, using confidence-adaptive soft-snaps (50% high, 15% moderate, 0% coasting) for smooth visual motion.
+10. **Advanced DSP Robustness**: Multiplicative Gaussian human priors, exponential recency decay buffer weighting, and high-energy transient peak detection.
+11. **Dynamic Audio Latency Tracking**: Real-world latency measured using `sounddevice` PortAudio `inputBufferAdcTime` timestamps, automatically self-calibrating back-projection delays.
+12. **Audio-Based Orchestration**: The `transitions/` sector decides when and how modes change from the live musical context (timer-driven today; see the contract for open gaps).
+13. **Dual Lookahead Audio Ingestion & Delay Queues**: 5-second lookahead audio buffer in `AudioAnalyzer` paired with `Listener` delayed queues perfectly aligns visualizer outputs with speaker audio.
+14. **JSON-Backed Web App Playlists & Configurations**: The React interface reads and writes presets through `/api/configurations`. `Connector.py` broadcasts `Mode_master.get_state_snapshot()` over `/ws`.
+15. **Topology LIVE vs Persist Architecture**: Interactive mode and direction changes in Topology send runtime WebSocket instructions (`select_segment_mode`, `toggle_segment_direction`). Presets persist to disk via `POST /api/configurations` from `MODIFY` or `BUILD` modes.
+16. **Anticipation Flywheel ("Oracle") Beat Tracking Engine**: Upgraded rhythm architecture to $O(1)$ pre-computed Pearson template correlation with circular logarithmic tempo-class arithmetic.
+17. **Unified Single Source of Truth for Segments & Dynamic Hardware Profiles (`full` vs `small`)**: Unified physical geometry and Web App UI layout into `config/segments_full.json` and `config/segments_small.json`, resolved dynamically at runtime.
+18. **Dynamic Segment Geometry Reconstruction in Pygame Visualizer (`Fake_leds.py`)**: Visualizer reconstructs segment positions, colors, and vertical bottom-up wiring directly from the active segment JSON file.
+19. **Production Multi-Band Rhythm Engine (`MultiBandOnsetAudioAnalyzer.py`) & Dual-Resolution Mel Ingestion**: Promoted `MultiBandOnsetAudioAnalyzer` to core production engine with 32 Mel bands, 4 instrument streams ($y_{\text{kick}}$, $y_{\text{snare}}$, $y_{\text{hat}}$, $y_{\text{mid}}$), and kick-conditioned anti-phase disambiguation solving 180° upbeat traps (`PHASE_INVERSION_UPBEAT`), supported by standalone compiled `comb_kernels.py` and dual-resolution filterbanks in `AudioIngestion.py`.

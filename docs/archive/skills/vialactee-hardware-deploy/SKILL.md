@@ -1,6 +1,6 @@
 ---
 name: vialactee-hardware-deploy
-description: Hardware abstractions, LED geometry coordinates (full: 1,304 LEDs, small: 249 LEDs), dynamic channel allocation, Pygame simulation safety, GPIO NeoPixel drivers, and Raspberry Pi deployment procedures.
+description: "Hardware abstractions, LED geometry coordinates (full: 1,304 LEDs, small: 249 LEDs), dynamic channel allocation, Pygame simulation safety, GPIO NeoPixel drivers, and Raspberry Pi deployment procedures."
 ---
 
 # Vialactée Hardware & Deployment Skill

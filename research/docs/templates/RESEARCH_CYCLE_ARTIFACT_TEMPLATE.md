@@ -49,7 +49,7 @@ $$\text{e.g. } \phi_{\text{new}} = \dots$$
 ### Real-Time Embedded & Memory Compliance Check
 - [x] **Zero Dynamic Heap Allocation:** All state buffers pre-allocated in `__init__()`.
 - [x] **Pure Vectorization:** All per-frame calculations use NumPy vectorized operations.
-- [x] **RPi 4/5 CPU Frame Budget:** Average latency $\le 3.0\text{ms}$ per frame at 60 FPS.
+- [x] **RPi 4/5 CPU Budget:** Average latency $\le 3.0\text{ms}$ per `update()` tick (analyzer ticks at 60 Hz; LEDs render at 30 FPS, AXIOM-01).
 
 ---
 

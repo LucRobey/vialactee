@@ -8,7 +8,7 @@ Welcome to the **Vialactée R&D Laboratory**. This directory houses all offline 
 
 Vialactée is divided into two distinct domains:
 1. **Live Embedded Runtime** (`/core`, `/modes`, `/hardware`, `/connectors`, `/config`):
-   - Real-time execution at 60 FPS on Raspberry Pi or PC simulator.
+   - Real-time execution with a 60 Hz analyzer tick (LEDs render at 30 FPS) on Raspberry Pi or PC simulator.
    - Zero dependencies on heavy offline MIR packages (e.g. `mirdata`, `mir_eval`, `BeatNet`).
 2. **Offline Research Laboratory** (`/research`):
    - Scientific evaluation, deterministic stress-testing, and automated experiment tracking.

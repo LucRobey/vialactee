@@ -1,6 +1,6 @@
 ---
 name: vialactee-mode-creator
-description: Guidelines, vectorization rules, boilerplate templates, and settings schemas for authoring and modifying visual animation modes in the Vialactée chandelier project. Use when creating, modifying, or debugging modes in the modes/ directory.
+description: "Vectorized NumPy light rendering, 30 FPS frame budget (AXIOM-01), Mode class inheritance, dynamic settings schemas, and audio-reactive kinetics/scene hooks in modes/. Use when creating, modifying, optimizing, or debugging visual lighting modes and choreographies."
 ---
 
 # Vialactée Visual Mode Authoring Skill
@@ -22,7 +22,7 @@ Use this skill whenever you are writing, refactoring, or optimizing visual light
   ```
 
 ### 2. Strict NumPy Vectorization & Immutable Colors (Zero Memory Churn)
-To maintain 60 FPS across all 1,304 LEDs on the Raspberry Pi:
+To maintain 30 FPS (AXIOM-01) across all 1,304 LEDs on the Raspberry Pi:
 * **NEVER** write `for i in range(self.nb_of_leds)` or loop over indices.
 * Precompute spatial arrays (e.g. `np.linspace(0.0, 1.0, self.nb_of_leds)`) in `__init__`.
 * Compute arrays for Hue, Saturation, and Value shaped `(nb_of_leds,)`.
@@ -58,8 +58,8 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
   - Modulate visuals continuously with **Tier 1 Kinetics** (`context.energy`, `context.tension`, `context.drop_progress`, `context.spectral_tilt`).
   - Branch choreographies declaratively on **Tier 2 Macro Scenes** (`context.scene`: `CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) with `context.scene_blend`.
   - Gate physical flashes and transient impacts using **Tier 3 Micro Badges** (`context.is_locked`, `context.is_real_beat`, `context.is_drop_impact`, `context.is_syncopated`, `context.is_structural_cut`).
-  - Legacy `context.current_regime` and `context.regime_blend` are supported for backward compatibility.
-* **Rhythm Integration Rules**: Strictly follow [`modes/MODE_RULES.md`](../../modes/MODE_RULES.md) for confidence-based graceful degradation, `is_real_beat` strobe gating, and acoustic fallback. Never flash blindly on ghost beats.
+  - Legacy `context.current_regime` / `context.regime_blend` were removed; always use `context.scene` and `context.scene_blend`.
+* **Rhythm Integration Rules**: Strictly follow [`modes/MODE_RULES.md`](../../../modes/MODE_RULES.md) for confidence-based graceful degradation, `is_real_beat` strobe gating, and acoustic fallback. Never flash blindly on ghost beats.
 
 ### 5. Reference Implementation
 * Inspect [boilerplate_mode.py](./examples/boilerplate_mode.py) for a complete, production-ready template.
@@ -68,7 +68,7 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 When adding a new mode:
 1. Create the mode file in `modes/<ModeName>_mode.py`.
 2. Register the mode in `modes/modes_description.md` with visual description, orientation, and parameter schema.
-3. Register the mode entry in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json):
+3. Register the mode entry in [`config/modes.json`](../../../config/modes.json):
    ```json
    {
      "name": "Display Name",

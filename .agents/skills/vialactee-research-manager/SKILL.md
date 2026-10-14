@@ -24,7 +24,7 @@ The **Research Manager** acts as the laboratory director:
 ### 1.1 Non-Negotiable Physical Invariants
 All candidate research must ultimately conform to the physical constraints of the Vialactée installation:
 1. **Target Musical Domain:** Focus strictly on **Electro, Techno, Synthwave, Classic / Hard Rock, and Pop**. Never divert to slow acoustic jazz, classical waltzes, or ambient music.
-2. **Real-Time Embedded Budget ($\le 3.0\text{ms}$):** Production chandelier code executes at 60 FPS ($16.6\text{ms}$ frame budget) on a Raspberry Pi 4 / 5 (ARM Cortex-A72). Audio ingestion + beat tracking cannot exceed $3.0\text{ms}$ per frame.
+2. **Real-Time Embedded Budget ($\le 3.0\text{ms}$ per analyzer tick):** Production chandelier code renders at **30 FPS** ($33.33\text{ms}$ frame, $\le 20.0\text{ms}$ total compute, see `docs/axioms/AXIOM-01_FRAME_BUDGET.md`) on a Raspberry Pi 4 / 5 (ARM Cortex-A72); the audio analyzer ticks at 60 Hz. Audio ingestion + beat tracking cannot exceed $3.0\text{ms}$ per `update()` tick.
 3. **Zero Dynamic Heap Allocations:** All buffers, states, filters, and matrices must be pre-allocated in `__init__()`. No dynamic allocations inside `update()`.
 4. **Clean-Room Synthetic Invariant:** Any candidate promoted to production must pass the clean-room synthetic suite with zero regression ($\Delta \text{F1@50ms} \ge 0.0\%$).
 5. **Dual Salience & Calibration Metric:** Evaluate both classic F1@50ms and Rhythmic Salience F1 (`f1_salient_50ms`, weighted by beat importance ground truth $w_i$), alongside `bpm_trust_calibration` (ensuring the model knows when to trust the beat).
@@ -81,69 +81,59 @@ To prevent mathematical hallucination, every approved hypothesis must satisfy:
 
 ---
 
-## 3. The Two-Stage Funnel Dispatch Protocol
+## 3. The Two-Stage Research Funnel & Hand-off Protocol
 
-To maximize compute efficiency and prevent repository clutter, the Manager operates a **Two-Stage Funnel**:
+To maximize compute efficiency, keep memory clean, and prevent repository clutter, the Manager operates a **Two-Stage Funnel**:
 
 ```mermaid
 flowchart TD
-    M[Research Manager] -->|"Generate 2 Competing Hypotheses"| S1[Stage 1: Parallel Sandbox Tournament]
+    M[Research Manager] -->|"Formulates 2 Competing Leads"| S1[Stage 1: Lightweight Scratch Tournament]
     
     subgraph Stage1Sandbox ["Stage 1: Scratch Isolation"]
-        C1["Subagent A: Candidate Lead 1<br/>scratch/tournament_A/"]
-        C2["Subagent B: Candidate Lead 2<br/>scratch/tournament_B/"]
+        C1["Candidate Lead 1: Pure NumPy Prototype"]
+        C2["Candidate Lead 2: Pure NumPy Prototype"]
         TEST["Harness Verification:<br/>1. Numerical Stability & Poles<br/>2. Latency <= 1.0ms on 1000 frames<br/>3. Zero Heap Allocations in step()<br/>4. 2-Track Real-World Stress Test"]
         C1 & C2 --> TEST
     end
     
-    TEST -->|"Select Winner by Scorecard"| WIN["Winning Candidate Blueprint"]
-    WIN -->|"Dispatch via invoke_subagent"| S2["Stage 2: Full Research Cycle"]
+    TEST -->|"Select Winner by Scorecard"| WIN["Winning Lead Blueprint"]
+    WIN -->|"Issues Research Briefing"| S2[Stage 2: Full Research Cycle]
     
-    subgraph Stage2Execution ["Stage 2: Lead Researcher"]
+    subgraph Stage2Execution ["Stage 2: Researcher Execution"]
         R["Lead Researcher (vialactee-researcher)"]
-        RED["Adversarial Red-Team Subagent"]
-        BENCH["Full Synthetic & Neural-Core Benchmarks"]
-        R --> RED --> BENCH
+        BENCH["Synthetic & 10-Track neural-core Benchmark"]
+        R --> BENCH
     end
     
-    BENCH -->|"Scorecard & Model Card"| LOG["Update LEADERBOARD & RESEARCH_HISTORY"]
+    BENCH -->|"Scorecard & Delta Report"| LOG["Manager Updates LEADERBOARD & IDEA_TREE"]
     LOG --> M
 ```
 
-### 3.1 Stage 1: Parallel Sandbox Tournament
+### 3.1 Stage 1: Lightweight Scratch Tournament
 1. The Manager selects two competing candidate leads from `RESEARCH_IDEA_TREE.md` (e.g., `RAD-01` Costas Demodulator vs. `RAD-02` Kuramoto Network).
-2. Spawns two `self` subagents concurrently via `invoke_subagent`.
-3. **Strict Scratch Isolation:** Each subagent is assigned a dedicated namespaced directory:
-   - `<appDataDir>\brain\<conversation-id>/scratch/tournament_<lead_id>/`
-4. **Sandbox Test Requirements:** The subagent writes a self-contained test script (`sandbox.py`) that:
+2. Prototypes are verified in scratch isolation (`<appDataDir>\brain\<conversation-id>/scratch/tournament_<lead_id>/`).
+3. **Sandbox Test Requirements:** The candidate writes a self-contained test script (`sandbox.py`) that:
    - Implements the mathematical difference equations in pure NumPy.
    - Measures per-frame execution time over 1000 simulated frames (must be $\le 1.0\text{ms}$).
    - Verifies zero dynamic heap allocation in the step function.
    - **The 2-Track Real-World Stress Test:** Runs the prototype against 15 seconds of:
      - `Sweet Child O' Mine` (validates immunity against dense distorted guitar sustain leakage).
      - `Stayin' Alive` (validates resilience against 180° upbeat locking).
-   - Returns a concise JSON scorecard:
-     ```json
-     {
-       "lead_id": "RAD-01",
-       "avg_frame_ms": 0.32,
-       "heap_alloc_bytes": 0,
-       "stability_passed": true,
-       "guitar_rejection_score": 0.88,
-       "upbeat_locking_score": 0.92,
-       "recommendation": "ADVANCE"
-     }
-     ```
-5. The Manager evaluates the tournament results, selects the champion, and archives the runner-up in `RESEARCH_IDEA_TREE.md`.
+   - Generates a concise JSON scorecard (`guitar_rejection_score`, `upbeat_locking_score`, `avg_frame_ms`).
+4. The Manager evaluates the tournament results, selects the champion, and archives the runner-up in `RESEARCH_IDEA_TREE.md`.
 
-### 3.2 Stage 2: Full Research Cycle Dispatch
-1. The Manager invokes a single `vialactee-researcher` subagent to execute the complete cycle.
-2. **The Non-Blocking Autopilot Message Protocol:**
-   - The Lead Researcher drafts its mathematical implementation plan.
-   - When operating under the Research Manager in Autopilot mode, the worker sets `ArtifactMetadata: RequestFeedback: false` (to prevent blocking the human IDE interface) and sends its proposal directly to the Manager via `send_message`.
-   - The Manager reviews the plan against the Causal Discrete-Time Filter, and replies via `send_message`: `"APPROVED: Proceed with Cycle XXX implementation and benchmark execution."`
-   - The Lead Researcher authors `research/experiments/models/<CandidateName>.py`, documents `research/docs/models/<CandidateName>.md`, runs benchmarks, diffs runs, and logs results.
-3. **Pure Reactive Wakeup:** The Manager ends its turn and waits for the worker subagent to complete. Never poll with `manage_subagents(Action='list')` in a loop, and setting `schedule` polling timers is strictly forbidden. Simply rely on the platform's automatic high-priority wakeup.
+### 3.2 Stage 2: The Research Briefing Hand-off
+To transition from strategic ideation to tactical engineering, the Manager issues a structured **Research Briefing**:
+
+```markdown
+# 🔬 Research Briefing: <LeadID> (<LeadName>)
+- **Ideation Lens & Mathematical Formulation:** [Governing equations, difference equations]
+- **Target Failure Modes:** [e.g. 180° upbeat trap in Stayin' Alive, guitar sustain bleed in Sweet Child O' Mine]
+- **Quantitative Target:** [e.g. Delta F1 >= +3.0% on Rock/Disco while maintaining <= 1.0ms latency]
+- **Execution Mandate:** Execute under vialactee-researcher: author candidate in research/experiments/models/, benchmark on neural-core, run ablation, and report scorecard deltas.
+```
+
+The Researcher executes this briefing directly (or as a dispatched subagent/separate session), strictly respecting the Real-Time Embedded Constraint ($\le 3.0\text{ms}$ per tick, zero heap allocations). Once benchmarking concludes, the Manager integrates findings into `LEADERBOARD.md` and `RESEARCH_IDEA_TREE.md`.
 
 ---
 

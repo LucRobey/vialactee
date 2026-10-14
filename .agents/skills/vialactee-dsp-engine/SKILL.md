@@ -53,6 +53,6 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
   - **Tier 2 (4 Macro Scenes):** `CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT` governed by Schmitt hysteresis and dwell locks.
   - **Tier 3 (Micro Physical Badges):** `is_locked`, `is_syncopated`, `is_real_beat`, `is_silent`, `is_drop_impact` (1-frame arrival pulse), `is_drop_imminent`, `is_structural_cut`.
 * Protects against premature drop arrivals during buildup risers (requires `drop_countdown <= 0.40s` or a post-silence transient) and false lookahead buildups across track boundaries (`live_is_song_change`).
-* Preserves backward compatibility via legacy regime aliases (`current_regime`, `regime_blend`).
+* The legacy regime aliases (`current_regime`, `regime_blend`, etc.) were removed; use `scene`, `previous_scene`, `scene_blend`, `scene_dwell_time` and the `is_structural_cut` badge.
 
 
