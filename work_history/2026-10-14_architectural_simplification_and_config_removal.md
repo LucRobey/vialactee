@@ -5,7 +5,7 @@
 > **Agent / Model:** Antigravity  
 > **Primary Goal:** Execute the 5-step architectural simplification plan (DSP dead-code removal, 4-scene migration, `Segment.py` caching & transition deduplication, staggered auto-transitions) and completely remove all legacy preset/playlist/configuration systems across backend, frontend, and documentation.  
 > **Status:** COMPLETED  
-> **Commits:** pending (pushed: pending)  
+> **Commits:** `d67846c` `28d79dc` (pushed: yes)  
 > **Skills Used:** `vialactee-project`  
 > **Skill Friction:** none
 
