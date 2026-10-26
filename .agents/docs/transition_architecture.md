@@ -1,7 +1,7 @@
 # Transition Architecture: Spatial Orchestration & Engine Reality
 
 > **Status:** Current Production Architecture  
-> **See Also:** Prospective and planned transition concepts are archived in [transition_architecture_potential_ideas.md](./transition_architecture_potential_ideas.md).
+> **See Also:** Prospective and planned transition concepts are archived in [transition_architecture_potential_ideas.md](../../docs/ideas/transition_potential_ideas.md).
 
 The Transition Engine prevents the chandelier installation from abruptly snapping between lighting modes. It smoothly blends between active and queued presets across physical 2D space using a centralized state machine and mathematical spatial masks.
 

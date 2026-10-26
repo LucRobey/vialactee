@@ -34,11 +34,11 @@ Every visual animation subclasses `modes.Mode.Mode`.
 ### Rule 3: Frame-Rate Independence
 - Always scale kinematics with `self.infos.get("fps_ratio", 1.0)` or `delta_time`.
 
-### Rule 4: Signal Trust Tiers & Subtle Mood Governance (`modes/MODE_RULES.md`)
-- Follow the Mode Sector Contract in [`modes/MODE_RULES.md`](../../modes/MODE_RULES.md) (enforced by `TestDocsParity.test_modes_respect_trust_tiers`):
-  - **🟢 HIGH Trust (Unrestricted):** `context.energy` $\in [0.0, 1.0]$, `context.spectral_tilt` $[-1.0, 1.0]$, `context.vertical_center` $[0.0, 1.0]$, `context.is_silent`, `asserved_fft_band`, and the cosine-smoothed mood modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`).
-  - **🟡 MEDIUM Trust (Rule B — Must Gate):** Any mode reading `beat_phase`, `is_beat`, `bpm`, `is_real_beat`, or `beat_count` must blend or gate with `self.rhythm_lock` or `self.beat_pulse(sharpness)` so visuals stay alive when `beat_trust == 0.0`.
-  - **🟠 LOW Trust (Rule A — Forbidden in Concrete Modes):** Never read or branch on `context.scene`, `is_drop_impact`, `is_drop_imminent`, `is_song_change`, `is_verse_chorus_change`, or `is_structural_cut` in concrete modes; use `self.mood_*` modifiers and the sanctioned `self.drop_hit` (1-frame trigger) and `self.drop_decay` ($1 \to 0$ envelope) helpers on `Mode`.
+### Rule 4: Handling Signals by Trust & Subtle Mood Governance (`modes/MODE_RULES.md`)
+- Follow the Mode Sector Contract in [`modes/MODE_RULES.md`](../../modes/MODE_RULES.md). Per-signal trust is stated only in [`music_analyzer_contract.md`](../contracts/music_analyzer_contract.md); trust is guidance, not a test-enforced rule:
+  - **🟢 HIGH trust:** safe to drive visuals directly every frame (physical spectral/power signals and the cosine-smoothed mood modifiers `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`).
+  - **🟡 MEDIUM trust:** when reading tempo/phase signals (`beat_phase`, `is_beat`, `bpm`, `is_real_beat`, `beat_count`), blend or gate with `self.rhythm_lock` or `self.beat_pulse(sharpness)` so visuals stay alive when `beat_trust == 0.0`.
+  - **🟠 LOW trust:** avoid reading or branching on heuristic scene/drop/boundary signals (for example `context.scene`, `is_drop_impact`, `is_song_change`) in concrete modes; use `self.mood_*` modifiers and the sanctioned `self.drop_hit` (1-frame trigger) and `self.drop_decay` ($1 \to 0$ envelope) helpers on `Mode`.
 
 ---
 

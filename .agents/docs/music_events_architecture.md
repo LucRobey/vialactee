@@ -1,7 +1,7 @@
 # Structural Music Events: The Architecture of Novelty
 
 > **Status:** Current Production Architecture  
-> **See Also:** Prospective event detection concepts (Hard Song Cuts, HPS Vocal Isolation, Mood Triad) are archived in [music_events_architecture_potential_ideas.md](./music_events_architecture_potential_ideas.md).
+> **See Also:** Prospective event detection concepts (Hard Song Cuts, HPS Vocal Isolation, Mood Triad) are archived in [music_events_architecture_potential_ideas.md](../../docs/ideas/music_events_potential_ideas.md).
 
 The Vialactée music analysis pipeline does not just output timestamps; it fundamentally understands the macro-structure of the music it is listening to. Implemented in [`music/StructuralNoveltyDetector.py`](../../music/StructuralNoveltyDetector.py) and configured via [`music/RhythmConfig.py`](../../music/RhythmConfig.py), it autonomously draws intelligent boundaries around **Verses/Choruses**, while reliably detecting full-blown **Song Changes** regardless of whether they are sharp drops or seamless DJ crossfades.
 

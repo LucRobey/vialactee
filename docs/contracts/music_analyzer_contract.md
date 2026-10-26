@@ -10,7 +10,7 @@ Sibling of [`mood_contract.md`](mood_contract.md) and [`transition_contract.md`]
 1. Nothing in `music/` imports project code outside `music/` (`core/`, `modes/`, `connectors/`, `hardware/`, `transitions/`, `mood/`, ...). Only the Python standard library, `numpy`, and `music/` itself.
 2. Production code outside `music/` imports **only** `music.api`. (Tests, `research/`, and developer studios in `tools/` / `scripts/` may import internal modules directly for benchmarking and diagnostics.)
 3. None of the 10 music modules (`AudioIngestion.py`, `BaseAudioAnalyzer.py`, `AudioAnalyzer.py`, `MultiBandOnsetAudioAnalyzer.py`, `DyadicMetricalAudioAnalyzer.py`, `comb_kernels.py`, `StructuralNoveltyDetector.py`, `RhythmConfig.py`, `MusicalContextEngine.py`, `Listener.py`) may exist as shims in `core/`.
-4. Every public signal on `Listener` and `listener.context` (`MusicalContextEngine`) is assigned to **exactly one** trust set in `music.api` and documented in §2 and §3 below (`TestDocsParity.test_music_contract_parity`).
+4. Every public attribute on `Listener` and `listener.context` (`MusicalContextEngine`) is documented in §2 and §3 below (`TestDocsParity.test_music_contract_parity`). **This file is the only place that states our trust (🟢 HIGH / 🟡 MEDIUM / 🟠 LOW) in each of these signals.** Trust is engineering guidance for people and agents writing or reviewing consumers; it is not encoded in Python and not enforced by a test. To change a signal's trust, edit its table row here and nowhere else.
 
 ### Doors Across the Wall
 
@@ -34,9 +34,6 @@ Sibling of [`mood_contract.md`](mood_contract.md) and [`transition_contract.md`]
 | `DEFAULT_ANALYZER_MODEL` | `str` | `"DyadicMetricalAudioAnalyzer"` (Cycle 012 production default). |
 | `resolve_analyzer_class(spec)` | Function | Resolves a model name or class to a `BaseAudioAnalyzer` subclass; warns and falls back to default on unknown names. |
 | `ListenerProtocol`, `MusicalContextProtocol` | `typing.Protocol` | Static type protocols documenting the consumer-facing surface injected into `modes/` and `core/TransitionBridge.py`. |
-| `LISTENER_{HIGH,MEDIUM,LOW,CONFIG}_TRUST` | `frozenset[str]` | Disjoint trust-tier classification sets covering all 42 `Listener` `@property` attributes. |
-| `CONTEXT_{HIGH,MEDIUM,LOW}_TRUST` | `frozenset[str]` | Disjoint trust-tier classification sets covering all 31 `MusicalContextEngine` `@property` attributes. |
-| `LISTENER_INTERNAL_ATTRS`, `CONTEXT_INTERNAL_ATTRS` | `frozenset[str]` | Non-signal methods, sub-objects, and hysteresis threshold attributes excluded from consumer signal tables. |
 
 ---
 
@@ -64,7 +61,7 @@ Speaker Output (T_speaker = t - 5.0s) ──► Listener delayed properties + Mu
 
 ## 2. `Listener` Public Contract (42 Properties + 6 Internal Attributes)
 
-### 2.1 🟢 HIGH Trust (`LISTENER_HIGH_TRUST` — 12 Physical / Spectral Signals)
+### 2.1 🟢 HIGH Trust (10 Physical / Spectral Signals)
 
 Direct spectral measurements, ADSR-normalized envelopes, and hardware calibration values. Safe for modes to consume directly every frame without confidence gating.
 
@@ -76,16 +73,14 @@ Direct spectral measurements, ADSR-normalized envelopes, and hardware calibratio
 | `band_proportion` | `np.ndarray (8,) float64` | $[0.0, 1.0]$, $\sum \le 1$ | $T_{\text{speaker}}$ | Relative energy share of each of the 8 Mel bands. |
 | `band_means` | `np.ndarray (8,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Rolling mean energy per Mel band. |
 | `band_flux` | `np.ndarray (8,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Half-wave rectified spectral onset flux $\max(0, E_b[t] - E_b[t-1])$ across the 8 Mel bands. |
-| `chroma_values` | `np.ndarray (12,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Raw 12-pitch-class chromagram magnitudes (`C, C#, D, ..., B`). |
-| `smoothed_chroma_values` | `np.ndarray (12,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | ADSR-smoothed 12-pitch-class chromagram magnitudes. |
 | `smoothed_total_power` | `float` | $\ge 0.0$ | $T_{\text{speaker}}$ | Exponentially smoothed total acoustic power. |
 | `asserved_total_power` | `float` | $[0.0, 1.0]$ | $T_{\text{speaker}}$ | ADSR-normalized total acoustic power at speaker time. |
 | `live_asserved_total_power` | `float` | $[0.0, 1.0]$ | $T_{\text{lookahead}}$ | ADSR-normalized total acoustic power at the live lookahead horizon. |
 | `dynamic_audio_latency` | `float` | seconds ($\ge 0.0$) | Hardware | Dynamic PortAudio capture-to-Hanning-window-center latency calibration. |
 
-### 2.2 🟡 MEDIUM Trust (`LISTENER_MEDIUM_TRUST` — 15 Tempo, Phase & Confidence Signals)
+### 2.2 🟡 MEDIUM Trust (15 Tempo, Phase & Confidence Signals)
 
-Probabilistic estimates from the Anticipation Flywheel. **Consumer rule:** Concrete modes reading `beat_phase`, `is_beat`, `bpm`, `is_real_beat`, or `beat_count` **must** gate or blend by a confidence signal (`rhythm_lock`, `beat_trust`, `rhythm_salience`, `is_locked`, `beat_confidence`, or `Mode.beat_pulse()`) and remain smoothly animated when confidence is `0.0`.
+Probabilistic estimates from the Anticipation Flywheel. **Guidance:** Consumers reading `beat_phase`, `is_beat`, `bpm`, `is_real_beat`, or `beat_count` should gate or blend by a confidence signal (`rhythm_lock`, `beat_trust`, `rhythm_salience`, `is_locked`, `beat_confidence`, or `Mode.beat_pulse()`) and stay smoothly animated when confidence is `0.0`.
 
 | Signal | Type | Range / Values | Time Horizon | Description |
 | :--- | :--- | :--- | :-: | :--- |
@@ -105,12 +100,14 @@ Probabilistic estimates from the Anticipation Flywheel. **Consumer rule:** Concr
 | `standalone_phase` | `float` | $[0.0, 1.0)$ | $T_{\text{speaker}}$ | Backward-compatibility alias for `beat_phase`. |
 | `flywheel_status` | `str` | `"locked"`, `"coasting"`, ... | $T_{\text{speaker}}$ | Diagnostic status label of the Anticipation Flywheel. |
 
-### 2.3 🟠 LOW Trust (`LISTENER_LOW_TRUST` — 12 Heuristic Novelty, Boundary & Gradient Signals)
+### 2.3 🟠 LOW Trust (14 Heuristic Novelty, Boundary, Gradient & Uncalibrated Pitch Signals)
 
-Structural boundary heuristics and lookahead-minus-speaker gradients. Prone to false positives on complex transitions. **Consumer rule:** Concrete modes must **never** read `is_song_change` or `is_verse_chorus_change` directly; those are reserved for `transitions/` (behind cooldowns) and `MusicalContextEngine`.
+Structural boundary heuristics, lookahead-minus-speaker gradients, and uncalibrated chromagram pitch bins. Prone to false positives and broadband harmonic pollution. **Guidance:** Prefer not to drive visuals directly from `is_song_change`, `is_verse_chorus_change`, `chroma_values`, or `smoothed_chroma_values` in concrete modes (the chromagram is currently uncalibrated); boundary flags are meant for `transitions/` (behind cooldowns) and `MusicalContextEngine`.
 
 | Signal | Type | Range / Values | Time Horizon | Description |
 | :--- | :--- | :--- | :-: | :--- |
+| `chroma_values` | `np.ndarray (12,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Raw 12-pitch-class chromagram magnitudes (`C, C#, D, ..., B`); uncalibrated against broadband percussion/harmonics. |
+| `smoothed_chroma_values` | `np.ndarray (12,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | ADSR-smoothed 12-pitch-class chromagram magnitudes; uncalibrated against broadband percussion/harmonics. |
 | `is_song_change` | `bool` | `True` / `False` | $T_{\text{speaker}}$ | Speaker-delayed song change boundary flag. |
 | `is_verse_chorus_change` | `bool` | `True` / `False` | $T_{\text{speaker}}$ | Speaker-delayed structural section boundary flag. |
 | `live_is_song_change` | `bool` | `True` / `False` | $T_{\text{lookahead}}$ | Lookahead song change boundary flag (5.0 s ahead of speakers). |
@@ -124,7 +121,7 @@ Structural boundary heuristics and lookahead-minus-speaker gradients. Prone to f
 | `salience_gradient` | `float` | $[-1.0, 1.0]$ | $\Delta(T_{\text{lookahead}}, T_{\text{speaker}})$ | Forward rhythmic salience gradient $\Delta R = R_{\text{live}} - R_{\text{speaker}}$ (delegated to `context.salience_gradient`). |
 | `power_gradient` | `float` | $[-1.0, 1.0]$ | $\Delta(T_{\text{lookahead}}, T_{\text{speaker}})$ | Forward acoustic power gradient $\Delta P = P_{\text{live}} - P_{\text{speaker}}$ (delegated to `context.power_gradient`). |
 
-### 2.4 ⚙️ CONFIG (`LISTENER_CONFIG_TRUST` — 3 Configuration Properties)
+### 2.4 ⚙️ CONFIG (3 Configuration Properties)
 
 User-configurable runtime settings and static filterbank dimensions proxied from `AudioIngestion`.
 
@@ -134,7 +131,7 @@ User-configurable runtime settings and static filterbank dimensions proxied from
 | `sensi` | `float` | $> 0.0$ (default `1.0`) | Global audio input sensitivity multiplier controlled from the Live Deck UI. |
 | `nb_of_fft_band` | `int` | `8` | Number of coarse Mel frequency bands exposed to visual modes. |
 
-### 2.5 `Listener` Internal Attributes (`LISTENER_INTERNAL_ATTRS` — 6 Non-Signals)
+### 2.5 `Listener` Internal Attributes (6 Non-Signals)
 
 Orchestrator lifecycle methods and internal component references (not visual signals):
 
@@ -151,7 +148,7 @@ Orchestrator lifecycle methods and internal component references (not visual sig
 
 ## 3. `MusicalContextEngine` (`listener.context`) Contract (31 Signals + 19 Internal Attributes)
 
-### 3.1 🟢 HIGH Trust (`CONTEXT_HIGH_TRUST` — 7 Physical & Kinetic Signals)
+### 3.1 🟢 HIGH Trust (7 Physical & Kinetic Signals)
 
 Continuous physical kinetics and Schmitt-stabilized acoustic power/silence states at $T_{\text{speaker}}$. Safe to drive visual modes directly every frame.
 
@@ -165,7 +162,7 @@ Continuous physical kinetics and Schmitt-stabilized acoustic power/silence state
 | `is_power_high` | `bool` | `True` / `False` | $T_{\text{speaker}}$ | Schmitt-triggered high acoustic power state (`power_low = 0.35`, `power_high = 0.50`). |
 | `is_silent` | `bool` | `True` / `False` | $T_{\text{speaker}}$ | Schmitt-triggered acoustic silence guard (`silence_threshold = 0.05`, `silence_exit_threshold = 0.08`). |
 
-### 3.2 🟡 MEDIUM Trust (`CONTEXT_MEDIUM_TRUST` — 6 Rhythm Confidence Signals & Badges)
+### 3.2 🟡 MEDIUM Trust (6 Rhythm Confidence Signals & Badges)
 
 Confidence scores and Schmitt-gated micro badges derived from the rhythm flywheel.
 
@@ -178,9 +175,9 @@ Confidence scores and Schmitt-gated micro badges derived from the rhythm flywhee
 | `is_real_beat` | `bool` | `True` / `False` | $T_{\text{speaker}}$ | Speaker-time beat tick verified by acoustic power (`listener.is_beat and power >= 0.20`). |
 | `is_syncopated` | `bool` | `True` / `False` | $T_{\text{speaker}}$ | High rhythmic salience while 4/4 flywheel trust is low (`_is_salience_high and beat_trust < trust_low`). |
 
-### 3.3 🟠 LOW Trust (`CONTEXT_LOW_TRUST` — 18 Scene, Drop & Structural Heuristics)
+### 3.3 🟠 LOW Trust (18 Scene, Drop & Structural Heuristics)
 
-Macro scene states, lookahead drop predictors, and structural boundary badges. **Consumer rule:** Concrete modes (`modes/*_mode.py`) are **barred** from reading `scene`, `is_drop_impact`, `is_drop_imminent`, or `is_structural_cut` (`TestDocsParity.test_modes_respect_trust_tiers`). Instead, `mood/` smooths `scene` into 🟢 `mood_modifiers`, and `Mode.py` provides the gated `self.drop_hit` and `self.drop_decay` helpers.
+Macro scene states, lookahead drop predictors, and structural boundary badges. **Guidance:** Concrete modes (`modes/*_mode.py`) should not read `scene`, `is_drop_impact`, `is_drop_imminent`, or `is_structural_cut` directly. Instead, `mood/` smooths `scene` into 🟢 `mood_modifiers`, and `Mode.py` provides the gated `self.drop_hit` and `self.drop_decay` helpers.
 
 | Signal | Type | Range / Values | Time Horizon | Description |
 | :--- | :--- | :--- | :-: | :--- |
@@ -203,7 +200,7 @@ Macro scene states, lookahead drop predictors, and structural boundary badges. *
 | `salience_gradient` | `float` | $[-1.0, 1.0]$ | $\Delta(T_{\text{lookahead}}, T_{\text{speaker}})$ | Clamped forward salience delta $\Delta R = \text{live\_salience} - \text{salience}$. |
 | `power_gradient` | `float` | $[-1.0, 1.0]$ | $\Delta(T_{\text{lookahead}}, T_{\text{speaker}})$ | Clamped forward power delta $\Delta P = \text{live\_power} - \text{power}$. |
 
-### 3.4 `MusicalContextEngine` Internal Attributes (`CONTEXT_INTERNAL_ATTRS` — 19 Non-Signals)
+### 3.4 `MusicalContextEngine` Internal Attributes (19 Non-Signals)
 
 Lifecycle methods, parent back-reference, and Schmitt / dwell configuration constants:
 

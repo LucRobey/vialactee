@@ -12,7 +12,7 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`mood
 
 | # | Door | Dir | Shape (in `api.py`) | Notes |
 | :-: | :--- | :-: | :--- | :--- |
-| 1 | Music | in | `MusicSnapshot` | Read-only, speaker-time + lookahead triggers. Fields have defaults and trust ratings (§1.1). |
+| 1 | Music | in | `MusicSnapshot` | Read-only, speaker-time + lookahead triggers. Fields have defaults; the trust of each `music/` signal is stated only in [`music_analyzer_contract.md`](music_analyzer_contract.md). |
 | 2 | Installation | in | `InstallationSnapshot`, `SegmentDescriptor` | Segments, orientation, modes available, active mode, blocked. `room_bounds` comes from the layout. |
 | 3 | Requests | in | `request_next`, `request_drop`, `set_locked`, `set_auto_interval` | The UI and manual input all arrive as requests. |
 | 4 | Orders | out | `TransitionOrders` containing one `SegmentOrder` per segment | Each entry has its own mode, technique, duration, direction, `start_offset`, and `mode_handshake`. |
@@ -26,33 +26,33 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`mood
 
 **Change policy.** Inside the room anything may change freely. Changing a door means editing `api.py`, `tests/transitions/test_api_contracts.py` and this section together.
 
-### `MusicSnapshot` Trust-Rated Field Table
+### `MusicSnapshot` Field Table
 
-`core/TransitionBridge.build_music_snapshot(listener)` freezes 21 fields from `Listener` and `listener.context` into `MusicSnapshot`. Because `transitions/` consumes 🟡 MEDIUM and 🟠 LOW signals, it enforces internal **beat-quantization timeouts (`1.2 s`)** and **post-transition security cooldowns (`5.0 s`)** so noisy boundary flags cannot machine-gun mode changes:
+`core/TransitionBridge.build_music_snapshot(listener)` freezes 21 fields from `Listener` and `listener.context` into `MusicSnapshot`. The trust rating of each source signal is defined by its producer in [`music_analyzer_contract.md`](music_analyzer_contract.md) (this table does not repeat it). Because several of these signals are only moderately or weakly trusted there, `transitions/` enforces internal **beat-quantization timeouts (`1.2 s`)** and **post-transition security cooldowns (`5.0 s`)** so noisy boundary flags cannot machine-gun mode changes:
 
-| `MusicSnapshot` Field | Source | Trust Tier | How `transitions/` Safeguards Consumption |
-| :--- | :--- | :-: | :--- |
-| `energy` | `context.energy` | 🟢 HIGH | Continuous weight in target DNA and technique selection. |
-| `power` | `context.power` | 🟢 HIGH | Continuous acoustic power metric. |
-| `is_silent` | `context.is_silent` | 🟢 HIGH | Schmitt-triggered silence state. |
-| `beat_phase` | `listener.beat_phase` | 🟡 MEDIUM | Used for beat alignment (`beat_phase < 0.05`) only when `beat_trust >= 0.20`, with a `1.2 s` fallback timeout. |
-| `is_beat` | `listener.is_beat` | 🟡 MEDIUM | Beat quantization trigger with `1.2 s` timeout fallback if the flywheel stalls. |
-| `salience` | `context.salience` | 🟡 MEDIUM | Soft weight in target DNA (`punch`, `rhythm`) and technique selection. |
-| `beat_trust` | `context.beat_trust` | 🟡 MEDIUM | Gates `beat_phase` quantization (`>= 0.20`) and weights `rhythm` DNA. |
-| `is_locked` | `context.is_locked` | 🟡 MEDIUM | Soft probability weight in cohort pattern lottery. |
-| `is_syncopated` | `context.is_syncopated` | 🟡 MEDIUM | Soft probability weight in complexity DNA and cohort lottery. |
-| `novelty` | `context.novelty` | 🟠 LOW | Soft weight (`0.4 * novelty`) in target `complexity` DNA. |
-| `tension` | `context.tension` | 🟠 LOW | Soft weight (`0.3 * tension`) in target `complexity` DNA. |
-| `scene` | `context.scene.value` | 🟠 LOW | Soft probability bias in cohort lottery (`CHILL` vs `BUILDUP`); pre-drop trigger gated by cooldown. |
-| `is_rhythmic` | `context.is_rhythmic` | 🟠 LOW | Selects `directional_wipe` vs `smooth_cosine_crossfade` when transition fires. |
-| `is_drop_impact` | `context.is_drop_impact` | 🟠 LOW | Triggers `drop_impact` transition (`explosion` `0.4 s`), resetting cooldown timer. |
-| `is_drop_imminent` | `context.is_drop_imminent` | 🟠 LOW | Pre-drop indicator from lookahead countdown. |
-| `drop_countdown` | `context.drop_countdown` | 🟠 LOW | Schedules `pre_drop_buildup` transition gated by `5.0 s` security cooldown. |
-| `is_song_change` | `listener.is_song_change` | 🟠 LOW | Speaker-time song boundary trigger, gated by `5.0 s` security cooldown and `TRANSITION_DUAL` lock. |
-| `is_verse_chorus_change` | `listener.is_verse_chorus_change` | 🟠 LOW | Speaker-time structural trigger, gated by `5.0 s` security cooldown and `TRANSITION_DUAL` lock. |
-| `live_is_song_change` | `listener.live_is_song_change` | 🟠 LOW | Starts `lookahead_seconds` countdown timer in `Transition_Director`, gated by security cooldown. |
-| `live_is_verse_chorus_change` | `listener.live_is_verse_chorus_change` | 🟠 LOW | Starts `lookahead_seconds` structural countdown timer in `Transition_Director`, gated by security cooldown. |
-| `lookahead_seconds` | `analyzer.lookahead_seconds` | ⚙️ CONFIG | Lookahead horizon (`5.0 s`) used to initialize boundary countdowns. |
+| `MusicSnapshot` Field | Source | How `transitions/` Safeguards Consumption |
+| :--- | :--- | :--- |
+| `energy` | `context.energy` | Continuous weight in target DNA and technique selection. |
+| `power` | `context.power` | Continuous acoustic power metric. |
+| `is_silent` | `context.is_silent` | Schmitt-triggered silence state. |
+| `beat_phase` | `listener.beat_phase` | Used for beat alignment (`beat_phase < 0.05`) only when `beat_trust >= 0.20`, with a `1.2 s` fallback timeout. |
+| `is_beat` | `listener.is_beat` | Beat quantization trigger with `1.2 s` timeout fallback if the flywheel stalls. |
+| `salience` | `context.salience` | Soft weight in target DNA (`punch`, `rhythm`) and technique selection. |
+| `beat_trust` | `context.beat_trust` | Gates `beat_phase` quantization (`>= 0.20`) and weights `rhythm` DNA. |
+| `is_locked` | `context.is_locked` | Soft probability weight in cohort pattern lottery. |
+| `is_syncopated` | `context.is_syncopated` | Soft probability weight in complexity DNA and cohort lottery. |
+| `novelty` | `context.novelty` | Soft weight (`0.4 * novelty`) in target `complexity` DNA. |
+| `tension` | `context.tension` | Soft weight (`0.3 * tension`) in target `complexity` DNA. |
+| `scene` | `context.scene.value` | Soft probability bias in cohort lottery (`CHILL` vs `BUILDUP`); pre-drop trigger gated by cooldown. |
+| `is_rhythmic` | `context.is_rhythmic` | Selects `directional_wipe` vs `smooth_cosine_crossfade` when transition fires. |
+| `is_drop_impact` | `context.is_drop_impact` | Triggers `drop_impact` transition (`explosion` `0.4 s`), resetting cooldown timer. |
+| `is_drop_imminent` | `context.is_drop_imminent` | Pre-drop indicator from lookahead countdown. |
+| `drop_countdown` | `context.drop_countdown` | Schedules `pre_drop_buildup` transition gated by `5.0 s` security cooldown. |
+| `is_song_change` | `listener.is_song_change` | Speaker-time song boundary trigger, gated by `5.0 s` security cooldown and `TRANSITION_DUAL` lock. |
+| `is_verse_chorus_change` | `listener.is_verse_chorus_change` | Speaker-time structural trigger, gated by `5.0 s` security cooldown and `TRANSITION_DUAL` lock. |
+| `live_is_song_change` | `listener.live_is_song_change` | Starts `lookahead_seconds` countdown timer in `Transition_Director`, gated by security cooldown. |
+| `live_is_verse_chorus_change` | `listener.live_is_verse_chorus_change` | Starts `lookahead_seconds` structural countdown timer in `Transition_Director`, gated by security cooldown. |
+| `lookahead_seconds` | `analyzer.lookahead_seconds` | Lookahead horizon (`5.0 s`) used to initialize boundary countdowns. |
 
 ---
 

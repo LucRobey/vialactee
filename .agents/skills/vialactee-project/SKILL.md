@@ -24,7 +24,7 @@ Use this skill as the primary architectural authority for the Vialactée music-r
 * `research/`: Offline MIR laboratory, synthetic/neural/academic benchmark harnesses, and experimental algorithm ledger.
 * `work_history/`: Permanent chronological session logs (`work_history/README.md`, `work_history/TEMPLATE.md`) to maintain persistent engineering context and avoid agent amnesia.
 * `docs/`: Master documentation root (Sealed Contracts in [`docs/contracts/`](../../../docs/contracts/README.md), The 9 Golden Axioms in `docs/axioms/`, Architecture Specs in `docs/architecture/`, Catalogs in `docs/reference/`, Manuals in `docs/manuals/`).
-* `IDEAS.md`: The user's personal next-session scratchpad and raw idea backlog. **Strictly non-authoritative (NOT system truth).**
+* `docs/ideas/IDEAS.md` (and all other files in `docs/ideas/`): The user's personal next-session scratchpad and raw idea backlog. **Strictly non-authoritative (NOT system truth).**
 
 ---
 
@@ -74,7 +74,7 @@ Git history is the second half of the project's memory (`work_history/` explains
 6. **Never** use `git push --force`, `git reset --hard`, or `git add -A` blindly. Stage files explicitly and check that no logs, caches or scratch files slip in.
 
 ### 8. `IDEAS.md` Protocol (Non-Authoritative User Scratchpad)
-[`IDEAS.md`](../../../IDEAS.md) at the repository root is the user's personal reminder pad for future sessions:
+[`IDEAS.md`](../../../docs/ideas/IDEAS.md) in `docs/ideas/` is the user's personal reminder pad for future sessions:
 1. **Never treat `IDEAS.md` as truth:** Nothing in `IDEAS.md` describes current production behavior or canonical specifications.
 2. **Never auto-implement:** Do not implement items from `IDEAS.md` unless the user explicitly asks to work on them or add/edit notes in `IDEAS.md`.
 3. **Clean up on completion:** Only when the user asks to turn an idea from `IDEAS.md` into reality and it is completed, remove it from `IDEAS.md` and document the real feature in Tier 1/3 docs.

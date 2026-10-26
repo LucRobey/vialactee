@@ -305,7 +305,7 @@ This logbook maintains the persistent chronological scientific narrative of all 
 - **Official Baseline Run:** `RUN_20260905_235315_AudioAnalyzer_official_electro_rock_pop_baseline`
 - **Predecessor Run (Cycle 007):** `RUN_20260906_112904_SparseImpulseAudioAnalyzer_cycle007_candidate`
 - **Problem Investigated:**
-  - Followed the lead at the end of Cycle 007 and Lead 2 from `research_potential_ideas.md` ("Dual-Flywheel Rhythm Separation: Kick Flywheel + Snare Flywheel").
+  - Followed the lead at the end of Cycle 007 and Lead 2 from `research/research_potential_ideas.md` ("Dual-Flywheel Rhythm Separation: Kick Flywheel + Snare Flywheel").
   - Evaluated remaining 180° upbeat traps (*Stayin' Alive*, *Nightcall*) and octave double-tempo ambiguities (*Where Is My Mind_*). Single-stream ODFs suffer from fundamental Kick/Snare symmetry that collapses when offbeat synths or hi-hats dominate the template argmax.
 - **Hypothesis:**
   1. *Decoupled Dual ODF Streams:* Stream A ($y_K$) dedicated to sub-bass fundamental transients (Bands 0-1) with contrastive hi-hat cancellation; Stream B ($y_S$) dedicated to snare body (Bands 2-3) with Lead 3 adaptive crest-factor squelch.
@@ -345,9 +345,9 @@ This logbook maintains the persistent chronological scientific narrative of all 
 - **Official Baseline Run:** `RUN_20260905_235315_AudioAnalyzer_official_electro_rock_pop_baseline`
 - **Predecessor Runs:** `RUN_20260906_112904_SparseImpulseAudioAnalyzer_cycle007_candidate` (Cycle 007 SOTA)
 - **Problem Investigated:**
-  - Evaluated the core proposal in `research_potential_ideas.md`: *"maybe using more bands could help? Going beyond 8 bands (e.g. 16, 24, or 32 bands / mel-spectrogram bins) to isolate instruments much more cleanly so electric guitars and vocals don't bleed into kicks and snares."*
+  - Evaluated the core proposal in `research/research_potential_ideas.md`: *"maybe using more bands could help? Going beyond 8 bands (e.g. 16, 24, or 32 bands / mel-spectrogram bins) to isolate instruments much more cleanly so electric guitars and vocals don't bleed into kicks and snares."*
   - Diagnostic tracing showed that in legacy 8-band Mel, Band 0 covers $20\text{ Hz} \to 818.7\text{ Hz}$, merging sub-bass, kick fundamentals, bass guitar riffs, and synth arpeggios into an undifferentiated scalar. On *Nightcall*, the 8th-note pumping synth bassline offbeats created a higher positive flux than downbeat kicks ($0.88\times$ D/U flux ratio), forcing the tracker into an inverted 180° upbeat trap.
-- **Hypothesis (Lead 1 from `research_potential_ideas.md`):**
+- **Hypothesis (Lead 1 from `research/research_potential_ideas.md`):**
   1. *Per-Band Onset Derivatives:* Increase from 8 to 16, 24, or 32 Mel bands and compute $\Delta E_b[t] = \max(0, E_b[t] - E_b[t-1])$ independently per band. Sustained distorted guitar chords and vocal swells have high energy but near-zero slope ($\Delta E \approx 0$), rejecting guitar noise before it can corrupt the beat grid.
   2. *Instrument-Separated Streams:* Route bands into dedicated $y_{\text{kick}}$ (sub/fundamental), $y_{\text{snare}}$ (body & crack), $y_{\text{hat}}$ (offbeat sizzle), and $y_{\text{mid}}$ (with adaptive crest-factor squelching).
   3. *Kick-Conditioned Anti-Phase Disambiguation:* Competing candidate phases verify kick transient presence before snapping.

@@ -2,7 +2,7 @@
 
 Sibling of [`docs/contracts/music_analyzer_contract.md`](../docs/contracts/music_analyzer_contract.md), [`docs/contracts/mood_contract.md`](../docs/contracts/mood_contract.md), and [`docs/contracts/transition_contract.md`](../docs/contracts/transition_contract.md).
 
-This document defines **Part A: The Mode Sector Contract** (doors, signal trust rules, and sanctioned base-class helpers enforced by [`tests/governance/test_docs_parity.py`](../tests/governance/test_docs_parity.py)) and **Part B: Authoring & Vectorization Rules** for all 21 concrete modes in `modes/`.
+This document defines **Part A: The Mode Sector Contract** (doors, signal-handling guidance, and sanctioned base-class helpers) and **Part B: Authoring & Vectorization Rules** for all 21 concrete modes in `modes/`.
 
 ---
 
@@ -21,19 +21,19 @@ This document defines **Part A: The Mode Sector Contract** (doors, signal trust 
 | 5 | Mood Views | in | `Mode.bind_mood_colors(colors)`, `Mode.bind_mood_modifiers(modifiers)` | Bound once by `Mode_master` from `mood.api`. Concrete modes read `self.mood_colors`, `self.palette_lut`, `self.highlight_color`, `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, and `self.mood_accent`. |
 | 6 | Music Injection | in | `self.listener` (`music.api.ListenerProtocol`) | Speaker-aligned ($T_{\text{speaker}}$) audio facade and `self.listener.context` (`MusicalContextProtocol`). |
 
-### 2. Signal Trust Governance Rules (`test_modes_respect_trust_tiers`)
+### 2. Handling Signals by Trust
 
-Because `self.listener` is injected into every mode, AST governance (`TestDocsParity.test_modes_respect_trust_tiers`) inspects all concrete mode files (`modes/*.py` excluding `Mode.py`) to enforce how signals from [`docs/contracts/music_analyzer_contract.md`](../docs/contracts/music_analyzer_contract.md) are consumed:
+Because `self.listener` is injected into every mode, modes see every public signal of `Listener` and `listener.context`. How much we trust each one is stated **only** by its producer in [`docs/contracts/music_analyzer_contract.md`](../docs/contracts/music_analyzer_contract.md); this file does not repeat per-signal ratings. Trust is engineering guidance, not a hard rule, and it is not enforced by a test. General authoring guidance:
 
-| Tier | Signals | Concrete Mode Rule (`modes/*_mode.py`) |
+| Tier | What it means | How to use it in a concrete mode (`modes/*_mode.py`) |
 | :--- | :--- | :--- |
-| **🟢 HIGH** *(physical / pre-gated)* | `asserved_fft_band`, `fft_band_values`, `smoothed_fft_band_values`, `band_proportion`, `band_flux`, `chroma_values`, `smoothed_chroma_values`, `asserved_total_power`, `smoothed_total_power`, `ctx.energy`, `ctx.power`, `ctx.spectral_tilt`, `ctx.vertical_center`, `ctx.is_silent`, `ctx.is_power_high`, plus `mood_colors` & `mood_modifiers` | **Unrestricted.** Safe to drive brightness, extent, or colour directly on every frame. |
-| **🟡 MEDIUM** *(confidence-gated)* | `beat_phase`, `is_beat`, `bpm`, `is_real_beat`, `beat_count` | **Rule B (Must Gate):** Any concrete mode whose AST reads a 🟡 MEDIUM signal **must** also reference a confidence gate (`rhythm_lock`, `beat_trust`, `rhythm_salience`, `is_locked`, `beat_confidence`, or `beat_pulse`) and maintain a continuous fallback when confidence is `0.0`. |
-| **🟠 LOW** *(heuristic / predictive)* | `scene`, `is_drop_impact`, `is_drop_imminent`, `is_song_change`, `is_verse_chorus_change`, `is_structural_cut` | **Rule A (Forbidden in Concrete Modes):** Concrete modes **must not** read these attributes at all. Scene adaptation goes through `mood_modifiers` (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`), and drop/impact envelopes go through the sanctioned `Mode.py` gated helpers below. |
+| **🟢 HIGH** *(physical / pre-gated)* | Direct spectral measurement, or already debounced and smoothed inside its own sealed room (including `mood_colors` and `mood_modifiers` as consumed). | Safe to drive brightness, extent, or colour directly on every frame. |
+| **🟡 MEDIUM** *(confidence-gated)* | Probabilistic tempo/phase or rhythm badges that can drift on beatless intros, breakdowns, or polyrhythms. | Gate or blend by a confidence signal (`rhythm_lock`, `beat_trust`, `rhythm_salience`, `is_locked`, `beat_confidence`, or `beat_pulse`) and keep a continuous fallback when confidence is `0.0`. |
+| **🟠 LOW** *(heuristic / predictive / uncalibrated)* | Scene, drop, boundary, novelty, or pitch signals prone to false positives and jitter. | Avoid reading directly in concrete modes. Scene adaptation goes through `mood_modifiers` (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`), and drop/impact envelopes go through the sanctioned `Mode.py` helpers below. Never use for hard branches, velocity flips, or 1.5 s whiteouts. |
 
 ### 3. Sanctioned Gated Helpers on `Mode.py`
 
-`modes/Mode.py` is excluded from the raw AST ban because it encapsulates the noisy 🟡 MEDIUM and 🟠 LOW signals behind safe, bounded helpers:
+`modes/Mode.py` is the sanctioned place that reads the noisy signals directly, because it encapsulates the 🟡 MEDIUM and 🟠 LOW signals behind safe, bounded helpers:
 
 | Sanctioned Helper (`Mode.py`) | Internal Signals Read | What It Guarantees to Concrete Modes |
 | :--- | :--- | :--- |
@@ -52,10 +52,10 @@ Because `self.listener` is injected into every mode, AST governance (`TestDocsPa
 Interactive lighting has a golden rule: **The spectator must never see a broken rhythm or a violent state-machine snap.**
 Human perception detects audio-visual desync in under 50 milliseconds. If the beat tracker is confused (e.g. during a chaotic guitar solo, ambient intro, or tempo shift) and the chandelier keeps strobing out of time, or if a false `DROP_IMPACT` / `BUILDUP` classification causes a 1.5 s full-strip whiteout, spectators instantly perceive it as a technical glitch.
 
-Therefore, every visual mode must obey **three architectural laws**:
+Therefore, every visual mode should follow **three architectural laws**:
 1. **Always Alive Without the Flywheel (`self.rhythm_lock == 0.0`):** Every mode must produce a smooth, musical animation driven by continuous audio energy, 8-band spectrum, or pitch even when the beat tracker is completely lost (`beat_trust == 0.0`).
 2. **Rhythm-Locked When Confident (`self.rhythm_lock -> 1.0`):** As `rhythm_salience` and `beat_trust` rise, the *same* visual smoothly couples its pulse and speed to `beat_phase`, `bpm`, and `is_real_beat` without switching to a different visual algorithm.
-3. **No `if scene == ...` Branching in Modes:** Because macro scene detection (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) is a heuristic, **modes must never read or branch on `ctx.scene`**. Instead, the sealed [`mood/`](../mood/api.py) sector absorbs scene changes with a `0.30 s` debounce and a `2.5 s` cosine crossfade, exposing bounded modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) on `Mode`.
+3. **Avoid `if scene == ...` Branching in Modes:** Because macro scene detection (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) is a heuristic that can jitter, **modes should avoid reading or branching on `ctx.scene`**. Prefer the sealed [`mood/`](../mood/api.py) sector, which absorbs scene changes with a `0.30 s` debounce and a `2.5 s` cosine crossfade, exposing bounded modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) on `Mode`.
 
 ---
 
@@ -69,14 +69,14 @@ Therefore, every visual mode must obey **three architectural laws**:
 | `self.mood_sharpness` | 🟢 HIGH | `float` | Cosine-smoothed envelope exponent multiplier $[0.78, 1.22]$. | Softening pulses in `CHILL` and sharpening them in `BUILDUP`/`DROP_IMPACT`. |
 | `self.mood_trail` | 🟢 HIGH | `float` | Cosine-smoothed trail persistence multiplier $[0.88, 1.18]$. | Scaling trail length (`fade_ratio / self.mood_trail`). |
 | `self.mood_accent` | 🟢 HIGH | `float` | Cosine-smoothed highlight warmth blend $[0.00, 0.28]$. | Warming primary colors up to 28% toward `self.highlight_color`. |
-| `self.listener.context.energy` | 🟢 HIGH | `float` | Continuous fused visual energy drive $[0.0, 1.0]$. | Master brightness, bar height, and continuous motion drive. |
-| `self.listener.context.spectral_tilt` | 🟢 HIGH | `float` | Treble vs Bass balance $[-1.0, 1.0]$ across 8 Mel bands. | Warm/cool color shifts, horizontal balance point. |
-| `self.listener.context.vertical_center` | 🟢 HIGH | `float` | Spectral center of mass $[0.0, 1.0]$. | Target position for gliding balls and bar color balance. |
+| `self.listener.context.energy` | see contract | `float` | Continuous fused visual energy drive $[0.0, 1.0]$. | Master brightness, bar height, and continuous motion drive. |
+| `self.listener.context.spectral_tilt` | see contract | `float` | Treble vs Bass balance $[-1.0, 1.0]$ across 8 Mel bands. | Warm/cool color shifts, horizontal balance point. |
+| `self.listener.context.vertical_center` | see contract | `float` | Spectral center of mass $[0.0, 1.0]$. | Target position for gliding balls and bar color balance. |
 | `self.drop_hit` | 🟢 Helper | `bool` | True for **1 frame** on drop impact arrival (`ctx.is_drop_impact`). | Triggering a single shockwave or kick without a 1.5 s lock. |
 | `self.drop_decay` | 🟢 Helper | `float` | Smooth $1.0 \to 0.0$ envelope across the drop dwell. | Gradual post-drop boost without reading `ctx.scene` or `ctx.is_drop_impact`. |
-| `self.listener.context.is_real_beat` | 🟡 MEDIUM | `bool` | True if beat tick matches verified acoustic transient ($P \ge 0.20$). | Gating hard strobes, physical kicks, and boundary sparks (with `rhythm_lock`). |
-| `self.listener.beat_phase` | 🟡 MEDIUM | `float` | Continuous phase $\theta \in [0.0, 1.0)$ in speaker time ($0.0 = \text{strike}$). | Smooth ADSR decays, sine breathing, traveling waves (blended via `rhythm_lock`). |
-| `self.listener.bpm` | 🟡 MEDIUM | `float` | Current estimated tempo (e.g. `124.0`). | Scaling particle speeds, wave travel times, and physics (blended via `rhythm_lock`). |
+| `self.listener.context.is_real_beat` | see contract | `bool` | True if beat tick matches verified acoustic transient ($P \ge 0.20$). | Gating hard strobes, physical kicks, and boundary sparks (with `rhythm_lock`). |
+| `self.listener.beat_phase` | see contract | `float` | Continuous phase $\theta \in [0.0, 1.0)$ in speaker time ($0.0 = \text{strike}$). | Smooth ADSR decays, sine breathing, traveling waves (blended via `rhythm_lock`). |
+| `self.listener.bpm` | see contract | `float` | Current estimated tempo (e.g. `124.0`). | Scaling particle speeds, wave travel times, and physics (blended via `rhythm_lock`). |
 
 ---
 

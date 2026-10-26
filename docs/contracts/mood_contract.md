@@ -13,13 +13,13 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`tran
 
 ### Trust Transformation Across the Wall
 
-`mood/` acts as a **temporal shock absorber** that upgrades an 🟠 **LOW-trust** heuristic (`scene`) into 🟢 **HIGH-trust** visual signals:
-* **Input (`scene` — 🟠 LOW trust):** Macro scene classification (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) from `music/` can jitter or false-trigger on complex transients.
+`mood/` acts as a **temporal shock absorber** that turns the `scene` heuristic into 🟢 **HIGH-trust** visual signals:
+* **Input (`scene`):** Macro scene classification (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) from `music/` can jitter or false-trigger on complex transients. Its trust rating is stated only in [`music_analyzer_contract.md`](music_analyzer_contract.md).
 * **Outputs (`colors()` and `modifiers()` — 🟢 HIGH trust *as consumed*):** Because `mood/` applies a `0.30 s` debounce + `2.5 s` cosine crossfade to `modifiers()` and a `4.0 s` dwell + `3.0 s` cosine crossfade to `colors()`, modes can consume `self.mood_colors` (`self.palette_lut`, `self.highlight_color`) and `self.mood_modifiers` (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) directly on every frame without any branching or secondary smoothing.
 
 | # | Door | Dir | Trust | Shape (in `api.py`) | Notes |
 | :-: | :--- | :-: | :-: | :--- | :--- |
-| 1 | Clock + scene | in | 🟠 LOW (`scene`) | `update(dt, scene)` | Called every frame by `Mode_master`. `scene` is a plain string (e.g. `"BUILDUP"`), optional. |
+| 1 | Clock + scene | in | see [`music_analyzer_contract.md`](music_analyzer_contract.md) | `update(dt, scene)` | Called every frame by `Mode_master`. `scene` is a plain string (e.g. `"BUILDUP"`), optional. |
 | 2 | Requests | in | ⚙️ UI / Glue | `request_palette(name, duration)`, `next_palette()`, `set_auto_scene(enabled)` | UI selection (`select_mood`) and transition palette requests arrive here. Unknown names return `False`. |
 | 3 | Colours | out | 🟢 HIGH *(as consumed)* | `colors()` | One **read-only** `(4, 3)` `int32` array `[primary, secondary, accent, background]`. Always the same object, updated in place: zero allocation. |
 | 4 | Modifiers | out | 🟢 HIGH *(as consumed)* | `modifiers()` | One **read-only** `(4,)` `float32` array `[pace, sharpness, trail, accent_mix]`. Smoothly cosine-crossfaded over 2.5 s after a 0.30 s scene debounce (decoupled from `auto_scene`): zero allocation. |

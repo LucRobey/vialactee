@@ -55,7 +55,12 @@ Operational how-to guides:
 - [Developer Tools & Simulators Guide](./manuals/developer_tools.md)
 - [Web Interface Operator Manual](./manuals/web_interface_manual.md)
 
-### 5. [Tier 4: Concept Archive (`docs/archive/`)](./archive/)
+### 5. [Tier 4: Ideas Hub (`docs/ideas/`)](./ideas/README.md)
+Non-authoritative brainstorming and potential ideas (scratchpad, transitions, music events):
+- [Ideas Hub Index](./ideas/README.md)
+- [Personal Scratchpad (`IDEAS.md`)](./ideas/IDEAS.md)
+
+### 6. [Tier 4: Concept Archive (`docs/archive/`)](./archive/)
 Prospective research concepts and historical review archives:
 - [Prospective Transitions Concepts](./archive/prospective_transitions.md)
 - [Prospective Music Events Concepts](./archive/prospective_music_events.md)

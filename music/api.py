@@ -6,12 +6,12 @@ This is the only module that production code outside `music/` may import.
 Rules (enforced by tests/governance/test_music_isolation.py and test_docs_parity.py):
 - Nothing in `music/` imports project code outside `music/`.
 - Production code outside `music/` imports only `music.api`.
-- Every public signal on `Listener` and `MusicalContextEngine` belongs to
-  exactly one trust set below and is documented in
-  `docs/contracts/music_analyzer_contract.md`.
+- Every public signal on `Listener` and `MusicalContextEngine` is documented in
+  `docs/contracts/music_analyzer_contract.md`, which is also the only place
+  that states how much we trust each signal.
 """
 
-from typing import Any, Dict, FrozenSet, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 import numpy as np
 
 from music.Listener import (
@@ -27,150 +27,6 @@ from music.MusicalContextEngine import (
 
 
 # =============================================================================
-# TRUST-RATED SIGNAL SETS & INTERNAL ALLOWLISTS
-# =============================================================================
-
-LISTENER_INTERNAL_ATTRS: FrozenSet[str] = frozenset({
-    "analyzer",
-    "context",
-    "ingestion",
-    "reset",
-    "update",
-    "process_raw_audio",
-})
-
-LISTENER_CONFIG_TRUST: FrozenSet[str] = frozenset({
-    "luminosite",
-    "sensi",
-    "nb_of_fft_band",
-})
-LISTENER_CONFIG_ATTRS: FrozenSet[str] = LISTENER_CONFIG_TRUST
-
-LISTENER_HIGH_TRUST: FrozenSet[str] = frozenset({
-    "fft_band_values",
-    "smoothed_fft_band_values",
-    "asserved_fft_band",
-    "band_proportion",
-    "band_means",
-    "band_flux",
-    "chroma_values",
-    "smoothed_chroma_values",
-    "smoothed_total_power",
-    "asserved_total_power",
-    "live_asserved_total_power",
-    "dynamic_audio_latency",
-})
-
-LISTENER_MEDIUM_TRUST: FrozenSet[str] = frozenset({
-    "bpm",
-    "beat_phase",
-    "beat_count",
-    "is_beat",
-    "is_real_beat",
-    "is_dropped_beat",
-    "beat_tag",
-    "beat_confidence",
-    "beat_trust",
-    "live_beat_trust",
-    "rhythm_salience",
-    "live_rhythm_salience",
-    "standalone_bpm",
-    "standalone_phase",
-    "flywheel_status",
-})
-
-LISTENER_LOW_TRUST: FrozenSet[str] = frozenset({
-    "is_song_change",
-    "is_verse_chorus_change",
-    "live_is_song_change",
-    "live_is_verse_chorus_change",
-    "asserved_novelty",
-    "combined_novelty",
-    "live_asserved_novelty",
-    "live_combined_novelty",
-    "novelty_lm",
-    "novelty_gm",
-    "salience_gradient",
-    "power_gradient",
-})
-
-LISTENER_TRUST_SETS: Dict[str, FrozenSet[str]] = {
-    "HIGH": LISTENER_HIGH_TRUST,
-    "MEDIUM": LISTENER_MEDIUM_TRUST,
-    "LOW": LISTENER_LOW_TRUST,
-    "CONFIG": LISTENER_CONFIG_TRUST,
-}
-
-CONTEXT_INTERNAL_ATTRS: FrozenSet[str] = frozenset({
-    "listener",
-    "reset",
-    "update",
-    "get_state_snapshot",
-    "salience_high",
-    "salience_low",
-    "trust_high",
-    "trust_low",
-    "power_high",
-    "power_low",
-    "silence_threshold",
-    "silence_exit_threshold",
-    "drop_buildup_threshold",
-    "drop_buildup_power_threshold",
-    "min_dwell_time",
-    "transition_time",
-    "structural_dwell_time",
-    "pre_drop_cooldown_time",
-    "drop_impact_dwell_time",
-})
-
-CONTEXT_HIGH_TRUST: FrozenSet[str] = frozenset({
-    "energy",
-    "power",
-    "live_power",
-    "spectral_tilt",
-    "vertical_center",
-    "is_power_high",
-    "is_silent",
-})
-
-CONTEXT_MEDIUM_TRUST: FrozenSet[str] = frozenset({
-    "salience",
-    "live_salience",
-    "beat_trust",
-    "is_locked",
-    "is_real_beat",
-    "is_syncopated",
-})
-
-CONTEXT_LOW_TRUST: FrozenSet[str] = frozenset({
-    "scene",
-    "previous_scene",
-    "scene_blend",
-    "scene_dwell_time",
-    "is_ambient",
-    "is_rhythmic",
-    "is_in_pocket",
-    "is_buildup",
-    "drop_countdown",
-    "drop_progress",
-    "pre_drop_cooldown",
-    "is_drop_imminent",
-    "is_drop_impact",
-    "is_structural_cut",
-    "novelty",
-    "tension",
-    "salience_gradient",
-    "power_gradient",
-})
-
-CONTEXT_TRUST_SETS: Dict[str, FrozenSet[str]] = {
-    "HIGH": CONTEXT_HIGH_TRUST,
-    "MEDIUM": CONTEXT_MEDIUM_TRUST,
-    "LOW": CONTEXT_LOW_TRUST,
-}
-
-
-# =============================================================================
 # STATIC CONSUMER PROTOCOLS
 # =============================================================================
 
@@ -178,7 +34,6 @@ CONTEXT_TRUST_SETS: Dict[str, FrozenSet[str]] = {
 class MusicalContextProtocol(Protocol):
     """Static protocol documenting the public signals of `listener.context`."""
 
-    # 🟢 HIGH trust (physical / Schmitt-stabilized)
     @property
     def energy(self) -> float: ...
     @property
@@ -194,7 +49,6 @@ class MusicalContextProtocol(Protocol):
     @property
     def is_silent(self) -> bool: ...
 
-    # 🟡 MEDIUM trust (confidence-gated rhythm)
     @property
     def salience(self) -> float: ...
     @property
@@ -208,7 +62,6 @@ class MusicalContextProtocol(Protocol):
     @property
     def is_syncopated(self) -> bool: ...
 
-    # 🟠 LOW trust (scene & boundary heuristics — forbidden in concrete modes)
     @property
     def scene(self) -> MusicalScene: ...
     @property
@@ -253,7 +106,6 @@ class ListenerProtocol(Protocol):
 
     context: MusicalContextProtocol
 
-    # ⚙️ CONFIG properties
     @property
     def luminosite(self) -> float: ...
     @property
@@ -261,7 +113,6 @@ class ListenerProtocol(Protocol):
     @property
     def nb_of_fft_band(self) -> int: ...
 
-    # 🟢 HIGH trust (physical spectral & power measurements)
     @property
     def fft_band_values(self) -> np.ndarray: ...
     @property
@@ -275,10 +126,6 @@ class ListenerProtocol(Protocol):
     @property
     def band_flux(self) -> np.ndarray: ...
     @property
-    def chroma_values(self) -> np.ndarray: ...
-    @property
-    def smoothed_chroma_values(self) -> np.ndarray: ...
-    @property
     def smoothed_total_power(self) -> float: ...
     @property
     def asserved_total_power(self) -> float: ...
@@ -287,7 +134,6 @@ class ListenerProtocol(Protocol):
     @property
     def dynamic_audio_latency(self) -> float: ...
 
-    # 🟡 MEDIUM trust (flywheel tempo, phase & confidence)
     @property
     def bpm(self) -> float: ...
     @property
@@ -319,7 +165,10 @@ class ListenerProtocol(Protocol):
     @property
     def flywheel_status(self) -> str: ...
 
-    # 🟠 LOW trust (novelty, boundary flags & gradients)
+    @property
+    def chroma_values(self) -> np.ndarray: ...
+    @property
+    def smoothed_chroma_values(self) -> np.ndarray: ...
     @property
     def is_song_change(self) -> bool: ...
     @property
@@ -355,16 +204,4 @@ __all__ = [
     "MusicalContextEngine",
     "ListenerProtocol",
     "MusicalContextProtocol",
-    "LISTENER_INTERNAL_ATTRS",
-    "LISTENER_CONFIG_TRUST",
-    "LISTENER_CONFIG_ATTRS",
-    "LISTENER_HIGH_TRUST",
-    "LISTENER_MEDIUM_TRUST",
-    "LISTENER_LOW_TRUST",
-    "LISTENER_TRUST_SETS",
-    "CONTEXT_INTERNAL_ATTRS",
-    "CONTEXT_HIGH_TRUST",
-    "CONTEXT_MEDIUM_TRUST",
-    "CONTEXT_LOW_TRUST",
-    "CONTEXT_TRUST_SETS",
 ]
