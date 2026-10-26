@@ -1,204 +1,142 @@
-# Visual Mode Authoring & Rhythm Integration Rules (`MODE_RULES.md`)
+# Visual Mode Sector Contract & Authoring Rules (`MODE_RULES.md`)
 
-This document defines the core engineering, mathematical, and artistic rules for authoring visual animation modes in the Vialactée interactive chandelier.
+Sibling of [`docs/contracts/music_analyzer_contract.md`](../docs/contracts/music_analyzer_contract.md), [`docs/contracts/mood_contract.md`](../docs/contracts/mood_contract.md), and [`docs/contracts/transition_contract.md`](../docs/contracts/transition_contract.md).
 
-It codifies how modes must consume rhythmic signals from the **Anticipation Flywheel**, how to handle situations when the beat engine is lost or uncertain, and how to maintain flawless 60 FPS performance on embedded hardware.
-
----
-
-## 1. The Core Philosophy: "Graceful Degradation"
-
-Interactive lighting has a golden rule: **The spectator must never see a broken rhythm.**
-Human perception detects audio-visual desync in under 50 milliseconds. If the beat tracker is confused (e.g. during a chaotic guitar solo, ambient intro, or tempo shift) and the chandelier keeps strobing out of time, spectators instantly perceive it as a technical glitch.
-
-### The Unified 3-Tier Musical Context Engine (`self.listener.context`)
-Rather than requiring every mode to invent its own ad-hoc fallback logic, [`core/MusicalContextEngine.py`](../core/MusicalContextEngine.py) centrally evaluates real-time musical intent across 3 unified tiers accessible via `self.listener.context`:
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ TIER 1: CONTINUOUS DYNAMIC KINETICS                                    │
-│ energy [0, 1] · tension [0, 1] · drop_progress [0, 1]                  │
-│ spectral_tilt [-1, 1] · vertical_center [0, 1] · gradients (ΔR, ΔP)   │
-├────────────────────────────────────────────────────────────────────────┤
-│ TIER 2: 4 MACRO SCENES (Schmitt Hysteresis & Dwell Locks)              │
-│ CHILL · GROOVE · BUILDUP · DROP_IMPACT                                 │
-├────────────────────────────────────────────────────────────────────────┤
-│ TIER 3: MICRO PHYSICAL BADGES                                          │
-│ is_locked · is_syncopated · is_real_beat · is_silent · is_drop_impact  │
-│ is_drop_imminent · is_structural_cut                                   │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-Modes can smoothly blend between macro scenes using `self.listener.context.scene_blend` $\in [0.0, 1.0]$ or modulate continuously using Tier 1 kinetic scalars (`energy`, `tension`). When the analyzer is lost or the music shifts to ambient breakdown, the mode does **not** fail—it smoothly dissolves into an organic ambient visual.
-
-Use only the canonical scene API (`scene`, `previous_scene`, `scene_blend`, `scene_dwell_time`). The legacy `current_regime` / `regime_blend` properties and the 6 old regime names no longer exist; a structural cut is the separate `is_structural_cut` badge, never a scene.
+This document defines **Part A: The Mode Sector Contract** (doors, signal trust rules, and sanctioned base-class helpers enforced by [`tests/governance/test_docs_parity.py`](../tests/governance/test_docs_parity.py)) and **Part B: Authoring & Vectorization Rules** for all 21 concrete modes in `modes/`.
 
 ---
 
-## 2. Rhythmic Signals: What to Trust & What to Avoid
+## Part A: Mode Sector Contract (authoritative)
 
-### Signals You CAN Rely On:
-| Property | Type | Description | Best Used For |
-| :--- | :--- | :--- | :--- |
-| `self.listener.context.energy` | `float` | Continuous fused visual energy drive $[0.0, 1.0]$. | Master brightness, particle speed, and motion drive. |
-| `self.listener.context.tension` | `float` | Real-time musical tension & buildup curve $[0.0, 1.0]$. | Narrowing beams, color temperature shifts, strobe rate. |
-| `self.listener.context.drop_progress` | `float` | Linear progression $[0.0, 1.0]$ through buildup and drop dwell decay. | Buildup spatial contraction and drop impact dissipation. |
-| `self.listener.context.scene` | `MusicalScene` | Canonical macro scene (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`). | High-level behavioral choreography. |
-| `self.listener.context.scene_blend` | `float` | Crossfade progress $[0.0, 1.0]$ between previous and current scene. | Seamless interpolation between scene visual parameters. |
-| `self.listener.context.is_locked` | `bool` | Schmitt-triggered tempo lock stability badge. | Gating tight rhythmic lock vs ambient drift. |
-| `self.listener.context.is_real_beat` | `bool` | True if beat tick matches verified acoustic transient ($P \ge 0.20$). | Gating hard strobes, explosive sparks, and shockwaves. |
-| `self.listener.context.is_drop_impact` | `bool` | True for exactly 1 frame on drop impact arrival. | Maximum visual bloom, shockwave detonations. |
-| `self.listener.context.is_structural_cut` | `bool` | True for 1.2s upon track transition or verse/chorus cut. | Scene wipe, boundary reset, or thematic palette change. |
-| `self.listener.context.spectral_tilt` | `float` | Treble vs Bass balance $[-1.0, 1.0]$ across 8 Mel bands. | Warm/cool color shifts, vertical weight distribution. |
-| `self.listener.context.drop_countdown`| `float` | Seconds remaining until impending drop hits speakers. | Anticipation visuals, countdown indicators. |
-| `self.listener.beat_phase` | `float` | Continuous phase $\theta \in [0.0, 1.0)$ in speaker time ($0.0 = \text{strike}$). | Smooth ADSR decays, sine breathing, traveling waves. |
-| `self.listener.bpm` | `float` | Current estimated tempo (e.g. `124.0`). | Scaling particle speeds, wave travel times, and physics. |
-| `self.listener.is_beat` | `bool` | `True` for exactly 1 frame when a beat strikes speaker time. | 1-shot tick events. |
+### 1. The Doors (`modes/Mode.py`)
 
-### Signals to AVOID For Now:
-* **`self.listener.beat_count`**: **Do not rely on `beat_count % 2` or `beat_count % 4` for strict musical meter** (downbeat vs upbeat) at this stage. Skipped beats, ghost onsets, or breakdown coasting can invert parity, turning a kick flash into an upbeat flash. Treat every verified beat equally until measure tracking is stabilized.
+`modes/Mode.py` is the **sanctioned base class and front door** of the `modes/` sector. Every concrete mode (`modes/*_mode.py`) subclasses `Mode.Mode` and interacts with the rest of the chandelier through the doors below:
+
+| # | Door | Dir | Shape (on `Mode`) | Notes |
+| :-: | :--- | :-: | :--- | :--- |
+| 1 | Construction | in | `__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)` | Called once per segment on startup. Pre-allocates all scratch arrays here. |
+| 2 | Rendering | in/out | `render(buffer=None, audio_ctx=None, frame_info=None)` / `run()` | Mutates the target `(N, 3)` `int32` RGB buffer in place at 30 FPS with zero heap allocations. |
+| 3 | Settings | in/out | `get_settings_schema()`, `apply_settings(settings)` | Declares live UI sliders and binds runtime updates. Every declared setting must be read in `run()`/`render()`. |
+| 4 | Transition Handshake | in | `on_transition_enter(progress)`, `on_transition_exit(progress)` | Optional 3-layer cooperative transition hooks exposing `self.transition_scale` (`0.0 .. 1.0`). |
+| 5 | Mood Views | in | `Mode.bind_mood_colors(colors)`, `Mode.bind_mood_modifiers(modifiers)` | Bound once by `Mode_master` from `mood.api`. Concrete modes read `self.mood_colors`, `self.palette_lut`, `self.highlight_color`, `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, and `self.mood_accent`. |
+| 6 | Music Injection | in | `self.listener` (`music.api.ListenerProtocol`) | Speaker-aligned ($T_{\text{speaker}}$) audio facade and `self.listener.context` (`MusicalContextProtocol`). |
+
+### 2. Signal Trust Governance Rules (`test_modes_respect_trust_tiers`)
+
+Because `self.listener` is injected into every mode, AST governance (`TestDocsParity.test_modes_respect_trust_tiers`) inspects all concrete mode files (`modes/*.py` excluding `Mode.py`) to enforce how signals from [`docs/contracts/music_analyzer_contract.md`](../docs/contracts/music_analyzer_contract.md) are consumed:
+
+| Tier | Signals | Concrete Mode Rule (`modes/*_mode.py`) |
+| :--- | :--- | :--- |
+| **🟢 HIGH** *(physical / pre-gated)* | `asserved_fft_band`, `fft_band_values`, `smoothed_fft_band_values`, `band_proportion`, `band_flux`, `chroma_values`, `smoothed_chroma_values`, `asserved_total_power`, `smoothed_total_power`, `ctx.energy`, `ctx.power`, `ctx.spectral_tilt`, `ctx.vertical_center`, `ctx.is_silent`, `ctx.is_power_high`, plus `mood_colors` & `mood_modifiers` | **Unrestricted.** Safe to drive brightness, extent, or colour directly on every frame. |
+| **🟡 MEDIUM** *(confidence-gated)* | `beat_phase`, `is_beat`, `bpm`, `is_real_beat`, `beat_count` | **Rule B (Must Gate):** Any concrete mode whose AST reads a 🟡 MEDIUM signal **must** also reference a confidence gate (`rhythm_lock`, `beat_trust`, `rhythm_salience`, `is_locked`, `beat_confidence`, or `beat_pulse`) and maintain a continuous fallback when confidence is `0.0`. |
+| **🟠 LOW** *(heuristic / predictive)* | `scene`, `is_drop_impact`, `is_drop_imminent`, `is_song_change`, `is_verse_chorus_change`, `is_structural_cut` | **Rule A (Forbidden in Concrete Modes):** Concrete modes **must not** read these attributes at all. Scene adaptation goes through `mood_modifiers` (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`), and drop/impact envelopes go through the sanctioned `Mode.py` gated helpers below. |
+
+### 3. Sanctioned Gated Helpers on `Mode.py`
+
+`modes/Mode.py` is excluded from the raw AST ban because it encapsulates the noisy 🟡 MEDIUM and 🟠 LOW signals behind safe, bounded helpers:
+
+| Sanctioned Helper (`Mode.py`) | Internal Signals Read | What It Guarantees to Concrete Modes |
+| :--- | :--- | :--- |
+| `self.rhythm_lock` | `ctx.salience` (or `listener.rhythm_salience`), `ctx.beat_trust` (or `listener.beat_trust`) | Continuous confidence weight in $[0.0, 1.0]$ ($\sqrt{\text{trust} \cdot \text{salience}}$). |
+| `self.beat_pulse(sharpness=2.0)` | `listener.beat_phase`, `self.rhythm_lock`, `self.mood_sharpness`, `ctx.energy` | Blends a sharp phase-locked $(1 - \theta)^{\text{sharpness} \cdot \text{mood\_sharpness}}$ pulse with a smooth acoustic breathing fallback when `rhythm_lock -> 0.0`. |
+| `self.drop_hit` | `ctx.is_drop_impact` | **1-frame** boolean trigger on drop arrival (`False` on all other frames), preventing 1.5 s solid whiteouts. |
+| `self.drop_decay` | `ctx.scene`, `ctx.is_drop_impact`, `ctx.drop_progress` | Smooth $1.0 \to 0.0$ envelope across the 1.5 s `DROP_IMPACT` dwell (`0.0` outside a drop). |
+| `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent` | `Mode._shared_mood_modifiers` (bound from `mood.api.modifiers()`) | Debounced (`0.30 s`) and cosine-smoothed (`2.5 s`) scene modifiers (`🟢 HIGH` trust as consumed). |
 
 ---
 
-## 3. The 4 Golden Rules of Rhythm-Reactive Modes
+## Part B: Visual Mode Authoring & Rhythm Integration Rules
 
-### Rule 1: Always Blend with Confidence (Continuous Fallback)
-Never write binary logic that assumes the beat is always valid. Blend the rhythmic output with the acoustic fallback using `beat_confidence`:
+### 1. The Core Philosophy: "Graceful Degradation & Subtle Mood Governance"
+
+Interactive lighting has a golden rule: **The spectator must never see a broken rhythm or a violent state-machine snap.**
+Human perception detects audio-visual desync in under 50 milliseconds. If the beat tracker is confused (e.g. during a chaotic guitar solo, ambient intro, or tempo shift) and the chandelier keeps strobing out of time, or if a false `DROP_IMPACT` / `BUILDUP` classification causes a 1.5 s full-strip whiteout, spectators instantly perceive it as a technical glitch.
+
+Therefore, every visual mode must obey **three architectural laws**:
+1. **Always Alive Without the Flywheel (`self.rhythm_lock == 0.0`):** Every mode must produce a smooth, musical animation driven by continuous audio energy, 8-band spectrum, or pitch even when the beat tracker is completely lost (`beat_trust == 0.0`).
+2. **Rhythm-Locked When Confident (`self.rhythm_lock -> 1.0`):** As `rhythm_salience` and `beat_trust` rise, the *same* visual smoothly couples its pulse and speed to `beat_phase`, `bpm`, and `is_real_beat` without switching to a different visual algorithm.
+3. **No `if scene == ...` Branching in Modes:** Because macro scene detection (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) is a heuristic, **modes must never read or branch on `ctx.scene`**. Instead, the sealed [`mood/`](../mood/api.py) sector absorbs scene changes with a `0.30 s` debounce and a `2.5 s` cosine crossfade, exposing bounded modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) on `Mode`.
+
+---
+
+### 2. Rhythmic & Mood Signals Reference
+
+| Property | Trust | Type | Description | Best Used For |
+| :--- | :-: | :--- | :--- | :--- |
+| `self.rhythm_lock` | 🟢 Helper | `float` | Combined lock confidence $[0.0, 1.0]$ from `beat_trust` and `salience`. | Blending between continuous spectral/energy drive (`0.0`) and beat-locked motion (`1.0`). |
+| `self.beat_pulse(sharpness)` | 🟢 Helper | `float` | Confidence-blended beat envelope $[0.0, 1.0]$ scaled by `mood_sharpness`. | Primary rhythmic brightness/size pump with built-in acoustic breathing fallback. |
+| `self.mood_pace` | 🟢 HIGH | `float` | Cosine-smoothed scene speed multiplier $[0.82, 1.22]$. | Gently nudging wave, ball, or hue drift speed ($\pm 20\%$ max). |
+| `self.mood_sharpness` | 🟢 HIGH | `float` | Cosine-smoothed envelope exponent multiplier $[0.78, 1.22]$. | Softening pulses in `CHILL` and sharpening them in `BUILDUP`/`DROP_IMPACT`. |
+| `self.mood_trail` | 🟢 HIGH | `float` | Cosine-smoothed trail persistence multiplier $[0.88, 1.18]$. | Scaling trail length (`fade_ratio / self.mood_trail`). |
+| `self.mood_accent` | 🟢 HIGH | `float` | Cosine-smoothed highlight warmth blend $[0.00, 0.28]$. | Warming primary colors up to 28% toward `self.highlight_color`. |
+| `self.listener.context.energy` | 🟢 HIGH | `float` | Continuous fused visual energy drive $[0.0, 1.0]$. | Master brightness, bar height, and continuous motion drive. |
+| `self.listener.context.spectral_tilt` | 🟢 HIGH | `float` | Treble vs Bass balance $[-1.0, 1.0]$ across 8 Mel bands. | Warm/cool color shifts, horizontal balance point. |
+| `self.listener.context.vertical_center` | 🟢 HIGH | `float` | Spectral center of mass $[0.0, 1.0]$. | Target position for gliding balls and bar color balance. |
+| `self.drop_hit` | 🟢 Helper | `bool` | True for **1 frame** on drop impact arrival (`ctx.is_drop_impact`). | Triggering a single shockwave or kick without a 1.5 s lock. |
+| `self.drop_decay` | 🟢 Helper | `float` | Smooth $1.0 \to 0.0$ envelope across the drop dwell. | Gradual post-drop boost without reading `ctx.scene` or `ctx.is_drop_impact`. |
+| `self.listener.context.is_real_beat` | 🟡 MEDIUM | `bool` | True if beat tick matches verified acoustic transient ($P \ge 0.20$). | Gating hard strobes, physical kicks, and boundary sparks (with `rhythm_lock`). |
+| `self.listener.beat_phase` | 🟡 MEDIUM | `float` | Continuous phase $\theta \in [0.0, 1.0)$ in speaker time ($0.0 = \text{strike}$). | Smooth ADSR decays, sine breathing, traveling waves (blended via `rhythm_lock`). |
+| `self.listener.bpm` | 🟡 MEDIUM | `float` | Current estimated tempo (e.g. `124.0`). | Scaling particle speeds, wave travel times, and physics (blended via `rhythm_lock`). |
+
+---
+
+### 3. The 4 Golden Rules of Rhythm-Reactive Modes
+
+#### Rule 1: Always Blend with `rhythm_lock` or Use `self.beat_pulse()`
+Never write binary logic that assumes the beat tracker is always locked. Use `self.beat_pulse()` for envelope modulation, and blend kinematic positions/forces with `self.rhythm_lock`:
 
 ```python
-confidence = np.clip(self.listener.beat_confidence, 0.0, 1.0)
-
-# 1. Rhythmic component: punchy decay locked to beat phase
-rhythmic_energy = (1.0 - self.listener.beat_phase) ** 2.0
-
-# 2. Acoustic fallback component: direct smoothed volume
-acoustic_energy = self.listener.asserved_total_power
-
-# 3. Dynamic blend: locks to beat when confident, falls back to volume when lost
-effective_energy = (confidence * rhythmic_energy) + ((1.0 - confidence) * acoustic_energy)
+lock = self.rhythm_lock  # [0.0, 1.0]
+pulse = self.beat_pulse(2.2)  # Punchy when locked, smooth acoustic breathing when lost
 ```
 
-### Rule 2: Gate Hard Flashes (`is_real_beat` Protection)
-Violent, full-strip strobes and high-brightness flashes must **never** fire on phantom / coasting beats during silent breakdowns:
+#### Rule 2: Gate Hard Flashes (`is_real_beat` & `self.drop_hit` Protection)
+Violent strobes and high-brightness kicks must **never** fire on phantom coasting beats during silent breakdowns, and must **never** lock on for the 1.5 s `DROP_IMPACT` scene dwell:
 
 ```python
-# GOOD: Only flashes when a real physical transient landed at speaker time
-if self.listener.is_beat and self.listener.is_real_beat and self.listener.beat_confidence > 0.5:
-    self.trigger_flash()
-
-# BAD: Flashes blindly even during silent pauses
-if self.listener.is_beat:
-    self.trigger_flash()
+# GOOD: 1-frame verified transient or 1-frame drop_hit
+if (self.listener.is_beat and ctx.is_real_beat and self.rhythm_lock > 0.35) or self.drop_hit:
+    self.trigger_spark()
 ```
 
-### Rule 3: Prefer Continuous Phase ($\theta$) Over 1-Frame Impulse Spikes
-* **1-Frame Impulse Spikes (`is_beat`):** If a strobe triggers 50ms late due to phase jitter, the spectator notices instantly.
-* **Continuous Phase Envelopes (`beat_phase`):** Phase is smooth and continuous. Even if the tempo estimate is drifting slightly, continuous motion or exponential decays look fluid and pleasing.
+#### Rule 3: Prefer Continuous Phase ($\theta$) Over 1-Frame Impulse Spikes
+Continuous motion and exponential decays driven by `beat_phase` (blended with a free-running phase when `self.rhythm_lock` is low) look fluid even if the tempo estimate drifts slightly.
 
-#### Common Phase Envelopes:
-```python
-phase = self.listener.beat_phase # [0.0, 1.0)
-
-# Punchy Percussive Attack & Decay (Kick / Snare feel)
-decay_envelope = (1.0 - phase) ** 2.5
-
-# Harmonic Sine Breathing (Ambient / Downtempo feel)
-sine_breathe = 0.5 * (1.0 + np.sin(2.0 * np.pi * phase - (np.pi / 2.0)))
-
-# Pre-Beat Inhale / Anticipation (Pulls inward right before phase reaches 1.0/0.0)
-anticipation = np.maximum(0.0, (phase - 0.8) / 0.2) ** 2.0
-```
-
-### Rule 4: Scale Motion to Tempo (BPM-Aware Kinematics)
-When moving pixels, balls, or wavefronts across the chandelier, scale speed by `bpm` so animations don't feel too sluggish on fast tracks or frantic on slow tracks:
+#### Rule 4: Scale Motion to Tempo & `mood_pace` (BPM-Aware Kinematics)
+Scale speeds by `bpm` and `self.mood_pace`:
 
 ```python
-# Travel time across the segment takes exactly 1 beat
-# Segment length / (seconds per beat * FPS)
-beat_period_seconds = 60.0 / max(60.0, min(200.0, self.listener.bpm))
-frames_per_beat = beat_period_seconds * 60.0
-speed_pixels_per_frame = self.nb_of_leds / max(1.0, frames_per_beat)
+frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
+speed = (float(self.half_len) / frames_per_beat) * self.fps_ratio * self.mood_pace
 ```
 
 ---
 
-## 4. Hardware & Vectorization Invariants (Zero Heap Allocations)
+### 4. Hardware & Vectorization Invariants (Zero Heap Allocations)
 
-The chandelier runs on a Raspberry Pi at **60 FPS** (16.6ms total budget). Visual rendering across all 11 segments must execute in **$\le 1.0\text{ms}$** per frame.
+The chandelier renders on a Raspberry Pi at **30 FPS** (33.33 ms frame period, $\le 20.0\text{ ms}$ total compute budget per AXIOM-01; audio DSP ticks at 60 Hz). Visual rendering across all 11 segments must execute in **$\le 1.0\text{ ms}$** per frame ($\le 0.20\text{ ms}$ per mode).
 
-1. **Strictly No Python Loops Over LEDs:**
-   * Never use `for i in range(self.nb_of_leds):`.
-   * Use NumPy vectorization for all coordinate, HSV, and RGB math.
-2. **Zero Heap Allocations in `run()` / `render()`:**
-   * Pre-allocate all scratch buffers, linspaces, and coordinate arrays in `__init__()`.
-   * Mutate buffers in-place (`np.copyto()`, slice assignment `[:]`, or pre-allocated targets).
-3. **Use Immutable Color Constants:**
-   * Colors from `utils.colors` (`red`, `green`, `blue`, `white`, etc.) and `self.white` on `Mode` are immutable tuples `(R, G, B)`. They can be safely assigned to array slices (`self.rgb_list[:] = self.white`) without risk of shared mutable state corruption across segments.
-4. **Use Base Class Vectorized Blenders:**
-   * `self.smooth_vectorized(ratio, target_rgb_matrix)`
-   * `self.smooth_segment_vectorized(ratio, start, stop, target_color_or_array)`
-   * `self.fade_to_black(ratio)` or `self.fade_to_black_segment_vectorized(ratio, start, stop)`
+1. **Strictly No Python Loops Over LEDs:** Never use `for i in range(self.nb_of_leds):`. Use NumPy vectorization for all coordinate, HSV, and RGB math.
+2. **Zero Heap Allocations in `run()` / `render()`:** Pre-allocate all scratch buffers, linspaces, and coordinate arrays in `__init__()`. Mutate buffers in-place (`np.copyto()`, slice assignment `[:]`, or pre-allocated targets).
+3. **Use Base Class Vectorized Blenders:** `self.smooth_vectorized(ratio, target_rgb_matrix)`, `self.smooth_segment_vectorized(ratio, start, stop, target_color_or_array)`, `self.fade_to_black(ratio)`, or `self.fade_to_black_segment_vectorized(ratio, start, stop)`.
+4. **Support Mode-Cooperative Transitions (`self.transition_scale`):** Scale physical extent/height/radius/kick forces by `self.transition_scale`.
 
 ---
 
-## 5. Resilient Mode Reference Template
+### 5. Shared Authoring Helpers (`Mode` base class)
 
-Copy this pattern when authoring or retrofitting a rhythm-reactive mode:
+| Helper | Use it for |
+| :--- | :--- |
+| `self.rhythm_lock` | Continuous confidence weight in $[0.0, 1.0]$ combining `beat_trust` and `salience`. |
+| `self.beat_pulse(sharpness)` | Confidence-blended beat envelope (Rule 1 in one call), automatically scaled by `self.mood_sharpness`. |
+| `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent` | Cosine-smoothed scene modifiers from `mood/` (`(4,)` `float32`). |
+| `self.drop_hit` | **One-frame** trigger when a drop lands (`ctx.is_drop_impact`). |
+| `self.drop_decay` | Envelope $1 \to 0$ across the drop dwell (`0.0` outside a drop). |
+| `self.dt`, `self.fps_ratio`, `self.alpha(rate_hz)` | Frame time in seconds, ratio relative to 60 Hz reference, and frame-rate independent smoothing $1 - e^{-dt \cdot rate}$. |
+| `self.palette_lut`, `self.palette_sample(t, out)` | `(256, 3)` gradient `primary -> secondary -> accent`, refreshed in place on mood change, and allocation-free sampler. |
+| `self.highlight_color` | Luminance-safe flash/warmth colour (brightest palette slot pushed 40% toward white). **Use instead of `mood_colors[3]` for flashes and `mood_accent` blends.** |
+| `self.segment_phase_offset` | Stable per-segment offset in $[0, 1)$ to stagger identical modes across the chandelier. |
 
-```python
-import numpy as np
-import modes.Mode as Mode
-import utils.rgb_hsv as RGB_HSV
-import utils.colors as colors
+**Never cache views of `self.rgb_list` in `__init__`.** During transitions `Mode.render(buffer=...)` redirects `self.rgb_list` to a different buffer; a cached view keeps writing to the old one. Either slice inside `run()`/`render()`, or cache the views keyed by buffer identity (`if self._view_buf is not self.rgb_list: rebuild`).
 
-class Resilient_beat_mode(Mode.Mode):
-    """
-    Template for a resilient rhythm-reactive mode featuring:
-    1. Zero-allocation vectorized execution.
-    2. Graceful confidence degradation to acoustic volume when lost.
-    3. Real-beat gated kinetic transient triggers.
-    4. Continuous phase-driven smooth decays.
-    """
-
-    def __init__(self, name, segment_name, listener, leds, indexes, rgb_list, infos):
-        super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
-        
-        # Pre-allocated spatial arrays (ZERO runtime allocation)
-        self.spatial_coords = np.linspace(0.0, 1.0, self.nb_of_leds)
-        self.hues = np.full(self.nb_of_leds, 0.6) # Deep blue default
-        self.sats = np.ones(self.nb_of_leds)
-        self.vals = np.zeros(self.nb_of_leds)
-
-    def run(self):
-        # 1. Read rhythmic metrics
-        phase = self.listener.beat_phase
-        confidence = np.clip(self.listener.beat_confidence, 0.0, 1.0)
-        
-        # 2. Compute Rhythmic vs Acoustic energy components
-        # Rhythmic: Punchy exponential decay locked to phase
-        rhythmic_val = (1.0 - phase) ** 2.0
-        
-        # Acoustic Fallback: Smoothed total volume
-        acoustic_val = self.listener.asserved_total_power
-        
-        # 3. Graceful Degradation Blend
-        # When confidence is 1.0 -> 100% sharp beat
-        # When confidence is 0.0 -> 100% smooth acoustic breathing
-        blended_val = (confidence * rhythmic_val) + ((1.0 - confidence) * acoustic_val)
-        
-        # 4. Gated Shockwave / Flash Trigger
-        # Only inject high-energy flash on VERIFIED acoustic beats (no ghost beats during silence)
-        if self.listener.is_beat and self.listener.is_real_beat and confidence > 0.5:
-            # Shift hue slightly on strong real beats
-            self.hues[:] = (self.hues + 0.05) % 1.0
-            flash_boost = 0.3
-        else:
-            flash_boost = 0.0
-
-        # 5. Vectorized Color Synthesis
-        self.vals[:] = np.clip(blended_val + flash_boost, 0.0, 1.0)
-        target_rgb = RGB_HSV.fromHSV_toRGB_vectorized(self.hues, self.sats, self.vals)
-        
-        # 6. Smooth blend into LED buffer
-        self.smooth_segment_vectorized(0.3, 0, self.nb_of_leds - 1, target_rgb)
-```
+**Settings must be read.** Every entry returned by `get_settings_schema()` must be used by the mode outside `__init__`. `tests/test_mode_helpers.py::TestDeadSettingsRatchet` fails on new dead sliders; fix an old one and remove it from `KNOWN_DEAD`.
