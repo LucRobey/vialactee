@@ -1,11 +1,12 @@
 """
 Power Bar Mode
 Classic audio VU peak meter designed for vertical or linear segments.
-Scales peak gravity with fps_ratio = dt * 60.0. Drives height with ctx.energy.
-Tints gradient with ctx.spectral_tilt and active GlobalMoodManager mood_colors.
+Scales peak gravity with fps_ratio and mood_pace. Drives height continuously with
+ctx.energy and self.beat_pulse(), tinting the gradient with ctx.spectral_tilt and mood_accent.
 Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
+import math
 import numpy as np
 import modes.Mode as Mode
 
@@ -17,6 +18,7 @@ class Power_bar_mode(Mode.Mode):
         self.power_height: float = 0.0
         self.white_dot_height: float = 0.0
         self.white_speed: float = float(self.nb_of_leds) / 25.0
+        self.flutter_phase: float = 0.0
 
         # Pre-allocated scratch arrays (ZERO runtime heap allocation)
         self.spatial_coords: np.ndarray = np.linspace(0.0, 1.0, max(1, self.nb_of_leds))[:, None]
@@ -29,32 +31,38 @@ class Power_bar_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
-        dt = getattr(self.listener, "dt", 1.0 / 60.0)
-        fps_ratio = dt * 60.0
+        fps_ratio = self.fps_ratio
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
         tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
+        is_silent = bool(ctx.is_silent if ctx is not None else False)
         mood = self.mood_colors
 
-        # 1. Drive height with ctx.energy
-        target_height = energy * float(self.nb_of_leds - 1)
+        # 1. Drive height with energy, beat_pulse(), and subtle VU flutter when beat is lost
+        self.flutter_phase = (self.flutter_phase + self.dt * 3.2 * self.mood_pace) % (2.0 * math.pi)
+        flutter = 0.0 if is_silent else (1.0 - self.rhythm_lock) * 0.08 * math.sin(self.flutter_phase)
+        drive = float(np.clip((0.60 * energy + 0.40 * self.beat_pulse() + flutter) * self.mood_pace, 0.0, 1.0))
+        target_height = drive * float(self.nb_of_leds - 1) * self.transition_scale
         self.power_height = 0.5 * (self.power_height + target_height)
         self.power_height = float(np.clip(self.power_height, 0.0, self.nb_of_leds - 1))
 
-        # 2. Scale peak gravity with fps_ratio = dt * 60.0
+        # 2. Scale peak gravity with fps_ratio and mood_pace
         if self.power_height >= self.white_dot_height:
             self.white_dot_height = min(float(self.nb_of_leds - 1), self.power_height + 1.0)
         else:
-            self.white_dot_height -= self.white_speed * fps_ratio
+            self.white_dot_height -= (self.white_speed * fps_ratio * self.mood_pace) / max(0.5, self.mood_trail)
             if self.white_dot_height < 0.0:
                 self.white_dot_height = 0.0
 
-        # 3. Tint gradient with ctx.spectral_tilt and mood_colors
+        # 3. Tint gradient with ctx.spectral_tilt, mood_colors, and mood_accent
         tilt_factor = float(np.clip((tilt + 1.0) * 0.5, 0.0, 1.0))
         m0, m1, m2 = mood[0], mood[1], mood[2]
+        hi = self.highlight_color
+        accent = self.mood_accent
         for c in range(3):
-            self.peak_color[c] = (1.0 - tilt_factor) * float(m1[c]) + tilt_factor * float(m2[c])
+            base_peak = (1.0 - tilt_factor) * float(m1[c]) + tilt_factor * float(m2[c])
+            self.peak_color[c] = (1.0 - accent) * base_peak + accent * float(hi[c])
             self.bar_colors[:, c] = (1.0 - self.spatial_coords[:, 0]) * float(m0[c]) + self.spatial_coords[:, 0] * self.peak_color[c]
-        self.dot_color[:] = mood[3]
+        self.dot_color[:] = hi
 
         # 4. Render active bar and peak hold dot
         p_int = int(self.power_height)

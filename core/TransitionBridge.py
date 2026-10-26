@@ -114,7 +114,11 @@ def apply_orders(mode_master: Any, orders: TransitionOrders) -> OrderAck:
         if segment is None or getattr(segment, "isBlocked", False) is True:
             refused.append(order.segment)
             continue
-        cfg = {"type": order.technique, "duration": order.duration}
+        cfg = {
+            "type": order.technique,
+            "duration": order.duration,
+            "mode_handshake": bool(getattr(order, "mode_handshake", True)),
+        }
         if getattr(order, "start_offset", 0.0):
             cfg["start_offset"] = order.start_offset
         if orders.reason in ("drop_impact", "request_drop"):

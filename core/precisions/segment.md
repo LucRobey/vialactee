@@ -75,7 +75,7 @@ flowchart TD
 ## 2. Internal Workflow Explained
 
 ### 1. Dynamic Initialization
-On boot, the segment instantiates every allowed visual pattern (e.g. `Rainbow`, `Matrix Rain`) from the mode registry `config/modes.json` (vertical-only modes are added for vertical segments) and stores them in the `self.modes` dictionary for $O(1)$ instant lookup. The default mode is started immediately. `modes.json` and the segment coordinate layout are parsed **once per process** and shared by all segments (cached by file path and modification time), so creating 11 segments reads each file once.
+On boot, the segment instantiates every allowed visual pattern (e.g. `Rainbow`, `Plasma Fire`) from the mode registry `config/modes.json` (vertical-only modes are added for vertical segments) and stores them in the `self.modes` dictionary for $O(1)$ instant lookup. The default mode is started immediately. `modes.json` and the segment coordinate layout are parsed **once per process** and shared by all segments (cached by file path and modification time), so creating 11 segments reads each file once.
 
 ### 2. Dual Buffering
 The segment owns two $N \times 3$ NumPy matrices (`rgb_list` and `dual_rgb_list`).

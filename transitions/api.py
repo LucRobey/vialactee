@@ -91,6 +91,7 @@ class SegmentOrder:
     duration: float
     direction: Optional[str] = None                # "UP" | "DOWN" | None = leave unchanged
     start_offset: float = 0.0                      # seconds after the common start (0 = together)
+    mode_handshake: bool = False                   # True if transition uses MODE_COOPERATIVE physics
 
 
 @dataclass(frozen=True)
@@ -130,6 +131,35 @@ class TransitionStatus:
     auto_interval: float = 20.0
     technique: Optional[str] = None
     cooldown_remaining: float = 0.0
+    is_pending: bool = False
+
+
+AVAILABLE_TRANSITIONS: Tuple[str, ...] = (
+    "AUTO",
+    "silk_wipe",
+    "silk_wipe_reverse",
+    "iris_open",
+    "iris_close",
+    "zipper_merge",
+    "ember_dissolve",
+    "luma_melt",
+    "breath_dip",
+    "collider",
+    "prism_sweep",
+    "staccato_shutter",
+    "transformer_cut",
+    "flash_cut",
+    "explosion",
+    "vertical_wipe",
+    "wipe_left_to_right",
+    "wipe_right_to_left",
+    "box_wipe",
+    "spiral",
+    "fade_in_out",
+    "gravity_drop",
+    "weird_glitch",
+    "global_change",
+)
 
 
 # =============================================================================
@@ -166,6 +196,7 @@ class TransitionService:
         technique: Optional[str] = None,
         staggered: bool = False,
         stagger_pattern: Optional[Any] = None,
+        duration: Optional[float] = None,
     ) -> None:
         """Ask for the next transition (beat-aligned). Technique None = sector decides."""
         raise NotImplementedError
@@ -217,6 +248,7 @@ def create_transition_service(
 
 
 __all__ = [
+    "AVAILABLE_TRANSITIONS",
     "MusicSnapshot",
     "SegmentDescriptor",
     "InstallationSnapshot",

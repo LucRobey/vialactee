@@ -83,13 +83,14 @@ class DefaultTransitionService(TransitionService):
         technique: Optional[str] = None,
         staggered: bool = False,
         stagger_pattern: Optional[Any] = None,
+        duration: Optional[float] = None,
     ) -> None:
         self._drop_requested = False
         self._reason = "request_next"
         self._director.reset_cooldown()
         self._director.is_pending = True
         self._manager.schedule_transition(
-            transition_config=self._resolve(technique),
+            transition_config=self._resolve(technique, duration),
             quantize_downbeat=True,
             staggered=staggered,
             stagger_pattern=stagger_pattern,
@@ -131,17 +132,29 @@ class DefaultTransitionService(TransitionService):
             auto_interval=float(d.configuration_duration),
             technique=d.transition_type,
             cooldown_remaining=float(d.cooldown_remaining),
+            is_pending=bool(d.is_pending or self._manager._pending_transition is not None),
         )
 
     # --- internals -----------------------------------------------------------
 
-    @staticmethod
-    def _resolve(technique: Optional[str]) -> Optional[Dict[str, Any]]:
-        if technique is None:
-            return None
+    def _resolve(
+        self,
+        technique: Optional[str],
+        duration: Optional[float] = None,
+    ) -> Optional[Dict[str, Any]]:
+        if technique in (None, "", "AUTO"):
+            if duration is None:
+                return None
+            cfg = dict(self._manager.select_transition_technique())
+            cfg["duration"] = max(0.1, float(duration))
+            return cfg
         if technique in TRANSITION_TECHNIQUES:
-            return dict(TRANSITION_TECHNIQUES[technique])
-        return {"type": technique, "duration": 2.0}
+            cfg = dict(TRANSITION_TECHNIQUES[technique])
+        else:
+            cfg = {"type": technique, "duration": 2.0}
+        if duration is not None:
+            cfg["duration"] = max(0.1, float(duration))
+        return cfg
 
     def _drain(self) -> Optional[TransitionOrders]:
         orders = self._manager.pop_orders()

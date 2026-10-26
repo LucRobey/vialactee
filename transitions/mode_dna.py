@@ -118,13 +118,6 @@ MODE_DNA: Dict[str, Dict[str, Any]] = {
         "complexity": 0.55,
         "spatial_role": "both",
     },
-    "Matrix Rain": {
-        "energy": 0.55,
-        "punch": 0.30,
-        "rhythm": 0.45,
-        "complexity": 0.65,
-        "spatial_role": "vertical",
-    },
 
     # High Dynamic / Expressive / Synesthetic Modes
     "Plasma Fire": {
@@ -183,15 +176,6 @@ MODE_DNA: Dict[str, Dict[str, Any]] = {
         "punch": 0.95,
         "rhythm": 0.85,
         "complexity": 0.60,
-        "spatial_role": "both",
-    },
-
-    # Arcade / Special
-    "Alcool Randomer": {
-        "energy": 0.50,
-        "punch": 0.30,
-        "rhythm": 0.30,
-        "complexity": 0.50,
         "spatial_role": "both",
     },
 }

@@ -214,6 +214,74 @@ class TestStagger(unittest.TestCase):
         )
         self.assertEqual(select_stagger_pattern(ctx_enum), StaggerPattern.CENTER_OUT)
 
+    def test_altitude_cascade_down_and_up_patterns(self):
+        rings_with_h00 = [
+            ["Segment h00"],
+            ["Segment h10", "Segment h11"],
+            ["Segment h20"],
+            ["Segment h30", "Segment h31", "Segment h32"],
+        ]
+        all_segs = self.verticals + [s for r in rings_with_h00 for s in r]
+        alloc = {seg: "Rainbow" for seg in all_segs}
+
+        down_cfg = generate_staggered_configs(
+            allocation=alloc,
+            verticals=self.verticals,
+            rings=rings_with_h00,
+            pattern=StaggerPattern.ALTITUDE_CASCADE_DOWN,
+            step_delay=0.15,
+        )
+        # Canopy tier (h30, h00, h20) fires at 0.0, Mid tier (h11, h32) at 0.15, Low tier (h31, h10) at 0.30
+        self.assertAlmostEqual(down_cfg["Segment h30"]["start_offset"], 0.0, places=2)
+        self.assertAlmostEqual(down_cfg["Segment h00"]["start_offset"], 0.0, places=2)
+        self.assertAlmostEqual(down_cfg["Segment h11"]["start_offset"], 0.15, places=2)
+        self.assertAlmostEqual(down_cfg["Segment h31"]["start_offset"], 0.30, places=2)
+
+        up_cfg = generate_staggered_configs(
+            allocation=alloc,
+            verticals=self.verticals,
+            rings=rings_with_h00,
+            pattern=StaggerPattern.ALTITUDE_CASCADE_UP,
+            step_delay=0.15,
+        )
+        # Low tier fires first at 0.0, Canopy tier fires last at 0.30
+        self.assertAlmostEqual(up_cfg["Segment h10"]["start_offset"], 0.0, places=2)
+        self.assertAlmostEqual(up_cfg["Segment h30"]["start_offset"], 0.30, places=2)
+
+    def test_bay_wave_lr_and_rl_patterns(self):
+        rings_with_h00 = [
+            ["Segment h00"],
+            ["Segment h10", "Segment h11"],
+            ["Segment h20"],
+            ["Segment h30", "Segment h31", "Segment h32"],
+        ]
+        all_segs = self.verticals + [s for r in rings_with_h00 for s in r]
+        alloc = {seg: "Rainbow" for seg in all_segs}
+
+        lr_cfg = generate_staggered_configs(
+            allocation=alloc,
+            verticals=self.verticals,
+            rings=rings_with_h00,
+            pattern=StaggerPattern.BAY_WAVE_LR,
+            step_delay=0.10,
+        )
+        # Leftmost h00 fires before v1, which fires before v4
+        self.assertLess(lr_cfg["Segment h00"]["start_offset"], lr_cfg["Segment v1"]["start_offset"])
+        self.assertLess(lr_cfg["Segment v1"]["start_offset"], lr_cfg["Segment v4"]["start_offset"])
+        self.assertEqual(lr_cfg["Segment h00"]["type"], "silk_wipe")
+
+        rl_cfg = generate_staggered_configs(
+            allocation=alloc,
+            verticals=self.verticals,
+            rings=rings_with_h00,
+            pattern=StaggerPattern.BAY_WAVE_RL,
+            step_delay=0.10,
+        )
+        # Rightmost v4 fires before v1, which fires before h00
+        self.assertLess(rl_cfg["Segment v4"]["start_offset"], rl_cfg["Segment v1"]["start_offset"])
+        self.assertLess(rl_cfg["Segment v1"]["start_offset"], rl_cfg["Segment h00"]["start_offset"])
+        self.assertEqual(rl_cfg["Segment h00"]["type"], "silk_wipe_reverse")
+
 
 if __name__ == "__main__":
     unittest.main()

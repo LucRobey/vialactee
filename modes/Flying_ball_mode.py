@@ -1,10 +1,12 @@
 """
 Flying Ball Mode
-A luminous cluster gliding across the strip using spring-damper physics tracking ctx.vertical_center.
-Scales ball radius and glow by ctx.energy and settles in the center during silence.
-Harmonized with GlobalMoodManager mood_colors with zero runtime heap allocations.
+A luminous cluster gliding across the strip using spring-damper physics tracking ctx.vertical_center
+with gentle continuous orbital sway. Scales ball radius and glow by ctx.energy and self.beat_pulse(),
+and settles smoothly in the center during silence.
+Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
+import math
 import numpy as np
 import modes.Mode as Mode
 
@@ -15,6 +17,7 @@ class Flying_ball_mode(Mode.Mode):
 
         self.ball_pos: float = float(self.nb_of_leds / 2.0)
         self.ball_vel: float = 0.0
+        self.glide_phase: float = 0.0
 
         # Pre-allocated scratch arrays (ZERO runtime heap allocation)
         self.indices: np.ndarray = np.arange(self.nb_of_leds, dtype=np.float64)
@@ -28,29 +31,37 @@ class Flying_ball_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
-        dt = getattr(self.listener, "dt", 1.0 / 60.0)
+        dt = self.dt
         is_silent = bool(ctx.is_silent if ctx is not None else False)
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
         v_center = float(ctx.vertical_center if ctx is not None else 0.5)
         mood = self.mood_colors
 
-        # 1. Target Position & Silence Settling
+        # 1. Target Position & Silence / Exit Settling
+        center_pos = float(self.nb_of_leds / 2.0)
         if is_silent:
-            target_pos = float(self.nb_of_leds / 2.0)
+            target_pos = center_pos
         else:
-            target_pos = v_center * float(self.nb_of_leds - 1)
+            self.glide_phase = (self.glide_phase + dt * 2.4 * self.mood_pace) % (2.0 * math.pi)
+            sway = 0.18 * math.sin(self.glide_phase) * (1.0 - 0.4 * self.rhythm_lock)
+            effective_v = float(np.clip(v_center + sway, 0.05, 0.95))
+            raw_target = effective_v * float(self.nb_of_leds - 1)
+            target_pos = (1.0 - self._exit_progress) * raw_target + self._exit_progress * center_pos
 
-        # 2. Spring-Damper Physics
-        stiffness = 14.0
+        # 2. Spring-Damper Physics (nudged by mood_pace)
+        stiffness = 14.0 * self.mood_pace
         damping = 4.5
         accel = stiffness * (target_pos - self.ball_pos) - damping * self.ball_vel
         self.ball_vel += accel * dt
         self.ball_pos += self.ball_vel * dt
         self.ball_pos = float(np.clip(self.ball_pos, 0.0, self.nb_of_leds - 1))
 
-        # 3. Scale Ball Radius and Glow by ctx.energy
-        radius = (1.5 + 3.0 * energy) if not is_silent else 1.0
-        intensity = (0.25 + 0.75 * energy) if not is_silent else 0.06
+        # 3. Scale Ball Radius and Glow by energy, beat_pulse(), and transition_scale
+        t_scale = self.transition_scale
+        pulse = self.beat_pulse()
+        drive = 0.65 * energy + 0.35 * pulse
+        radius = ((1.5 + 3.0 * drive) if not is_silent else 1.0) * (0.4 + 0.6 * t_scale)
+        intensity = ((0.25 + 0.75 * drive) if not is_silent else 0.06) * t_scale
 
         # 4. Vectorized Gaussian Glow calculation
         two_r_sq = 2.0 * (radius ** 2)
@@ -60,14 +71,17 @@ class Flying_ball_mode(Mode.Mode):
         np.exp(self.glow_weights, out=self.glow_weights)
         self.glow_weights *= intensity
 
-        # 5. Color from mood_colors interpolated by v_center
+        # 5. Color from mood_colors interpolated by v_center and warmed by mood_accent
         m0, m2 = mood[0], mood[2]
-        self.ball_color[0] = (1.0 - v_center) * float(m0[0]) + v_center * float(m2[0])
-        self.ball_color[1] = (1.0 - v_center) * float(m0[1]) + v_center * float(m2[1])
-        self.ball_color[2] = (1.0 - v_center) * float(m0[2]) + v_center * float(m2[2])
+        hi = self.highlight_color
+        accent = self.mood_accent
+        for c in range(3):
+            base_c = (1.0 - v_center) * float(m0[c]) + v_center * float(m2[c])
+            self.ball_color[c] = (1.0 - accent) * base_c + accent * float(hi[c])
         np.multiply(self.glow_weights[:, None], self.ball_color, out=self.target_rgb)
         np.clip(self.target_rgb, 0.0, 255.0, out=self.target_rgb)
 
-        # 6. Smooth blend with motion blur trail
-        self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
+        # 6. Smooth blend with motion blur trail (scaled by mood_trail)
+        trail_fade = float(np.clip(0.25 / max(0.5, self.mood_trail), 0.05, 0.65))
+        self.fade_to_black_segment_vectorized(trail_fade, 0, self.nb_of_leds - 1)
         self.smooth_segment_vectorized(0.85, 0, self.nb_of_leds - 1, self.target_rgb)

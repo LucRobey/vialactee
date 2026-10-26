@@ -12,11 +12,11 @@ Rules (enforced by tests/governance/test_mood_isolation.py):
 
 Doors:
   IN : update(dt, scene) every frame, request_palette(), next_palette(), set_auto_scene()
-  OUT: colors() (live read-only (4, 3) int32 view), get_status() (MoodStatus)
+  OUT: colors() (live read-only (4, 3) int32 view), modifiers() (live read-only (4,) float32 view), get_status() (MoodStatus)
 
 Guarantees:
-- AXIOM-01/02: update() mutates the colour buffer in place with zero allocation.
-- colors() always returns the SAME read-only array, so callers may keep it.
+- AXIOM-01/02: update() mutates the colour and modifier buffers in place with zero allocation.
+- colors() and modifiers() always return the SAME read-only arrays, so callers may keep them.
 """
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -41,7 +41,7 @@ class MoodService:
     # --- inputs --------------------------------------------------------------
 
     def update(self, dt: float, scene: Optional[str] = None) -> None:
-        """Advance the crossfade by dt seconds. `scene` (e.g. "BUILDUP") drives auto-mode, if enabled."""
+        """Advance the crossfade by dt seconds. `scene` (e.g. "BUILDUP") drives modifiers and (if enabled) auto-palette."""
         raise NotImplementedError
 
     def request_palette(self, name: str, duration: Optional[float] = None) -> bool:
@@ -60,6 +60,10 @@ class MoodService:
 
     def colors(self) -> np.ndarray:
         """Live blended colours: read-only (4, 3) int32 [primary, secondary, accent, background]."""
+        raise NotImplementedError
+
+    def modifiers(self) -> np.ndarray:
+        """Live blended scene modifiers: read-only (4,) float32 [pace, sharpness, trail, accent_mix]."""
         raise NotImplementedError
 
     def get_status(self) -> MoodStatus:

@@ -1,8 +1,9 @@
 """
 Extending Waves Mode
-Subpixel wave propagation driven by dt * speed(bpm, tension).
-Wave injection on ctx.is_real_beat. Waves implode inward during BUILDUP and explode outward on DROP_IMPACT.
-Harmonized with GlobalMoodManager mood_colors with zero runtime heap allocations.
+Subpixel wave propagation driven by dt * speed(bpm, tension) * mood_pace.
+Wave injection on every rhythmic tempo tick (flywheel listener.is_beat, real beat, or phase wrap).
+Waves always propagate outward from the center with no scene branching.
+Harmonized with the mood sector's mood_colors and mood_modifiers with zero runtime heap allocations.
 """
 from typing import List, Dict, Any
 import numpy as np
@@ -27,7 +28,9 @@ class Extending_waves_mode(Mode.Mode):
         self.wave_slot: int = 0
         self.wave_count: int = 0
         self.time_since_wave: float = 1.0
+        self.prev_phase: float = 0.0
         self.wave_width: float = 2.2
+        self.breath_phase: float = 0.0
 
         # Coordinate and color buffers
         self.half_coords: np.ndarray = np.arange(self.half_len, dtype=np.float32)
@@ -35,36 +38,47 @@ class Extending_waves_mode(Mode.Mode):
         self.wave_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
         self.wave_scratch_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
         self.half_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
+        self.center_falloff: np.ndarray = np.exp(- (self.half_coords ** 2) / 8.0).astype(np.float32)
+        self.glow_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
             return
 
         ctx = getattr(self.listener, "context", None)
-        dt = getattr(self.listener, "dt", 1.0 / 60.0)
-        fps_ratio = dt * 60.0
+        dt = self.dt
+        fps_ratio = self.fps_ratio
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
         mood = self.mood_colors
 
         tension = float(ctx.tension if ctx is not None else 0.0)
-        scene = getattr(ctx, "scene", None)
-        is_buildup = bool(scene == "BUILDUP")
-        drop_prog = float(getattr(ctx, "drop_progress", 0.0))
-        is_drop = bool(ctx.is_drop_impact if ctx is not None else False) or scene == "DROP_IMPACT"
+        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        is_silent = bool(ctx.is_silent if ctx is not None else False) and (energy <= 0.05)
+        lock = self.rhythm_lock
+        phase = float(getattr(self.listener, "beat_phase", 0.0))
+        phase_wrapped = (phase < self.prev_phase) and (self.prev_phase > 0.5) and (not is_silent)
+        self.prev_phase = phase
+
         is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
+        band_flux = getattr(self.listener, "band_flux", None)
+        bass_flux_peak = False
+        if (not is_silent) and (lock < 0.25) and band_flux is not None and len(band_flux) >= 2:
+            bass_flux_peak = float(band_flux[0] + band_flux[1]) > 0.35
+
+        # Flywheel tempo tick: fires once per beat period even when no acoustic transient backs it.
+        is_tick = bool(getattr(self.listener, "is_beat", False)) or is_real or phase_wrapped or bass_flux_peak
 
         self.time_since_wave += dt
 
-        # 1. Subpixel Wave Propagation Speed
+        # 1. Subpixel Wave Propagation Speed (nudged smoothly by mood_pace)
         frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
-        base_speed = (float(self.half_len) / frames_per_beat) * fps_ratio * (1.0 + 0.6 * tension)
-        if is_drop:
-            base_speed *= 2.0
+        base_speed = (float(self.half_len) / frames_per_beat) * fps_ratio * (1.0 + 0.6 * tension) * self.mood_pace
+        damping = (0.035 / max(0.5, self.mood_trail)) * fps_ratio
 
         for w in range(self.MAX_WAVES):
             if self.wave_active[w]:
                 self.wave_positions[w] += self.wave_velocities[w] * base_speed
-                self.wave_amps[w] *= (1.0 - 0.035 * fps_ratio)
+                self.wave_amps[w] *= max(0.0, 1.0 - damping)
 
                 # Boundary checking
                 if self.wave_velocities[w] > 0 and self.wave_positions[w] >= (self.half_len + 2.0):
@@ -74,35 +88,33 @@ class Extending_waves_mode(Mode.Mode):
                 elif self.wave_amps[w] < 0.015:
                     self.wave_active[w] = False
 
-        # 2. Wave Injection: Gated on ctx.is_real_beat, Implode in BUILDUP, Explode on DROP_IMPACT
+        # 2. Wave Injection: one outward wave per rhythmic tempo tick (no scene reversal)
         min_wave_interval = 0.35 * (60.0 / bpm)
-        should_trigger = is_drop or (is_real and self.time_since_wave >= min_wave_interval)
+        seed_wave = self._enter_progress < 0.25 and not bool(np.any(self.wave_active))
+        should_trigger = (
+            ((is_tick and self.time_since_wave >= min_wave_interval) or seed_wave)
+            and self._exit_progress <= 0.40
+        )
 
         if should_trigger:
+            t_scale = self.transition_scale
             self.time_since_wave = 0.0
             slot = self.wave_slot
             self.wave_slot = (self.wave_slot + 1) % self.MAX_WAVES
             self.wave_active[slot] = True
             self.wave_count += 1
-
-            if is_drop:
-                # Explode outward on drop impact
-                self.wave_positions[slot] = 0.0
-                self.wave_velocities[slot] = 2.0
-                self.wave_amps[slot] = 1.0
-                self.wave_colors[slot] = mood[3]
-            elif is_buildup:
-                # Implode inward during buildup
-                self.wave_positions[slot] = float(self.half_len)
-                self.wave_velocities[slot] = -1.0
-                self.wave_amps[slot] = 0.85 + 0.15 * tension
-                self.wave_colors[slot] = mood[2]
+            self.wave_positions[slot] = 0.0
+            self.wave_velocities[slot] = 1.0
+            self.wave_amps[slot] = 0.90 * t_scale
+            base_c = mood[self.wave_count % 3]
+            accent = self.mood_accent
+            if accent > 0.001:
+                hi = self.highlight_color
+                inv_acc = 1.0 - accent
+                for c in range(3):
+                    self.wave_colors[slot, c] = inv_acc * float(base_c[c]) + accent * float(hi[c])
             else:
-                # Normal outward propagation
-                self.wave_positions[slot] = 0.0
-                self.wave_velocities[slot] = 1.0
-                self.wave_amps[slot] = 0.90
-                self.wave_colors[slot] = mood[self.wave_count % 3]
+                self.wave_colors[slot] = base_c
 
         # 3. Synthesize Half-Strip Energy & Colors
         self.half_rgb.fill(0.0)
@@ -120,6 +132,15 @@ class Extending_waves_mode(Mode.Mode):
                 for c in range(3):
                     np.multiply(self.wave_profile, float(col[c]), out=self.wave_scratch_rgb[:, c])
                 np.add(self.half_rgb, self.wave_scratch_rgb, out=self.half_rgb)
+
+        # Gentle acoustic center breathing when flywheel is lost so stalled phase never freezes the strip
+        if (not is_silent) and (lock < 0.5) and not bool(np.any(self.wave_active)):
+            self.breath_phase = (self.breath_phase + dt * 2.4 * self.mood_pace) % 6.2831853
+            breath_amp = (1.0 - 2.0 * lock) * energy * (0.15 + 0.20 * (0.5 + 0.5 * float(np.sin(self.breath_phase))))
+            m0 = mood[0]
+            for c in range(3):
+                np.multiply(self.center_falloff, breath_amp * float(m0[c]), out=self.glow_rgb[:, c])
+            np.add(self.half_rgb, self.glow_rgb, out=self.half_rgb)
 
         np.clip(self.half_rgb, 0.0, 255.0, out=self.half_rgb)
 

@@ -1,9 +1,5 @@
 """
 transitions/engine.py - Spatial and alpha pixel blending routines.
-
-# Note: only fade_in_out, vertical_wipe, and explosion are wired into automatic
-# selection today; the remaining effects are dormant unless passed explicitly
-# via request_next(technique=...).
 """
 import numpy as np
 import logging
@@ -11,6 +7,21 @@ import math
 from typing import Optional
 
 from transitions.assets import spatial_images, load_spatial_images
+from transitions.effects import (
+    ACTIVE_PARAMS,
+    apply_breath_dip,
+    apply_collider,
+    apply_ember_dissolve,
+    apply_flash_cut,
+    apply_iris_transition,
+    apply_luma_melt,
+    apply_prism_sweep,
+    apply_silk_wipe,
+    apply_staccato_shutter,
+    apply_transformer_cut,
+    apply_zipper_merge,
+    set_transition_params,
+)
 
 ROOM_MAX_X = 430
 ROOM_MAX_Y = 246
@@ -57,81 +68,41 @@ def apply_colorful_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, pr
     tier = int(progress * 8)
     
     # 6 intensely saturated colors
-    colors = [
-        [255, 0, 0],   # Red
-        [0, 255, 0],   # Green
-        [0, 0, 255],   # Blue
-        [255, 0, 255], # Magenta
-        [0, 255, 255], # Cyan
-        [255, 255, 0]  # Yellow
-    ]
-    
-    # For every tier, generate blocky geometric tearing across the segment
+    colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 0, 255], [0, 255, 255], [255, 255, 0]]
     block_size = max(1, num_leds // max(1, tier + 2))
     blocks = np.arange(num_leds) // block_size
-    
-    # Create chaotic boolean mask based on the current tier parity
     mask_glitch = (blocks % 2 == tier % 2)
-    
+
     if tier % 2 == 0:
-        # Splash random vivid solid color where mask is active
         color = np.array(colors[tier % len(colors)])
         np.copyto(rgb_list_old, color, where=mask_glitch[:, np.newaxis])
-        
-        # Where mask is false, snap immediately to the incoming mode
         np.copyto(rgb_list_old, rgb_list_new, where=(~mask_glitch)[:, np.newaxis])
     else:
-        # Inverse snap to black or incoming
         np.copyto(rgb_list_old, rgb_list_new, where=mask_glitch[:, np.newaxis])
         np.copyto(rgb_list_old, np.array([0, 0, 0]), where=(~mask_glitch)[:, np.newaxis])
 
+
 def apply_gravity_drop(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
-    """ 
-    Discrete numerical integrator that simulates realistic physical mechanics for multiple bouncing balls.
-    The primary ball (Index 0) defines the wipe boundary and transition states.
-    """
+    """Discrete numerical integrator for multiple bouncing balls; primary ball defines the wipe boundary."""
     progress = max(0.0, min(1.0, progress))
     if progress <= 0.0: return
     if progress >= 1.0:
         np.copyto(rgb_list_old, rgb_list_new)
         return
-        
+
     H = float(ROOM_MAX_Y)
-    
-    # --- Tunable Physics Constraints --- #
-    g = TRANSITION_DEFAULTS["g"]  # Gravity (downward acceleration mapping)
-    e = TRANSITION_DEFAULTS["e"]    # Coefficient of restitution (Bounciness)
-    dt = TRANSITION_DEFAULTS["dt"]  # Integration step size
-    
-    # Define deterministically spaced beautiful balls
-    base_colors = [
-        [255, 0, 50], [0, 200, 255], [150, 0, 255], [255, 200, 0],
-        [50, 255, 50], [255, 100, 0]
-    ]
+    g, e, dt = TRANSITION_DEFAULTS["g"], TRANSITION_DEFAULTS["e"], TRANSITION_DEFAULTS["dt"]
+    base_colors = [[255, 0, 50], [0, 200, 255], [150, 0, 255], [255, 200, 0], [50, 255, 50], [255, 100, 0]]
     balls = []
-    for i in range(len(base_colors)):
+    for i, c in enumerate(base_colors):
         if i == 0:
-            # Primary ball remains fully grounded to dictate transition correctly
-            balls.append({
-                "color": np.array(base_colors[i], dtype=np.int32), 
-                "delay": 0.0, 
-                "v0": 50.0,
-                "size_mult": 1.0
-            })
+            balls.append({"color": np.array(c, dtype=np.int32), "delay": 0.0, "v0": 50.0, "size_mult": 1.0})
         else:
-            delay = 0.04 * i
-            
-            # Deterministic pseudo-random generation based on index to ensure NO visual jitter across frames
-            # Velocity constrained from 0 to 100 using sine wave amplitude extraction
-            pseudo_v0 = abs(np.sin(i * 4.56)) * 100.0  
-            # Size constrained dynamically from 30% to 150% of base radius
-            pseudo_size = 0.3 + abs(np.cos(i * 7.89)) * 1.2
-            
             balls.append({
-                "color": np.array(base_colors[i], dtype=np.int32), 
-                "delay": delay, 
-                "v0": pseudo_v0,
-                "size_mult": pseudo_size
+                "color": np.array(c, dtype=np.int32),
+                "delay": 0.04 * i,
+                "v0": abs(np.sin(i * 4.56)) * 100.0,
+                "size_mult": 0.3 + abs(np.cos(i * 7.89)) * 1.2,
             })
     
     ball_results = []
@@ -221,11 +192,13 @@ def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coord
     bx = coords[:, 0] // block_size_x
     by = coords[:, 1] // block_size_y
     
-    # Pseudo-random hash per block
-    block_hash = ((bx * 373 + by * 113) % 100) / 100.0
+    # Pseudo-random hash per block, permuted by active seed
+    seed = float(ACTIVE_PARAMS.get("seed", 0.0))
+    block_hash = np.mod(((bx * 373 + by * 113) % 100) / 100.0 + seed, 1.0)
     
-    # Outbreak mechanic: calculate distance from an epicenter (center of room)
-    cx, cy = ROOM_MAX_X / 2.0, ROOM_MAX_Y / 2.0
+    # Outbreak mechanic: calculate distance from the active 2D room epicenter
+    cx = ROOM_MAX_X * float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
+    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
     dist_scale = max(1.0, max(ROOM_MAX_X, ROOM_MAX_Y) * 1.5)
     dist_norm = np.sqrt((bx * block_size_x - cx)**2 + (by * block_size_y - cy)**2) / dist_scale
     dist_norm = np.clip(dist_norm, 0.0, 1.0)
@@ -246,12 +219,9 @@ def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coord
     
     # 2. Process actively glitching blocks
     if np.any(mask_glitching):
-        # Flicker calculates ultra-fast noise per individual pixel (not block!) 
         flicker_noise = np.sin(progress * 500.0 + coords[:, 0][mask_glitching] * 19.0 + coords[:, 1][mask_glitching] * 23.0)
-        
         glitch_colors = rgb_list_old[mask_glitching].copy()
         
-        # Sub-behaviors inside the glitch noise
         mask_white = flicker_noise > 0.8
         mask_black = flicker_noise < -0.8
         mask_peek = (flicker_noise > 0.4) & (flicker_noise <= 0.8)
@@ -270,96 +240,74 @@ def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coord
         synth_colors[color_mod == 2] = [255, 255, 0] # Yellow
         
         glitch_colors[mask_color] = synth_colors[mask_color]
-        
         rgb_list_old[mask_glitching] = glitch_colors
 
 def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
-    """ Concentric inwards falling rings accelerating to a blackout, then violently expelling bright branching beams. """
+    """Concentric inward-collapsing rings to a brief blackout, then a radial shockwave explosion."""
     progress = max(0.0, min(1.0, progress))
     if progress <= 0.0: return
     if progress >= 1.0:
         np.copyto(rgb_list_old, rgb_list_new)
         return
-        
-    cx, cy = ROOM_MAX_X / 2.0, ROOM_MAX_Y / 2.0
+
+    cx = ROOM_MAX_X * float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
+    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
     dx = coords[:, 0] - cx
     dy = coords[:, 1] - cy
     dist = np.sqrt(dx**2 + dy**2)
     angle = np.arctan2(dy, dx)
-    max_dist = max(ROOM_MAX_X, ROOM_MAX_Y) * 1.5
-    
-    # Timing assumes a ~5.0s total transition (3.9s implosion, 0.1s pitch black, 1.0s explosion)
-    t_implode = 0.78 
-    t_blackout = 0.80
-    
+    max_radius = float(math.hypot(max(cx, ROOM_MAX_X - cx), max(cy, ROOM_MAX_Y - cy)))
+    max_radius = max(120.0, max_radius)
+
+    t_implode = 0.52
+    t_blackout = 0.60
+
     if progress < t_implode:
-        # --- PHASE 1: CONCENTRATION (Concentric shrinking rings) ---
+        # --- PHASE 1: CONCENTRATION (Shrinking horizon + inward rings collapsing to center) ---
         p1 = progress / t_implode
-        
-        # Sucks energy entirely from background mode, ending in blackness before the actual blackout begins
-        darken_factor = max(0.0, 1.0 - (p1 * 1.5))
+        implode_horizon = max_radius * (1.05 - 0.92 * (p1 ** 1.35))
+        darken_factor = max(0.0, 1.0 - (p1 * 1.4))
         np.multiply(rgb_list_old, darken_factor, out=rgb_list_old, casting="unsafe")
-        
-        # Exponentially accelerating timing mapped for rings (the 'more and more' frantic pull)
-        time_mapped = (p1 ** 2.5) * 100.0
-        
-        # Gravity well mapping: rings are packed much tighter together near the active center
-        dist_warp = dist ** 0.8
-        rings = np.cos(dist_warp * 0.12 + time_mapped)
-        
-        mask_energy = rings > 0.85
-        white_blue = np.array([200, 230, 255], dtype=np.int32)
-        
+        rgb_list_old[dist > implode_horizon] = 0
+
+        time_mapped = (p1 ** 2.2) * 55.0
+        dist_warp = dist ** 0.82
+        rings = np.cos(dist_warp * 0.14 + time_mapped)
+
+        mask_energy = (rings > 0.78) & (dist <= implode_horizon)
         if np.any(mask_energy):
-            rgb_list_old[mask_energy] = white_blue
-            
+            rgb_list_old[mask_energy] = [200, 230, 255]
+        core_mask = dist < max(18.0, max_radius * 0.12 * (1.0 - 0.5 * p1))
+        if np.any(core_mask):
+            rgb_list_old[core_mask] = [255, 255, 255]
+
     elif progress < t_blackout:
-        # --- PHASE 2: BLACKOUT ---
-        # Absolutely zero energy for a split second (0.1s in a 5s duration)
+        # --- PHASE 2: COMPRESSION BLACKOUT ---
         rgb_list_old.fill(0)
-        
+
     else:
-        # --- PHASE 3: EXPLOSION ---
+        # --- PHASE 3: RADIAL SHOCKWAVE EXPLOSION ---
         p2 = (progress - t_blackout) / (1.0 - t_blackout)
-        
-        # Generate entirely new high-density sharp branching beam patterns based purely on angle
-        beam_raw1 = np.sin(angle * 24.0)
-        beam_raw2 = np.sin(angle * 37.0 + 1.4)
-        
-        # By clipping heavily strictly to positive bounds and using extreme powers, we calculate piercing 'spokes' geometry
-        beam_shape = (np.clip(beam_raw1, 0, 1)**6) * 1.0 + (np.clip(beam_raw2, 0, 1)**4) * 0.8
-        
-        # Rapid foundational spherical wave expansion
-        base_expansion = max_dist * 1.5 * (p2 ** 0.7) 
-        
-        # Geometrically blast outward where the angular beam_shape spikes exist
-        jagged_radius = base_expansion * (1.0 + beam_shape * 6.0)
-        
+        beam_raw1 = np.sin(angle * 12.0)
+        beam_raw2 = np.sin(angle * 19.0 + 1.4)
+        beam_shape = (np.clip(beam_raw1, 0, 1) ** 3) * 0.22 + (np.clip(beam_raw2, 0, 1) ** 2) * 0.18
+        front_depth = max(65.0, max_radius * 0.28)
+        base_expansion = (max_radius + front_depth) * (p2 ** 0.85)
+        jagged_radius = base_expansion * (0.88 + beam_shape)
+
         mask_swallowed = dist < jagged_radius
-        
-        # Before copying the new mode, maintain the absolute structural blackness for regions the blast has naturally not yet reached!
         rgb_list_old.fill(0)
-        
-        # Inject the loaded final mode completely underneath the explosion
         np.copyto(rgb_list_old, rgb_list_new, where=mask_swallowed[:, np.newaxis])
-        
-        # Synthesize ultra-hot blasting glowing fronts overlaying the perimeter of the jag bounds
+
         dist_from_front = jagged_radius - dist
-        front_depth = 250.0  # thick aggressive bleeding streaks!
-        
         mask_blast = (dist_from_front > 0) & (dist_from_front < front_depth)
-        
+
         if np.any(mask_blast):
-            # Alpha gradient linearly dropping behind the wavefront
             edge_intensity = 1.0 - (dist_from_front[mask_blast] / front_depth)
-            
-            # Entire atmospheric explosion extinguishes itself organically as p2 scales -> 1.0
-            global_energy = 1.0 - (p2 ** 1.5)
-            fire_alpha = (edge_intensity * global_energy)[:, np.newaxis]
-            
+            global_energy = 1.0 - (p2 ** 1.6)
+            fire_alpha = np.clip(edge_intensity * global_energy * 1.25, 0.0, 1.0)[:, np.newaxis]
             base_color = rgb_list_old[mask_blast]
             blast_color = np.array([255, 255, 255], dtype=np.int32)
-            
             blended = (base_color * (1.0 - fire_alpha) + blast_color * fire_alpha).astype(np.int32)
             rgb_list_old[mask_blast] = blended
 
@@ -410,31 +358,52 @@ def apply_vertical_wipe(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coor
 
 
 def apply_box_wipe(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, beam_thickness: float = 0.04) -> None:
-    """ Sweeps outwards from the geometric center of the installation in a rectangular frame. """
+    """ Sweeps outwards from the active 2D room epicenter in a rectangular frame. """
     progress = max(0.0, min(1.0, float(progress)))
     if progress <= 0.0: return
     if progress >= 1.0:
         np.copyto(rgb_list_old, rgb_list_new)
         return
 
-    cx = ROOM_MAX_X / 2.0
-    cy = ROOM_MAX_Y / 2.0
-    dist = np.maximum(np.abs(coords[:, 0] - cx) / max(1.0, cx), np.abs(coords[:, 1] - cy) / max(1.0, cy))
+    cx = ROOM_MAX_X * float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
+    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
+    span_x = max(cx, ROOM_MAX_X - cx, 1.0)
+    span_y = max(cy, ROOM_MAX_Y - cy, 1.0)
+    dist = np.maximum(np.abs(coords[:, 0] - cx) / span_x, np.abs(coords[:, 1] - cy) / span_y)
     _apply_field_wipe(rgb_list_old, rgb_list_new, dist, progress, beam_thickness)
 
 
 def apply_spiral_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, beam_thickness: float = 0.04) -> None:
-    """ Radial clock wipe pivoting around the installation center. """
+    """ Radial clock wipe pivoting around the active 2D room epicenter. """
     progress = max(0.0, min(1.0, float(progress)))
     if progress <= 0.0: return
     if progress >= 1.0:
         np.copyto(rgb_list_old, rgb_list_new)
         return
 
-    cx = ROOM_MAX_X / 2.0
-    cy = ROOM_MAX_Y / 2.0
+    cx = ROOM_MAX_X * float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
+    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
     angles = (np.arctan2(coords[:, 1] - cy, coords[:, 0] - cx) + np.pi) / (2.0 * np.pi)
+    if float(ACTIVE_PARAMS.get("spiral_sign", 1.0)) < 0.0:
+        angles = 1.0 - angles
     _apply_field_wipe(rgb_list_old, rgb_list_new, angles, progress, beam_thickness)
+
+
+_STRIP_HANDLERS = {
+    "ember_dissolve": apply_ember_dissolve,
+    "luma_melt": apply_luma_melt,
+    "breath_dip": apply_breath_dip,
+    "silk_wipe": lambda o, n, p: apply_silk_wipe(o, n, p, reverse=False),
+    "silk_wipe_reverse": lambda o, n, p: apply_silk_wipe(o, n, p, reverse=True),
+    "iris_open": lambda o, n, p: apply_iris_transition(o, n, p, close_in=False),
+    "iris_close": lambda o, n, p: apply_iris_transition(o, n, p, close_in=True),
+    "zipper_merge": apply_zipper_merge,
+    "collider": apply_collider,
+    "prism_sweep": apply_prism_sweep,
+    "flash_cut": apply_flash_cut,
+    "staccato_shutter": apply_staccato_shutter,
+    "transformer_cut": apply_transformer_cut,
+}
 
 
 def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float, transition_name: str, coords: Optional[np.ndarray] = None, beam_thickness: float = 0.04) -> None:
@@ -443,6 +412,8 @@ def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progres
     """
     if transition_name in ("fade_to_black", "fade_in_out", "smooth_cosine_crossfade", "cosine_fade"):
         apply_dual_fade(rgb_list_old, rgb_list_new, progress)
+    elif transition_name in _STRIP_HANDLERS:
+        _STRIP_HANDLERS[transition_name](rgb_list_old, rgb_list_new, progress)
     elif transition_name == "global_change":
         apply_colorful_glitch(rgb_list_old, rgb_list_new, progress)
     elif coords is None:

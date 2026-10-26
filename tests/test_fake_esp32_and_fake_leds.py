@@ -177,6 +177,35 @@ class TestFakeLedsAndFakeESP32(unittest.TestCase):
         self.assertEqual(self.visualizer.segment_modes.get("segment_v3", {}).get("mode"), "Aurora")
         self.assertEqual(self.visualizer._analyzer_data.get("bpm"), 130.0)
 
+    def test_fake_esp32_transition_tester_ui_and_metadata(self):
+        """Verify Transition Tester UI selection, duration adjustment, request dispatch, and UDP status draining."""
+        trans_payload = json.dumps({
+            "type": "transition_state",
+            "is_in_transition": True,
+            "is_pending": False,
+            "progress": 0.42,
+            "technique": "silk_wipe",
+        }).encode("utf-8")
+
+        mock_meta = MagicMock()
+        mock_meta.recvfrom.side_effect = [
+            (trans_payload, ("127.0.0.1", 9003)),
+            BlockingIOError(),
+        ]
+        Fake_ESP32.drain_metadata_packets(mock_meta, self.visualizer)
+        self.assertEqual(self.visualizer._transition_data.get("technique"), "silk_wipe")
+        self.assertAlmostEqual(self.visualizer._transition_data.get("progress"), 0.42)
+
+        # Test stepping transition and duration in HUD
+        hud = self.visualizer.hud
+        hud.selected_idx = 0
+        hud.selected_duration = 1.2
+        hud.step_transition(1)
+        self.assertEqual(hud.selected_transition, "silk_wipe")
+        hud.adjust_duration(0.5)
+        self.assertAlmostEqual(hud.selected_duration, 1.7)
+
+
     def test_fake_esp32_timer_period_calls(self):
         """Verify Fake_ESP32.main calls timeBeginPeriod(1) and timeEndPeriod(1) on Windows."""
         with patch("sys.platform", "win32"):

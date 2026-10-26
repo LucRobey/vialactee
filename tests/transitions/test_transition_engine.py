@@ -82,19 +82,19 @@ class TestTransitionEngine(unittest.TestCase):
         TE.apply_explosion(old, self.new_rgb, self.coords, progress=1.0)
         np.testing.assert_array_equal(old, self.new_rgb)
 
-        # Implosion phase (progress < 0.78)
+        # Implosion phase (progress < 0.52)
         old = self.old_rgb.copy()
         TE.apply_explosion(old, self.new_rgb, self.coords, progress=0.3)
         self.assertEqual(old.shape, (self.num_leds, 3))
 
-        # Blackout phase (0.78 <= progress < 0.80)
+        # Blackout phase (0.52 <= progress < 0.60)
         old = self.old_rgb.copy()
-        TE.apply_explosion(old, self.new_rgb, self.coords, progress=0.79)
+        TE.apply_explosion(old, self.new_rgb, self.coords, progress=0.56)
         np.testing.assert_array_equal(old, np.zeros_like(old))
 
-        # Explosion phase (progress >= 0.80)
+        # Explosion phase (progress >= 0.60)
         old = self.old_rgb.copy()
-        TE.apply_explosion(old, self.new_rgb, self.coords, progress=0.9)
+        TE.apply_explosion(old, self.new_rgb, self.coords, progress=0.8)
         self.assertEqual(old.shape, (self.num_leds, 3))
 
     def test_apply_horizontal_wipe(self):
@@ -188,6 +188,19 @@ class TestTransitionEngine(unittest.TestCase):
             "gravity_drop",
             "weird_glitch",
             "explosion",
+            "ember_dissolve",
+            "luma_melt",
+            "breath_dip",
+            "silk_wipe",
+            "silk_wipe_reverse",
+            "iris_open",
+            "iris_close",
+            "zipper_merge",
+            "collider",
+            "prism_sweep",
+            "flash_cut",
+            "staccato_shutter",
+            "transformer_cut",
             "non_existent_transition",  # Graceful fallback test
         ]
         for trans in all_transitions:
@@ -195,6 +208,41 @@ class TestTransitionEngine(unittest.TestCase):
                 old = self.old_rgb.copy()
                 TE.apply_transition(old, self.new_rgb, progress=0.5, transition_name=trans, coords=self.coords)
                 self.assertEqual(old.shape, (self.num_leds, 3))
+                self.assertTrue(np.all(old >= 0) and np.all(old <= 255))
+
+    def test_new_strip_intrinsic_transitions_endpoints_and_midpoint(self):
+        """Every new transition must preserve old_rgb at progress=0.0, reach new_rgb at progress=1.0, and mutate in-place at 0.5."""
+        new_transitions = [
+            "ember_dissolve",
+            "luma_melt",
+            "breath_dip",
+            "silk_wipe",
+            "silk_wipe_reverse",
+            "iris_open",
+            "iris_close",
+            "zipper_merge",
+            "collider",
+            "prism_sweep",
+            "flash_cut",
+            "staccato_shutter",
+            "transformer_cut",
+        ]
+        for trans in new_transitions:
+            with self.subTest(transition=trans):
+                buf0 = self.old_rgb.copy()
+                TE.apply_transition(buf0, self.new_rgb, progress=0.0, transition_name=trans, coords=None)
+                np.testing.assert_array_equal(buf0, self.old_rgb)
+
+                buf1 = self.old_rgb.copy()
+                TE.apply_transition(buf1, self.new_rgb, progress=1.0, transition_name=trans, coords=None)
+                np.testing.assert_array_equal(buf1, self.new_rgb)
+
+                buf_mid = self.old_rgb.copy()
+                buf_id = id(buf_mid)
+                TE.apply_transition(buf_mid, self.new_rgb, progress=0.5, transition_name=trans, coords=None)
+                self.assertEqual(id(buf_mid), buf_id)
+                self.assertEqual(buf_mid.shape, (self.num_leds, 3))
+                self.assertTrue(np.all(buf_mid >= 0) and np.all(buf_mid <= 255))
 
     def test_apply_transition_missing_coords_fallback(self):
         """When coords=None, spatial transitions must safely fall back to dual fade."""

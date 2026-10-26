@@ -6,8 +6,7 @@ The `modes` directory contains the creative visual algorithms for the chandelier
 
 - **`Mode.py`**: The base class for all visual effects. It provides shared utility functions, vectorized numpy matrix operations (`self.rgb_list`), decay smoothing (`self.smooth_segment_vectorized`), and enforces the execution contract with `Mode_master`.
 - **[`MODE_RULES.md`](./MODE_RULES.md)**: **Mandatory rules and architectural guidelines** for rhythm reactivity, graceful confidence degradation, real-beat gating (`is_real_beat`), and acoustic volume fallbacks when the beat tracker is uncertain.
-- **Active Modes**: Registered in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json) (22 modes mounted at runtime and switchable from the web interface).
-- **Unmounted Game Modes**: Implemented modes in `modes/` that are unmounted from `config/modes.json` (`Alcool_randomer.py`).
+- **Active Modes**: Registered in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json) (21 modes mounted at runtime and switchable from the web interface).
 
 ---
 
@@ -62,7 +61,6 @@ def get_settings_schema(self):
 | `Metronome_mode.py` | `metronome_brightness` | float | `1.0` | Master brightness multiplier |
 | | `metronome_alternate_sub_beats` | bool | `True` | Alternate white (downbeat) and blue (sub-beat) |
 | | `metronome_accent_color` | str | `"blue"` | Sub-beat accent color |
-| `Matrix_rain_mode.py` | `rain_flux_threshold` | float | `0.5` | Threshold to spawn new raindrops |
 | | `rain_fade_ratio` | float | `0.15` | Drop trail persistence |
 | | `rain_listen_band` | int | `-1` | Frequency band triggering drops (-1 = treble) |
 | `Plasma_fire_mode.py` | `fire_fade_ratio` | float | `0.3` | Flame decay rate |
@@ -74,9 +72,6 @@ def get_settings_schema(self):
 | | `stars_iteration_wait` | int | `30` | Cool-down frames between star spawns |
 | `Synesthesia_mode.py` | `synesthesia_fade_ratio`| float | `0.2` | Color transition smoothing |
 | | `synesthesia_brightness`| float | `1.0` | Output brightness multiplier |
-| `Alcool_randomer.py` *(dormant)* | `shot_base_speed` | float | `nb_leds / 40` | Initial launch speed |
-| | `shot_max_speed` | float | `4 * base` | Terminal cruising velocity |
-| | `shot_fade_ratio` | float | `0.4` | Trail decay rate |
 
 ---
 

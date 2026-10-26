@@ -2,8 +2,8 @@
 Proportion Rainbow Mode
 Full rainbow gradient spanning the strip whose color regions scale with FFT band energy.
 Pre-allocates cumulative hue scratch buffers in __init__ (zero heap allocations).
-Modulates brightness and saturation with ctx.energy: gentle breathing in CHILL, punchy in GROOVE.
-Fades to black in silence. Harmonized with GlobalMoodManager mood_colors.
+Modulates brightness and saturation continuously with ctx.energy and self.beat_pulse()
+without branching on ctx.scene. Fades to black in silence.
 """
 from typing import List, Dict, Any
 import numpy as np
@@ -48,28 +48,21 @@ class Proportion_rainbow_mode(Mode.Mode):
             self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
             return
 
-        phase = float(getattr(self.listener, "beat_phase", 0.0))
-        scene = getattr(ctx, "scene", None)
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        pulse = self.beat_pulse(2.0)
 
-        # 2. Gentle breathing in CHILL, punchy in GROOVE
-        if scene == "CHILL":
-            sine_breath = 0.5 * (1.0 + np.sin(2.0 * np.pi * phase - (np.pi / 2.0)))
-            val = float(np.clip((0.15 + 0.45 * energy) * (0.7 + 0.3 * sine_breath), 0.0, 1.0))
-            sat = float(np.clip(0.55 + 0.35 * energy, 0.0, 1.0))
-        else:
-            decay = (1.0 - phase) ** 2.0
-            val = float(np.clip(0.30 * energy + 0.70 * (energy * decay), 0.0, 1.0))
-            sat = float(np.clip(0.70 + 0.30 * energy, 0.0, 1.0))
+        # 2. Continuous confidence-blended brightness & saturation (no scene branching)
+        val = float(np.clip(0.35 * energy + 0.65 * pulse, 0.0, 1.0))
+        sat = float(np.clip(0.68 + 0.32 * energy - 0.25 * self.mood_accent, 0.40, 1.0))
 
         # 3. FFT Band Proportions
         delayed_bands = getattr(self.listener, "_delayed_asserved_fft_band", None)
         if delayed_bands is None or len(delayed_bands) < self.nb_bands:
             delayed_bands = getattr(self.listener, "asserved_fft_band", None)
         if delayed_bands is None or len(delayed_bands) < self.nb_bands:
-            delayed_bands = np.zeros(self.nb_bands)
-
-        self.fft_bands_array[:] = delayed_bands[:self.nb_bands]
+            self.fft_bands_array.fill(0.0)
+        else:
+            self.fft_bands_array[:] = delayed_bands[:self.nb_bands]
 
         sum_dhue = ((self.N + 1) / 2.0) * (self.fft_bands_array[0] + self.fft_bands_array[-1]) + self.N * float(np.sum(self.fft_bands_array[1:-1]))
         if sum_dhue < 1e-4:

@@ -1,9 +1,9 @@
 """
 Chromatic Chaser Mode
 Concentrated laser head sweeping across the strip leaving an exponential decay trail.
-Replaces the python loop with precomputed ctx.vertical_center.
-Synchronizes chaser speed to listener.bpm with ctx.tension acceleration.
-Harmonized with GlobalMoodManager mood_colors with zero runtime heap allocations.
+Synchronizes chaser speed to listener.bpm, ctx.tension, and mood_pace, while scaling trail
+persistence with mood_trail and color warmth with mood_accent.
+Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
 import numpy as np
@@ -61,16 +61,15 @@ class Chromatic_chaser_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
-        dt = getattr(self.listener, "dt", 1.0 / 60.0)
-        fps_ratio = dt * 60.0
+        fps_ratio = self.fps_ratio
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
         tension = float(ctx.tension if ctx is not None else 0.0)
         v_center = float(ctx.vertical_center if ctx is not None else 0.5)
         mood = self.mood_colors
 
-        # 1. Synchronize chaser speed to listener.bpm with ctx.tension acceleration
-        bpm_factor = bpm / 120.0
-        effective_speed = self.speed * bpm_factor * (1.0 + 0.75 * tension) * fps_ratio
+        # 1. Synchronize chaser speed to listener.bpm (gated by rhythm_lock), tension, and mood_pace
+        bpm_factor = 1.0 + self.rhythm_lock * ((bpm / 120.0) - 1.0)
+        effective_speed = self.speed * bpm_factor * (1.0 + 0.55 * tension) * self.mood_pace * fps_ratio
         self.position += effective_speed * self.direction
 
         if self.bounce_enabled:
@@ -87,19 +86,16 @@ class Chromatic_chaser_mode(Mode.Mode):
                 self.position = float(self.nb_of_leds - 1)
             self.direction = 1
 
-        # 2. Derive color directly from ctx.vertical_center and mood_colors (no python loop)
+        # 2. Derive color from vertical_center, mood_colors, and mood_accent
         m0, m2 = mood[0], mood[2]
-        self.head_color[0] = (1.0 - v_center) * float(m0[0]) + v_center * float(m2[0])
-        self.head_color[1] = (1.0 - v_center) * float(m0[1]) + v_center * float(m2[1])
-        self.head_color[2] = (1.0 - v_center) * float(m0[2]) + v_center * float(m2[2])
-        if tension > 0.4:
-            t_white = (tension - 0.4) * 0.7
-            m3 = mood[3]
-            self.head_color[0] = (1.0 - t_white) * self.head_color[0] + t_white * float(m3[0])
-            self.head_color[1] = (1.0 - t_white) * self.head_color[1] + t_white * float(m3[1])
-            self.head_color[2] = (1.0 - t_white) * self.head_color[2] + t_white * float(m3[2])
+        hi = self.highlight_color
+        warmth = min(1.0, max(0.0, (tension - 0.35) * 0.5) + self.mood_accent)
+        for c in range(3):
+            base_c = (1.0 - v_center) * float(m0[c]) + v_center * float(m2[c])
+            self.head_color[c] = (1.0 - warmth) * base_c + warmth * float(hi[c])
 
-        # 3. Paint the head and fade the tail
+        # 3. Paint the head and fade the tail (scaled by mood_trail)
         head_idx = int(np.clip(self.position, 0, self.nb_of_leds - 1))
         self.smooth_segment_vectorized(1.0, head_idx, head_idx, self.head_color)
-        self.fade_to_black_segment_vectorized(self.fade_ratio, 0, self.nb_of_leds - 1)
+        effective_fade = float(np.clip(self.fade_ratio / max(0.5, self.mood_trail), 0.005, 0.60))
+        self.fade_to_black_segment_vectorized(effective_fade, 0, self.nb_of_leds - 1)

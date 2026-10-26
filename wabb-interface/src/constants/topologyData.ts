@@ -27,7 +27,7 @@ export const relativeTopology: TopologySegment[] = [
   { id: "h32", name: "segment_h32", col: 38, row: -3, w: 6, h: 2, color: '#ff3232', orientation: 'horizontal', mode: 'Hyper Strobe', direction: 'UP' },
   { id: "h31", name: "segment_h31", col: 38, row: 7, w: 6, h: 2, color: '#ff00ff', orientation: 'horizontal', mode: 'Rainbow', direction: 'UP' },
   { id: "h30", name: "segment_h30", col: 38, row: 16, w: 6, h: 2, color: '#969696', orientation: 'horizontal', mode: 'Shining Stars', direction: 'UP' },
-  { id: "v3", name: "segment_v3", col: 38, row: -1, w: 2, h: 18, color: '#00ffff', orientation: 'vertical', mode: 'Matrix Rain', direction: 'UP' },
+  { id: "v3", name: "segment_v3", col: 38, row: -1, w: 2, h: 18, color: '#00ffff', orientation: 'vertical', mode: 'Power Bar', direction: 'UP' },
   { id: "h20", name: "segment_h20", col: 29, row: 4, w: 10, h: 2, color: '#96ff96', orientation: 'horizontal', mode: 'Synesthesia', direction: 'UP' },
   { id: "h00", name: "segment_h00", col: 0, row: -1, w: 22, h: 2, color: '#0000ff', orientation: 'horizontal', mode: 'Coloured Middle Wave', direction: 'UP' },
   // Strip 1

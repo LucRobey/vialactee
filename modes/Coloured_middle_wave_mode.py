@@ -2,8 +2,8 @@
 Coloured Middle Wave Mode
 Divides the strip symmetrically from the center outwards into frequency band sections.
 Pre-allocates all scratch arrays in __init__ for zero-allocation performance.
-Modulates center expansion with ctx.energy and ctx.spectral_tilt.
-Harmonized with GlobalMoodManager mood_colors.
+Modulates center expansion with ctx.energy, self.beat_pulse(), ctx.spectral_tilt, and mood_pace.
+Harmonized with the mood sector's mood_colors and mood_accent.
 """
 from typing import List, Dict, Any
 import numpy as np
@@ -35,16 +35,20 @@ class Coloured_middle_wave_mode(Mode.Mode):
         self.target_half_int: np.ndarray = np.zeros((self.half_len, 3), dtype=np.int32)
         self._fallback_bands: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
 
+        # NOTE: views of self.rgb_list are cached keyed by buffer IDENTITY (see run()). Never cache a
+        # view without that check: Mode.render() redirects self.rgb_list to a different buffer during
+        # transitions, and a stale view would keep writing into the old one.
+        self._view_buf = None
+        self._view_r = None
+        self._view_l = None
         self.right_start = self.middle
         self.right_end = min(self.nb_of_leds - 1, self.middle + self.half_len - 1)
         self.right_len = max(0, self.right_end - self.right_start + 1)
-        self.view_r = self.rgb_list[self.right_start:self.right_end + 1] if self.right_len > 0 else None
         self.target_sub_r = self.target_half_int[:self.right_len] if self.right_len > 0 else None
 
         self.left_end = self.middle - 1
         self.left_start = max(0, self.middle - self.half_len + 1)
         self.left_len = max(0, self.left_end - self.left_start + 1)
-        self.view_l = self.rgb_list[self.left_start:self.left_end + 1] if self.left_len > 0 else None
         self.target_sub_l = self.target_half_int[self.left_len:0:-1] if self.left_len > 0 else None
 
     def run(self) -> None:
@@ -56,8 +60,9 @@ class Coloured_middle_wave_mode(Mode.Mode):
         tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
         mood = self.mood_colors
 
-        # 1. Modulate center expansion with ctx.energy and ctx.spectral_tilt (pure scalar, no numpy wrapper)
-        raw_exp = 0.5 + 0.7 * energy - 0.3 * tilt
+        # 1. Modulate center expansion with energy, beat_pulse(), spectral_tilt, and mood_pace
+        pulse = self.beat_pulse()
+        raw_exp = (0.45 + 0.50 * energy + 0.25 * pulse - 0.30 * tilt) * self.mood_pace
         expansion_factor = max(0.25, min(2.0, raw_exp))
         denom = max(1.0, float(self.half_len) * expansion_factor)
         np.divide(self.pos_array, denom, out=self.fractions)
@@ -65,7 +70,7 @@ class Coloured_middle_wave_mode(Mode.Mode):
 
         # 2. Vectorized Band Index Interpolation (zero-allocation np.take)
         np.multiply(self.fractions, self.nb_bands - 1, out=self.float_band_idxs)
-        np.floor(self.float_band_idxs, out=self.lower_idxs, casting='unsafe')
+        np.floor(self.float_band_idxs, out=self.lower_idxs, casting="unsafe")
         np.add(self.lower_idxs, 1, out=self.upper_idxs)
         self.upper_idxs.clip(0, self.nb_bands - 1, out=self.upper_idxs)
         np.subtract(self.float_band_idxs, self.lower_idxs, out=self.blend_factors)
@@ -83,7 +88,6 @@ class Coloured_middle_wave_mode(Mode.Mode):
         np.add(self.local_powers, self.vol_lowers, out=self.local_powers)
 
         # 3. Vectorized Color Gradient from mood_colors via BLAS matmul
-        # Bass (center) -> mood[0], Mid -> mood[1], Treble (outer) -> mood[2]
         t_mid = self.mood_weights[:, 1]
         np.multiply(self.fractions, 2.0, out=t_mid)
         t_mid.clip(0.0, 1.0, out=t_mid)
@@ -102,6 +106,12 @@ class Coloured_middle_wave_mode(Mode.Mode):
         np.multiply(t_high, self.local_powers, out=t_high)
 
         self.mood_3x3[:] = mood[:3]
+        accent = self.mood_accent
+        if accent > 0.001:
+            hi = self.highlight_color
+            inv_acc = 1.0 - accent
+            for c in range(3):
+                self.mood_3x3[:, c] = inv_acc * self.mood_3x3[:, c] + accent * float(hi[c])
         np.matmul(self.mood_weights, self.mood_3x3, out=self.target_colors)
         self.target_colors.clip(0.0, 255.0, out=self.target_colors)
 
@@ -109,10 +119,16 @@ class Coloured_middle_wave_mode(Mode.Mode):
         np.multiply(self.target_colors, 0.5, out=self.target_half)
         self.target_half_int[:] = self.target_half
 
-        if self.view_r is not None:
-            np.right_shift(self.view_r, 1, out=self.view_r)
-            np.add(self.view_r, self.target_sub_r, out=self.view_r)
+        # Views are cached per target buffer (rebuilt only when Mode.render() redirects rgb_list)
+        if self._view_buf is not self.rgb_list:
+            self._view_buf = self.rgb_list
+            self._view_r = self.rgb_list[self.right_start:self.right_end + 1] if self.right_len > 0 else None
+            self._view_l = self.rgb_list[self.left_start:self.left_end + 1] if self.left_len > 0 else None
 
-        if self.view_l is not None:
-            np.right_shift(self.view_l, 1, out=self.view_l)
-            np.add(self.view_l, self.target_sub_l, out=self.view_l)
+        if self._view_r is not None:
+            np.right_shift(self._view_r, 1, out=self._view_r)
+            np.add(self._view_r, self.target_sub_r, out=self._view_r)
+
+        if self._view_l is not None:
+            np.right_shift(self._view_l, 1, out=self._view_l)
+            np.add(self._view_l, self.target_sub_l, out=self._view_l)

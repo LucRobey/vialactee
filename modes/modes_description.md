@@ -15,7 +15,6 @@ Modes registered in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact
 | **Coloured_middle_wave_mode** | Horizontal | The strip is divided symmetrically into frequency sections. The center represents bass (red/orange), while outer edges represent treble (blue/purple). Colored sections light up and pulse outwards proportionally to band volumes, creating a center-outward audio-reactive equalizer. |
 | **Flying_ball_mode** | Horizontal | A luminous cluster (~7 LEDs wide) darts left and right across the strip leaving an exponential fade trail. The ball's position correlates to spectral pitch balance (low frequencies pull left, high frequencies pull right), and its color sweeps along the spectrum. |
 | **Hyper_strobe_mode** | Omnidirectional (Both) | Strip remains black until high-energy kick transients hit. On kick detection, the entire segment flashes blinding pure white and decays sharply to black within a few frames, creating an aggressive, kinetic strobe. |
-| **Matrix_rain_mode** | Vertical | Classic digital rain inspired by *The Matrix*. Neon green raindrops spawn at the top of vertical strips on high-frequency transients (snares/hi-hats) and slide downwards pixel-by-pixel, leaving smooth fading green tails. |
 | **Metronome_mode** | Omnidirectional (Both) | The entire LED segment pulses rhythmically with the Anticipation Flywheel ("Oracle"). On downbeats (primary beat), it flashes pure white; on sub-beats, it pulses deep blue, using sharp attack and smooth exponential decay. |
 | **Middle_bar_mode** | Horizontal | A solid colored bar grows symmetrically outward from the exact center of the strip. The bar width expands and contracts in direct proportion to the energy of an auto-selected frequency band, fading smoothly to black outside the active bar. |
 | **Opposite_sides_mode** | Horizontal | Dual complementary bars: from the middle-left, a red/orange bar expands outward in sync with bass energy; from the middle-right, a blue/purple bar expands in sync with treble energy, creating an energetic visual tug-of-war across the center gap. |
@@ -32,14 +31,3 @@ Modes registered in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact
 | **Power_bar_mode** | Vertical | Classic audio VU peak meter. A solid colored column rises vertically with instantaneous power. A persistent peak-hold white dot floats at the maximum crest and descends slowly under gravity. |
 | **Extending_waves_mode** | Horizontal | On each detected beat, a new colored wavefront is injected at the strip center and travels outward towards both edges like ripples in water. Wave speed and luminosity scale with audio power. |
 | **Magnetic_ball_mode** | Horizontal | A physics-simulated ball modeled with mass, spring tension toward center, and friction. Audio transients deliver kinetic impulses that kick the ball toward the boundaries, where it bounces elastically. Ball radius expands with audio power. |
-
----
-
-## Unmounted Game Modes
-
-> [!NOTE]
-> The following mode exists in `modes/` as a self-contained game/arcade implementation inheriting from `Mode.Mode`, but is **not mounted by default** in [`config/modes.json`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/config/modes.json). It can be mounted into custom playlists or run in standalone scripts.
-
-| Mode Name | Orientation | Visual Description |
-| :--- | :--- | :--- |
-| **Alcool_randomer** | Omnidirectional (Both) | An arcade-style shot roulette wheel. A bright cursor accelerates along the strip through three distinct phases (ramp-up, constant cruise, deceleration) before stopping at a randomized LED position to select an outcome. Configurable via `shot_base_speed`, `shot_max_speed`, and `shot_fade_ratio`. |

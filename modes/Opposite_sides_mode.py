@@ -1,11 +1,12 @@
 """
 Opposite Sides Mode
-Dual complementary audio-reactive bars advancing toward each other across a central gap.
-Strip all per-frame logger.debug calls and pre-allocate arrays in __init__.
-Balance point driven directly by ctx.spectral_tilt [-1.0, 1.0] and bar depths scaled by ctx.energy.
-Harmonized with GlobalMoodManager mood_colors.
+Dual complementary audio-reactive bars advancing toward each other across a central equilibrium zone.
+Balance point driven by ctx.spectral_tilt with gentle continuous sway, and bar depths scaled by
+ctx.energy and self.beat_pulse(). Harmonized with mood_colors and mood_modifiers.
+Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
+import math
 import numpy as np
 import modes.Mode as Mode
 
@@ -16,6 +17,7 @@ class Opposite_sides_mode(Mode.Mode):
 
         self.middle_len: int = max(2, int(self.nb_of_leds / 4))
         self.maxSize: int = max(1, int(self.nb_of_leds / 3))
+        self.sway_phase: float = 0.0
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.bass_color: np.ndarray = np.zeros(3, dtype=np.float64)
@@ -30,11 +32,16 @@ class Opposite_sides_mode(Mode.Mode):
         ctx = getattr(self.listener, "context", None)
         tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        is_silent = bool(ctx.is_silent if ctx is not None else False)
         mood = self.mood_colors
 
-        # 1. Balance point driven directly by ctx.spectral_tilt [-1.0, 1.0]
+        # 1. Balance point driven by spectral_tilt + subtle continuous sway when beat is lost
+        self.sway_phase = (self.sway_phase + self.dt * 2.0 * self.mood_pace) % (2.0 * math.pi)
+        sway = 0.0 if is_silent else 0.25 * math.sin(self.sway_phase) * (1.0 - 0.5 * self.rhythm_lock)
+        effective_tilt = float(np.clip(tilt + sway, -1.0, 1.0))
+
         nominal_center = self.nb_of_leds / 2.0
-        center_shift = tilt * (self.nb_of_leds * 0.15)
+        center_shift = effective_tilt * (self.nb_of_leds * 0.16)
         center_pos = int(np.clip(nominal_center + center_shift, 0, self.nb_of_leds - 1))
 
         half_mid = self.middle_len // 2
@@ -42,20 +49,23 @@ class Opposite_sides_mode(Mode.Mode):
         mid_end = min(self.nb_of_leds - 1, mid_start + self.middle_len - 1)
         actual_mid_len = mid_end - mid_start + 1
 
-        # 2. Colors from mood_colors
-        self.bass_color[:] = mood[0]
-        self.high_color[:] = mood[1]
-
-        # Draw center equilibrium gradient
+        # 2. Colors from mood_colors gently warmed by mood_accent
         m0, m1 = mood[0], mood[1]
+        hi = self.highlight_color
+        accent = self.mood_accent
+        for c in range(3):
+            self.bass_color[c] = (1.0 - accent) * float(m0[c]) + accent * float(hi[c])
+            self.high_color[c] = (1.0 - accent) * float(m1[c]) + accent * float(hi[c])
+
         t = self.t_coords[:actual_mid_len, 0]
         for c in range(3):
-            self.gradient_buffer[:actual_mid_len, c] = (1.0 - t) * float(m0[c]) + t * float(m1[c])
+            self.gradient_buffer[:actual_mid_len, c] = (1.0 - t) * self.bass_color[c] + t * self.high_color[c]
         self.smooth_segment_vectorized(0.5, mid_start, mid_end, self.gradient_buffer[:actual_mid_len])
 
-        # 3. Bar depths scaled by ctx.energy
-        lower_height = int(np.clip(self.maxSize * energy * (1.0 - 0.4 * max(0.0, tilt)), 0, self.maxSize))
-        higher_height = int(np.clip(self.maxSize * energy * (1.0 + 0.4 * min(0.0, tilt)), 0, self.maxSize))
+        # 3. Bar depths scaled by energy and beat_pulse()
+        drive = (0.60 * energy + 0.40 * self.beat_pulse()) * self.mood_pace
+        lower_height = int(np.clip(self.maxSize * drive * (1.0 - 0.4 * max(0.0, effective_tilt)), 0, self.maxSize))
+        higher_height = int(np.clip(self.maxSize * drive * (1.0 + 0.4 * min(0.0, effective_tilt)), 0, self.maxSize))
 
         bass_start = max(0, mid_start - 1 - lower_height)
         bass_end = max(0, mid_start - 1)

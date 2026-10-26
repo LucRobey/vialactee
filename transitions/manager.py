@@ -11,6 +11,13 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from transitions.api import MusicSnapshot, SegmentDescriptor, SegmentOrder
 from transitions.director import Transition_Director
+from transitions.effects import set_transition_params
+from transitions.families import (
+    get_allowed_stagger_patterns,
+    is_mode_cooperative,
+    is_staggerable,
+    roll_transition_params,
+)
 from transitions.mode_dna import MODE_DNA, get_mode_dna
 from transitions.stagger import (
     StaggerPattern,
@@ -31,24 +38,32 @@ TRANSITION_TECHNIQUES: Dict[str, Dict[str, Any]] = {
     "smooth_cosine_crossfade": {"type": "fade_in_out", "duration": 2.0},
     "directional_wipe": {"type": "vertical_wipe", "duration": 1.2},
     "transient_blip": {"type": "explosion", "duration": 0.4},
+    "ember_dissolve": {"type": "ember_dissolve", "duration": 1.8},
+    "luma_melt": {"type": "luma_melt", "duration": 1.6},
+    "breath_dip": {"type": "breath_dip", "duration": 2.0},
+    "silk_wipe": {"type": "silk_wipe", "duration": 1.2},
+    "silk_wipe_reverse": {"type": "silk_wipe_reverse", "duration": 1.2},
+    "iris_open": {"type": "iris_open", "duration": 1.2},
+    "iris_close": {"type": "iris_close", "duration": 1.2},
+    "zipper_merge": {"type": "zipper_merge", "duration": 1.2},
+    "collider": {"type": "collider", "duration": 1.0},
+    "prism_sweep": {"type": "prism_sweep", "duration": 1.4},
+    "flash_cut": {"type": "flash_cut", "duration": 0.5},
+    "staccato_shutter": {"type": "staccato_shutter", "duration": 0.8},
+    "transformer_cut": {"type": "transformer_cut", "duration": 1.0},
 }
 
 
 def _safe_float(val: Any, default: float = 0.0) -> float:
     """Safely converts val to float; coalesces None and invalid types to default."""
-    if val is None:
-        return default
     try:
-        return float(val)
+        return default if val is None else float(val)
     except (TypeError, ValueError):
         return default
 
 
 class LocalTransitionManager:
-    """
-    Evaluates musical intent, draws weighted lottery candidates, and quantizes
-    non-rigid segment transitions to musical downbeats.
-    """
+    """Evaluates musical intent, draws weighted lottery candidates, and quantizes transitions."""
 
     def __init__(
         self,
@@ -137,9 +152,7 @@ class LocalTransitionManager:
             "complexity": round(max(0.0, min(1.0, 0.40 * nov + 0.30 * tension + (0.30 if is_sync else 0.10))), 4),
         }
 
-    # =========================================================================
     # 2. WEIGHTED LOTTERY: Probabilistic Mode Selection
-    # =========================================================================
 
     def select_mode_lottery(
         self,
@@ -149,10 +162,7 @@ class LocalTransitionManager:
         spatial_orientation: Optional[str] = None,
         penalty_mode: Optional[str] = None,
     ) -> str:
-        """
-        Draws a mode from candidates using Euclidean DNA distance weighting.
-        Never strictly zero; preserves freshness and serendipitous surprises.
-        """
+        """Draws a mode from candidates using Euclidean DNA distance weighting."""
         if not candidate_pool:
             return "Rainbow"
 
@@ -172,40 +182,24 @@ class LocalTransitionManager:
             dist_sq = (de * de) + (dp * dp) + (dr * dr) + (dc * dc)
 
             w = 1.0 / (1.0 + 4.0 * dist_sq)
-
-            # Spatial role filtering / soft penalty
             if spatial_orientation is not None:
                 role = dna.get("spatial_role", "both")
                 if role != "both" and role != spatial_orientation:
                     w *= 0.15
-
-            # Recency penalty: discourage immediately repeating current mode
             if current_mode is not None and name.lower() == current_mode.lower():
                 w *= 0.20
-
-            # Affinity penalty: discourage mode B copying mode A in pair allocation
             if penalty_mode is not None and name.lower() == penalty_mode.lower():
                 w *= 0.05
-
             weights.append(max(0.001, w))
 
         return random.choices(candidate_pool, weights=weights, k=1)[0]
 
-    # =========================================================================
     # 3. FLEXIBLE COHORT ALLOCATION: Non-rigid Symmetries & Unison
-    # =========================================================================
 
     def choose_cohort_pattern(self, context: Optional[Any] = None) -> CohortPattern:
-        """
-        Probabilistically chooses a structural allocation pattern:
-        - UNISON: Boosted during high-energy drop impacts and risers.
-        - SYMMETRIC_PAIRS: Boosted during rhythmic locked grooves.
-        - DIVERSE: General atmospheric, ambient, or exploratory textures.
-        """
+        """Probabilistically chooses DIVERSE, SYMMETRIC_PAIRS, or UNISON based on music."""
         ctx = context if context is not None else self.music
-        p_unison = 0.20
-        p_sym = 0.35
-        p_div = 0.45
+        p_unison, p_sym, p_div = 0.20, 0.35, 0.45
 
         if ctx is not None:
             raw_scene = getattr(ctx, "scene", None)
@@ -232,45 +226,32 @@ class LocalTransitionManager:
         pattern: Optional[CohortPattern] = None,
         spatial_orientation: Optional[str] = None,
     ) -> Dict[str, str]:
-        """
-        Allocates modes across a cohort of segments using the selected pattern.
-        Supports symmetric pairings (ABAB, ABBA, ABA) and unison without rigidity.
-        """
+        """Allocates modes across a cohort of segments using the selected pattern."""
         if not segment_names:
             return {}
 
         target = target_dna or self.evaluate_target_dna()
         chosen_pattern = pattern or self.choose_cohort_pattern()
         n = len(segment_names)
-
-        # Get pool of candidate modes available on these segments
         pool = self._get_candidate_pool_for_segments(segment_names)
-
         allocation: Dict[str, str] = {}
 
         if chosen_pattern == CohortPattern.UNISON or n == 1:
-            # All segments run identical winning mode
             mode_unison = self.select_mode_lottery(pool, target, spatial_orientation=spatial_orientation)
             for seg in segment_names:
                 allocation[seg] = mode_unison
             return allocation
 
         if chosen_pattern == CohortPattern.SYMMETRIC_PAIRS:
-            # 2 distinct modes A and B mapped symmetrically
             mode_a = self.select_mode_lottery(pool, target, spatial_orientation=spatial_orientation)
             pool_b = [m for m in pool if m.lower() != mode_a.lower()] or pool
             mode_b = self.select_mode_lottery(pool_b, target, spatial_orientation=spatial_orientation, penalty_mode=mode_a)
 
             if n == 4:
-                # For 4 pillars: flip between alternating (ABAB) and mirror (ABBA)
-                if random.random() < 0.50:
-                    mapping = [mode_a, mode_b, mode_a, mode_b]
-                else:
-                    mapping = [mode_a, mode_b, mode_b, mode_a]
+                mapping = [mode_a, mode_b, mode_a, mode_b] if random.random() < 0.50 else [mode_a, mode_b, mode_b, mode_a]
                 for idx, seg in enumerate(segment_names):
                     allocation[seg] = mapping[idx]
             elif n == 3:
-                # 3 segments (e.g. s1, s2, s3): ABA symmetry sandwich
                 mapping = [mode_a, mode_b, mode_a]
                 for idx, seg in enumerate(segment_names):
                     allocation[seg] = mapping[idx]
@@ -278,18 +259,15 @@ class LocalTransitionManager:
                 allocation[segment_names[0]] = mode_a
                 allocation[segment_names[1]] = mode_b
             else:
-                # Arbitrary N: mirror symmetry around center
                 for idx, seg in enumerate(segment_names):
                     allocation[seg] = mode_a if (idx % 2 == 0) else mode_b
             return allocation
 
-        # DIVERSE: Every segment draws independently via weighted lottery
         for seg in segment_names:
             cur_mode = self._get_current_mode_name(seg)
             allocation[seg] = self.select_mode_lottery(
                 pool, target, current_mode=cur_mode, spatial_orientation=spatial_orientation
             )
-
         return allocation
 
     def allocate_all_segments(
@@ -297,29 +275,21 @@ class LocalTransitionManager:
         target_dna: Optional[Dict[str, float]] = None,
         force_pattern: Optional[CohortPattern] = None,
     ) -> Dict[str, str]:
-        """
-        Partitions the physical installation into natural cohorts (verticals, horizontal rings)
-        and allocates modes across all segments.
-        """
+        """Partitions the installation into natural cohorts and allocates modes across all segments."""
         target = target_dna or self.evaluate_target_dna()
         verts, rings = self._discover_segment_cohorts()
-
         full_allocation: Dict[str, str] = {}
 
         if verts:
-            vert_alloc = self.allocate_cohort_modes(
-                verts, target_dna=target, pattern=force_pattern, spatial_orientation="vertical"
+            full_allocation.update(
+                self.allocate_cohort_modes(verts, target_dna=target, pattern=force_pattern, spatial_orientation="vertical")
             )
-            full_allocation.update(vert_alloc)
-
         for ring_cohort in rings:
             if ring_cohort:
-                ring_alloc = self.allocate_cohort_modes(
-                    ring_cohort, target_dna=target, pattern=force_pattern, spatial_orientation="horizontal"
+                full_allocation.update(
+                    self.allocate_cohort_modes(ring_cohort, target_dna=target, pattern=force_pattern, spatial_orientation="horizontal")
                 )
-                full_allocation.update(ring_alloc)
 
-        # Catch any remaining segments not caught in cohorts
         all_segs = [s.name for s in self.segments]
         remainder = [s for s in all_segs if s not in full_allocation]
         if remainder:
@@ -329,17 +299,10 @@ class LocalTransitionManager:
 
         return full_allocation
 
-    # =========================================================================
     # 4. DOWNBEAT QUANTIZATION & CLEAN TECHNIQUES
-    # =========================================================================
 
     def select_transition_technique(self, context: Optional[Any] = None) -> Dict[str, Any]:
-        """
-        Picks a clean transition technique based on audio kinetics:
-        - Transient blip (0.4s cut/explosion) on high energy or drop impacts.
-        - Directional wipe (1.2s vertical/lateral wipe) on rhythmic grooves.
-        - Smooth cosine crossfade (2.0s fade_in_out) on ambient/chill sections.
-        """
+        """Picks a transition technique based on audio kinetics (drop -> explosion, rhythmic -> wipe, chill -> fade)."""
         ctx = context if context is not None else self.music
         if ctx is not None:
             is_drop = bool(getattr(ctx, "is_drop_impact", False))
@@ -360,14 +323,20 @@ class LocalTransitionManager:
         pattern: Optional[StaggerPattern] = None,
         step_delay: float = 0.15,
     ) -> Dict[str, Dict[str, Any]]:
-        """
-        Builds per-segment transition configurations with staggered start offsets
-        and/or cohort-specific techniques.
-        """
+        """Builds per-segment transition configurations respecting TransitionFamily stagger contracts."""
         cfg = base_config or self.select_transition_technique()
-        base_tech = cfg.get("type", "fade_in_out")
+        base_tech = str(cfg.get("type", "fade_in_out"))
         base_dur = float(cfg.get("duration", 2.0))
-        stagger_pat = pattern or select_stagger_pattern(self.music)
+        if not is_staggerable(base_tech):
+            stagger_pat = StaggerPattern.SIMULTANEOUS
+        elif pattern is not None:
+            allowed = get_allowed_stagger_patterns(base_tech)
+            stagger_pat = pattern if pattern in allowed else StaggerPattern.SIMULTANEOUS
+        else:
+            stagger_pat = select_stagger_pattern(self.music)
+            allowed = get_allowed_stagger_patterns(base_tech)
+            if stagger_pat not in allowed:
+                stagger_pat = random.choice(allowed)
         verts, rings = self._discover_segment_cohorts()
         return generate_staggered_configs(
             allocation=allocation,
@@ -405,7 +374,7 @@ class LocalTransitionManager:
         self._pending_transition = {"allocation": target_alloc, "config": target_cfg, "elapsed": 0.0}
 
     def _execute_transition(self, allocation: Dict[str, str], transition_config: Any) -> None:
-        """Builds SegmentOrders for non-blocked segments and starts Transition_Director if any changed."""
+        """Builds SegmentOrders for non-blocked segments, rolls family parameters, and starts Transition_Director."""
         self._orders.clear()
         if not allocation:
             if self.director is not None:
@@ -414,7 +383,11 @@ class LocalTransitionManager:
 
         is_per_seg = isinstance(transition_config, dict) and any(k in allocation for k in transition_config)
         max_duration = 0.0
-        primary_tech = "fade_in_out"
+        primary_tech = (
+            str(transition_config.get("type", "fade_in_out"))
+            if (isinstance(transition_config, dict) and not is_per_seg)
+            else "fade_in_out"
+        )
         emitted = 0
 
         for seg_name, mode_name in allocation.items():
@@ -436,6 +409,7 @@ class LocalTransitionManager:
                         duration=dur,
                         direction=seg_cfg.get("direction"),
                         start_offset=offset,
+                        mode_handshake=is_mode_cooperative(tech),
                     )
                 )
                 emitted += 1
@@ -445,6 +419,7 @@ class LocalTransitionManager:
                     primary_tech = str(seg_cfg["type"])
 
         if emitted > 0:
+            set_transition_params(roll_transition_params(primary_tech))
             if self.director is not None:
                 if is_per_seg:
                     self.director.start_transition(

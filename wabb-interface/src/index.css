@@ -1836,55 +1836,6 @@ body {
 }
 
 /* Mode Animations - Physically Accurate Replicas */
-/* 1. Alcool Randomer */
-/* White ball ping-ponging, spinning very fast at first, slowing down with phases, stopping. Fading white tail. */
-.anim-alcool-randomer {
-  background-image: radial-gradient(circle at 50% 50%, white 0%, rgba(255, 255, 255, 0.4) 10%, transparent 40%);
-  background-size: 200% 200%;
-  animation: alcool-randomer 4s cubic-bezier(0.1, 0.9, 0.2, 1) infinite;
-}
-
-@keyframes alcool-randomer {
-  0% {
-    background-position: -100% 50%;
-  }
-
-  10% {
-    background-position: 200% 50%;
-  }
-
-  20% {
-    background-position: -50% 50%;
-  }
-
-  35% {
-    background-position: 150% 50%;
-  }
-
-  55% {
-    background-position: 20% 50%;
-  }
-
-  65% {
-    background-position: 80% 50%;
-  }
-
-  75% {
-    background-position: 40% 50%;
-  }
-
-  80% {
-    background-position: 60% 50%;
-  }
-
-  85%,
-  100% {
-    background-position: 50% 50%;
-  }
-
-  /* Freezing on final position */
-}
-
 /* 2. Bary Rainbow */
 /* Static symmetrical rainbow gradient from center out. Red in center, blue at edges. Center intensely lit. */
 .anim-bary-rainbow {
@@ -2087,24 +2038,6 @@ body {
   }
 
   /* Pulled back */
-}
-
-/* 9. Matrix Rain */
-/* Bright green drops falling from top to bottom (right to left typically for strips), leaving fading tail. */
-.anim-matrix-rain {
-  background-image: linear-gradient(180deg, transparent 0%, rgba(0, 255, 0, 0.1) 60%, lime 95%, white 100%);
-  background-size: 100% 300%;
-  animation: matrix-rain 0.8s linear infinite;
-}
-
-@keyframes matrix-rain {
-  0% {
-    background-position: 0% -50%;
-  }
-
-  100% {
-    background-position: 0% 150%;
-  }
 }
 
 /* 10. Metronome */

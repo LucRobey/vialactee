@@ -75,6 +75,8 @@ def drain_metadata_packets(sock_meta, visualizer, max_packets=64):
                     )
             elif p_type == "analyzer_state":
                 visualizer.update_analyzer_data(payload)
+            elif p_type == "transition_state":
+                visualizer.update_transition_data(payload)
         except Exception:
             pass
 

@@ -16,7 +16,16 @@ import numpy as np
 
 from mood.api import MoodStatus, create_mood_service
 from mood.palettes import PALETTES
-from mood.scene_policy import DEFAULT_DWELL, SceneGovernor, palette_for_scene
+from mood.scene_policy import (
+    DEFAULT_DWELL,
+    MODIFIER_DWELL,
+    MODIFIER_FADE_DURATION,
+    SCENE_TO_MODIFIERS,
+    ModifierGovernor,
+    SceneGovernor,
+    modifiers_for_scene,
+    palette_for_scene,
+)
 
 
 class TestMoodService(unittest.TestCase):
@@ -85,12 +94,13 @@ class TestMoodService(unittest.TestCase):
         """update() must allocate ZERO dynamic heap memory during a crossfade (auto-mode on too)."""
         self.mood.set_auto_scene(True)
         self.mood.request_palette("Deep Ocean", duration=2.0)
-        self.mood.update(0.01, "GROOVE")  # warm up
+        self.mood.update(MODIFIER_DWELL + 0.01, "CHILL")  # start modifier crossfade
+        self.mood.update(0.01, "GROOVE")  # warm up palette + modifier fade + governors
 
         tracemalloc.start()
         start = tracemalloc.take_snapshot()
         for _ in range(50):
-            self.mood.update(0.033, "GROOVE")
+            self.mood.update(0.005, "GROOVE")
         end = tracemalloc.take_snapshot()
         tracemalloc.stop()
 
@@ -144,6 +154,51 @@ class TestMoodService(unittest.TestCase):
         self.assertEqual(status.available_palettes, tuple(PALETTES.keys()))
         self.assertFalse(status.auto_scene)
 
+    def test_modifiers_is_one_live_read_only_view(self):
+        """modifiers() is the same read-only (4,) float32 object and follows scene fades live."""
+        mods = self.mood.modifiers()
+        self.assertIs(self.mood.modifiers(), mods)
+        self.assertEqual(mods.shape, (4,))
+        self.assertEqual(mods.dtype, np.float32)
+        self.assertFalse(mods.flags.writeable)
+        with self.assertRaises(ValueError):
+            mods[0] = 2.0
+
+        before = mods.copy()
+        self.mood.update(MODIFIER_DWELL + 0.05, "CHILL")
+        self.mood.update(MODIFIER_FADE_DURATION * 0.5, "CHILL")
+        self.assertFalse(np.array_equal(mods, before))
+
+    def test_modifiers_decoupled_from_auto_scene_and_cosine_smoothed(self):
+        """Even with auto_scene=False, modifiers() debounces (0.30s) and cosine-fades over 2.5s."""
+        self.assertFalse(self.mood.get_status().auto_scene)
+        # Short blip (< MODIFIER_DWELL) must not start a modifier transition
+        self.mood.update(0.10, "DROP_IMPACT")
+        np.testing.assert_allclose(self.mood.modifiers(), [1.0, 1.0, 1.0, 0.0], atol=1e-6)
+
+        # Persist past debounce -> starts 2.5s cosine fade toward CHILL
+        self.mood.update(MODIFIER_DWELL + 0.01, "CHILL")
+        start_mods = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
+        chill_mods = np.array(SCENE_TO_MODIFIERS["CHILL"], dtype=np.float32)
+
+        # Midpoint of 2.5s cosine crossfade -> 50% blend
+        self.mood.update(MODIFIER_FADE_DURATION * 0.5)
+        np.testing.assert_allclose(self.mood.modifiers(), 0.5 * (start_mods + chill_mods), atol=1e-3)
+
+        # Complete crossfade -> exact CHILL target, while palette stayed Cyberpunk
+        self.mood.update(MODIFIER_FADE_DURATION * 0.6)
+        np.testing.assert_allclose(self.mood.modifiers(), chill_mods, atol=1e-5)
+        self.assertEqual(self.mood.get_status().palette, "Cyberpunk")
+
+    def test_modifiers_bounded_ranges(self):
+        """All scene modifier targets stay within bounded subtle ranges."""
+        for scene, (pace, sharpness, trail, accent) in SCENE_TO_MODIFIERS.items():
+            self.assertEqual(modifiers_for_scene(scene.lower()), (pace, sharpness, trail, accent))
+            self.assertTrue(0.75 <= pace <= 1.25, f"{scene} pace out of bounds")
+            self.assertTrue(0.75 <= sharpness <= 1.25, f"{scene} sharpness out of bounds")
+            self.assertTrue(0.80 <= trail <= 1.25, f"{scene} trail out of bounds")
+            self.assertTrue(0.0 <= accent <= 0.30, f"{scene} accent out of bounds")
+
 
 class TestSceneDriven(unittest.TestCase):
     def test_scene_mapping(self):
@@ -165,10 +220,16 @@ class TestSceneDriven(unittest.TestCase):
         gov.update(2.0, "BUILDUP")
         gov.update(0.1, "CHILL")   # scene changed: timer restarts
         self.assertIsNone(gov.update(2.0, "CHILL"))
-        self.assertEqual(gov.update(1.5, "CHILL"), "Deep Ocean")
+        self.assertEqual(gov.update(DEFAULT_DWELL, "CHILL"), "Deep Ocean")
 
-    def test_drop_impact_is_immediate(self):
-        self.assertEqual(SceneGovernor().update(0.016, "DROP_IMPACT"), "Neon Acid")
+    def test_drop_impact_is_debounced_not_instant(self):
+        """A 1.5s drop must not hijack the palette; all scenes require DEFAULT_DWELL (4.0s)."""
+        gov = SceneGovernor()
+        self.assertIsNone(gov.update(0.016, "DROP_IMPACT"))
+        self.assertIsNone(gov.update(1.5, "DROP_IMPACT"))
+        self.assertEqual(gov.update(DEFAULT_DWELL, "DROP_IMPACT"), "Neon Acid")
+        self.assertIsNone(ModifierGovernor().update(0.1, "DROP_IMPACT"))
+        self.assertEqual(ModifierGovernor().update(MODIFIER_DWELL, "DROP_IMPACT"), "DROP_IMPACT")
 
     def test_auto_mode_off_by_default_does_nothing(self):
         mood = create_mood_service()
@@ -177,17 +238,17 @@ class TestSceneDriven(unittest.TestCase):
 
     def test_auto_mode_drives_palette(self):
         mood = create_mood_service(auto_scene=True)
-        mood.update(0.016, "DROP_IMPACT")
-        self.assertEqual(mood.get_status().target_palette, "Neon Acid")
+        mood.update(DEFAULT_DWELL + 0.1, "BUILDUP")
+        self.assertEqual(mood.get_status().target_palette, "Solar Ember")
         self.assertTrue(mood.get_status().is_transitioning)
 
     def test_manual_pick_is_not_held(self):
-        """No manual hold: a manual pick works and the next scene change takes over again."""
+        """No manual hold: a manual pick works and the next debounced scene change takes over again."""
         mood = create_mood_service(auto_scene=True)
-        mood.update(0.016, "DROP_IMPACT")            # auto -> Neon Acid
+        mood.update(DEFAULT_DWELL + 0.1, "BUILDUP")    # auto -> Solar Ember
         self.assertTrue(mood.request_palette("Ethereal"))
         self.assertEqual(mood.get_status().target_palette, "Ethereal")
-        mood.update(DEFAULT_DWELL + 0.1, "CHILL")     # scene change -> auto resumes
+        mood.update(DEFAULT_DWELL + 0.1, "CHILL")      # scene change -> auto resumes
         self.assertEqual(mood.get_status().target_palette, "Deep Ocean")
 
 

@@ -1,9 +1,9 @@
 """
 Shining Stars Mode
-Ambient dark canvas where individual LEDs ("stars") twinkle into existence at random positions.
-Stars ignite when specific frequency bands exceed activation thresholds, adopting the band's hue.
-Twinkle density scales with ctx.energy and ctx.is_syncopated.
-Fade rate slows in CHILL and accelerates in GROOVE. Flares on DROP_IMPACT.
+Ambient dark canvas where soft 3-LED stars twinkle into existence across frequency bands.
+Never branches on ctx.scene and eliminates the 1.5s solid fill on DROP_IMPACT.
+Star trail fade scales smoothly with mood_trail, twinkle density scales with energy and mood_pace,
+and star colours are sampled across the 256-entry palette_lut for all 8 bands.
 Adheres strictly to modes/MODE_RULES.md with zero runtime heap allocations.
 """
 from typing import List, Dict, Any
@@ -11,11 +11,10 @@ import numpy as np
 import random
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
-from core.MusicalContextEngine import MusicalContextEngine
+from music.api import MusicalContextEngine
 
 
 class Shining_stars_mode(Mode.Mode):
-    # Fallback configuration constants
     sub_segment_size_default = 40
     threshold_default = 10.0
     fade_ratio_default = 0.1
@@ -66,8 +65,7 @@ class Shining_stars_mode(Mode.Mode):
         self.sub_segment_size = int(infos.get("stars_sub_segment_size", infos.get("sub_segment_size", self.sub_segment_size_default)))
         self.threshold = float(infos.get("stars_threshold", infos.get("threshold", self.threshold_default)))
         self.fade_ratio = float(infos.get("stars_fade_ratio", infos.get("fade_ratio", self.fade_ratio_default)))
-        self.iteration_wait = infos.get("stars_iteration_wait", 30)
-        # Pre-compute band colors (red = bass; blue/purple = treble)
+
         colors_list = []
         for band_index in range(self.nb_of_fft_band):
             hue = float(band_index) / max(1, self.nb_of_fft_band - 1)
@@ -75,15 +73,13 @@ class Shining_stars_mode(Mode.Mode):
             colors_list.append(rgb)
         self.colors = np.array(colors_list, dtype=np.int32)
         self.star_colors = np.copy(self.colors)
+        self.neighbor_colors = np.zeros_like(self.star_colors)
         self.num_bands: int = min(self.nb_of_fft_band, len(self.colors))
+        self._band_lut_idx = np.linspace(0, 255, max(1, self.num_bands), dtype=np.intp)
 
         self.step: int = max(1, int(self.sub_segment_size))
         self.max_offset: int = min(self.step, self.nb_of_leds)
-        self.fade_chill: float = self.fade_ratio * 0.60
-        self.fade_groove: float = self.fade_ratio * 1.40
 
-        # Pre-allocate random pool (size 256, power of 2) for zero heap allocation during execution (Axiom 2).
-        # Capping index at 255 ensures _rand_idx stays entirely within Python's small integer cache [-5, 256].
         rng = random.Random(hash((name, segment_name)) & 0xFFFFFFFF)
         self._rand_pool = [rng.randint(0, 100000) for _ in range(256)]
         self._rand_idx = 0
@@ -92,37 +88,28 @@ class Shining_stars_mode(Mode.Mode):
         super().apply_settings(settings)
         self.step = max(1, int(self.sub_segment_size))
         self.max_offset = min(self.step, self.nb_of_leds)
-        self.fade_chill = self.fade_ratio * 0.60
-        self.fade_groove = self.fade_ratio * 1.40
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
             return
 
         ctx = getattr(self.listener, "context", None)
-        if not isinstance(ctx, MusicalContextEngine):
-            ctx = None
-        has_real_ctx = ctx is not None
+        has_real_ctx = isinstance(ctx, MusicalContextEngine)
 
-        # 1. Fade active stars back toward black
-        if has_real_ctx:
-            scene = ctx.scene
-            if scene == "CHILL":
-                effective_fade = self.fade_chill
-            elif scene == "GROOVE":
-                effective_fade = self.fade_groove
-            else:
-                effective_fade = self.fade_ratio
-        else:
-            effective_fade = self.fade_ratio
-
+        # 1. Continuous trail fade modulated smoothly by mood_trail (no scene branching)
+        trail = self.mood_trail
+        effective_fade = self.fade_ratio / (trail if trail > 0.5 else 0.5)
+        if effective_fade < 0.01:
+            effective_fade = 0.01
+        elif effective_fade > 0.85:
+            effective_fade = 0.85
         self.fade_to_black(effective_fade)
+        if self._exit_progress > 0.50:
+            return
 
-        # 2. Check each frequency band for transient flux spikes
         if self.listener is None:
             return
-        band_flux = getattr(self.listener, "band_flux", None)
-        if band_flux is None:
+        if has_real_ctx and ctx.is_silent:
             return
 
         step = self.step
@@ -130,31 +117,49 @@ class Shining_stars_mode(Mode.Mode):
         if max_offset <= 0:
             return
 
-        # 3. Flare on DROP_IMPACT
-        if has_real_ctx and (ctx.is_drop_impact or ctx.scene == "DROP_IMPACT"):
-            mood = self.mood_colors
-            self.rgb_list[:] = mood[3]
-            return
+        # 2. Sample 8 distinct band colours from palette_lut, gently warmed by mood_accent
+        lut = self.palette_lut
+        hi = self.highlight_color
+        accent = self.mood_accent
+        for i in range(self.num_bands):
+            base_c = lut[self._band_lut_idx[i]]
+            for c in range(3):
+                val = int((1.0 - accent) * float(base_c[c]) + accent * float(hi[c]))
+                self.star_colors[i, c] = val
+                self.neighbor_colors[i, c] = (val * 2) // 5  # 40% soft halo neighbor
 
-        # 4. Scale twinkle density with ctx.energy and ctx.is_syncopated
+        # 3. Scale twinkle density with energy, mood_pace, and syncopation
         if has_real_ctx:
-            density_boost = (0.25 * ctx.energy) + (0.35 if ctx.is_syncopated else 0.0)
-            current_threshold = max(1.0, self.threshold * (1.0 - 0.45 * density_boost))
-            mood = self.mood_colors
-            for i in range(self.nb_of_fft_band):
-                self.star_colors[i] = mood[i % 4]
-            active_colors = self.star_colors
+            energy = float(ctx.energy)
+            is_sync = bool(ctx.is_syncopated)
+            density_boost = (0.30 * energy * self.mood_pace) + (0.25 if is_sync else 0.0)
+            current_threshold = max(0.5, self.threshold * (1.0 - 0.50 * density_boost))
+            bands = getattr(self.listener, "asserved_fft_band", None)
+            lock = self.rhythm_lock
         else:
             current_threshold = self.threshold
-            active_colors = self.colors
+            bands = None
+            lock = 1.0
 
-        num_bands = min(self.num_bands, len(band_flux), len(active_colors))
-        for band_index in range(num_bands):
-            if band_flux[band_index] > current_threshold:
+        band_flux = getattr(self.listener, "band_flux", None)
+        if band_flux is None and bands is None:
+            return
+
+        for band_index in range(self.num_bands):
+            flux_val = float(band_flux[band_index]) if (band_flux is not None and band_index < len(band_flux)) else 0.0
+            band_val = float(bands[band_index]) if (bands is not None and band_index < len(bands)) else 0.0
+            # When flywheel is lost or flux is flat during sustained notes, allow spectral band energy to twinkle
+            drive = max(flux_val, (1.0 - 0.6 * lock) * band_val * self.threshold * 2.8)
+            if drive > current_threshold:
                 rand_val = self._rand_pool[self._rand_idx]
                 self._rand_idx = (self._rand_idx + 1) & 255
                 random_pos = rand_val % max_offset
-                self.rgb_list[random_pos::step] = active_colors[band_index]
+                self.rgb_list[random_pos::step] = self.star_colors[band_index]
+                if self.nb_of_leds >= 3 and step >= 3:
+                    if random_pos > 0:
+                        self.rgb_list[random_pos - 1::step] = self.neighbor_colors[band_index]
+                    if random_pos + 1 < self.nb_of_leds:
+                        self.rgb_list[random_pos + 1::step] = self.neighbor_colors[band_index]
 
 
 # Warmup Python interpreter code execution caches for zero-allocation hot-path guarantees

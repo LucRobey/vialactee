@@ -36,11 +36,6 @@
       "class": "Opposite_sides_mode"
     },
     {
-      "name": "Matrix Rain",
-      "module": "Matrix_rain_mode",
-      "class": "Matrix_rain_mode"
-    },
-    {
       "name": "Plasma Fire",
       "module": "Plasma_fire_mode",
       "class": "Plasma_fire_mode"

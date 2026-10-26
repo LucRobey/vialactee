@@ -1,14 +1,14 @@
 """
 Hyper Strobe Mode
-High-energy kinetic strobe effect gated strictly on verified acoustic beats.
-Strobe accelerates with drop_progress during BUILDUP and pinches toward center on drop_imminent.
-Full bloom explosion on DROP_IMPACT, and gentle sleep/glow during CHILL.
-Harmonized with GlobalMoodManager mood_colors with zero runtime heap allocations.
+Kinetic strobe and pulse effect gated on verified acoustic beats when rhythm-locked,
+with smooth fallback to spectral flux peaks and continuous breathing glow when the beat tracker is lost.
+Never branches on ctx.scene (eliminating the 1.5s DROP_IMPACT whiteout and fake BUILDUP auto-strobe).
+Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
+import math
 import numpy as np
 import modes.Mode as Mode
-import utils.colors as colors
 
 
 class Hyper_strobe_mode(Mode.Mode):
@@ -59,6 +59,7 @@ class Hyper_strobe_mode(Mode.Mode):
         self.flux_threshold = float(infos.get("strobe_flux_threshold", infos.get("fluxThreshold", 0.7)))
         self.decay_ratio = float(infos.get("strobe_decay_ratio", infos.get("decayRatio", 0.3)))
         self.listen_band = int(infos.get("strobe_listen_band", infos.get("listenBand", 1)))
+        self.pulse_phase: float = 0.0
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.strobe_color: np.ndarray = np.zeros(3, dtype=np.float64)
@@ -69,78 +70,50 @@ class Hyper_strobe_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
-        phase = float(getattr(self.listener, "beat_phase", 0.0))
-        is_beat = bool(getattr(self.listener, "is_beat", False))
         mood = self.mood_colors
+        effective_decay = float(np.clip(self.decay_ratio / max(0.5, self.mood_trail), 0.02, 0.95))
+
+        band_flux = getattr(self.listener, "band_flux", None)
+        flux_val = 0.0
+        if band_flux is not None and 0 <= self.listen_band < len(band_flux):
+            flux_val = float(band_flux[self.listen_band])
 
         if ctx is not None:
+            if ctx.is_silent:
+                self.fade_to_black_segment_vectorized(effective_decay, 0, self.nb_of_leds - 1)
+                return
+
             is_real = bool(ctx.is_real_beat)
             trust = float(ctx.beat_trust)
-            drop_prog = float(ctx.drop_progress)
-            imminent = bool(ctx.is_drop_imminent)
-            scene = getattr(ctx, "scene", None)
-            is_drop = bool(ctx.is_drop_impact or scene == "DROP_IMPACT")
-            is_buildup = bool(scene == "BUILDUP")
-            is_chill = bool(scene == "CHILL" or (ctx.is_silent and scene not in ("GROOVE", "BUILDUP", "DROP_IMPACT")))
             energy = float(ctx.energy)
             tension = float(ctx.tension)
+            lock = self.rhythm_lock
 
-            # 1. Full bloom on DROP_IMPACT: pure highlight whiteout across full segment
-            if is_drop:
-                self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, mood[3])
-                return
+            # 1. Gate hard strobe flash on verified real beat (or 1-frame drop_hit / strong flux peak)
+            beat_trigger = (is_real and trust > 0.4) or self.drop_hit
+            flux_trigger = flux_val > (self.flux_threshold * (0.45 + 0.55 * lock))
+            trigger = beat_trigger or flux_trigger
 
-            # 2. Gate on ctx.is_real_beat and ctx.beat_trust > 0.4
-            beat_trigger = is_real and (trust > 0.4)
-
-            # Strobe accelerates with ctx.drop_progress in BUILDUP
-            if is_buildup:
-                rate = 1.0 + 3.0 * drop_prog
-                strobe_active = (phase * rate) % 1.0 < 0.25
-                trigger = beat_trigger or strobe_active
-            else:
-                trigger = beat_trigger
-
-            # 3. Pinch on is_drop_imminent: contract light inward to center, fade outer edges
-            if imminent:
-                center = self.nb_of_leds // 2
-                pinch_width = max(1, int(float(self.nb_of_leds) * 0.15 * max(0.1, 1.0 - drop_prog)))
-                start_p = max(0, center - pinch_width)
-                end_p = min(self.nb_of_leds - 1, center + pinch_width)
-                if start_p > 0:
-                    self.fade_to_black_segment_vectorized(1.0, 0, start_p - 1)
-                if end_p < self.nb_of_leds - 1:
-                    self.fade_to_black_segment_vectorized(1.0, end_p + 1, self.nb_of_leds - 1)
-
-                if trigger:
-                    self.smooth_segment_vectorized(1.0, start_p, end_p, mood[3])
-                else:
-                    self.fade_to_black_segment_vectorized(self.decay_ratio, start_p, end_p)
-                return
-
-            # 4. Standard Strobe vs Chill Glow
             if trigger:
-                accent_blend = float(np.clip(tension, 0.0, 1.0))
-                m3, m2 = mood[3], mood[2]
-                self.strobe_color[0] = (1.0 - accent_blend) * float(m3[0]) + accent_blend * float(m2[0])
-                self.strobe_color[1] = (1.0 - accent_blend) * float(m3[1]) + accent_blend * float(m2[1])
-                self.strobe_color[2] = (1.0 - accent_blend) * float(m3[2]) + accent_blend * float(m2[2])
+                accent_blend = float(np.clip(0.6 * tension + self.mood_accent, 0.0, 1.0))
+                hi = self.highlight_color
+                m2 = mood[2]
+                for c in range(3):
+                    self.strobe_color[c] = (1.0 - accent_blend) * float(hi[c]) + accent_blend * float(m2[c])
                 self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, self.strobe_color)
-            elif is_chill:
-                # Sleep/glow in CHILL
-                sine_breath = 0.5 * (1.0 + np.sin(2.0 * np.pi * phase))
-                glow_level = (0.05 + 0.12 * energy) * (0.6 + 0.4 * sine_breath)
+            elif lock < 0.35 and energy > 0.05:
+                # 2. When the flywheel is lost, breathe smoothly with acoustic energy so the mode never dies
+                self.pulse_phase = (self.pulse_phase + self.dt * 3.0 * self.mood_pace) % (2.0 * math.pi)
+                breath = 0.5 + 0.5 * math.sin(self.pulse_phase)
+                glow_level = (1.0 - lock) * energy * (0.12 + 0.25 * breath)
                 m0 = mood[0]
-                self.glow_color[0] = float(m0[0]) * glow_level
-                self.glow_color[1] = float(m0[1]) * glow_level
-                self.glow_color[2] = float(m0[2]) * glow_level
-                self.smooth_segment_vectorized(0.3, 0, self.nb_of_leds - 1, self.glow_color)
+                for c in range(3):
+                    self.glow_color[c] = float(m0[c]) * glow_level
+                self.smooth_segment_vectorized(0.35, 0, self.nb_of_leds - 1, self.glow_color)
             else:
-                self.fade_to_black_segment_vectorized(self.decay_ratio, 0, self.nb_of_leds - 1)
+                self.fade_to_black_segment_vectorized(effective_decay, 0, self.nb_of_leds - 1)
         else:
-            # Fallback when ctx is not available
-            band_flux = getattr(self.listener, "band_flux", None)
-            if band_flux is not None and len(band_flux) > self.listen_band and band_flux[self.listen_band] > self.flux_threshold:
-                self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, mood[3])
+            if flux_val > self.flux_threshold:
+                self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, self.highlight_color)
             else:
-                self.fade_to_black_segment_vectorized(self.decay_ratio, 0, self.nb_of_leds - 1)
+                self.fade_to_black_segment_vectorized(effective_decay, 0, self.nb_of_leds - 1)

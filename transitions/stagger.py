@@ -27,6 +27,30 @@ class StaggerPattern(str, Enum):
     CASCADE_UP = "CASCADE_UP"
     CENTER_OUT = "CENTER_OUT"
     COHORT_COMPLEMENTARY = "COHORT_COMPLEMENTARY"
+    ALTITUDE_CASCADE_DOWN = "ALTITUDE_CASCADE_DOWN"
+    ALTITUDE_CASCADE_UP = "ALTITUDE_CASCADE_UP"
+    BAY_WAVE_LR = "BAY_WAVE_LR"
+    BAY_WAVE_RL = "BAY_WAVE_RL"
+
+
+# Canonical physical Y-altitude tier mapping for full-profile horizontal segments
+_ALTITUDE_TIER_BY_SUFFIX: Dict[str, int] = {
+    "h30": 0, "h00": 0, "h20": 0,  # Canopy tier (Y = 1..16)
+    "h11": 1, "h32": 1,            # Mid tier (Y = 73..85)
+    "h31": 2, "h10": 2,            # Low tier (Y = 171..189)
+}
+
+# Canonical left-to-right horizontal bay column order across the full chandelier
+_BAY_COLUMN_BY_SUFFIX: Dict[str, int] = {
+    "h00": 0,
+    "v1": 1, "s1": 0,
+    "h10": 2, "h11": 2,
+    "v2": 3, "s2": 1,
+    "h20": 4,
+    "v3": 5, "s3": 2,
+    "h30": 6, "h31": 6, "h32": 6,
+    "v4": 7,
+}
 
 
 def select_stagger_pattern(context: Optional[Any] = None) -> StaggerPattern:
@@ -85,9 +109,24 @@ def discover_segment_cohorts(segments: List[Any]) -> Tuple[List[str], List[List[
     return verticals, rings
 
 
+def _segment_suffix(seg_name: str) -> str:
+    parts = seg_name.strip().lower().split()
+    return parts[-1] if parts else seg_name.lower()
+
+
+def _group_rings_by_altitude(rings: List[List[str]]) -> List[List[str]]:
+    """Re-groups horizontal segments by physical Y-altitude tier (Canopy -> Mid -> Low)."""
+    tiers: Dict[int, List[str]] = {}
+    for ring in rings:
+        for seg in ring:
+            tier = _ALTITUDE_TIER_BY_SUFFIX.get(_segment_suffix(seg), 1)
+            tiers.setdefault(tier, []).append(seg)
+    return [sorted(tiers[k]) for k in sorted(tiers.keys())]
+
+
 def _step_distance(idx: int, total: int, pattern: StaggerPattern) -> float:
     """Computes the cohort step multiplier for a given index and stagger pattern."""
-    if pattern == StaggerPattern.CASCADE_UP:
+    if pattern in (StaggerPattern.CASCADE_UP, StaggerPattern.ALTITUDE_CASCADE_UP):
         return float(total - 1 - idx)
     if pattern == StaggerPattern.CENTER_OUT:
         return abs(idx - (total - 1) / 2.0)
@@ -122,9 +161,39 @@ def generate_staggered_configs(
             }
         return configs
 
-    has_rings = any(len(r) > 0 for r in rings)
+    if pattern in (StaggerPattern.BAY_WAVE_LR, StaggerPattern.BAY_WAVE_RL):
+        reverse_wave = pattern == StaggerPattern.BAY_WAVE_RL
+        cols = sorted({_BAY_COLUMN_BY_SUFFIX.get(_segment_suffix(s), 0) for s in allocation})
+        num_cols = max(1, len(cols))
+        col_rank = {c: (num_cols - 1 - i if reverse_wave else i) for i, c in enumerate(cols)}
+        vert_set = set(verticals)
+        for seg in allocation:
+            rank = col_rank.get(_BAY_COLUMN_BY_SUFFIX.get(_segment_suffix(seg), 0), 0)
+            is_vert = seg in vert_set
+            h_wipe = "silk_wipe_reverse" if reverse_wave else "silk_wipe"
+            tech = ("iris_open" if base_technique == "fade_in_out" else base_technique) if is_vert else (
+                h_wipe if base_technique in ("fade_in_out", "vertical_wipe") else base_technique
+            )
+            configs[seg] = {
+                "type": tech,
+                "duration": base_duration,
+                "start_offset": round(rank * step_delay, 3),
+                "direction": None if is_vert else ("DOWN" if reverse_wave else "UP"),
+            }
+        return configs
+
+    active_rings = (
+        _group_rings_by_altitude(rings)
+        if pattern in (StaggerPattern.ALTITUDE_CASCADE_DOWN, StaggerPattern.ALTITUDE_CASCADE_UP)
+        else rings
+    )
+    has_rings = any(len(r) > 0 for r in active_rings)
     is_complementary = pattern == StaggerPattern.COHORT_COMPLEMENTARY
-    vert_tech = "vertical_wipe" if pillar_wipe else base_technique
+    vert_tech = (
+        "vertical_wipe"
+        if (pillar_wipe and base_technique in ("fade_in_out", "vertical_wipe"))
+        else base_technique
+    )
     vert_dur = min(base_duration, 1.2) if is_complementary else base_duration
     ring_tech = (
         ("fade_in_out" if base_technique in ("vertical_wipe", "explosion") else base_technique)
@@ -132,7 +201,7 @@ def generate_staggered_configs(
         else base_technique
     )
     vert_dir = (
-        "UP" if pattern == StaggerPattern.CASCADE_UP
+        "UP" if pattern in (StaggerPattern.CASCADE_UP, StaggerPattern.ALTITUDE_CASCADE_UP)
         else (None if pattern == StaggerPattern.CENTER_OUT else "DOWN")
     )
     ring_start_base = 0.20 if (is_complementary and verticals) else 0.0
@@ -146,8 +215,8 @@ def generate_staggered_configs(
                     "start_offset": 0.0,
                     "direction": vert_dir,
                 }
-        num_rings = len(rings)
-        for ring_idx, ring in enumerate(rings):
+        num_rings = len(active_rings)
+        for ring_idx, ring in enumerate(active_rings):
             offset = round(ring_start_base + _step_distance(ring_idx, num_rings, pattern) * step_delay, 3)
             for seg in ring:
                 if seg in allocation:

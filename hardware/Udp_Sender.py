@@ -9,6 +9,7 @@ from hardware.HardwareInterface import HardwareInterface
 # transition target) to the Fake_ESP32 simulator. Pixel data still flows on the
 # main ports (9001/9002) untouched.
 SEGMENT_METADATA_PORT = 9003
+CONTROL_PORT = 9004
 
 class Udp_Sender(HardwareInterface):
     """
@@ -22,13 +23,29 @@ class Udp_Sender(HardwareInterface):
         self.data = np.zeros((nb_of_leds, 3), dtype=np.uint8)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._analyzer = None
+        self._transitions = None
+        self._control_sock = None
         self._last_analyzer_send = 0.0
+        self._last_transition_send = 0.0
+        self._last_transition_state = None
         self._last_segment_heartbeats = {}  # {segment_name: monotonic_timestamp}
         self._cached_segment_modes = {}     # {segment_name: (mode_name, target_mode_name)}
 
     def set_analyzer(self, analyzer):
         """Store a reference to the AudioAnalyzer so show() can stream its state to the simulator."""
         self._analyzer = analyzer
+
+    def set_transition_controller(self, transitions):
+        """Attach the TransitionService so simulator UI requests on CONTROL_PORT can trigger transitions."""
+        self._transitions = transitions
+        if self._control_sock is None:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.bind(("127.0.0.1", CONTROL_PORT))
+                sock.setblocking(False)
+                self._control_sock = sock
+            except OSError:
+                self._control_sock = None
 
     def __getitem__(self, index):
         return self.data[index]
@@ -60,6 +77,54 @@ class Udp_Sender(HardwareInterface):
 
         if self._analyzer is not None:
             self._send_analyzer_state()
+        if self._transitions is not None:
+            self._poll_control_requests()
+            self._send_transition_state()
+
+    def _poll_control_requests(self):
+        """Drain simulator UI transition requests from CONTROL_PORT in non-blocking mode."""
+        if self._control_sock is None or self._transitions is None:
+            return
+        for _ in range(8):
+            try:
+                data, _ = self._control_sock.recvfrom(2048)
+            except (BlockingIOError, OSError):
+                break
+            try:
+                payload = json.loads(data.decode("utf-8"))
+                if payload.get("type") == "request_transition":
+                    raw_tech = payload.get("technique")
+                    tech = None if raw_tech in (None, "", "AUTO") else str(raw_tech)
+                    dur = payload.get("duration")
+                    self._transitions.request_next(
+                        technique=tech,
+                        duration=float(dur) if dur is not None else None,
+                    )
+            except Exception:
+                pass
+
+    def _send_transition_state(self):
+        """Send transition status to the simulator UI on state change or 10 Hz heartbeat."""
+        if self._transitions is None:
+            return
+        try:
+            now = time.monotonic()
+            st = self._transitions.get_status()
+            curr = (bool(st.is_in_transition), bool(st.is_pending), round(float(st.progress), 2), st.technique)
+            if curr == self._last_transition_state and (now - self._last_transition_send) < 0.1:
+                return
+            self._last_transition_state = curr
+            self._last_transition_send = now
+            payload = {
+                "type": "transition_state",
+                "is_in_transition": bool(st.is_in_transition),
+                "is_pending": bool(st.is_pending),
+                "progress": round(float(st.progress), 3),
+                "technique": st.technique,
+            }
+            self.sock.sendto(json.dumps(payload).encode("utf-8"), (self.ip, SEGMENT_METADATA_PORT))
+        except Exception:
+            pass
 
     def _send_analyzer_state(self):
         """Send analyzer telemetry, throttled to 10 Hz directly at the network boundary."""
@@ -163,6 +228,12 @@ class Udp_Sender(HardwareInterface):
             self.sock.close()
         except Exception:
             pass
+        if self._control_sock is not None:
+            try:
+                self._control_sock.close()
+            except Exception:
+                pass
+            self._control_sock = None
             
     def __del__(self):
         self.close()

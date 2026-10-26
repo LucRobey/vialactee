@@ -10,7 +10,12 @@ import numpy as np
 from mood.api import MoodService, MoodStatus
 from mood.engine import CrossfadeEngine
 from mood.palettes import DEFAULT_PALETTE, PALETTES
-from mood.scene_policy import SceneGovernor
+from mood.scene_policy import (
+    AUTO_PALETTE_DURATION,
+    MODIFIER_FADE_DURATION,
+    ModifierGovernor,
+    SceneGovernor,
+)
 
 
 class DefaultMoodService(MoodService):
@@ -21,19 +26,26 @@ class DefaultMoodService(MoodService):
         initial = initial_palette if initial_palette in PALETTES else DEFAULT_PALETTE
         self._engine = CrossfadeEngine(initial, transition_duration)
         self._governor = SceneGovernor()
+        self._mod_governor = ModifierGovernor()
         self._auto_scene = bool(auto_scene)
         self._names: Tuple[str, ...] = tuple(PALETTES.keys())
 
-        # One read-only view of the live buffer: the engine mutates the base array in place.
+        # Read-only views of the live buffers: the engine mutates the base arrays in place.
         self._view: np.ndarray = self._engine.colors.view()
         self._view.flags.writeable = False
+        self._mod_view: np.ndarray = self._engine.modifiers.view()
+        self._mod_view.flags.writeable = False
 
     def update(self, dt: float, scene: Optional[str] = None) -> None:
-        if self._auto_scene and scene is not None:
-            due = self._governor.update(dt, scene)
-            if due is not None:
-                self.request_palette(due)
         self._engine.advance(dt)
+        if scene is not None:
+            if self._auto_scene:
+                due = self._governor.update(dt, scene)
+                if due is not None:
+                    self.request_palette(due, duration=AUTO_PALETTE_DURATION)
+            mod_due = self._mod_governor.update(dt, scene)
+            if mod_due is not None:
+                self._engine.start_modifiers(mod_due, MODIFIER_FADE_DURATION)
 
     def request_palette(self, name: str, duration: Optional[float] = None) -> bool:
         if name not in PALETTES:
@@ -57,6 +69,9 @@ class DefaultMoodService(MoodService):
 
     def colors(self) -> np.ndarray:
         return self._view
+
+    def modifiers(self) -> np.ndarray:
+        return self._mod_view
 
     def get_status(self) -> MoodStatus:
         e = self._engine

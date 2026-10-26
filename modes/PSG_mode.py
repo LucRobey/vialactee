@@ -1,11 +1,12 @@
 """
 PSG (Paris Saint-Germain) Mode
-Split-spectrum visualizer featuring club colors and a dynamic balance dot.
-Stripped of per-frame logging. White balance dot driven directly by ctx.spectral_tilt.
-Modulates bar power with ctx.energy and harmonized with GlobalMoodManager mood_colors.
+Split-spectrum visualizer featuring opposing bars and a dynamic balance dot.
+Balance dot driven by ctx.spectral_tilt with gentle continuous oscillation,
+and bar power driven by ctx.energy and self.beat_pulse().
 Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
+import math
 import numpy as np
 import modes.Mode as Mode
 
@@ -15,6 +16,7 @@ class PSG_mode(Mode.Mode):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
         self.maxSize: int = max(1, int(self.nb_of_leds / 3))
+        self.dot_phase: float = 0.0
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.left_color: np.ndarray = np.zeros(3, dtype=np.float64)
@@ -28,15 +30,25 @@ class PSG_mode(Mode.Mode):
         ctx = getattr(self.listener, "context", None)
         tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        is_silent = bool(ctx.is_silent if ctx is not None else False)
         mood = self.mood_colors
 
-        # 1. Modulate bar power with ctx.energy and spectral_tilt
-        lower_height = int(np.clip(self.maxSize * energy * (1.0 - 0.4 * max(0.0, tilt)), 0, self.maxSize))
-        higher_height = int(np.clip(self.maxSize * energy * (1.0 + 0.4 * min(0.0, tilt)), 0, self.maxSize))
+        # 1. Modulate bar power with energy, beat_pulse(), and spectral_tilt
+        self.dot_phase = (self.dot_phase + self.dt * 2.2 * self.mood_pace) % (2.0 * math.pi)
+        sway = 0.0 if is_silent else 0.22 * math.sin(self.dot_phase) * (1.0 - 0.5 * self.rhythm_lock)
+        effective_tilt = float(np.clip(tilt + sway, -1.0, 1.0))
 
-        self.left_color[:] = mood[0]
-        self.right_color[:] = mood[1]
-        self.white_dot_color[:] = mood[3]
+        drive = (0.60 * energy + 0.40 * self.beat_pulse()) * self.mood_pace
+        lower_height = int(np.clip(self.maxSize * drive * (1.0 - 0.4 * max(0.0, effective_tilt)), 0, self.maxSize))
+        higher_height = int(np.clip(self.maxSize * drive * (1.0 + 0.4 * min(0.0, effective_tilt)), 0, self.maxSize))
+
+        m0, m1 = mood[0], mood[1]
+        hi = self.highlight_color
+        accent = self.mood_accent
+        for c in range(3):
+            self.left_color[c] = (1.0 - accent) * float(m0[c]) + accent * float(hi[c])
+            self.right_color[c] = (1.0 - accent) * float(m1[c]) + accent * float(hi[c])
+        self.white_dot_color[:] = hi
 
         # 2. Render left bar, middle gap fade, and right bar
         if lower_height >= 0:
@@ -51,6 +63,6 @@ class PSG_mode(Mode.Mode):
         if right_start < self.nb_of_leds:
             self.smooth_segment_vectorized(0.5, right_start, self.nb_of_leds - 1, self.right_color)
 
-        # 3. White balance dot driven directly by ctx.spectral_tilt [-1.0, 1.0]
-        white_dot_pos = int(np.clip((self.nb_of_leds / 2.0) * (1.0 + tilt), 0, self.nb_of_leds - 1))
+        # 3. Balance dot driven by spectral_tilt + continuous sway
+        white_dot_pos = int(np.clip((self.nb_of_leds / 2.0) * (1.0 + effective_tilt), 0, self.nb_of_leds - 1))
         self.smooth_segment_vectorized(1.0, white_dot_pos, white_dot_pos, self.white_dot_color)

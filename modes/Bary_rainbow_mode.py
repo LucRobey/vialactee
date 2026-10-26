@@ -1,9 +1,9 @@
 """
 Barycentric Rainbow Mode
 Displays a symmetrical rainbow gradient mirrored outward from the strip's center.
-Replaces the python loop with precomputed ctx.vertical_center.
-Modulates brightness and saturation with ctx.energy and fades to black in silence.
-Harmonized with GlobalMoodManager mood_colors with zero runtime heap allocations.
+Driven continuously by ctx.vertical_center, ctx.energy, and self.beat_pulse()
+with subtle hue drift so it stays fluid even when beat tracking is lost.
+Zero runtime heap allocations.
 """
 from typing import List, Dict, Any, Optional
 import numpy as np
@@ -20,6 +20,8 @@ class Bary_rainbow_mode(Mode.Mode):
             self.middle_index = [max(0, mid - 1), min(self.nb_of_leds - 1, mid)]
         else:
             self.middle_index = [mid, mid]
+
+        self.hue_drift: float = 0.0
 
         # Pre-allocated scratch arrays (ZERO runtime heap allocation)
         left_len = self.middle_index[0]
@@ -51,14 +53,18 @@ class Bary_rainbow_mode(Mode.Mode):
             self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
             return
 
-        # 2. Replace band loop with ctx.vertical_center
+        # 2. Continuous center hue from spectral vertical_center + gentle drift
+        self.hue_drift = (self.hue_drift + self.dt * 0.025 * self.mood_pace) % 1.0
         v_center = float(ctx.vertical_center if ctx is not None else 0.5)
-        middle_hue = float(np.clip(v_center * 0.84, 0.0, 0.84))
+        drift_nudge = 0.06 * np.sin(2.0 * np.pi * self.hue_drift)
+        middle_hue = float(np.clip(v_center * 0.84 + drift_nudge, 0.02, 0.84))
 
-        # 3. Modulate brightness and saturation with ctx.energy
+        # 3. Modulate brightness and saturation with ctx.energy and beat_pulse()
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
-        val = float(np.clip(0.20 + 0.80 * energy, 0.0, 1.0))
-        sat = float(np.clip(0.50 + 0.50 * energy, 0.0, 1.0))
+        pulse = self.beat_pulse(2.0)
+        drive = 0.55 * energy + 0.45 * pulse
+        val = float(np.clip(0.20 + 0.80 * drive, 0.0, 1.0))
+        sat = float(np.clip(0.55 + 0.45 * energy - 0.20 * self.mood_accent, 0.35, 1.0))
 
         # 4. Vectorize left side
         if self.middle_index[0] > 0:

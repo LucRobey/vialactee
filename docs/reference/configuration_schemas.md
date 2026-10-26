@@ -22,8 +22,8 @@ graph TD
     SegmentsConfig --> Mgr
 
     Mgr --> Main["Main.py"]
-    Main --> Listener["core/Listener.py"]
-    Main --> AudioAnalyzer["core/AudioAnalyzer.py"]
+    Main --> Listener["music/Listener.py"]
+    Main --> AudioAnalyzer["music/AudioAnalyzer.py"]
     Main --> LocalMic["connectors/Local_Microphone.py"]
     Main --> ModeMaster["core/Mode_master.py"]
     ModeMaster --> Segment
