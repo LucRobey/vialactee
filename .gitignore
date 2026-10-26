@@ -1,4 +1,5 @@
 __pycache__/
+.venv/
 *.log
 vialactee.log
 debug-*.log
@@ -7,6 +8,7 @@ playground/
 archive/playground/
 .pytest_cache/
 scratch/
+.temp_scratch/
 
 # Pre-cached audio analysis dumps
 assets/musics/mp3_files/librosa/*.npz
