@@ -1,6 +1,6 @@
 """
 tests/test_musical_context_engine.py
-Unit tests and governance verification for core/MusicalContextEngine.py (Offer 4):
+Unit tests and governance verification for music/MusicalContextEngine.py (Offer 4):
 - Unified 3-Tier Musical Context verification:
   - Tier 1: Continuous Dynamic Kinetics (energy, tension, drop_progress, spectral_tilt, vertical_center, gradients)
   - Tier 2: 4 Macro Scenes (CHILL, GROOVE, BUILDUP, DROP_IMPACT) with Schmitt hysteresis, dwell locks, crossfading
@@ -14,7 +14,7 @@ import time
 import tracemalloc
 import numpy as np
 
-from core.MusicalContextEngine import MusicalContextEngine, MusicalScene
+from music.MusicalContextEngine import MusicalContextEngine, MusicalScene
 from modes.Beat_runner_mode import Beat_runner_mode
 from modes.Impact_shockwave_mode import Impact_shockwave_mode
 from modes.Rhythm_breather_mode import Rhythm_breather_mode
@@ -775,16 +775,18 @@ class TestMusicalContextEngine(unittest.TestCase):
         while self.engine.scene == MusicalScene.BUILDUP and self.engine.drop_countdown > 0.0:
             self.engine.update(0.1)
 
-        # Frame 1: Impact frame
+        # Frame 1: Impact frame (is_drop_impact == True)
         self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
         self.assertTrue(self.engine.is_drop_impact)
         mode_runner.run()
         mode_shockwave.run()
         mode_breather.run()
         f1_runner_max = float(np.max(mode_runner.vals))
-        f1_shock_glow = float(mode_shockwave.half_intensity[0])
-        self.assertGreaterEqual(f1_runner_max, 0.90)
-        self.assertGreaterEqual(f1_shock_glow, 0.40)
+        f1_shock_max = float(np.max(mode_shockwave.half_intensity))
+        self.assertGreater(f1_runner_max, 0.20)
+        self.assertGreater(f1_shock_max, 0.40)
+        self.assertEqual(mode_shockwave.wave_count_total, 1)
+        self.assertTrue(np.any(rgb_breather > 0))
 
         # Frame 2: is_drop_impact badge clears, but engine is in DROP_IMPACT dwell
         self.engine.update(0.1)
@@ -796,11 +798,13 @@ class TestMusicalContextEngine(unittest.TestCase):
         mode_shockwave.run()
         mode_breather.run()
         f2_runner_max = float(np.max(mode_runner.vals))
-        f2_shock_glow = float(mode_shockwave.half_intensity[0])
+        f2_shock_max = float(np.max(mode_shockwave.half_intensity))
 
-        # Verify sustained flare across dwell (must NOT collapse to zero!)
-        self.assertGreater(f2_runner_max, 0.70, "Beat_runner flare must sustain across dwell")
-        self.assertGreater(f2_shock_glow, 0.35, "Impact_shockwave core glow must sustain across dwell")
+        # Verify sustained motion across dwell without full-strip flooding or per-frame wave spam
+        self.assertGreater(f2_runner_max, 0.15, "Beat_runner must stay active across dwell")
+        self.assertGreater(f2_shock_max, 0.35, "Impact_shockwave wave must propagate across dwell")
+        self.assertEqual(mode_shockwave.wave_count_total, 1, "Impact_shockwave must not flood waves every dwell frame")
+        self.assertTrue(np.any(rgb_breather > 0))
 
         # Step past 1.5s dwell: exits DROP_IMPACT
         for _ in range(16):

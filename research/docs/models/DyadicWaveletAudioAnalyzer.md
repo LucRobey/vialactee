@@ -5,7 +5,7 @@
 > **Date:** 2026-10-05  
 > **Version:** `1.0.0`  
 > **Cycle:** `013` (Lead RAD-04)  
-> **Base Class:** [`core.DyadicMetricalAudioAnalyzer.DyadicMetricalAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/DyadicMetricalAudioAnalyzer.py)  
+> **Base Class:** [`music.DyadicMetricalAudioAnalyzer.DyadicMetricalAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/DyadicMetricalAudioAnalyzer.py)  
 > **Implementation File:** [`research/experiments/models/DyadicWaveletAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/DyadicWaveletAudioAnalyzer.py)
 
 ---

@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional
 
 import connectors.System_status as System_status
 import core.Segment as Segment
-import core.Listener as Listener
+import music.api as Listener
 import core.TransitionBridge as TransitionBridge
 from config.room_bounds import compute_room_bounds
 from transitions.api import create_transition_service
@@ -65,8 +65,11 @@ class Mode_master:
         self.initiate_segments()
         self.mode_settings_catalog = self._build_mode_settings_catalog()
         self.transitions = create_transition_service(self.infos)
+        if len(self.leds_list) > 0 and hasattr(self.leds_list[0], "set_transition_controller"):
+            self.leds_list[0].set_transition_controller(self.transitions)
         self.mood = create_mood_service(auto_scene=True)  # auto_scene is a code default (off) in mood.api
         Mode.bind_mood_colors(self.mood.colors())
+        Mode.bind_mood_modifiers(self.mood.modifiers())
         self.initiate_modes()
         self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
 

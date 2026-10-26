@@ -9,7 +9,7 @@ This logbook maintains the persistent chronological scientific narrative of all 
 ### Cycle 001: Evaluation Engine Formalization & Chatter Fix
 - **Date:** 2026-09-05
 - **Investigator:** System / Antigravity Assistant
-- **Target Model:** `core/AudioAnalyzer.py`
+- **Target Model:** `music/AudioAnalyzer.py`
 - **Benchmark Suite:** `--suite synthetic` (Clean-room algorithmic stress tracks)
 - **Problem Investigated:**
   1. *Double-Trigger Chatter Bug:* Immediate re-triggering of beats on consecutive frames (16.6ms apart) caused by soft-snapping wrapping backwards across the $0.0$ boundary into $[0.85, 1.0)$.
@@ -523,10 +523,10 @@ This logbook maintains the persistent chronological scientific narrative of all 
 
 ### Milestone: Production Promotion of MultiBandOnsetAudioAnalyzer (Cycle 008)
 - **Date:** 2026-09-22
-- **Action:** Promoted `MultiBandOnsetAudioAnalyzer` to core production engine ([`core/MultiBandOnsetAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactee/core/MultiBandOnsetAudioAnalyzer.py)).
+- **Action:** Promoted `MultiBandOnsetAudioAnalyzer` to core production engine ([`music/MultiBandOnsetAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactee/music/MultiBandOnsetAudioAnalyzer.py)).
 - **Engineered Capabilities:**
   1. *Dual-Resolution Ingestion:* Kept 8-band Mel array for visual modes in `modes/` (`AudioIngestion.fft_band_values`) while computing 32-band Mel filterbanks (`AudioIngestion.multiband_fft_values`) for the analyzer.
-  2. *Zero External Dependencies:* Promoted `build_dense_phase_bank` kernel into a standalone production module [`core/comb_kernels.py`](file:///c:/Users/Users/Desktop/vialactee/core/comb_kernels.py).
+  2. *Zero External Dependencies:* Promoted `build_dense_phase_bank` kernel into a standalone production module [`music/comb_kernels.py`](file:///c:/Users/Users/Desktop/vialactee/music/comb_kernels.py).
   3. *Production Parity & Property Contract:* Added all required interface properties (`silence_frames`, `song_changes_times`, `structural_changes_times`, `detect_band_peaks`, `update_structural_novelty`) ensuring seamless drop-in compatibility with `Listener.py`, `Fake_leds.py`, and `Transition_Director.py`.
   4. *Dynamic Model Configuration:* Wired `config/app_config.json` (`"analyzer_model": "MultiBandOnsetAudioAnalyzer"`) and developer tool loaders (`tools/mode_studio.py`, `tools/music_studio.py`).
 - **Verification:**
@@ -572,7 +572,7 @@ This logbook maintains the persistent chronological scientific narrative of all 
 
 ### Milestone: Production Promotion of DyadicMetricalAudioAnalyzer (Cycle 012) & Demotion of MultiBandOnsetAudioAnalyzer (Cycle 008)
 - **Date:** 2026-10-05
-- **Action:** Promoted `DyadicMetricalAudioAnalyzer` to `core/DyadicMetricalAudioAnalyzer.py` and made it the default (`config/app_config.json`: `"analyzer_model": "DyadicMetricalAudioAnalyzer"`). `MultiBandOnsetAudioAnalyzer` is demoted from default to **stable fallback & parent engine** (still in `core/`, still selectable with `--model MultiBandOnsetAudioAnalyzer`).
+- **Action:** Promoted `DyadicMetricalAudioAnalyzer` to `music/DyadicMetricalAudioAnalyzer.py` and made it the default (`config/app_config.json`: `"analyzer_model": "DyadicMetricalAudioAnalyzer"`). `MultiBandOnsetAudioAnalyzer` is demoted from default to **stable fallback & parent engine** (still in `core/`, still selectable with `--model MultiBandOnsetAudioAnalyzer`).
 - **Why the research file could not be copied as-is:** Cycle 012 subclassed the *research fork* of MultiBand, which had drifted from the production parent. Missing in the fork: the `update_structural_novelty` / `detect_band_peaks` split that `Listener` calls, the 4-pillar `rhythm_salience`, the speaker-time (`band_flux_buffer`) `beat_tag`, and the pulse-density history; it also used `lookahead + latency` where production uses `lookahead - latency`, and a +/-3 instead of +/-6 speaker window. The port subclasses the **core** parent and overrides only the tempo/phase sweep, flywheel advance, ODF ingestion and telemetry. The research file is now an alias to the core class (original preserved in git: `git show c37e9e2:research/experiments/models/DyadicMetricalAudioAnalyzer.py`).
 - **Parity (neural-core, core port vs original Cycle 012):** Salient F1 80.8% = 80.8%, Raw F1 79.2% = 79.2%, CMLt 72.4% = 72.4%, jitter 34.2 ms, upbeat gap 0.00, every track identical. CPU 0.44 ms/frame (0.29 ms in the original run; machine noise, budget <= 0.5 ms). Synthetic: 96.0% F1 / 95.8% CMLt / 9.9 ms jitter, 8/8 tracks, zero regressions. Runs: `RUN_20261005_215957_..._cycle012_promoted_to_core` and `RUN_20261005_220021_..._cycle012_promoted_to_core_synth`.
 - **Measured finding (parity experiment):** the first port also cleared the sub-pulse latch on a novelty-detected song change. That cost *Nightcall* -0.2 pt / *Pumped Up Kicks* -0.3 pt Salient F1 and about -0.6 / -2.2 pt CMLt. Removing the reset restored exact parity, so the latch is deliberately left to decay on its own.

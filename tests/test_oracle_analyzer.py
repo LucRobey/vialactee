@@ -6,9 +6,9 @@ import unittest
 import numpy as np
 import time
 
-from core.RhythmConfig import RhythmConfig
-from core.StructuralNoveltyDetector import StructuralNoveltyDetector
-from core.AudioAnalyzer import (
+from music.RhythmConfig import RhythmConfig
+from music.StructuralNoveltyDetector import StructuralNoveltyDetector
+from music.AudioAnalyzer import (
     AudioAnalyzer,
     FastTemplateBank,
     bpm_to_class,
@@ -18,9 +18,9 @@ from core.AudioAnalyzer import (
     class_based_phase_sweep,
     evaluate_specific_bpms,
 )
-from core.AudioIngestion import AudioIngestion
-from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
-from core.Listener import Listener
+from music.AudioIngestion import AudioIngestion
+from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+from music.Listener import Listener
 
 
 class TestRhythmConfig(unittest.TestCase):

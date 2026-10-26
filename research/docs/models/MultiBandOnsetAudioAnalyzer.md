@@ -3,10 +3,10 @@
 > **Model Identifier:** `MultiBandOnsetAudioAnalyzer`  
 > **Author:** Autonomous Lead Rhythm Data Scientist & Audio DSP Engineer  
 > **Date:** 2026-09-06 (Promoted to Production: 2026-09-22)  
-> **Status:** 🚀 **Promoted to Production** (`core/MultiBandOnsetAudioAnalyzer.py`)  
+> **Status:** 🚀 **Promoted to Production** (`music/MultiBandOnsetAudioAnalyzer.py`)  
 > **Version:** `1.1.0` (Production Hardened)  
-> **Base Class:** [`core.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)  
-> **Production Implementation:** [`core/MultiBandOnsetAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/MultiBandOnsetAudioAnalyzer.py)  
+> **Base Class:** [`music.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/BaseAudioAnalyzer.py)  
+> **Production Implementation:** [`music/MultiBandOnsetAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/MultiBandOnsetAudioAnalyzer.py)  
 > **Research Prototype:** [`research/experiments/models/MultiBandOnsetAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/MultiBandOnsetAudioAnalyzer.py)  
 > **Research Cycle:** 008  
 

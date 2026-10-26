@@ -29,9 +29,9 @@ import argparse
 from typing import Dict, Any, List, Optional, Tuple, Type
 import numpy as np
 
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.AudioAnalyzer import AudioAnalyzer
-from core.RhythmConfig import RhythmConfig
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.AudioAnalyzer import AudioAnalyzer
+from music.RhythmConfig import RhythmConfig
 from research.benchmarks.run_benchmark import (
     discover_tracks,
     load_model_class,

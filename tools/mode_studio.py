@@ -31,10 +31,11 @@ import soundfile as sf
 import sounddevice as sd
 import pygame
 
-from core.Listener import Listener
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.AudioAnalyzer import AudioAnalyzer, bpm_to_class
-from core.MusicalContextEngine import MusicalScene
+from music.Listener import Listener
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.AudioAnalyzer import AudioAnalyzer, bpm_to_class
+from music.MusicalContextEngine import MusicalScene
+from mood.api import create_mood_service
 from modes.Mode import Mode
 
 
@@ -46,10 +47,10 @@ def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAn
     if model_name in ("AudioAnalyzer", "baseline"):
         return AudioAnalyzer
     if model_name == "MultiBandOnsetAudioAnalyzer":
-        from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+        from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
         return MultiBandOnsetAudioAnalyzer
     if model_name in ("DyadicMetricalAudioAnalyzer", "production", "default"):
-        from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+        from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
         return DyadicMetricalAudioAnalyzer
 
     models_dir = os.path.join(repo_root, "research", "experiments", "models")
@@ -295,6 +296,10 @@ class ModeManager:
         self.rgb_buffer = np.zeros((self.nb_leds, 3), dtype=np.int32)
         self.indexes = list(range(self.nb_leds))
 
+        self.mood = create_mood_service(auto_scene=True)
+        Mode.bind_mood_colors(self.mood.colors())
+        Mode.bind_mood_modifiers(self.mood.modifiers())
+
         self.discover_modes()
 
     def discover_modes(self) -> None:
@@ -363,7 +368,12 @@ class ModeManager:
         return self.load_mode(self.current_idx - 1)
 
     def render(self) -> None:
-        """Executes rendering of the active mode into self.rgb_buffer."""
+        """Executes mood sector update and rendering of the active mode into self.rgb_buffer."""
+        ctx = getattr(self.listener, "context", None)
+        raw_scene = getattr(ctx, "scene", None) if ctx is not None else None
+        scene_str = str(raw_scene.value if hasattr(raw_scene, "value") else raw_scene) if raw_scene is not None else None
+        dt = float(getattr(self.listener, "dt", 1.0 / 60.0))
+        self.mood.update(dt if dt > 0.0 else (1.0 / 60.0), scene_str)
         if self.active_mode_instance is not None:
             try:
                 self.active_mode_instance.render(buffer=self.rgb_buffer)
@@ -660,11 +670,19 @@ class StudioApp:
                         target_sec = ratio * self.streamer.total_duration
                         self.streamer.seek(target_sec, self.sync_offset_ms / 1000.0)
 
-            # Advance audio analysis pipeline & step modes
+            # Advance audio analysis pipeline & step modes.
+            # The mode MUST render after every analyzer step: is_beat / is_real_beat are one-frame
+            # flags that the next listener.update() clears, so rendering once after a multi-step
+            # catch-up would silently drop beat ticks (the HUD dial reads the continuous phase and
+            # would still look perfectly aligned).
             if self.streamer.is_playing:
-                self.streamer.advance_ingest_frame(self.sync_offset_ms / 1000.0)
+                self.streamer.advance_ingest_frame(
+                    self.sync_offset_ms / 1000.0,
+                    on_frame_step=self.mode_mgr.render,
+                )
 
-            self.mode_mgr.render()
+            if not self.streamer.is_playing:
+                self.mode_mgr.render()  # paused / idle: keep the preview alive
 
             # Render GUI
             self.screen.fill(self.BG_COLOR)

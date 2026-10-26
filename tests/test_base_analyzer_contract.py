@@ -4,11 +4,11 @@ tests/test_base_analyzer_contract.py - Verifies the BaseAudioAnalyzer contract.
 
 import unittest
 import numpy as np
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.AudioAnalyzer import AudioAnalyzer
-from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
-from core.AudioIngestion import AudioIngestion
-from core.RhythmConfig import RhythmConfig
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.AudioAnalyzer import AudioAnalyzer
+from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+from music.AudioIngestion import AudioIngestion
+from music.RhythmConfig import RhythmConfig
 
 
 class DummyMinimalAnalyzer(BaseAudioAnalyzer):

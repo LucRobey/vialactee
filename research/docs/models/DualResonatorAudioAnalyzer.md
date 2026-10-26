@@ -4,7 +4,7 @@
 > **Author:** Autonomous Lead Rhythm Data Scientist & Audio DSP Engineer  
 > **Date:** 2026-09-06  
 > **Version:** `1.0.0`  
-> **Base Class:** [`core.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)  
+> **Base Class:** [`music.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/BaseAudioAnalyzer.py)  
 > **Implementation File:** [`research/experiments/models/DualResonatorAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/DualResonatorAudioAnalyzer.py)
 
 ---
@@ -80,4 +80,4 @@ $$\phi_{\text{speaker}}[t] \ge \phi_{\text{speaker}}[t-1] + 0.20 \cdot \frac{\te
 - **RPi Frame Budget:** $\le 3.0\text{ms}$ at 60 FPS.
 - **Measured Latency:** $\sim 0.31\text{ms}$ per frame (over 90% CPU margin).
 - **Dynamic Heap Allocation:** Strictly **0 objects** per frame. All buffers and complex arrays pre-allocated in `__init__()`.
-- **Contract:** Subclasses `core.BaseAudioAnalyzer.BaseAudioAnalyzer` directly.
+- **Contract:** Subclasses `music.BaseAudioAnalyzer.BaseAudioAnalyzer` directly.

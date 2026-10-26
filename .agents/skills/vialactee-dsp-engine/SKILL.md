@@ -5,7 +5,7 @@ description: Rules, mathematical foundations, and guidelines for modifying audio
 
 # Vialactée DSP & Beat Tracking Engine Skill
 
-Use this skill whenever modifying audio analysis algorithms, FFT filtering, tempo estimation, beat prediction, rhythmic phase synchronization, or structural novelty detection in `core/AudioIngestion.py`, `core/DyadicMetricalAudioAnalyzer.py`, `core/MultiBandOnsetAudioAnalyzer.py`, `core/comb_kernels.py`, `core/AudioAnalyzer.py`, `core/StructuralNoveltyDetector.py`, `core/RhythmConfig.py`, `core/Listener.py`, or `connectors/Local_Microphone.py`.
+Use this skill whenever modifying audio analysis algorithms, FFT filtering, tempo estimation, beat prediction, rhythmic phase synchronization, or structural novelty detection in `music/AudioIngestion.py`, `music/DyadicMetricalAudioAnalyzer.py`, `music/MultiBandOnsetAudioAnalyzer.py`, `music/comb_kernels.py`, `music/AudioAnalyzer.py`, `music/StructuralNoveltyDetector.py`, `music/RhythmConfig.py`, `music/Listener.py`, or `connectors/Local_Microphone.py`.
 
 ## Core Guidelines & Invariants
 
@@ -27,13 +27,13 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 ### 4. Multi-Band Separation, Oracle Flywheel & Phase Projection
 * Production beat tracking (`DyadicMetricalAudioAnalyzer.py`, built on the `MultiBandOnsetAudioAnalyzer.py` parent engine) separates 32-band onset derivatives into 4 instrument streams: Kick ($y_{\text{kick}}$), Snare ($y_{\text{snare}}$), Hi-hat ($y_{\text{hat}}$), and Mid-melodic ($y_{\text{mid}}$).
 * Kick-conditioned anti-phase disambiguation ($K_{\text{anti}} > 1.25 \cdot K_1$) prevents 180° upbeat phase locking on synth-heavy tracks.
-* Standalone compiled `core/comb_kernels.py` builds the dense pulse template bank for sub-millisecond class correlation without external dependencies.
+* Standalone compiled `music/comb_kernels.py` builds the dense pulse template bank for sub-millisecond class correlation without external dependencies.
 * Phase estimation is back-projected to speaker time ($T_{\text{speaker}}$).
-* Flywheel and onset detection thresholds are centralized in `core/RhythmConfig.py`.
+* Flywheel and onset detection thresholds are centralized in `music/RhythmConfig.py`.
 * Consult [flywheel_architecture.md](./references/flywheel_architecture.md) for complete mathematical definitions, Logarithmic Base-Tempo (LBT) octave folding, and dropout immunity rules.
 
 ### 5. Structural Novelty Separation
-* Structural music events (Verse/Chorus boundaries, Seamless Crossfades, Silence Drops) are managed by `core/StructuralNoveltyDetector.py`.
+* Structural music events (Verse/Chorus boundaries, Seamless Crossfades, Silence Drops) are managed by `music/StructuralNoveltyDetector.py`.
 * Macro-structure tension is computed from Short-Term Memory (STM) vs Long-Term Memory (LTM) Euclidean distance and asserved dynamically via Local Max / Global Max decay envelopes.
 
 ### 6. Listener Facade Contract & Zero-Allocation Delay Buffer
@@ -41,12 +41,12 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 * Any new property added to `AudioIngestion`, `AudioAnalyzer`, or `StructuralNoveltyDetector` must be exposed via delayed properties in `Listener.py` so visual modes receive time-aligned metrics.
 
 ### 7. BaseAudioAnalyzer Contract & Benchmark Verification
-* Any modification or replacement of beat tracking algorithms must subclass `core/BaseAudioAnalyzer.py`.
+* Any modification or replacement of beat tracking algorithms must subclass `music/BaseAudioAnalyzer.py`.
 * Always evaluate changes against the immutable benchmark suite (`python -m research.benchmarks.run_benchmark --suite synthetic --save-run`) before merging.
 * Enforce the physical refractory lockout ($T_{\min} = \max(0.18\text{s}, 0.40 \times 60/\text{BPM})$) and backward wrap clamp on soft-snapping to prevent double-trigger chatter and phase jitter.
 
 ### 8. Musical Context Engine & Unified 3-Tier Visual Conductor
-* High-level musical context is orchestrated by `core/MusicalContextEngine.py` and exposed via `self.listener.context`.
+* High-level musical context is orchestrated by `music/MusicalContextEngine.py` and exposed via `self.listener.context`.
 * It consumes speaker-aligned `rhythm_salience`, `beat_trust`, spectral power, 8-band Mel FFT, novelty, lookahead gradients ($\Delta R, \Delta P$), and boundary flags (`live_is_song_change`).
 * Operates across 3 unified abstraction tiers:
   - **Tier 1 (Continuous Dynamic Kinetics):** `energy`, `tension`, `drop_progress` (smoothly sustained and decaying from 1.0 to 0.0 across the 1.5s `DROP_IMPACT` dwell), `spectral_tilt`, `vertical_center`.

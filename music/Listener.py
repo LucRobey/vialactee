@@ -4,11 +4,11 @@ import asyncio
 import logging
 import numpy as np
 
-from core.AudioIngestion import AudioIngestion
-from core.AudioAnalyzer import AudioAnalyzer
-from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
-from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
-from core.MusicalContextEngine import MusicalContextEngine
+from music.AudioIngestion import AudioIngestion
+from music.AudioAnalyzer import AudioAnalyzer
+from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+from music.MusicalContextEngine import MusicalContextEngine
 
 logger = logging.getLogger(__name__)
 

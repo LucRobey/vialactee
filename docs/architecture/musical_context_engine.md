@@ -1,14 +1,14 @@
 # Unified 3-Tier Musical Context Engine Architecture
 
 > **Location:** `docs/architecture/musical_context_engine.md` (Tier 1 Canonical Specification)  
-> **Source Files:** [`core/MusicalContextEngine.py`](../../core/MusicalContextEngine.py), [`core/Listener.py`](../../core/Listener.py)  
+> **Source Files:** [`music/MusicalContextEngine.py`](../../music/MusicalContextEngine.py), [`music/Listener.py`](../../music/Listener.py)  
 > **Enforcing Axioms:** [AXIOM-01](../axioms/AXIOM-01_FRAME_BUDGET.md), [AXIOM-02](../axioms/AXIOM-02_ZERO_ALLOCATION.md), [AXIOM-06](../axioms/AXIOM-06_PERCEPTUAL_RHYTHM.md), [AXIOM-07](../axioms/AXIOM-07_CODE_GOVERNANCE.md)
 
 ---
 
 ## 1. Executive Summary & Architectural Overview
 
-The **Unified 3-Tier Musical Context Engine** replaces fragmented, ad-hoc DSP threshold checks in modes with a structured, hierarchical representation of real-time musical intent. Residing inside [`core/MusicalContextEngine.py`](../../core/MusicalContextEngine.py) and exposed directly via `self.listener.context`, it provides a rock-solid, multi-signal semantic layer partitioned into three distinct abstraction tiers:
+The **Unified 3-Tier Musical Context Engine** replaces fragmented, ad-hoc DSP threshold checks in modes with a structured, hierarchical representation of real-time musical intent. Residing inside [`music/MusicalContextEngine.py`](../../music/MusicalContextEngine.py) and exposed directly via `self.listener.context`, it provides a rock-solid, multi-signal semantic layer partitioned into three distinct abstraction tiers:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -51,7 +51,7 @@ The **Unified 3-Tier Musical Context Engine** replaces fragmented, ad-hoc DSP th
                                 │
                                 ▼
                  ┌──────────────────────────────┐
-                 │       core/Listener.py       │ ◄── Speaker FIFO Ring Buffers
+                 │       music/Listener.py       │ ◄── Speaker FIFO Ring Buffers
                  │   • rhythm_salience          │     (Speaker time T_speaker)
                  │   • beat_trust               │
                  │   • asserved_total_power     │
@@ -169,7 +169,7 @@ Convenience properties derived from the scene:
 - **AXIOM-01 (Frame Budget):** Execution time $\le 0.04\text{ms}$ per frame (budget: $0.15\text{ms}$).
 - **AXIOM-02 (Zero Dynamic Heap Allocations):** Pre-allocated scalar state variables, identity comparisons (`is`), module-level alias sets, zero tuple unpacking.
 - **AXIOM-06 (Perceptual Rhythm Stability):** Dual-threshold Schmitt trigger deadbands and minimum dwell times prevent 60 FPS state chattering.
-- **AXIOM-07 (Code Governance):** `core/MusicalContextEngine.py` strictly adheres to the 500-line cap (currently 477 lines).
+- **AXIOM-07 (Code Governance):** `music/MusicalContextEngine.py` strictly adheres to the 500-line cap (currently 477 lines).
 
 ---
 

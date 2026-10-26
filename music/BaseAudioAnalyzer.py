@@ -1,5 +1,5 @@
 """
-core/BaseAudioAnalyzer.py - Abstract Contract for all Audio & Rhythm Analyzers.
+music/BaseAudioAnalyzer.py - Abstract Contract for all Audio & Rhythm Analyzers.
 
 Any rhythm model (Pearson Flywheel, Multi-band, Kalman Filter, Neural Net)
 must inherit from this base class to be compatible with both the production

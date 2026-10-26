@@ -28,8 +28,8 @@ import logging
 from typing import Dict, Any, Optional
 import numpy as np
 
-from core.RhythmConfig import RhythmConfig
-from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+from music.RhythmConfig import RhythmConfig
+from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 
 logger = logging.getLogger(__name__)
 

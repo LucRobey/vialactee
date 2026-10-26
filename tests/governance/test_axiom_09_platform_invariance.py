@@ -57,25 +57,26 @@ class TestAxiom09PlatformInvariance(unittest.TestCase):
         self.assertEqual(violations, [], "Platform branching found in modes/:\n" + "\n".join(violations))
 
     def test_core_dsp_has_zero_platform_checks(self):
-        """Verify core/ DSP modules have zero platform checks."""
-        core_dir = os.path.join(self.repo_root, "core")
+        """Verify core/ and music/ modules have zero platform checks."""
         violations = []
 
-        for root, _, files in os.walk(core_dir):
-            for file_name in files:
-                if not file_name.endswith(".py"):
-                    continue
-                file_path = os.path.join(root, file_name)
-                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                    try:
-                        tree = ast.parse(f.read(), filename=file_name)
-                    except SyntaxError:
+        for pkg in ("core", "music"):
+            pkg_dir = os.path.join(self.repo_root, pkg)
+            for root, _, files in os.walk(pkg_dir):
+                for file_name in files:
+                    if not file_name.endswith(".py"):
                         continue
-                visitor = PlatformCheckVisitor(file_name)
-                visitor.visit(tree)
-                violations.extend(visitor.violations)
+                    file_path = os.path.join(root, file_name)
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        try:
+                            tree = ast.parse(f.read(), filename=file_name)
+                        except SyntaxError:
+                            continue
+                    visitor = PlatformCheckVisitor(file_name)
+                    visitor.visit(tree)
+                    violations.extend(visitor.violations)
 
-        self.assertEqual(violations, [], "Platform branching found in core/:\n" + "\n".join(violations))
+        self.assertEqual(violations, [], "Platform branching found in core/ or music/:\n" + "\n".join(violations))
 
 
 if __name__ == "__main__":

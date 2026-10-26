@@ -1,7 +1,7 @@
 # Rhythm Engine & Anticipation Flywheel ("Oracle")
 
 > **Location:** `docs/architecture/rhythm_engine.md` (Tier 1 Canonical Specification)  
-> **Source Files:** [`core/DyadicMetricalAudioAnalyzer.py`](../../core/DyadicMetricalAudioAnalyzer.py), [`core/MultiBandOnsetAudioAnalyzer.py`](../../core/MultiBandOnsetAudioAnalyzer.py), [`core/comb_kernels.py`](../../core/comb_kernels.py), [`core/AudioAnalyzer.py`](../../core/AudioAnalyzer.py)  
+> **Source Files:** [`music/DyadicMetricalAudioAnalyzer.py`](../../music/DyadicMetricalAudioAnalyzer.py), [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py), [`music/comb_kernels.py`](../../music/comb_kernels.py), [`music/AudioAnalyzer.py`](../../music/AudioAnalyzer.py)  
 > **Enforcing Axioms:** [AXIOM-01](../axioms/AXIOM-01_FRAME_BUDGET.md), [AXIOM-05](../axioms/AXIOM-05_LOOKAHEAD_SYNC.md), [AXIOM-06](../axioms/AXIOM-06_PERCEPTUAL_RHYTHM.md), [AXIOM-08](../axioms/AXIOM-08_RESEARCH_REGRESSION.md)
 
 ---
@@ -10,7 +10,7 @@
 
 The **Anticipation Flywheel ("Oracle")** rhythm tracking engine is a predictive, real-time algorithmic pipeline designed to achieve zero-lag, jitter-free beat synchronization for the Vialactée chandelier. Rather than running a reactive beat tracker and delaying its triggers, it uses the 5-second look-ahead audio buffer to predict incoming tempo and phase, back-projects the phase to the physical speaker time ($T_{\text{speaker}}$), and drives a continuous mechanical flywheel with breakdown coasting, anti-phase disambiguation, and real-beat gating.
 
-The production engine is `core/DyadicMetricalAudioAnalyzer.py` (Cycle 012), a subclass of the stable parent engine `core/MultiBandOnsetAudioAnalyzer.py` (Cycle 008, still selectable as a fallback), backed by standalone compiled `core/comb_kernels.py`. Sections A-D describe the parent engine; section E describes what the Dyadic layer adds.
+The production engine is `music/DyadicMetricalAudioAnalyzer.py` (Cycle 012), a subclass of the stable parent engine `music/MultiBandOnsetAudioAnalyzer.py` (Cycle 008, still selectable as a fallback), backed by standalone compiled `music/comb_kernels.py`. Sections A-D describe the parent engine; section E describes what the Dyadic layer adds.
 
 ---
 
@@ -33,7 +33,7 @@ $$K_1 = \mathbb{E}\left[y_{\text{kick}} \mid \text{phase} \approx \phi_1\right],
 If $s(\phi_{\text{anti}}) \ge 0.80 s(\phi_1)$ and $K_{\text{anti}} > 1.25 \cdot K_1$, the engine forces phase alignment to the true acoustic kick downbeat, resolving upbeat inversion.
 
 ### C. Dense Pearson Template Bank & Logarithmic Octave Folding
-Using standalone compiled `core/comb_kernels.py`, the engine builds dense triangular pulse template banks across continuous logarithmic tempo classes:
+Using standalone compiled `music/comb_kernels.py`, the engine builds dense triangular pulse template banks across continuous logarithmic tempo classes:
 $$f(\text{BPM}) = \log_2\left(\frac{\text{BPM}}{60}\right) \pmod 1$$
 - **Fast Scout Sweep:** Evaluates Pearson cross-correlation across tempo classes in $< 0.3\text{ ms}$ on Raspberry Pi CPU.
 - **Dyadic Judge:** Evaluates candidate octaves only ($\{0.5\times, 1.0\times, 2.0\times\}$; $3:2$ fifths are banned because they cause cross-metric polyrhythmic locks) with a Gaussian human prior centered at $125\text{ BPM}$.

@@ -23,7 +23,7 @@ python Main.py
 ```
 This spawns:
 - The async audio ingestion and beat tracking engine.
-- The 22 active visual mode animations across all segments.
+- The 21 active visual mode animations across all segments.
 - The Pygame visualizer (`hardware/Fake_leds.py`) reconstructing chandelier geometry from `config/segments_small.json` or `config/segments_full.json`.
 - The Web App API server on `http://localhost:8080` (if `startServer: true` in `config/app_config.json`).
 
@@ -54,6 +54,6 @@ Vialactée is strictly governed by **The 9 Untouchable Golden Axioms (Tier 0)**:
 All documentation is hierarchically classified into the [5-Tier Documentation Authority Matrix](./docs/README.md):
 - **[Documentation Portal](./docs/README.md)**: Central table of contents.
 - **[System Architecture Blueprints](./docs/architecture/system_overview.md)**: Deep dive into the audio pipeline, rhythm tracker, transition director, and hardware abstraction.
-- **[Reference Catalogs & Schemas](./docs/reference/modes_catalog.md)**: Complete catalog of the 22 active mounted visual modes, configuration schemas, and coordinate matrices.
+- **[Reference Catalogs & Schemas](./docs/reference/modes_catalog.md)**: Complete catalog of the 21 active mounted visual modes, configuration schemas, and coordinate matrices.
 - **[Operational Manuals](./docs/manuals/mode_authoring_guide.md)**: Step-by-step guides for authoring modes, Raspberry Pi deployment, developer tools, and the web interface.
 - **[AI Agent Onboarding](./project_overview.md)**: Primary router for AI agents working in this repository.

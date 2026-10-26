@@ -1,5 +1,5 @@
 """
-Unit tests for core/Listener.py.
+Unit tests for music/Listener.py.
 Verifies the facade pattern, property delegations, fake FFT processing,
 and non-causal spectral delay queue synchronization.
 """
@@ -7,8 +7,8 @@ import unittest
 import numpy as np
 import time
 
-from core.Listener import Listener
-from core.MusicalContextEngine import MusicalScene
+from music.Listener import Listener
+from music.MusicalContextEngine import MusicalScene
 
 
 class TestListener(unittest.TestCase):

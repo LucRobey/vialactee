@@ -4,7 +4,7 @@
 > **Author:** Autonomous Lead Rhythm Data Scientist & Audio DSP Engineer  
 > **Date:** 2026-09-06  
 > **Version:** `2.0.0` (Cycle 007)  
-> **Base Class:** [`core.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)  
+> **Base Class:** [`music.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/BaseAudioAnalyzer.py)  
 > **Implementation File:** [`research/experiments/models/SparseImpulseAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/SparseImpulseAudioAnalyzer.py)
 
 ---
@@ -63,4 +63,4 @@ $$	ext{Score}(b) = \max_p r(b, p) 	imes \operatorname{Prior}(b)$$
 - **RPi Frame Budget:** $\le 3.0	ext{ms}$ at 60 FPS.
 - **Measured Frame Latency:** $\sim 0.35	ext{ms}$ per frame ($> 80\%$ CPU margin on ARM Cortex-A72).
 - **Dynamic Heap Allocation:** Strictly **0 bytes** per frame in `update()`. All arrays pre-allocated.
-- **Contract Compliance:** Directly subclasses `core.BaseAudioAnalyzer.BaseAudioAnalyzer`.
+- **Contract Compliance:** Directly subclasses `music.BaseAudioAnalyzer.BaseAudioAnalyzer`.

@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import pytest
 
-from core.AudioAnalyzer import AudioAnalyzer
+from music.AudioAnalyzer import AudioAnalyzer
 from research.benchmarks.ground_truth.synthetic.generator import generate_click_120bpm
 from research.benchmarks.engine.evaluator import run_benchmark_on_track, compute_scorecard
 from research.benchmarks.engine.episode_slicer import extract_failure_episodes

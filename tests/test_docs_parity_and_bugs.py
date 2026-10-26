@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import time
 
-from core.Listener import Listener
+from music.Listener import Listener
 import transitions.engine as TE
 from hardware.Fake_leds import Fake_leds, FakeLedsVisualizer
 from modes.Magnetic_ball_mode import Magnetic_ball_mode

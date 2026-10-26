@@ -13,10 +13,10 @@ import unittest
 
 import numpy as np
 
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
-from core.Listener import Listener, ANALYZER_REGISTRY, DEFAULT_ANALYZER_MODEL
-from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+from music.Listener import Listener, ANALYZER_REGISTRY, DEFAULT_ANALYZER_MODEL
+from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 
 FPS = 60.0
 DT = 1.0 / FPS
@@ -185,7 +185,7 @@ class TestListenerContractWiring(unittest.TestCase):
         self.assertIs(type(make_listener("MultiBandOnsetAudioAnalyzer").analyzer), MultiBandOnsetAudioAnalyzer)
 
     def test_unknown_model_warns_instead_of_silently_falling_back(self):
-        with self.assertLogs("core.Listener", level=logging.WARNING) as logs:
+        with self.assertLogs("music.Listener", level=logging.WARNING) as logs:
             listener = make_listener("NoSuchAnalyzer")
         self.assertTrue(any("NoSuchAnalyzer" in line for line in logs.output))
         self.assertIsInstance(listener.analyzer, DyadicMetricalAudioAnalyzer)
@@ -374,7 +374,7 @@ class TestHardwareLatencyConfig(unittest.TestCase):
     def test_legacy_latency_key_is_ignored_with_warning(self):
         for name in PRODUCTION_ANALYZERS:
             with self.subTest(model=name):
-                with self.assertLogs("core.BaseAudioAnalyzer", level="WARNING") as logs:
+                with self.assertLogs("music.BaseAudioAnalyzer", level="WARNING") as logs:
                     an = make_listener(name, latency=0.2).analyzer
                 self.assertEqual(an.hardware_latency, 0.0)
                 self.assertTrue(any("led_latency" in m for m in logs.output))

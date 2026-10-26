@@ -3,7 +3,7 @@
 > **Status:** Current Production Architecture  
 > **See Also:** Prospective event detection concepts (Hard Song Cuts, HPS Vocal Isolation, Mood Triad) are archived in [music_events_architecture_potential_ideas.md](./music_events_architecture_potential_ideas.md).
 
-The Vialactée music analysis pipeline does not just output timestamps; it fundamentally understands the macro-structure of the music it is listening to. Implemented in [`core/StructuralNoveltyDetector.py`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/core/StructuralNoveltyDetector.py) and configured via [`core/RhythmConfig.py`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/core/RhythmConfig.py), it autonomously draws intelligent boundaries around **Verses/Choruses**, while reliably detecting full-blown **Song Changes** regardless of whether they are sharp drops or seamless DJ crossfades.
+The Vialactée music analysis pipeline does not just output timestamps; it fundamentally understands the macro-structure of the music it is listening to. Implemented in [`music/StructuralNoveltyDetector.py`](../../music/StructuralNoveltyDetector.py) and configured via [`music/RhythmConfig.py`](../../music/RhythmConfig.py), it autonomously draws intelligent boundaries around **Verses/Choruses**, while reliably detecting full-blown **Song Changes** regardless of whether they are sharp drops or seamless DJ crossfades.
 
 This is accomplished by continuously processing the tension between the audio's **Short-Term Memory (STM)** and **Long-Term Memory (LTM)** across multiple sonic dimensions, smoothed inside elegant self-adjusting mathematical envelopes.
 
@@ -20,7 +20,7 @@ The system tracks the raw total volume moving through the track (`AudioIngestion
 - **Power Novelty** is tracked as the relative percentage difference between the STM and LTM. This ensures a loud drop triggers identically to an acoustic breakdown fading out.
 
 ### Rhythmic Trust (Confidence)
-The rhythm tracker evaluates the 5-second lookahead buffer using the $O(1)$ Pearson Template Bank and Logarithmic Base-Tempo (LBT) class metric in [`core/AudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialact%C3%A9e/vialactee/core/AudioAnalyzer.py). It computes a real-time `beat_confidence` score (how strongly the physical audio transients correlate with the periodic template grid).
+The rhythm tracker evaluates the 5-second lookahead buffer using the $O(1)$ Pearson Template Bank and Logarithmic Base-Tempo (LBT) class metric in [`music/AudioAnalyzer.py`](../../music/AudioAnalyzer.py). It computes a real-time `beat_confidence` score (how strongly the physical audio transients correlate with the periodic template grid).
 
 > [!NOTE]
 > The **Combined Novelty Score** is the heartbeat of this entire system. It tightly merges Timbre and Power together using the formula:

@@ -4,7 +4,7 @@
 > **Author:** Autonomous Lead Rhythm Data Scientist & Audio DSP Engineer  
 > **Date:** 2026-09-06  
 > **Version:** `1.0.0` (Cycle 009)  
-> **Base Class:** [`core.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)  
+> **Base Class:** [`music.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/BaseAudioAnalyzer.py)  
 > **Implementation File:** [`research/experiments/models/DualFlywheelAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/DualFlywheelAudioAnalyzer.py)
 
 ---
@@ -60,4 +60,4 @@ $$\text{Score}(b) = \left(0.55 \cdot r_{K,\max} + 0.35 \cdot r_{S,\max} + 0.10 \
 - **RPi Frame Budget:** $\le 3.0\text{ms}$ at 60 FPS ($16.6\text{ms}$ frame period).
 - **Measured CPU Latency:** $\approx 0.188\text{ms}$ per frame ($> 90\%$ CPU margin on ARM Cortex-A72).
 - **Dynamic Heap Allocation:** Strictly **0 bytes** per frame in `update()`.
-- **Inheritance:** Directly subclasses `core.BaseAudioAnalyzer.BaseAudioAnalyzer`.
+- **Inheritance:** Directly subclasses `music.BaseAudioAnalyzer.BaseAudioAnalyzer`.

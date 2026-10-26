@@ -4,8 +4,8 @@
 > **Author:** Luc Robey / Antigravity Team  
 > **Date:** 2026-09-05  
 > **Version:** `1.2.0-baseline`  
-> **Base Class:** [`core.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)  
-> **Implementation File:** [`core/AudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/AudioAnalyzer.py)
+> **Base Class:** [`music.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/BaseAudioAnalyzer.py)  
+> **Implementation File:** [`music/AudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/AudioAnalyzer.py)
 
 ---
 

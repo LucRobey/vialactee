@@ -9,7 +9,7 @@ wrapped in asserved self-adjusting mathematical envelopes.
 from typing import List, Optional
 import numpy as np
 
-from core.RhythmConfig import RhythmConfig
+from music.RhythmConfig import RhythmConfig
 
 
 class StructuralNoveltyDetector:

@@ -29,9 +29,9 @@ import logging
 from typing import Dict, Any, Optional
 import numpy as np
 
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.RhythmConfig import RhythmConfig
-from core.StructuralNoveltyDetector import StructuralNoveltyDetector
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.RhythmConfig import RhythmConfig
+from music.StructuralNoveltyDetector import StructuralNoveltyDetector
 from research.dsp.comb_kernels import build_dense_phase_bank
 
 logger = logging.getLogger(__name__)

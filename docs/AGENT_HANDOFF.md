@@ -21,14 +21,14 @@ The user was dissatisfied with past exploratory research in `playground/` becaus
 ## 2. What Was Accomplished (Current Architecture)
 
 ### A. Universal Model Contract
-- **[`core/BaseAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)**: Universal abstract base class defining 6 functional domains:
+- **[`music/BaseAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/BaseAudioAnalyzer.py)**: Universal abstract base class defining 6 functional domains:
   1. *Execution & Clocking*: `update()`, `reset()`, `lookahead_seconds`, `hardware_latency`.
   2. *Rhythm & Metronome*: `bpm`, `beat_phase`, `is_beat`, `is_real_beat`, `is_dropped_beat`, `beat_confidence`, `flywheel_status`, `is_downbeat`.
   3. *Spectral Dynamics*: `band_flux`, `spectral_centroid` (`band_peak` removed).
   4. *Macro-Structure*: `is_song_change`, `is_verse_chorus_change`, `asserved_novelty`, `combined_novelty`.
   5. *Semantics*: `current_beat_tag`, `vocals_present`, `musical_key`.
   6. *AI Telemetry Hook*: `capture_frame_telemetry()`, `get_model_metadata()`.
-- **[`core/AudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/AudioAnalyzer.py)**: Production model refactored to inherit from `BaseAudioAnalyzer`. 100% backwards-compatible with `core/Listener.py` (all 22 unit tests pass).
+- **[`music/AudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/AudioAnalyzer.py)**: Production model refactored to inherit from `BaseAudioAnalyzer`. 100% backwards-compatible with `music/Listener.py` (all 21 unit tests pass).
 
 ### B. Immutable Benchmark & Scorecard Engine
 - **[`research/benchmarks/engine/evaluator.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/engine/evaluator.py)**:

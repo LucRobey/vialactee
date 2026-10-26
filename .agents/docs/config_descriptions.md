@@ -24,8 +24,8 @@ graph TD
     DataConfig --> Mgr
 
     Mgr --> Main["Main.py"]
-    Main --> Listener["core/Listener.py"]
-    Main --> AudioAnalyzer["core/AudioAnalyzer.py"]
+    Main --> Listener["music/Listener.py"]
+    Main --> AudioAnalyzer["music/AudioAnalyzer.py"]
     Main --> LocalMic["connectors/Local_Microphone.py"]
     Main --> ModeMaster
     Main --> HwFactory["hardware/HardwareFactory.py"]

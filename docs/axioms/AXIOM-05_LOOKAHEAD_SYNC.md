@@ -2,7 +2,7 @@
 
 **Tier:** Tier 0 (Untouchable Golden Axiom)  
 **Status:** Inviolable Law  
-**Enforcement:** `tests/test_audio_pipeline.py`, `core/Listener.py`, `core/DyadicMetricalAudioAnalyzer.py`, `core/MultiBandOnsetAudioAnalyzer.py`  
+**Enforcement:** `tests/test_audio_pipeline.py`, `music/Listener.py`, `music/DyadicMetricalAudioAnalyzer.py`, `music/MultiBandOnsetAudioAnalyzer.py`  
 
 ---
 

@@ -24,7 +24,7 @@ Instead of legacy 1D Pearson correlation over a 5-second static template buffer,
 
 ### 4.3 The 4 Non-Negotiable Invariants
 Any clean-sheet mathematical redesign must satisfy:
-1. **Contract Inheritance:** Subclass [`core.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py) directly (implementing `__init__`, `reset()`, `update()`, and `beat_phase`). Do not inherit from `AudioAnalyzer` if you are replacing its paradigm.
+1. **Contract Inheritance:** Subclass [`music.BaseAudioAnalyzer.BaseAudioAnalyzer`](../../../../music/BaseAudioAnalyzer.py) directly (implementing `__init__`, `reset()`, `update()`, and `beat_phase`). Do not inherit from `AudioAnalyzer` if you are replacing its paradigm.
 2. **Real-Time Safety:** Per-tick `update()` execution must remain $\le 3.0\text{ms}$ on ARM Cortex-A72 (60 Hz analyzer tick; LEDs render at 30 FPS, AXIOM-01).
 3. **Zero Heap Allocation:** All state arrays, filter coefficients, and history matrices must be pre-allocated in `__init__()`. No dynamic allocations or array reshaping inside `update()`.
 4. **Zero Clean-Room Regression:** Must pass the synthetic suite (`--suite synthetic`) with $\Delta \text{F1@50ms} \ge 0.0\%$.

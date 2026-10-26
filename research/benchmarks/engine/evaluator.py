@@ -14,7 +14,7 @@ from typing import Dict, Any, List, Optional, Tuple, Type
 import numpy as np
 import mir_eval
 
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
 
 
 class MockAudioIngestion:

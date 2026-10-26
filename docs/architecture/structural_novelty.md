@@ -1,7 +1,7 @@
 # Structural Novelty & Music Event Detection
 
 > **Location:** `docs/architecture/structural_novelty.md` (Tier 1 Canonical Specification)  
-> **Source Files:** [`core/StructuralNoveltyDetector.py`](../../core/StructuralNoveltyDetector.py), [`core/RhythmConfig.py`](../../core/RhythmConfig.py)  
+> **Source Files:** [`music/StructuralNoveltyDetector.py`](../../music/StructuralNoveltyDetector.py), [`music/RhythmConfig.py`](../../music/RhythmConfig.py)  
 > **Enforcing Axioms:** [AXIOM-01](../axioms/AXIOM-01_FRAME_BUDGET.md), [AXIOM-06](../axioms/AXIOM-06_PERCEPTUAL_RHYTHM.md)
 
 ---

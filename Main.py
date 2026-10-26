@@ -10,7 +10,7 @@ import sys
 import subprocess
 import argparse
 
-import core.Listener as Listener
+import music.api as Listener
 import connectors.Local_Microphone as Local_Microphone
 import connectors.Local_AudioFile as Local_AudioFile
 import connectors.Connector as Connector

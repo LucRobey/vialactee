@@ -1,7 +1,7 @@
 # Audio Pipeline & Feature Extraction Architecture
 
 > **Location:** `docs/architecture/audio_pipeline.md` (Tier 1 Canonical Specification)  
-> **Source Files:** [`core/AudioIngestion.py`](../../core/AudioIngestion.py), [`core/Listener.py`](../../core/Listener.py), [`connectors/Local_Microphone.py`](../../connectors/Local_Microphone.py)  
+> **Source Files:** [`music/AudioIngestion.py`](../../music/AudioIngestion.py), [`music/Listener.py`](../../music/Listener.py), [`connectors/Local_Microphone.py`](../../connectors/Local_Microphone.py)  
 > **Enforcing Axioms:** [AXIOM-01](../axioms/AXIOM-01_FRAME_BUDGET.md), [AXIOM-02](../axioms/AXIOM-02_ZERO_ALLOCATION.md), [AXIOM-05](../axioms/AXIOM-05_LOOKAHEAD_SYNC.md), [AXIOM-09](../axioms/AXIOM-09_PLATFORM_AGNOSTIC_DSP.md)
 
 ---
@@ -27,7 +27,7 @@ graph LR
 
 ## 2. Ingestion & Dual-Resolution Mel Filterbanks
 
-Implemented in `core/AudioIngestion.py`:
+Implemented in `music/AudioIngestion.py`:
 1. **Windowing & FFT:**
    - Real FFT (`np.fft.rfft`) computed on 2048-sample audio frames with Hann windowing.
    - Vectorized matrix multiplications map power spectrum bins into Mel frequency bins.
@@ -46,7 +46,7 @@ Implemented in `core/AudioIngestion.py`:
 
 ## 3. The 5.0-Second Lookahead Delay Queue
 
-Implemented in `core/Listener.py`:
+Implemented in `music/Listener.py`:
 - Ingested audio is held in a 5.0-second FIFO circular queue.
 - Rhythm tracking and novelty detection operate on the incoming live head of the audio ($T_{\text{ingest}}$).
 - Visual animations receive the delayed audio features ($T_{\text{ingest}} - 5.0\text{ s}$), aligning visual animations with physical speaker output cone arrival time ($T_{\text{speaker}}$).

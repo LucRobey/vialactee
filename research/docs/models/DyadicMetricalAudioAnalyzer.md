@@ -6,7 +6,7 @@
 > **Version:** `1.0.0`  
 > **Base Class:** [`research.experiments.models.MultiBandOnsetAudioAnalyzer.MultiBandOnsetAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/MultiBandOnsetAudioAnalyzer.py)  
 > **Implementation File:** [`research/experiments/models/DyadicMetricalAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/DyadicMetricalAudioAnalyzer.py)  
-> **PROMOTED TO PRODUCTION (2026-10-05):** the canonical implementation is now `core/DyadicMetricalAudioAnalyzer.py`, subclassing the production `core/MultiBandOnsetAudioAnalyzer.py`. `research/experiments/models/DyadicMetricalAudioAnalyzer.py` is an alias. Contract mapping: while the sub-pulse is active, `bpm` is `effective_bpm` (2 x tactus) and `beat_phase` wraps once per metrical beat. See `RESEARCH_HISTORY.md` (promotion milestone) for parity results and open items.  
+> **PROMOTED TO PRODUCTION (2026-10-05):** the canonical implementation is now `music/DyadicMetricalAudioAnalyzer.py`, subclassing the production `music/MultiBandOnsetAudioAnalyzer.py`. `research/experiments/models/DyadicMetricalAudioAnalyzer.py` is an alias. Contract mapping: while the sub-pulse is active, `bpm` is `effective_bpm` (2 x tactus) and `beat_phase` wraps once per metrical beat. See `RESEARCH_HISTORY.md` (promotion milestone) for parity results and open items.  
 > **Research Cycle:** 012  
 
 ---

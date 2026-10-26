@@ -20,14 +20,14 @@ Use this skill whenever you are tasked with conducting Music Information Retriev
   - **Pop / Pop-Rock:** `Pumped Up Kicks`, `Where Is My Mind_`, `Stayin' Alive - From _Saturday Night Fever_ Soundtrack`
 
 ### 1.1 The Real-Time Embedded Constraint ($\le 3.0\text{ms}$)
-- **Canonical authority:** [`docs/axioms/AXIOM-01_FRAME_BUDGET.md`](../../../docs/axioms/AXIOM-01_FRAME_BUDGET.md). The chandelier **renders at 30 FPS** ($33.33\text{ms}$ frame, $\le 20.0\text{ms}$ total compute) on a **Raspberry Pi 4 / 5**. Never describe production as "60 FPS".
+- **Canonical authority:** [`docs/axioms/AXIOM-01_FRAME_BUDGET.md`](../../../docs/axioms/README.md). The chandelier **renders at 30 FPS** ($33.33\text{ms}$ frame, $\le 20.0\text{ms}$ total compute) on a **Raspberry Pi 4 / 5**. Never describe production as "60 FPS".
 - The audio onset/analyzer layer is decoupled and **ticks at 60 Hz** ($16.67\text{ms}$ hop, 735 samples @ 44.1 kHz). Benchmarks call `update()` once per 60 Hz tick, and `avg_frame_time_ms` in the scorecard is **per tick**.
 - Research gate: audio ingestion + Beat Tracking + Novelty Detection must stay $\le 3.0\text{ms}$ **per `update()` tick** on ARM Cortex-A72 (a conservative gate: AXIOM-01 allots $\le 3.5\text{ms}$ of audio DSP per 30 FPS render frame, and current models run well under $1\text{ms}$ per tick).
 - **Zero Dynamic Heap Allocation:** Never allocate new arrays or resize buffers in per-frame `update()`. All arrays must be pre-allocated NumPy buffers initialized in `__init__()`.
 - **Pure Vectorization:** Use compiled NumPy matrix math (`np.dot`, `np.convolve`, slicing). Never write Python `for` loops over raw audio sample buffers.
 
 ### 1.2 The Zero-Regression Policy
-- Any candidate model proposed for promotion to production (`core/AudioAnalyzer.py`) must pass the **clean-room synthetic suite** (`--suite synthetic`) with **$\Delta \text{F1@50ms} \ge 0.0\%$**.
+- Any candidate model proposed for promotion to production (`music/AudioAnalyzer.py`) must pass the **clean-room synthetic suite** (`--suite synthetic`) with **$\Delta \text{F1@50ms} \ge 0.0\%$**.
 - A candidate that improves complex syncopated tracks but causes double-trigger chatter or phase lag on steady click tracks will be rejected.
 
 ### 1.3 Agent Execution & Workflow Guardrails
@@ -45,7 +45,7 @@ Use this skill whenever you are tasked with conducting Music Information Retriev
   4. **Phase 4 (Model Card):** Reference the newly authored `research/docs/models/<CandidateName>.md`.
   5. **Phase 5 (Benchmarks):** Append synthetic scorecard table (zero-regression check) and real-world (`neural-core`) scorecard table.
   6. **Phase 6 (Diagnostics & Decision):** Append single-track comparisons, ablation tables, final decision (Promote vs Reject), and lessons learned.
-- Refer to [`research/docs/templates/RESEARCH_CYCLE_ARTIFACT_TEMPLATE.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/docs/templates/RESEARCH_CYCLE_ARTIFACT_TEMPLATE.md) for the standard structure.
+- Refer to [`research/docs/templates/RESEARCH_CYCLE_ARTIFACT_TEMPLATE.md`](../../../research/docs/templates/RESEARCH_CYCLE_ARTIFACT_TEMPLATE.md) for the standard structure.
 
 ---
 
@@ -66,9 +66,9 @@ flowchart TD
 ```
 
 ### Step 1: Literature & Diagnostic Inspection
-1. Read the latest entries in [`research/experiments/RESEARCH_HISTORY.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/RESEARCH_HISTORY.md) to understand current state of the art and past dead ends.
-2. Read the baseline scorecard in [`research/experiments/runs/`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/runs/) and inspect `failure_episodes.json` to identify active error types (`PHASE_INVERSION_UPBEAT`, `GHOST_BEAT_BURST`, `HIGH_PHASE_JITTER`).
-3. Check [`research/benchmarks/ground_truth/music_catalog.json`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/ground_truth/music_catalog.json) to correlate failures with musical style (e.g. 180° upbeat traps in Disco/Funk vs 3/4 drift in Chanson).
+1. Read the latest entries in [`research/experiments/RESEARCH_HISTORY.md`](../../../research/experiments/RESEARCH_HISTORY.md) to understand current state of the art and past dead ends.
+2. Read the baseline scorecard in [`research/experiments/runs/`](../../../research/experiments/runs/) and inspect `failure_episodes.json` to identify active error types (`PHASE_INVERSION_UPBEAT`, `GHOST_BEAT_BURST`, `HIGH_PHASE_JITTER`).
+3. Check [`research/benchmarks/ground_truth/music_catalog.json`](../../../research/benchmarks/ground_truth/music_catalog.json) to correlate failures with musical style (e.g. 180° upbeat traps in Disco/Funk vs 3/4 drift in Chanson).
 4. **Inspect target tracks directly with diagnostic tools:**
    ```bash
    # Quick diagnostic of a single failing track:
@@ -109,8 +109,8 @@ flowchart TD
 2. Must inherit from `BaseAudioAnalyzer` and implement the standard constructor:
    ```python
    from typing import Dict, Any, Optional
-   from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-   from core.RhythmConfig import RhythmConfig
+   from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+   from music.RhythmConfig import RhythmConfig
 
    class CandidateModel(BaseAudioAnalyzer):
        def __init__(
@@ -126,7 +126,7 @@ flowchart TD
 4. **Update Artifact:** Append model architecture notes and buffer pre-allocation details to `research_log.md`.
 
 ### Step 4: Write Model Documentation
-1. Copy [`research/docs/models/MODEL_CARD_TEMPLATE.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/docs/models/MODEL_CARD_TEMPLATE.md) to `research/docs/models/<CandidateName>.md` and document the mathematical equations ($ODF$, phase flywheel, template scoring), hyperparameters, and target failure modes.
+1. Copy [`research/docs/models/MODEL_CARD_TEMPLATE.md`](../../../research/docs/models/MODEL_CARD_TEMPLATE.md) to `research/docs/models/<CandidateName>.md` and document the mathematical equations ($ODF$, phase flywheel, template scoring), hyperparameters, and target failure modes.
 2. **Update Artifact:** Link model documentation card in `research_log.md`.
 
 ### Step 5: Benchmark Execution
@@ -162,8 +162,8 @@ Run `compare_runs.py` to get machine-readable deltas and exit codes:
 python -m research.benchmarks.compare_runs research/experiments/runs/<BASELINE_RUN> research/experiments/runs/<CANDIDATE_RUN> --json
 ```
 - **If improved ($\Delta \text{F1} > 0$ and synthetic passes):**
-  - Record entry in [`research/experiments/RESEARCH_HISTORY.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/RESEARCH_HISTORY.md).
-  - Update [`research/experiments/LEADERBOARD.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/LEADERBOARD.md).
+  - Record entry in [`research/experiments/RESEARCH_HISTORY.md`](../../../research/experiments/RESEARCH_HISTORY.md).
+  - Update [`research/experiments/LEADERBOARD.md`](../../../research/experiments/LEADERBOARD.md).
   - Recommend promotion to production.
   - **Update Artifact:** Append final positive verdict to `research_log.md`.
 - **If regressed or dead end:**
@@ -200,4 +200,4 @@ python -m research.benchmarks.compare_runs research/experiments/runs/<BASELINE_R
 | To write the final cycle report (**mandatory format**) | [`references/executive_report_template.md`](references/executive_report_template.md) |
 | Scorecard keys, exit codes, PowerShell pitfalls | [`references/scorecard_and_guardrails.md`](references/scorecard_and_guardrails.md) |
 
-> **Non-negotiable even when you skip the references:** subclass `core.BaseAudioAnalyzer.BaseAudioAnalyzer`, respect the real-time budget (Section 1.1), zero heap allocation in `update()`, and zero clean-room regression.
+> **Non-negotiable even when you skip the references:** subclass `music.BaseAudioAnalyzer.BaseAudioAnalyzer`, respect the real-time budget (Section 1.1), zero heap allocation in `update()`, and zero clean-room regression.

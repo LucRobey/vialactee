@@ -546,8 +546,8 @@ def run_model_predictions_simulation(model_name: str, tracks: List[str]) -> Dict
     Runs a live audio analyzer model (or StructuralNoveltyDetector) across benchmark tracks
     at 60 FPS using fast cached audio arrays, extracting predicted structural changes.
     """
-    from core.StructuralNoveltyDetector import StructuralNoveltyDetector
-    from core.RhythmConfig import RhythmConfig
+    from music.StructuralNoveltyDetector import StructuralNoveltyDetector
+    from music.RhythmConfig import RhythmConfig
 
     predictions: Dict[str, Any] = {}
 

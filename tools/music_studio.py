@@ -30,11 +30,11 @@ import soundfile as sf
 import sounddevice as sd
 import pygame
 
-from core.Listener import Listener
-from core.RhythmConfig import RhythmConfig
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.AudioAnalyzer import AudioAnalyzer, bpm_to_class
-from core.MusicalContextEngine import MusicalScene
+from music.Listener import Listener
+from music.RhythmConfig import RhythmConfig
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.AudioAnalyzer import AudioAnalyzer, bpm_to_class
+from music.MusicalContextEngine import MusicalScene
 
 
 def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]:
@@ -45,10 +45,10 @@ def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAn
     if model_name in ("AudioAnalyzer", "baseline"):
         return AudioAnalyzer
     if model_name == "MultiBandOnsetAudioAnalyzer":
-        from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+        from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
         return MultiBandOnsetAudioAnalyzer
     if model_name in ("DyadicMetricalAudioAnalyzer", "production", "default"):
-        from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+        from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
         return DyadicMetricalAudioAnalyzer
 
     models_dir = os.path.join(repo_root, "research", "experiments", "models")

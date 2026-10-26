@@ -32,9 +32,9 @@
 ┌────────────────────────────────────────────────────────┐
 │             MATHEMATICAL CORE (PURE & AGNOSTIC)        │
 │                                                        │
-│  core/AudioIngestion.py       core/Listener.py         │
-│  core/MultiBandOnsetAudioAnalyzer.py                   │
-│  core/comb_kernels.py         modes/*.py               │
+│  music/AudioIngestion.py       music/Listener.py         │
+│  music/MultiBandOnsetAudioAnalyzer.py                   │
+│  music/comb_kernels.py         modes/*.py               │
 │                                                        │
 │  [ZERO OS checks, ZERO platform branching, PURE NUMPY]  │
 └───────────────────────────┬────────────────────────────┘

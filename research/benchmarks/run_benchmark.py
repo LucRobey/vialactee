@@ -28,9 +28,9 @@ from datetime import datetime
 from typing import Dict, Any, List, Tuple, Type, Optional
 import numpy as np
 
-from core.AudioAnalyzer import AudioAnalyzer
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.RhythmConfig import RhythmConfig
+from music.AudioAnalyzer import AudioAnalyzer
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.RhythmConfig import RhythmConfig
 from research.benchmarks.engine.evaluator import run_benchmark_on_track
 from research.benchmarks.engine.episode_slicer import extract_failure_episodes
 from research.benchmarks.ground_truth.synthetic.generator import generate_all_synthetic_tracks
@@ -65,15 +65,15 @@ def load_music_catalog(repo_root: str) -> Dict[str, Any]:
 def load_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]:
     """
     Dynamically discovers and loads any model subclassing BaseAudioAnalyzer.
-    Looks in core.AudioAnalyzer and research/experiments/models/*.py.
+    Looks in music.AudioAnalyzer and research/experiments/models/*.py.
     """
     if model_name == "AudioAnalyzer":
         return AudioAnalyzer
     if model_name == "MultiBandOnsetAudioAnalyzer":
-        from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+        from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
         return MultiBandOnsetAudioAnalyzer
     if model_name in ("DyadicMetricalAudioAnalyzer", "production"):
-        from core.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+        from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
         return DyadicMetricalAudioAnalyzer
 
     models_dir = os.path.join(repo_root, "research", "experiments", "models")

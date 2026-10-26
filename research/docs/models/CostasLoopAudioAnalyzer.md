@@ -4,7 +4,7 @@
 > **Author:** Autonomous Lead Rhythm Data Scientist & Audio DSP Engineer  
 > **Date:** 2026-09-06  
 > **Version:** `1.0.0`  
-> **Base Class:** [`core.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)  
+> **Base Class:** [`music.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/BaseAudioAnalyzer.py)  
 > **Implementation File:** [`research/experiments/models/CostasLoopAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/CostasLoopAudioAnalyzer.py)  
 > **Research Cycle:** 010 (Advancement of Stage 1 Tournament 001 Winner Lead RAD-01)  
 

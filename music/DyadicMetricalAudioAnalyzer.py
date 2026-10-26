@@ -1,5 +1,5 @@
 """
-core/DyadicMetricalAudioAnalyzer.py - Production Dyadic Metrical Rhythm Analyzer (Cycle 012).
+music/DyadicMetricalAudioAnalyzer.py - Production Dyadic Metrical Rhythm Analyzer (Cycle 012).
 
 Production rhythm model for the Vialactée interactive LED chandelier.
 Subclasses the production MultiBandOnsetAudioAnalyzer (which is kept as the stable
@@ -31,8 +31,8 @@ import logging
 from typing import Dict, Any, Optional
 import numpy as np
 
-from core.RhythmConfig import RhythmConfig
-from core.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+from music.RhythmConfig import RhythmConfig
+from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 
 logger = logging.getLogger(__name__)
 

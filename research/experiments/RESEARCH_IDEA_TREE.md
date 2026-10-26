@@ -8,9 +8,9 @@ This document is the living knowledge repository, genealogical tree, and priorit
 
 | Role | Model | Where |
 | :--- | :--- | :--- |
-| **Production default (SOTA champion)** | `DyadicMetricalAudioAnalyzer` (Cycle 012) | `core/DyadicMetricalAudioAnalyzer.py` |
-| Stable fallback & parent engine | `MultiBandOnsetAudioAnalyzer` (Cycle 008) | `core/MultiBandOnsetAudioAnalyzer.py` |
-| Legacy baseline | `AudioAnalyzer` | `core/AudioAnalyzer.py` |
+| **Production default (SOTA champion)** | `DyadicMetricalAudioAnalyzer` (Cycle 012) | `music/DyadicMetricalAudioAnalyzer.py` |
+| Stable fallback & parent engine | `MultiBandOnsetAudioAnalyzer` (Cycle 008) | `music/MultiBandOnsetAudioAnalyzer.py` |
+| Legacy baseline | `AudioAnalyzer` | `music/AudioAnalyzer.py` |
 
 New research cycles must beat the **production** model (benchmark alias `--model production` = Dyadic) with zero regression on the synthetic suite. See the promotion milestone in `RESEARCH_HISTORY.md`.
 

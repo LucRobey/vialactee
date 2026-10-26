@@ -11,7 +11,28 @@ Verifies:
 import os
 import re
 import unittest
-import yaml
+
+try:
+    import yaml  # type: ignore
+except ImportError:
+    class _MinimalYaml:
+        @staticmethod
+        def safe_load(text: str):
+            data = {}
+            for raw_line in text.splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if ":" not in line:
+                    raise ValueError(f"Invalid YAML frontmatter line: {raw_line!r}")
+                key, val = line.split(":", 1)
+                val = val.strip()
+                if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+                    val = val[1:-1]
+                data[key.strip()] = val
+            return data
+
+    yaml = _MinimalYaml()
 
 
 class TestSkillsGovernance(unittest.TestCase):

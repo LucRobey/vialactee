@@ -13,12 +13,12 @@ import time
 import logging
 import numpy as np
 
-from core.RhythmConfig import RhythmConfig
-from core.StructuralNoveltyDetector import StructuralNoveltyDetector
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.RhythmConfig import RhythmConfig
+from music.StructuralNoveltyDetector import StructuralNoveltyDetector
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
 
 if TYPE_CHECKING:
-    from core.AudioIngestion import AudioIngestion
+    from music.AudioIngestion import AudioIngestion
 
 logger = logging.getLogger(__name__)
 

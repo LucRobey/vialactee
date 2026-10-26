@@ -12,9 +12,10 @@ Use this skill as the primary architectural authority for the Vialactée music-r
 ## 1. Directory Structure
 
 * `Main.py`: The asynchronous orchestration entry point.
-* `transitions/`: `transitions/` is a sealed room: all transition logic lives there and is reached only through `transitions.api` (see `docs/reference/transition_contract.md`). Enforced by `tests/governance/test_transition_isolation.py`; to work on it alone run `python -m transitions.sandbox`.
-* `mood/`: `mood/` is a sealed room (curated palettes, cosine crossfade, scene rules) reached only through `mood.api` (see `docs/reference/mood_contract.md`). Enforced by `tests/governance/test_mood_isolation.py`. Modes read colours via `Mode.mood_colors`, bound by `Mode_master`.
-* `core/`: The math and execution engine (`Mode_master.py`, `CommandRouter.py`, `AppConfigStore.py`, `TransitionBridge.py`, `Listener.py`, `MusicalContextEngine.py`, `AudioAnalyzer.py`, `AudioIngestion.py`, `Segment.py`).
+* `transitions/`: `transitions/` is a sealed room: all transition logic lives there and is reached only through `transitions.api` (see [`docs/contracts/transition_contract.md`](../../../docs/contracts/transition_contract.md)). Enforced by `tests/governance/test_transition_isolation.py`; to work on it alone run `python -m transitions.sandbox`.
+* `mood/`: `mood/` is a sealed room (curated palettes, cosine crossfade, scene rules) reached only through `mood.api` (see [`docs/contracts/mood_contract.md`](../../../docs/contracts/mood_contract.md)). Enforced by `tests/governance/test_mood_isolation.py`. Modes read colours via `Mode.mood_colors`, bound by `Mode_master`.
+* `music/`: `music/` is a sealed room (audio ingestion, beat tracking, structural novelty, 3-tier `MusicalContextEngine`, and `Listener` delay facade) reached by production code only through [`music.api`](../../../music/api.py) (see [`docs/contracts/music_analyzer_contract.md`](../../../docs/contracts/music_analyzer_contract.md)). Enforced by `tests/governance/test_music_isolation.py` and `tests/governance/test_docs_parity.py`.
+* `core/`: The runtime orchestrator (`Mode_master.py`, `Segment.py`, `TransitionBridge.py`, `CommandRouter.py`, `AppConfigStore.py`, `Webapp_instruction_logger.py`).
 * `modes/`: Visual light animation modes inheriting from `modes.Mode`.
 * `config/`: Hardware profiles (`hardware_profile` in `app_config.json`), unified physical geometry + UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
 * `hardware/`: Physical abstractions (`Fake_leds.py`, `Rpi_NeoPixels.py`, `Udp_Sender.py`, `HardwareFactory.py`, `Fake_ESP32.py`).
@@ -22,7 +23,8 @@ Use this skill as the primary architectural authority for the Vialactée music-r
 * `wabb-interface/`: React-based remote control web interface.
 * `research/`: Offline MIR laboratory, synthetic/neural/academic benchmark harnesses, and experimental algorithm ledger.
 * `work_history/`: Permanent chronological session logs (`work_history/README.md`, `work_history/TEMPLATE.md`) to maintain persistent engineering context and avoid agent amnesia.
-* `docs/`: Master documentation root (The 9 Golden Axioms in `docs/axioms/`, Architecture Specs in `docs/architecture/`, Catalogs in `docs/reference/`, Manuals in `docs/manuals/`).
+* `docs/`: Master documentation root (Sealed Contracts in [`docs/contracts/`](../../../docs/contracts/README.md), The 9 Golden Axioms in `docs/axioms/`, Architecture Specs in `docs/architecture/`, Catalogs in `docs/reference/`, Manuals in `docs/manuals/`).
+* `IDEAS.md`: The user's personal next-session scratchpad and raw idea backlog. **Strictly non-authoritative (NOT system truth).**
 
 ---
 
@@ -71,6 +73,12 @@ Git history is the second half of the project's memory (`work_history/` explains
 5. **Push** at the end of every session and after every completed phase or feature: `git push`.
 6. **Never** use `git push --force`, `git reset --hard`, or `git add -A` blindly. Stage files explicitly and check that no logs, caches or scratch files slip in.
 
+### 8. `IDEAS.md` Protocol (Non-Authoritative User Scratchpad)
+[`IDEAS.md`](../../../IDEAS.md) at the repository root is the user's personal reminder pad for future sessions:
+1. **Never treat `IDEAS.md` as truth:** Nothing in `IDEAS.md` describes current production behavior or canonical specifications.
+2. **Never auto-implement:** Do not implement items from `IDEAS.md` unless the user explicitly asks to work on them or add/edit notes in `IDEAS.md`.
+3. **Clean up on completion:** Only when the user asks to turn an idea from `IDEAS.md` into reality and it is completed, remove it from `IDEAS.md` and document the real feature in Tier 1/3 docs.
+
 ---
 
 ## 3. Specialized Domain Skills & Subsystem Authority Index
@@ -85,7 +93,8 @@ For specialized development domains, refer to the dedicated workspace skills:
 | **Tactical Research Worker** | `vialactee-researcher` | [`.agents/skills/vialactee-researcher/SKILL.md`](../vialactee-researcher/SKILL.md) — Model implementation, 10-track `neural-core` benchmarks, ablation, failure diagnostics. |
 
 For subsystems governed directly by canonical documentation and unit tests:
-* **Transitions (Sealed Room):** [`docs/reference/transition_contract.md`](../../../docs/reference/transition_contract.md) and [`transitions/api.py`](../../../transitions/api.py) (verified by `tests/governance/test_transition_isolation.py`).
-* **Mood (Sealed Room):** [`docs/reference/mood_contract.md`](../../../docs/reference/mood_contract.md) and [`mood/api.py`](../../../mood/api.py) (verified by `tests/governance/test_mood_isolation.py`).
+* **Music Analyzer & DSP (Sealed Room):** [`docs/contracts/music_analyzer_contract.md`](../../../docs/contracts/music_analyzer_contract.md) and [`music/api.py`](../../../music/api.py) (verified by `tests/governance/test_music_isolation.py` and `tests/governance/test_docs_parity.py`).
+* **Transitions (Sealed Room):** [`docs/contracts/transition_contract.md`](../../../docs/contracts/transition_contract.md) and [`transitions/api.py`](../../../transitions/api.py) (verified by `tests/governance/test_transition_isolation.py`).
+* **Mood (Sealed Room):** [`docs/contracts/mood_contract.md`](../../../docs/contracts/mood_contract.md) and [`mood/api.py`](../../../mood/api.py) (verified by `tests/governance/test_mood_isolation.py`).
 * **Hardware & Deployment:** [`docs/manuals/raspberry_pi_deployment.md`](../../../docs/manuals/raspberry_pi_deployment.md) and [`docs/reference/coordinates_matrix.md`](../../../docs/reference/coordinates_matrix.md).
 * **Web Remote Control:** [`docs/architecture/api_and_wire_protocol.md`](../../../docs/architecture/api_and_wire_protocol.md) and [`wabb-interface/DESIGN_SYSTEM.md`](../../../wabb-interface/DESIGN_SYSTEM.md).

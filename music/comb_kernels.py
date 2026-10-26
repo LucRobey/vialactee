@@ -1,5 +1,5 @@
 """
-core/comb_kernels.py - Vectorized Phase Template Matrix Generator.
+music/comb_kernels.py - Vectorized Phase Template Matrix Generator.
 
 Provides pre-computed template matrix banks for sub-frame phase sweeps in rhythm tracking engines.
 Clean, zero-external-dependency, compiled NumPy implementation.

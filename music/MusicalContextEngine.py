@@ -1,5 +1,5 @@
 """
-core/MusicalContextEngine.py - Unified 3-Tier Musical Context & Visual Conductor.
+music/MusicalContextEngine.py - Unified 3-Tier Musical Context & Visual Conductor.
 
 Unified Vialactée Visual Conductor (Offer 4):
 Consumes multi-signal acoustic, rhythmic, and spectral dynamics (rhythm_salience,

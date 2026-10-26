@@ -149,9 +149,9 @@ If two consecutive refinement cycles on an exploited branch yield $\Delta \text{
 
 ### 4.3 Persistent State Synchronization
 At the conclusion of every cycle, the Manager verifies or performs updates to:
-1. [`research/experiments/RESEARCH_IDEA_TREE.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/RESEARCH_IDEA_TREE.md): Update node status (`UNTESTED`, `SANDBOX_PASSED`, `BENCHMARKED`, `PROMOTED`, `ARCHIVED`).
-2. [`research/experiments/LEADERBOARD.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/LEADERBOARD.md): Record new benchmark entries.
-3. [`research/experiments/RESEARCH_HISTORY.md`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/RESEARCH_HISTORY.md): Append detailed cycle findings and root-cause analysis.
+1. [`research/experiments/RESEARCH_IDEA_TREE.md`](../../../research/experiments/RESEARCH_IDEA_TREE.md): Update node status (`UNTESTED`, `SANDBOX_PASSED`, `BENCHMARKED`, `PROMOTED`, `ARCHIVED`).
+2. [`research/experiments/LEADERBOARD.md`](../../../research/experiments/LEADERBOARD.md): Record new benchmark entries.
+3. [`research/experiments/RESEARCH_HISTORY.md`](../../../research/experiments/RESEARCH_HISTORY.md): Append detailed cycle findings and root-cause analysis.
 
 ---
 

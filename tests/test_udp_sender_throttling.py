@@ -133,7 +133,7 @@ class TestUdpSenderThrottling(unittest.TestCase):
         self.assertEqual(payload["silence_frames"], 0)
 
     def test_analyzer_state_base_audio_analyzer_compatibility(self):
-        from core.BaseAudioAnalyzer import BaseAudioAnalyzer
+        from music.BaseAudioAnalyzer import BaseAudioAnalyzer
 
         class CustomBaseAnalyzer(BaseAudioAnalyzer):
             def update(self, audio_chunk, current_time): pass

@@ -3,8 +3,8 @@ import numpy as np
 from unittest.mock import patch, MagicMock
 
 import config.Configuration_manager as Configuration_manager
-import core.AudioAnalyzer as AudioAnalyzer
-import core.Listener as Listener
+import music.AudioAnalyzer as AudioAnalyzer
+import music.Listener as Listener
 
 
 MOCK_DEVICES_WITH_VBCABLE = [

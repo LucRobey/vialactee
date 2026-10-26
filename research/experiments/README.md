@@ -39,9 +39,9 @@ Each `--save-run` execution creates an immutable directory inside `research/expe
 ## How to Introduce a New Experimental Model
 
 1. Create a new file in `research/experiments/models/` (e.g. `research/experiments/models/dual_judge_tracker.py`).
-2. Subclass `BaseAudioAnalyzer` from `core.BaseAudioAnalyzer`:
+2. Subclass `BaseAudioAnalyzer` from `music.BaseAudioAnalyzer`:
    ```python
-   from core.BaseAudioAnalyzer import BaseAudioAnalyzer
+   from music.BaseAudioAnalyzer import BaseAudioAnalyzer
    from typing import Dict, Any
 
    class DualJudgeTracker(BaseAudioAnalyzer):
@@ -60,4 +60,4 @@ Each `--save-run` execution creates an immutable directory inside `research/expe
    ```bash
    python -m research.benchmarks.compare_runs research/experiments/runs/RUN_BASELINE research/experiments/runs/RUN_MY_ATTEMPT
    ```
-5. If the candidate achieves a higher score without regressions, propose integrating the logic into `core/AudioAnalyzer.py`.
+5. If the candidate achieves a higher score without regressions, propose integrating the logic into `music/AudioAnalyzer.py`.

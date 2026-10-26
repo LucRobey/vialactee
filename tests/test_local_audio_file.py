@@ -8,7 +8,7 @@ import numpy as np
 import tempfile
 import soundfile as sf
 
-from core.Listener import Listener
+from music.Listener import Listener
 from connectors.Local_AudioFile import Local_AudioFile
 from Main import parse_arguments
 

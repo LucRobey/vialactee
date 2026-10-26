@@ -5,7 +5,7 @@
 ## 5. Lean Subagent Delegation & Adversarial Red-Teaming
 
 To prevent token exhaustion, latency bloat, and fragile multi-tier nesting, autonomous research follows a **Lean 2-Tier Subagent Model**:
-- **Direct Execution by Lead Researcher:** The Lead Researcher executes all fast CLI commands directly via bash/PowerShell ([`diagnose_track.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/diagnose_track.py), [`run_ablation.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/run_ablation.py), and [`compare_runs.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/benchmarks/compare_runs.py)). Do NOT spawn sub-subagents merely to run a single CLI command!
+- **Direct Execution by Lead Researcher:** The Lead Researcher executes all fast CLI commands directly via bash/PowerShell ([`diagnose_track.py`](../../../../research/benchmarks/diagnose_track.py), [`run_ablation.py`](../../../../research/benchmarks/run_ablation.py), and [`compare_runs.py`](../../../../research/benchmarks/compare_runs.py)). Do NOT spawn sub-subagents merely to run a single CLI command!
 - **Targeted Subagent Delegation:** Spawning subagents (`invoke_subagent`) is reserved for high-leverage cognitive tasks:
 
 ### 5.1 High-Value Subagent Delegation Patterns

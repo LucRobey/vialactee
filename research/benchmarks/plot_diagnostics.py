@@ -25,7 +25,7 @@ matplotlib.use("Agg")  # Headless backend
 import matplotlib.pyplot as plt
 from typing import List, Dict, Any, Optional, Tuple
 
-from core.AudioAnalyzer import AudioAnalyzer
+from music.AudioAnalyzer import AudioAnalyzer
 from research.benchmarks.engine.evaluator import run_benchmark_on_track, load_audio_file, load_beats_file
 from research.benchmarks.engine.episode_slicer import extract_failure_episodes
 

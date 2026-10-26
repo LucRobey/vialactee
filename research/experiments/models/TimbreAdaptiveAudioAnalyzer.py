@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
 
-from core.AudioAnalyzer import (
+from music.AudioAnalyzer import (
     AudioAnalyzer,
     class_based_phase_sweep,
     evaluate_specific_bpms,
@@ -26,9 +26,9 @@ from core.AudioAnalyzer import (
     bpm_to_class,
     harmonic_alignment
 )
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.AudioIngestion import AudioIngestion
-from core.RhythmConfig import RhythmConfig
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.AudioIngestion import AudioIngestion
+from music.RhythmConfig import RhythmConfig
 
 
 class TimbreAdaptiveAudioAnalyzer(AudioAnalyzer):

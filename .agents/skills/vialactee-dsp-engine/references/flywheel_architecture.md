@@ -1,6 +1,6 @@
 # Anticipation Flywheel ("Oracle") Architecture & Math Reference
 
-The Vialactée rhythm tracking engine operates non-causally via an Anticipation Flywheel ("Oracle") architecture implemented across `core/AudioIngestion.py`, `core/AudioAnalyzer.py`, and `core/Listener.py`.
+The Vialactée rhythm tracking engine operates non-causally via an Anticipation Flywheel ("Oracle") architecture implemented across `music/AudioIngestion.py`, `music/AudioAnalyzer.py`, and `music/Listener.py`.
 
 ---
 

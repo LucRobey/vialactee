@@ -4,7 +4,7 @@
 > **Author:** Autonomous Rhythm Data Scientist & Audio DSP Engineer  
 > **Date:** 2026-09-05  
 > **Version:** `1.0.0`  
-> **Base Class:** [`core.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/core/BaseAudioAnalyzer.py)  
+> **Base Class:** [`music.BaseAudioAnalyzer.BaseAudioAnalyzer`](file:///c:/Users/Users/Desktop/vialactée/vialactee/music/BaseAudioAnalyzer.py)  
 > **Implementation File:** [`research/experiments/models/PhaseInertiaAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactée/vialactee/research/experiments/models/PhaseInertiaAudioAnalyzer.py)  
 
 ---

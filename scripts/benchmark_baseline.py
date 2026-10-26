@@ -17,7 +17,7 @@ import numpy as np
 # Ensure repository root is on sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.Listener import Listener
+from music.api import Listener
 from core.Segment import Segment
 
 

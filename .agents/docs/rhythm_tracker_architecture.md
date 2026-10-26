@@ -2,7 +2,7 @@
 
 The **Anticipation Flywheel ("Oracle")** rhythm tracking engine is a predictive, real-time algorithmic pipeline designed to achieve zero-lag, jitter-free beat synchronization for the Vialactée chandelier. Rather than running a reactive beat tracker and delaying its triggers, it uses the 5-second look-ahead audio buffer to predict incoming tempo and phase, back-projects the phase to the physical speaker time ($T_{\text{speaker}}$), and drives a continuous mechanical flywheel with breakdown coasting, anti-phase disambiguation, and frequency-band beat tagging.
 
-The production engine is implemented in [`core/MultiBandOnsetAudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactee/core/MultiBandOnsetAudioAnalyzer.py), backed by standalone C-compiled [`core/comb_kernels.py`](file:///c:/Users/Users/Desktop/vialactee/core/comb_kernels.py). The original single-ODF implementation is retained in [`core/AudioAnalyzer.py`](file:///c:/Users/Users/Desktop/vialactee/core/AudioAnalyzer.py) for baseline comparison and ablations.
+The production engine is implemented in [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py), backed by standalone C-compiled [`music/comb_kernels.py`](../../music/comb_kernels.py). The original single-ODF implementation is retained in [`music/AudioAnalyzer.py`](../../music/AudioAnalyzer.py) for baseline comparison and ablations.
 
 ## Core Components
 
@@ -17,8 +17,8 @@ The architecture consists of five primary subsystems:
 ---
 
 ### 1. Dual-Resolution Mel Transient Extractor
-Raw PCM audio chunks are processed via FFT in [`core/AudioIngestion.py`](file:///c:/Users/Users/Desktop/vialactee/core/AudioIngestion.py) across two parallel Mel-scale filterbanks:
-- **8 Mel Bands (`fft_band_values`):** Preserved strictly for lighting modes in [`modes/`](file:///c:/Users/Users/Desktop/vialactee/modes/).
+Raw PCM audio chunks are processed via FFT in [`music/AudioIngestion.py`](../../music/AudioIngestion.py) across two parallel Mel-scale filterbanks:
+- **8 Mel Bands (`fft_band_values`):** Preserved strictly for lighting modes in [`modes/`](../../modes/).
 - **32 Mel Bands (`multiband_fft_values`):** Fed into `MultiBandOnsetAudioAnalyzer` to isolate fine-grained acoustic transients (sub-bass 20-80 Hz, kick fundamental 60-120 Hz, snare snap 2-5 kHz, hi-hat shimmer 8-16 kHz).
 
 Per-band half-wave rectified onset derivatives are computed every frame:
@@ -41,7 +41,7 @@ $$K_1 = \mathbb{E}\left[y_{\text{kick}} \mid \text{phase} \approx \phi_1\right],
 If $s(\phi_{\text{anti}}) \ge 0.80 s(\phi_1)$ and $K_{\text{anti}} > 1.25 \cdot K_1$, the engine forces phase alignment to the true acoustic kick downbeat, resolving upbeat inversion.
 
 ### 4. Dense Pearson Template Bank & LBT Harmonic Judge
-Using standalone compiled [`core/comb_kernels.py`](file:///c:/Users/Users/Desktop/vialactee/core/comb_kernels.py), the engine builds dense triangular pulse template banks across continuous logarithmic tempo classes:
+Using standalone compiled [`music/comb_kernels.py`](../../music/comb_kernels.py), the engine builds dense triangular pulse template banks across continuous logarithmic tempo classes:
 $$f(\text{BPM}) = \log_2\left(\frac{\text{BPM}}{60}\right) \pmod 1$$
 - **Fast Scout Sweep:** Evaluates Pearson cross-correlation across tempo classes in $<0.3\text{ms}$ on Raspberry Pi CPU.
 - **Harmonic Judge:** Evaluates candidate octaves and $3:2$ perfect fifths ($\Delta = \log_2(1.5)$) with a Gaussian human prior centered at $125\text{ BPM}$.
@@ -82,7 +82,7 @@ flowchart TD
     end
 
     subgraph "3. Dense Pearson Scout & Harmonic Judge"
-        Kernels["core/comb_kernels.py\nDense Phase Bank"]:::engine
+        Kernels["music/comb_kernels.py\nDense Phase Bank"]:::engine
         Scout["Fast Logarithmic Scout\n+ Gaussian Human Prior (125 BPM)"]:::engine
         Judge["Harmonic Candidate Judge\nOctaves & 3:2 Fifths"]:::logic
         Winner["Winning BPM & Ingest Phase (φ_ingest)"]:::data

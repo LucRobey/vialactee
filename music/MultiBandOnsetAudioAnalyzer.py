@@ -1,5 +1,5 @@
 """
-core/MultiBandOnsetAudioAnalyzer.py - Production Multi-Band Onset Derivative Rhythm Analyzer.
+music/MultiBandOnsetAudioAnalyzer.py - Production Multi-Band Onset Derivative Rhythm Analyzer.
 
 Production rhythm model for the Vialactée interactive LED chandelier.
 Subclasses BaseAudioAnalyzer directly, featuring:
@@ -24,10 +24,10 @@ import logging
 from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
 
-from core.BaseAudioAnalyzer import BaseAudioAnalyzer
-from core.RhythmConfig import RhythmConfig
-from core.StructuralNoveltyDetector import StructuralNoveltyDetector
-from core.comb_kernels import build_dense_phase_bank
+from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.RhythmConfig import RhythmConfig
+from music.StructuralNoveltyDetector import StructuralNoveltyDetector
+from music.comb_kernels import build_dense_phase_bank
 
 logger = logging.getLogger(__name__)
 

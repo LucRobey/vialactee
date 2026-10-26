@@ -26,7 +26,7 @@ To maintain 30 FPS (AXIOM-01) across all 1,304 LEDs on the Raspberry Pi:
 * **NEVER** write `for i in range(self.nb_of_leds)` or loop over indices.
 * Precompute spatial arrays (e.g. `np.linspace(0.0, 1.0, self.nb_of_leds)`) in `__init__`.
 * Compute arrays for Hue, Saturation, and Value shaped `(nb_of_leds,)`.
-* Convert colors via `RGB_HSV.fromHSV_toRGB_vectorized(h, s, v)` which returns a 2D `(nb_of_leds, 3)` RGB array.
+* Convert colors via `RGB_HSV.fromHSV_toRGB_vectorized(h, s, v)` which returns a 2D `(nb_of_leds, 3)` RGB array, or sample `self.palette_lut` / `self.palette_sample(t, out)`.
 * **Immutable Color Constants**: Color constants from `utils.colors` (`red`, `green`, `blue`, `white`, etc.) and `self.white` on `Mode` are defined as immutable tuples `(R, G, B)`. They can be assigned directly to NumPy arrays (`self.rgb_list[:] = self.white`) without risk of shared mutable state corruption across segments.
 * Apply fades and blends using base class helper methods:
   - `self.smooth_vectorized(ratio, target_rgb_matrix)`: Blends current frame with target matrix.
@@ -34,7 +34,7 @@ To maintain 30 FPS (AXIOM-01) across all 1,304 LEDs on the Raspberry Pi:
   - `self.fade_to_black(ratio)` or `self.fade_to_black_segment_vectorized(ratio, start, stop)`.
 
 ### 3. Dynamic Settings & React Webapp Exposure
-Avoid hardcoding magic constants in color math. Fetch default parameters from `self.infos.get("param_name", default_val)` and expose them via `get_settings_schema()`:
+Avoid hardcoding magic constants in color math. Fetch default parameters from `self.infos.get("param_name", default_val)` and expose them via `get_settings_schema()`, ensuring every declared setting is read inside `run()`/`render()`:
 ```python
 def get_settings_schema(self) -> List[Dict[str, Any]]:
     return [
@@ -51,15 +51,14 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
     ]
 ```
 
-### 4. Audio & Rhythm Reactivity
-* Access audio data via `self.listener`.
+### 4. Audio, Rhythm & Subtle Mood Reactivity
+* Access audio data via `self.listener` and base `Mode` helpers (`self.rhythm_lock`, `self.beat_pulse(sharpness)`, `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`, `self.palette_lut`, `self.highlight_color`, `self.drop_hit`).
 * Consult [listener_api.md](./references/listener_api.md) for full descriptions of `asserved_fft_band`, `beat_phase`, `is_real_beat`, `beat_tag`, and `chroma_values`.
-* **Unified 3-Tier Musical Context (`self.listener.context`)**:
-  - Modulate visuals continuously with **Tier 1 Kinetics** (`context.energy`, `context.tension`, `context.drop_progress`, `context.spectral_tilt`).
-  - Branch choreographies declaratively on **Tier 2 Macro Scenes** (`context.scene`: `CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) with `context.scene_blend`.
-  - Gate physical flashes and transient impacts using **Tier 3 Micro Badges** (`context.is_locked`, `context.is_real_beat`, `context.is_drop_impact`, `context.is_syncopated`, `context.is_structural_cut`).
-  - Legacy `context.current_regime` / `context.regime_blend` were removed; always use `context.scene` and `context.scene_blend`.
-* **Rhythm Integration Rules**: Strictly follow [`modes/MODE_RULES.md`](../../../modes/MODE_RULES.md) for confidence-based graceful degradation, `is_real_beat` strobe gating, and acoustic fallback. Never flash blindly on ghost beats.
+* **Three Architectural Laws ([`modes/MODE_RULES.md`](../../../modes/MODE_RULES.md))**:
+  - **Always Alive Without the Flywheel (`self.rhythm_lock == 0.0`):** Every mode must produce a smooth, musical animation driven by continuous audio energy, 8-band spectrum, or pitch even when `beat_trust == 0.0`.
+  - **Rhythm-Locked When Confident (`self.rhythm_lock -> 1.0`):** Smoothly blend the same visual algorithm with `beat_phase`, `bpm`, and `self.beat_pulse(sharpness)` as `self.rhythm_lock` rises.
+  - **No `if ctx.scene == ...` Branching in Modes:** Never write hard `if scene == ...` branches in modes. The sealed `mood/` sector absorbs scene changes (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) with a `0.30s` debounce and `2.5s` cosine crossfade, exposing bounded modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) on `Mode`.
+  - **Gate Hard Flashes:** Use **Tier 3 Micro Badges** (`context.is_locked`, `context.is_real_beat`, `context.is_syncopated`) and sanctioned `Mode` helpers (`self.drop_hit`, `self.drop_decay`) to gate 1-frame transient impacts and strobes. Never read 🟠 LOW-trust flags (`scene`, `is_drop_impact`, `is_drop_imminent`, `is_song_change`, `is_verse_chorus_change`, `is_structural_cut`) in concrete modes, and never flash blindly on ghost beats or lock into 1.5s full-strip whiteouts.
 
 ### 5. Reference Implementation
 * Inspect [boilerplate_mode.py](./examples/boilerplate_mode.py) for a complete, production-ready template.
@@ -67,7 +66,7 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 ### 6. Mode Registration
 When adding a new mode:
 1. Create the mode file in `modes/<ModeName>_mode.py`.
-2. Register the mode in `modes/modes_description.md` with visual description, orientation, and parameter schema.
+2. Register the mode in `modes/modes_description.md` and `docs/reference/modes_catalog.md` with visual description, orientation, and parameter schema.
 3. Register the mode entry in [`config/modes.json`](../../../config/modes.json):
    ```json
    {
