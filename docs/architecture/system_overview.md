@@ -27,13 +27,18 @@ graph TD
     Conn -->|State Snapshots (<= 10Hz)| Wabb
     RoomAudio --> Mic
 
-    %% Core Processing Engine
-    subgraph Core [Core Orchestration Engine]
+    %% Music Analysis Sector (Sealed Room)
+    subgraph Music [Music Analysis Sector - music.api]
         ListenerFacade["Listener (Facade & 5.0s Lookahead Queue)"]
         AudioIngest["AudioIngestion (Dual-Res Mel: 8 & 32 Bands)"]
         AudioAnalyz["DyadicMetricalAudioAnalyzer (32-Band Onset Engine + Metrical Sub-Pulse)"]
+        ContextEng["MusicalContextEngine (3-Tier Musical Context)"]
+    end
+
+    %% Core Processing Engine
+    subgraph Core [Core Orchestration Engine]
         ModeMaster["Mode_master (Central Orchestrator)"]
-        MoodDir["mood.api (MoodDirector & Scene Policy)"]
+        MoodSvc["mood.api (MoodService: Palettes & Scene Modifiers)"]
         TransBridge["TransitionBridge -> transitions.api (TransitionService)"]
     end
 
@@ -43,20 +48,22 @@ graph TD
     ListenerFacade -->|PCM Chunks| AudioIngest
     AudioIngest -->|32-Band Mel Energies| AudioAnalyz
     AudioIngest -->|8-Band Smoothed FFT & Power| ListenerFacade
+    AudioAnalyz -->|Live & Delayed Rhythm Signals| ContextEng
+    ContextEng -->|3-Tier Context| ListenerFacade
     ListenerFacade -->|Delayed FFT & MusicalContext| ModeMaster
-    AudioAnalyz -->|BPM, Phase & Transients| ModeMaster
-    ModeMaster -->|MusicalContext| MoodDir
-    MoodDir -->|Target Scene & Mode Pool| TransBridge
-    AudioAnalyz -->|Structural Changes & Drops| TransBridge
-    TransBridge -->|Commands Mode Transitions| ModeMaster
+    ModeMaster -->|MusicalContext Scene| MoodSvc
+    ListenerFacade -->|MusicSnapshot| TransBridge
+    TransBridge -->|TransitionOrders| ModeMaster
+    TransBridge -->|PaletteRequest| MoodSvc
 
     %% Visual Rendering Layer
     subgraph Visuals [Visual Animation Pipeline]
-        Mode["Mode Subclasses (22 Active Modes)"]
+        Mode["Mode Subclasses (21 Active Modes)"]
         Seg["Segment (Logical LED Strip)"]
         TransEng["transitions.engine (Spatial Blends)"]
     end
 
+    MoodSvc -->|Shared mood_colors & mood_modifiers| Mode
     ModeMaster -->|Update Ticks (30 FPS)| Seg
     Seg -->|Queries Transition State| TransBridge
     Seg -->|Renders Mode Animation| Mode
@@ -89,7 +96,7 @@ graph TD
    - Budget: 33.33 ms frame period, $\le 20.0\text{ ms}$ compute cap on Pi 4B (AXIOM-01).
    - Hot-path operations are zero-allocation NumPy slice assignments (AXIOM-02).
 2. **The 60.0 Hz Audio Onset Sampling:**
-   - Audio feature extraction in `core/DyadicMetricalAudioAnalyzer.py` (on top of `core/MultiBandOnsetAudioAnalyzer.py`) samples at 60 Hz to ensure precise onset detection.
+   - Audio feature extraction in `music/DyadicMetricalAudioAnalyzer.py` (on top of `music/MultiBandOnsetAudioAnalyzer.py`) samples at 60 Hz to ensure precise onset detection.
    - Lookahead buffer maintains a continuous 5.0-second delay queue, back-projecting beat phase to speaker time $T_{\text{speaker}}$ (AXIOM-05).
 3. **Decoupled Telemetry:**
    - `Connector.on_frame_tick()` executes in 0.0 ms when no clients are connected.

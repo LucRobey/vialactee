@@ -136,17 +136,17 @@ SALIENCE (S)     │                      │                      │
 
 ## 5. Tier 3: Micro Physical Badges (Booleans)
 
-Modes no longer need to parse raw thresholds; they simply inspect deterministic boolean badges:
+Deterministic boolean badges encapsulate threshold and Schmitt-trigger logic for downstream consumers (`mood/`, `transitions/`, and `Mode.py` helpers):
 
-| Badge Property | Boolean Condition & Physical Meaning | Mode Application |
+| Badge Property | Boolean Condition & Physical Meaning | Consumer & Mode Application |
 | :--- | :--- | :--- |
-| **`is_locked`** | $T \ge 0.50$ (release $< 0.35$, Schmitt trigger). High tempo confidence. | Engage beat-phase locked traveling waves. |
-| **`is_syncopated`** | $S \ge 0.45 \land T < 0.35$. Energetic percussion without stable metric lock (drum fills, breakcore, polyrhythms). | Particle burst, aperiodic flashes, bypass strict beat phase. |
-| **`is_real_beat`** | `is_beat == True` and $P \ge 0.20$. Physical confirmed acoustic transient. | Kick shockwave, bright bass hit flash. |
-| **`is_silent`** | $P < 0.05$ (release $\ge 0.08$, Schmitt trigger). True acoustic silence. | Silence blackout or gentle resting glow. |
-| **`is_drop_impact`** | High for **exactly 1 frame** on drop landing. | Full chandelier flash, blinding ripple expansion. |
-| **`is_drop_imminent`**| Countdown $\le 0.40\text{s}$ in `BUILDUP`. | Pre-drop dramatic blackout or fast strobe freeze. |
-| **`is_structural_cut`**| High for $1.2\text{s}$ dwell upon `is_song_change` or `is_verse_chorus_change`. | Macro sectional reset, dramatic palette change. |
+| **`is_locked`** | $T \ge 0.50$ (release $< 0.35$, Schmitt trigger). High tempo confidence. | Cohort lottery in `transitions/`; concrete modes prefer continuous `self.rhythm_lock`. |
+| **`is_syncopated`** | $S \ge 0.45 \land T < 0.35$. Energetic percussion without stable metric lock (drum fills, breakcore, polyrhythms). | Complexity DNA and cohort lottery in `transitions/`. |
+| **`is_real_beat`** | `is_beat == True` and $P \ge 0.20$. Physical confirmed acoustic transient. | Gate hard kicks/sparks in modes (paired with `self.rhythm_lock` or `ctx.beat_trust`). |
+| **`is_silent`** | $P < 0.05$ (release $\ge 0.08$, Schmitt trigger). True acoustic silence. | Silence fade-to-black in modes and `self.beat_pulse()`. |
+| **`is_drop_impact`** | High for **exactly 1 frame** on drop landing. | Exposed to concrete modes via `self.drop_hit` (1-frame trigger) and `self.drop_decay` ($1.0 \to 0.0$ envelope). |
+| **`is_drop_imminent`**| Countdown $\le 0.40\text{s}$ in `BUILDUP`. | Consumed by `transitions/` (`MusicSnapshot`); **never** used in concrete modes for pre-drop blackouts. |
+| **`is_structural_cut`**| High for $1.2\text{s}$ dwell upon `is_song_change` or `is_verse_chorus_change`. | Telemetry and macro sectional tracking. |
 
 ---
 
@@ -173,50 +173,28 @@ Convenience properties derived from the scene:
 
 ---
 
-## 8. Mode Authoring Pattern (Offer 4)
+## 8. Mode Consumption Pattern (Sanctioned Helpers & Subtle Mood Modifiers)
+
+Concrete modes (`modes/*_mode.py`) **do not branch on `ctx.scene` or `ctx.is_drop_imminent`**, as heuristic scene classifications and pre-drop blackouts cause jarring visual snaps on false positives. Instead, `Mode_master` feeds `ctx.scene` into `mood.api.MoodService(auto_scene=True)`, which debounces (`0.30 s`) and cosine-smooths (`2.5 s`) scene transitions into four continuous modifiers bound on `Mode` (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`), while `Mode.py` provides bounded rhythm and drop helpers:
 
 ```python
-def render(self, buffer=None, audio_ctx=None, frame_info=None):
+def run(self) -> None:
     ctx = self.listener.context
-
-    # 1. Micro Badges: One-frame drop impact shockwave
-    if ctx.is_drop_impact:
-        self.trigger_shockwave_blast()
-
-    # Pre-drop dramatic blackout
-    if ctx.is_drop_imminent:
-        buffer.fill(0)
+    if ctx is not None and ctx.is_silent:
+        self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
         return
 
-    # Physical acoustic hit
-    if ctx.is_real_beat:
-        self.add_kick_ripple()
+    # 1. Confidence-blended beat envelope & continuous lock weight
+    lock = self.rhythm_lock          # [0.0, 1.0]: trust * (0.4 + 0.6 * salience)
+    pulse = self.beat_pulse(2.2)     # Punchy when locked, smooth breathing when lost
 
-    # 2. Continuous Kinetics: Drive amplitude and geometry
-    master_brightness = ctx.energy
-    y_center = int(ctx.vertical_center * self.nb_leds)
-    color_tilt = ctx.spectral_tilt  # Warm for bass, cool for treble
+    # 2. One-frame drop trigger & smooth 1.5s post-drop decay envelope
+    if (self.listener.is_beat and ctx.is_real_beat and lock > 0.35) or self.drop_hit:
+        self.trigger_kick_ripple()
+    boost = 1.0 + 0.35 * self.drop_decay
 
-    # 3. Macro Scene Branching
-    scene = ctx.scene
-    blend = ctx.scene_blend
-
-    if scene == MusicalScene.GROOVE:
-        if ctx.is_syncopated:
-            target_val = self.render_chaotic_syncopation(ctx.tension)
-        else:
-            target_val = self.render_locked_groove(self.listener.beat_phase) * master_brightness
-    elif scene == MusicalScene.BUILDUP:
-        target_val = ctx.tension * 255
-    elif scene == MusicalScene.DROP_IMPACT:
-        target_val = 255.0  # Climax release state
-    else:  # MusicalScene.CHILL
-        target_val = master_brightness * 0.4
-
-    # Apply smooth scene crossfade
-    if blend < 1.0:
-        val = (1.0 - blend) * self._prev_val + blend * target_val
-    else:
-        val = target_val
-    self._prev_val = val
+    # 3. Continuous kinetics + cosine-smoothed mood_* modifiers (no ctx.scene branching)
+    drive = min(1.0, (0.55 * ctx.energy + 0.45 * pulse) * boost)
+    speed = self.base_speed * (1.0 + lock * ((self.listener.bpm / 120.0) - 1.0)) * self.mood_pace * self.fps_ratio
+    fade_ratio = self.base_fade / max(0.5, self.mood_trail)
 ```

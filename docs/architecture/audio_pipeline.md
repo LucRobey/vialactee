@@ -12,7 +12,7 @@ The audio pipeline transforms raw acoustic PCM stream data into mathematically s
 
 ```mermaid
 graph LR
-    PCM["Raw PCM Stream<br/>(44.1 kHz, Mono/Stereo)"] --> FFT["Vectorized rFFT<br/>(np.fft.rfft, 2048 pts)"]
+    PCM["Raw PCM Stream<br/>(44.1 kHz, Mono/Stereo)"] --> FFT["Vectorized rFFT<br/>(np.fft.rfft, 4096 pts)"]
     FFT --> DualMel["Dual-Resolution Mel Filterbanks"]
     DualMel --> Bands8["8 Mel Bands<br/>(Visual Modes)"]
     DualMel --> Bands32["32 Mel Bands<br/>(Rhythm Onsets)"]
@@ -29,7 +29,7 @@ graph LR
 
 Implemented in `music/AudioIngestion.py`:
 1. **Windowing & FFT:**
-   - Real FFT (`np.fft.rfft`) computed on 2048-sample audio frames with Hann windowing.
+   - Real FFT (`np.fft.rfft`) computed on 4096-sample audio frames (`buffer_size = 4096`, yielding 2049 frequency bins) with Hanning windowing.
    - Vectorized matrix multiplications map power spectrum bins into Mel frequency bins.
 2. **Dual-Resolution Mel Filterbanks:**
    - **8 Bands (`fft_band_values`):** Preserved for visual lighting modes in `modes/` (Sub-bass, Bass, Low-Mid, Mid, High-Mid, Treble, Brilliance, Air).
@@ -39,8 +39,8 @@ Implemented in `music/AudioIngestion.py`:
      - Snare body and crack: 200–4000 Hz
      - Hi-hat shimmer: 8–16 kHz
 3. **12-Tone Chromagram:**
-   - Pre-computed pitch matrix maps spectral bins to the 12 chromatic semitones (C, C#, D, ..., B).
-   - Powers harmonic color calculation in `Synesthesia_mode`.
+   - Pre-computed pitch matrix maps spectral bins ($f > 30\text{ Hz}$) to the 12 chromatic semitones (C, C#, D, ..., B), smoothed with fast-attack/slow-release ADSR (`smoothed_chroma_values`).
+   - Powers harmonic color calculation in `Synesthesia_mode` (where circular pitch-class vectors are blended with `mood_colors[0]` and `mood_accent` over a traveling spatial wave).
 
 ---
 
