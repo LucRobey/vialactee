@@ -9,10 +9,10 @@
 #include "secrets.h"
 
 // Hardware Pin & LED Configuration (Profile: "full")
-// Strip 1: 785 LEDs on GPIO 2 (Port 9001)
-// Strip 2: 519 LEDs on GPIO 4 (Port 9002)
-#define PIN_STRIP_1 2
-#define PIN_STRIP_2 4
+// Strip 1: 785 LEDs on GPIO 21 (Port 9001)
+// Strip 2: 519 LEDs on GPIO 18 (Port 9002)
+#define PIN_STRIP_1 21
+#define PIN_STRIP_2 18
 
 #define NUM_LEDS_1 785
 #define NUM_LEDS_2 519
@@ -34,7 +34,9 @@ AsyncUDP udp1;
 AsyncUDP udp2;
 
 volatile uint32_t lastPacketTimeMs = 0;
-volatile bool newPacketReceived = false;
+volatile uint32_t frameStartMs = 0;
+volatile bool strip1Updated = false;
+volatile bool strip2Updated = false;
 
 enum DeviceState {
     STATE_DISCONNECTED, // RED: Wi-Fi disconnected or connecting
@@ -108,8 +110,14 @@ void setup() {
 
                 if (startIndex + numLedsInPacket <= NUM_LEDS_1) {
                     memcpy(&leds1[startIndex], packet.data() + 2, numLedsInPacket * 3);
-                    lastPacketTimeMs = millis();
-                    newPacketReceived = true;
+                    uint32_t t = millis();
+                    lastPacketTimeMs = t;
+                    if (startIndex + numLedsInPacket >= NUM_LEDS_1) {
+                        if (!strip1Updated && !strip2Updated) {
+                            frameStartMs = t;
+                        }
+                        strip1Updated = true;
+                    }
                 }
             }
         });
@@ -127,8 +135,14 @@ void setup() {
 
                 if (startIndex + numLedsInPacket <= NUM_LEDS_2) {
                     memcpy(&leds2[startIndex], packet.data() + 2, numLedsInPacket * 3);
-                    lastPacketTimeMs = millis();
-                    newPacketReceived = true;
+                    uint32_t t = millis();
+                    lastPacketTimeMs = t;
+                    if (startIndex + numLedsInPacket >= NUM_LEDS_2) {
+                        if (!strip1Updated && !strip2Updated) {
+                            frameStartMs = t;
+                        }
+                        strip2Updated = true;
+                    }
                 }
             }
         });
@@ -166,10 +180,14 @@ void loop() {
             Serial.println("[Status] Stream active -> Displaying live frames");
         }
 
-        if (newPacketReceived) {
+        bool bothReady = strip1Updated && strip2Updated;
+        bool partialTimeout = (strip1Updated || strip2Updated) && ((now - frameStartMs) >= 8);
+
+        if (bothReady || partialTimeout) {
             static uint32_t lastShowMs = 0;
             if (now - lastShowMs >= 15) { // Cap rendering at ~60 FPS
-                newPacketReceived = false;
+                strip1Updated = false;
+                strip2Updated = false;
                 lastShowMs = now;
                 FastLED.show();
             }
@@ -178,8 +196,14 @@ void loop() {
         // Stream stopped or waiting for first frame
         if (currentState != STATE_WAITING) {
             currentState = STATE_WAITING;
-            Serial.println("[Status] Stream idle -> LEDs GREEN");
+            Serial.printf("[Status] Stream idle -> LEDs GREEN (IP: %s)\n", WiFi.localIP().toString().c_str());
             showStatusColor(CRGB::Green);
+        }
+        static uint32_t lastIpPrintMs = 0;
+        if (now - lastIpPrintMs >= 5000) {
+            lastIpPrintMs = now;
+            Serial.printf("[Waiting] ESP32 FULL ready — IP: %s | Ports: %d, %d\n",
+                          WiFi.localIP().toString().c_str(), PORT_STRIP_1, PORT_STRIP_2);
         }
     }
 

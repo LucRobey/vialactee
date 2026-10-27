@@ -1,4 +1,4 @@
 #pragma once
 
-const char* ssid = "SFR_7F90";
-const char* password = "LucFilsPref";
+const char* ssid = "freebox_LAURE";
+const char* password = "laure128";

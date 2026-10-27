@@ -109,10 +109,16 @@ In production, the Raspberry Pi or PC streams chunked UDP pixel frames over Wi-F
 
 ```text
 hardware/esp32_firmware/
-├── esp32_udp_neopixel.ino        # Master configurable firmware (#define PROFILE_FULL)
-├── esp32_udp_neopixel_full.ino   # Ready-to-flash 2-Channel Full Chandelier firmware (1,304 LEDs)
-├── esp32_udp_neopixel_small.ino  # Ready-to-flash 1-Channel Small Testing firmware (249 LEDs)
-└── secrets.h.example             # Template for Wi-Fi credentials (copy to secrets.h)
+├── ESP32_full/
+│   ├── ESP32_full.ino        # 2-Channel Full Chandelier firmware (1,304 LEDs)
+│   ├── secrets.h             # Local Wi-Fi credentials
+│   └── secrets.h.example     # Template for Wi-Fi credentials
+├── ESP32_small/
+│   ├── ESP32_small.ino       # 1-Channel Small Profile firmware (249 LEDs)
+│   ├── secrets.h             # Local Wi-Fi credentials
+│   └── secrets.h.example     # Template for Wi-Fi credentials
+└── ESP32_test/
+    └── ESP32_test.ino        # Standalone hardware test sketch (no Wi-Fi/UDP)
 ```
 
 ### 5.2 Profile Comparison (`FULL` vs `SMALL`)
@@ -121,36 +127,36 @@ Matches `"hardware_profile"` in [`config/app_config.json`](../../config/app_conf
 
 | Feature | **FULL Profile** (`"full"`) | **SMALL Profile** (`"small"`) |
 | :--- | :--- | :--- |
-| **Sketch File** | `esp32_udp_neopixel_full.ino` | `esp32_udp_neopixel_small.ino` |
+| **Sketch File** | `ESP32_full/ESP32_full.ino` | `ESP32_small/ESP32_small.ino` |
 | **Active Channels** | **2 Channels** (Dual UDP Listeners) | **1 Channel** (Single UDP Listener) |
 | **Total LEDs** | **1,304 LEDs** | **249 LEDs** |
-| **Channel 1** | **785 LEDs** on **UDP Port `9001`** $\rightarrow$ **GPIO 4** | **249 LEDs** on **UDP Port `9001`** $\rightarrow$ **GPIO 4** |
-| **Channel 2** | **519 LEDs** on **UDP Port `9002`** $\rightarrow$ **GPIO 5** | *Disabled* |
+| **Channel 1** | **785 LEDs** on **UDP Port `9001`** $\rightarrow$ **GPIO 21** (`D21`) | **249 LEDs** on **UDP Port `9001`** $\rightarrow$ **GPIO 21** (`D21`) |
+| **Channel 2** | **519 LEDs** on **UDP Port `9002`** $\rightarrow$ **GPIO 18** (`D18`) | *Disabled* |
 
-### 5.3 On-Board Status LED (`GPIO 2` Blue LED)
+### 5.3 Visual Strip Status Diagnostics
 
-- **Rapid Blinking (`200ms` interval):** Searching for and connecting to Wi-Fi.
-- **Solid ON:** Connected to Wi-Fi and actively listening for UDP packets on port `9001` (and `9002` in `FULL` mode).
-- **Brief Flicker OFF:** Indicates Wi-Fi drop; auto-reconnection is triggered automatically.
+- **Solid RED (`STATE_DISCONNECTED`):** Searching for and connecting to Wi-Fi (or Wi-Fi dropped; auto-reconnection is active).
+- **Solid GREEN (`STATE_WAITING`):** Connected to Wi-Fi and ready, waiting for UDP packets on port `9001` (and `9002` in `FULL` mode), or stream idle for $> 1\text{ s}$.
+- **Live Animations (`STATE_STREAMING`):** Actively receiving UDP frames from Python.
 
 ### 5.4 Hardware Wiring & Pinout (ESP32)
 
 | ESP32 Pin | Label on Board | Connects To | Purpose |
 | :--- | :--- | :--- | :--- |
-| **GPIO 4** | `D4` | **Strip 1 Data In (`DIN`)** | Primary LED Strip Data (Channel 1 — Port `9001`) |
-| **GPIO 5** | `D5` | **Strip 2 Data In (`DIN`)** | Secondary LED Strip Data (Channel 2 — Port `9002`, `FULL` profile only) |
+| **GPIO 21** | `D21` | **Strip 1 Data In (`DIN`)** | Primary LED Strip Data (Channel 1 — Port `9001`) |
+| **GPIO 18** | `D18` | **Strip 2 Data In (`DIN`)** | Secondary LED Strip Data (Channel 2 — Port `9002`, `FULL` profile only) |
 | **GND** | `GND` | **LED Strip `GND` / Power Supply `-V`** | **CRITICAL:** Common Ground Reference |
 | **VIN / 5V** | `VIN` or `5V` | **5V Power Supply `+V`** *(Optional)* | Powers the ESP32 if not powered via USB |
 
 > **Electrical Safeguards:**
 > 1. **Common Ground (`GND`):** Always connect `GND` of the ESP32 to the negative (`GND` / `-V`) terminal of the 5V LED power supply. Without a common ground, the LEDs will glitch violently.
-> 2. **Data Line Resistor:** Place a **$330\,\Omega$ to $470\,\Omega$ resistor** in series between `GPIO 4` / `GPIO 5` and the strip `DIN` pads to prevent voltage ringing.
+> 2. **Data Line Resistor:** Place a **$330\,\Omega$ to $470\,\Omega$ resistor** in series between `GPIO 21` / `GPIO 18` and the strip `DIN` pads to prevent voltage ringing.
 > 3. **Power Filtering Capacitor:** Connect a **$1000\,\mu\text{F}$ electrolytic capacitor** ($\ge 6.3\text{V}$, ideally $16\text{V}$) across `+5V` and `GND` where power enters the strips.
 > 4. **Never power LEDs through the ESP32:** Feed high-amperage 5V power directly from the external PSU to the strips (with power injection every ~150–250 LEDs).
 
 ### 5.5 Flashing the ESP32
 
 1. Install **Arduino IDE 2.x**, add the Espressif ESP32 board manager URL (`https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`), and install the **esp32** board package and **FastLED** library.
-2. Copy `hardware/esp32_firmware/secrets.h.example` to `hardware/esp32_firmware/secrets.h` (git-ignored) and set `WIFI_SSID` and `WIFI_PASSWORD`.
-3. Open `esp32_udp_neopixel_full.ino` (or `esp32_udp_neopixel_small.ino`), select **ESP32 Dev Module** (`115200` baud), and click **Upload**.
+2. Verify `secrets.h` inside `ESP32_full/` or `ESP32_small/` has your Wi-Fi `ssid` and `password`.
+3. Open `ESP32_full/ESP32_full.ino` (or `ESP32_small/ESP32_small.ino`), select **ESP32 Dev Module** (`115200` baud), and click **Upload**.
 4. Open the Serial Monitor (`115200` baud) to read the ESP32's assigned IP address and set `"esp32_ip"` in `config/app_config.json`.
