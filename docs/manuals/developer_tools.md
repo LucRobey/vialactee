@@ -4,7 +4,7 @@
 > **Source Directory:** [`tools/`](../../tools/), [`hardware/Fake_leds.py`](../../hardware/Fake_leds.py), [`research/benchmarks/`](../../research/benchmarks/)  
 > **Target Audience:** Developers, DSP Researchers, and Visual Mode Designers
 
-This manual covers the offline graphical workbenches, interactive studios, and simulation tools available in Vialactée.
+This manual covers the offline graphical workbenches, interactive studios, and simulation tools available in Vialactée. Both studios in `tools/` run completely standalone on Windows, macOS, or Linux — no ESP32, no Raspberry Pi, and no web server required.
 
 ---
 
@@ -18,104 +18,102 @@ When running `Main.py` on a PC (`"HARDWARE_MODE": "simulation"` or `"auto"`), th
 
 ## 2. Mode Studio (`tools/mode_studio.py`)
 
-A standalone visual mode development and testing workbench that renders a single LED strip alongside a live audio telemetry HUD and interactive parameter sliders — without launching the full multi-segment simulator or web interface.
+A hot-reloading visual laboratory for creating, tuning, and debugging light modes in [`modes/`](../../modes/).
 
 ### 2.1 Usage & CLI Flags
 
 ```bash
-# Launch with default settings (first mode in modes.json, default song)
+# Launch with the first song in songs/ and the first registered mode
 python tools/mode_studio.py
 
-# Launch directly into a specific mode with a specific song
-python tools/mode_studio.py --mode "Beat Runner" --song "stromae"
+# Launch a specific song and mode (fuzzy substring match on both)
+python tools/mode_studio.py --song "stromae" --mode "Impact Shockwave"
 
-# Launch with live microphone capture instead of an audio file
-python tools/mode_studio.py --mode "Impact Shockwave" --mic
-
-# Test vertical strip behavior with custom LED count
-python tools/mode_studio.py --mode "Plasma Fire" --leds 150 --orientation vertical
-
-# List all registered modes in config/modes.json
-python tools/mode_studio.py --list
+# Custom LED count + explicit analyzer model
+python tools/mode_studio.py -s 2 -m "Beat Runner" --leds 120 --model DyadicMetricalAudioAnalyzer
 ```
 
 | Flag | Default | Description |
 | :--- | :--- | :--- |
-| `--mode`, `-m` | First mode | Initial mode name or substring (case-insensitive, e.g. `"beat"`, `"shockwave"`). |
-| `--song`, `-s` | First `.mp3` | Song name or substring from `songs/`, or path to an audio file. |
-| `--mic` | `False` | Use live microphone input (`Local_Microphone`) instead of an audio file. |
-| `--leds`, `-n` | `150` | Number of simulated LEDs on the strip (`16..600`). |
-| `--orientation` | `horizontal` | Strip orientation: `horizontal` or `vertical`. |
-| `--fps` | `60` | Target render frame rate (`15..120`), for profiling against AXIOM-01 ($\le 20.0\text{ ms}$). |
-| `--list` | — | Print all available modes from `config/modes.json` and exit. |
+| `--song`, `-s` | First track in `songs/` | Song filename substring, 1-based index (`1-9`), or path to an audio file. |
+| `--mode`, `-m` | First mode in `config/modes.json` | Mode name or substring (e.g. `"shockwave"`, `"breather"`). |
+| `--leds`, `-l` | `80` | Number of simulated LEDs on the virtual strip. |
+| `--model` | `DyadicMetricalAudioAnalyzer` | Audio analyzer model (`DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `AudioAnalyzer`). |
 
-### 2.2 HUD Layout & Keyboard Shortcuts
+### 2.2 HUD Layout (`1480 × 940`)
 
-- **Top Toolbar:** Mode selector (`◀` / `▶`), Song selector (`◀` / `▶`), Orientation toggle (`HORIZ` / `VERT`), Direction toggle (`DOWN` / `UP`), and LED count controls (`-25` / `+25`).
-- **Center Canvas:** Large LED strip viewport with pixel glow halos, LED index ruler (`0`, `N/4`, `N/2`, `3N/4`, `N-1`), and center crosshair.
-- **Bottom Telemetry Cards:**
-  1. **8-Band Mel Spectrum (`asserved_fft_band`)** + `band_flux` peak indicators.
-  2. **Rhythm & Flywheel Card:** Live BPM, `beat_phase` progress bar, `beat_confidence`, and `is_real_beat` / `is_dropped_beat` / `is_song_change` badges.
-  3. **Live Mode Settings Card:** Interactive sliders, toggles, and dropdowns auto-generated from `mode.get_settings_schema()` with a `Reset Defaults` button.
+- **Header (`54 px`):** Current mode name, orientation badge (`HORIZONTAL` / `VERTICAL`), song title, analyzer dropdown (`DyadicMetrical` / `MultiBandOnset` / `Legacy`), `Sens`, `Sync` offset (`ms`), and per-frame `mode.update()` execution time in `ms` (color-coded against the **AXIOM-01** frame budget).
+- **Card 0 — Virtual LED Strip (`150 px`):** Simulated glowing LEDs (`80` default) rendered in horizontal strip or vertical column layout, plus an interactive **Song Timeline Scrubber** (click anywhere to seek).
+- **Card 1 — 8-Band Mel Spectrum (`145 px`):** Live normalized `asserved_fft_band[0..7]` bars (`Sub-Bass` through `Brilliance`) with peak-hold markers and `band_flux` transient bars.
+- **Card 2 — Mode Settings (`145 px`):** Auto-generated interactive controls (`slider`, `toggle`, `list`) from the active mode's `get_settings_schema()`, with a **Reset Defaults** button.
+- **Card 3 — Musical Context & Mood (`210 px`):**
+  - **Left (`30%`):** Macro `scene` badge (`CHILL` / `GROOVE` / `BUILDUP` / `DROP_IMPACT`), `rhythm_salience`, `beat_trust`, and live `mood/` palette swatches (`mood_colors[0..3]` + `highlight_color`) with a clickable **Mood selector dropdown**.
+  - **Center (`44%`):** **6-Second Dual Trace** of `energy` (green) and `tension` (amber) with event flags (`DROP!`, `DROP SOON`, `CUT`).
+  - **Right (`26%`):** **Drop Detector / Override Tester** (`[B] Test Buildup (4s)`, `[D] Test Drop Now`, `[C] Reset CD`) and **12-Pitch Chromagram** (`C`..`B`).
+- **Card 4 — Rhythm & Tempo (`150 px`):** Live BPM readout, **Phase Dial** ($\phi \in [0, 1)$), `REAL` vs `COAST` beat flash indicators, **6-Second Beat & Onset Stream**, and **Tempo Comb Probability Curve (`60–200 BPM`)**.
+
+### 2.3 Keyboard Shortcuts (`mode_studio.py`)
 
 | Key | Action |
 | :--- | :--- |
-| `←` / `→` | Previous / Next Mode |
-| `[` / `]` | Previous / Next Song |
-| `SPACE` | Manual Beat Trigger (`is_beat = True`, `is_real_beat = True`) |
-| `G` | Ghost / Coasting Beat Trigger (`is_beat = True`, `is_real_beat = False`) |
-| `D` | Toggle strip direction (`DOWN` $\leftrightarrow$ `UP`) |
-| `O` | Toggle strip orientation (`horizontal` $\leftrightarrow$ `vertical`) |
-| `R` | Re-instantiate current mode (hard state reset) |
-| `ESC` | Quit Mode Studio |
+| `[R]` | **Hot-Reload** the current mode's `.py` file from disk (`importlib.reload`) without restarting audio |
+| `[Space]` | Pause / Resume audio playback |
+| `[↑]` / `[↓]` | Cycle through all 21 modes in `config/modes.json` |
+| `[←]` / `[→]` | Seek `-5s` / `+5s` in the active song (or click the timeline bar) |
+| `[B]` / `[D]` / `[C]` | Trigger synthetic `BUILDUP` (`4s` ramp -> drop) / immediate `DROP_IMPACT` / reset drop cooldown |
+| `[N]` / `[P]` | Next / Previous song in `songs/` |
+| `[1]`–`[9]` | Jump directly to song `#1`–`#9` |
+| `[+]` / `[-]` | Increase / Decrease audio `sensibility` (`5`..`100`) |
+| `[O]` | Cycle strip orientation override (`Auto` -> `Horizontal` -> `Vertical`) |
+| `[K]` / `[L]` | Adjust audio-visual sync offset `-10 ms` / `+10 ms` (`[\]` resets to `0 ms`) |
+| `[Esc]` | Quit Mode Studio |
 
 ---
 
 ## 3. Music Studio (`tools/music_studio.py`)
 
-A dedicated real-time DSP and beat-tracking inspection laboratory for [`music/`](../../music/) ([`music/AudioIngestion.py`](../../music/AudioIngestion.py), [`music/DyadicMetricalAudioAnalyzer.py`](../../music/DyadicMetricalAudioAnalyzer.py), [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py), [`music/StructuralNoveltyDetector.py`](../../music/StructuralNoveltyDetector.py), and [`music/Listener.py`](../../music/Listener.py)).
+A full-screen real-time DSP and beat-tracking inspection laboratory for [`music/`](../../music/) ([`music/AudioIngestion.py`](../../music/AudioIngestion.py), [`music/DyadicMetricalAudioAnalyzer.py`](../../music/DyadicMetricalAudioAnalyzer.py), [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py), [`music/StructuralNoveltyDetector.py`](../../music/StructuralNoveltyDetector.py), [`music/MusicalContextEngine.py`](../../music/MusicalContextEngine.py), and [`music/Listener.py`](../../music/Listener.py)).
 
 ### 3.1 Usage & CLI Flags
 
 ```bash
-# Launch with default song in songs/
+# Launch with the first song in songs/ and the default analyzer
 python tools/music_studio.py
 
-# Launch with a specific song (fuzzy substring match)
-python tools/music_studio.py --song "daft_punk"
-
-# Launch with live microphone input
-python tools/music_studio.py --mic
-
-# List all available songs in songs/
-python tools/music_studio.py --list-songs
+# Launch a specific song and analyzer model
+python tools/music_studio.py --song "losing" --model DyadicMetricalAudioAnalyzer
 ```
 
 | Flag | Default | Description |
 | :--- | :--- | :--- |
-| `--song`, `-s` | First `.mp3` | Song name or substring from `songs/`, or path to an audio file. |
-| `--mic` | `False` | Use live microphone capture (`Local_Microphone`) instead of an audio file. |
-| `--fps` | `60` | Target UI refresh rate (`20..120`). |
-| `--list-songs` | — | Print all audio files in `songs/` and exit. |
+| `--song`, `-s` | First track in `songs/` | Song filename substring, 1-based index (`1-9`), or path to an audio file. |
+| `--leds`, `-l` | `80` | Number of LEDs simulated inside the internal `Listener`. |
+| `--model`, `-m` | `DyadicMetricalAudioAnalyzer` | Initial analyzer model (`DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `AudioAnalyzer`). |
 
-### 3.2 Analytical Panels & Keyboard Shortcuts
+### 3.2 Analytical Panels (`1600 × 980`)
 
-1. **8-Band Mel Spectrum + 12-Tone Chromagram:** Real-time bars for `asserved_fft_band[0..7]` with peak-hold markers and `band_flux` ticks, plus the 12-semitone `smoothed_chroma_values` (`C` through `B`) and harmonic hue swatch.
-2. **Scrolling Onset & Power Timeline (~8s History):** Multi-trace oscilloscope plotting `asserved_total_power`, Bass Flux (`band_flux[0] + band_flux[1]`), Mid/High Flux, and vertical event markers for `REAL` beats, `COAST` beats, `VERSE/CHORUS`, and `SONG CUT`.
-3. **Anticipation Flywheel & Phase Radar:** Polar phase clock showing live `speaker_phase` ($\phi \in [0, 1)$), BPM readout, flywheel lock status (`LOCKED` / `COASTING` / `UNLOCKED`), `beat_confidence`, and `rhythm_salience`.
-4. **Tempo Hypothesis Comb Distribution (`60–200 BPM`):** Bar chart of `bpm_probabilities` across the 141 candidate tempo bins from the lookahead comb-filter bank.
-5. **Structural Novelty & STM vs LTM Memory:** Dual trace of raw vs asserved novelty (`combined_novelty`, `asserved_novelty`), `silence_frames`, and structural trigger counters.
-6. **Collapsible Live Tuning Drawer (`TAB`):** Adjust `sensibility`, `decay_base`, `hardware_latency`, and structural thresholds in real time.
+1. **Header & Song Scrubber:** Active song, clickable **Analyzer Model selector**, live `Sens`, `Sync` offset (`ms`), `[T] Tune Params` button, and interactive seek bar.
+2. **Panel 1 — 8-Band Mel Spectrum (`asserved_fft_band` & `band_flux`):** Normalized `0..1` band energy bars, peak-hold indicators, half-wave rectified spectral flux, and `GM` / `LM` / `Power` / `Flux` summary meters.
+3. **Panel 2 — 12-Pitch Chromagram (`smoothed_chroma_values`):** Real-time pitch-class energy across all 12 semitones (`C` through `B`), dominant pitch readout, and harmonic color swatch.
+4. **Panel 3 — Anticipation Flywheel & Phase Clock:** Polar phase radar ($\phi \in [0, 1)$), live BPM, `LOCKED` / `COASTING` status badge, `Confidence` & `Salience` bars, `REAL BEAT` / `COAST BEAT` / `VERSE/CHORUS` / `SONG CUT` lamps, and **Tempo Hypothesis Distribution (`60–200 BPM`)**.
+5. **Panel 4 — 32-Band Log-Mel Filterbank (`mel32_bands` & `mel32_flux`):** High-resolution 32-band log-Mel spectrogram and onset flux streams feeding the 4-stream rhythm engine.
+6. **Panel 5 — 4-Stream Percussive Onsets (`8s` Scrolling History):** Scrolling oscilloscope for **Kick (`30–140 Hz`)**, **Snare (`140–1.2 kHz`)**, **Hi-Hat (`3–12 kHz`)**, **Mid/Harmonic**, and fused **Combined ODF** with vertical beat markers.
+7. **Panel 6 — Structural Novelty & Musical Context (`8s` Scrolling History):** Scrolling STM/LTM structural novelty trace (`asserved_novelty`), macro `scene` state, `energy` & `tension` curves, and `drop_countdown` telemetry.
+8. **Live Parameter Tuner Overlay (`[T]`):** Interactive slider drawer exposing `12` live DSP & flywheel parameters (`sensibility`, `LOCK_THRESHOLD`, `COAST_THRESHOLD`, `PHASE_CORRECTION_STRENGTH`, `ONSET_SNAP_THRESHOLD`, `REAL_BEAT_FLUX_THRESHOLD`, `NOVELTY_VERSE_CHORUS_THRESHOLD`, `NOVELTY_SONG_CHANGE_THRESHOLD`, `STREAM_WEIGHT_KICK`, `STREAM_WEIGHT_SNARE`, `STREAM_WEIGHT_HAT`, `STREAM_WEIGHT_MID`) with `[D]` Reset Defaults.
+
+### 3.3 Keyboard Shortcuts (`music_studio.py`)
 
 | Key | Action |
 | :--- | :--- |
-| `←` / `→` or `[` / `]` | Previous / Next Song |
-| `TAB` | Toggle Live Parameter Tuning Drawer |
-| `SPACE` | Inject synthetic Real Beat marker |
-| `G` | Inject synthetic Ghost / Coasting Beat marker |
-| `P` | Pause / Resume scrolling timeline plots |
-| `R` | Reset analyzer & novelty state + clear history |
-| `ESC` | Quit Music Studio |
+| `[Space]` | Pause / Resume audio playback |
+| `[←]` / `[→]` | Seek `-5s` / `+5s` in the active song (or click the timeline bar) |
+| `[N]` / `[P]` | Next / Previous song in `songs/` |
+| `[1]`–`[9]` | Jump directly to song `#1`–`#9` |
+| `[M]` | Cycle analyzer model (`DyadicMetricalAudioAnalyzer` -> `MultiBandOnsetAudioAnalyzer` -> `AudioAnalyzer`) |
+| `[T]` | Toggle Live Parameter Tuner overlay (`[D]` inside tuner resets defaults) |
+| `[+]` / `[-]` | Increase / Decrease audio `sensibility` (`5`..`100`) |
+| `[K]` / `[L]` | Adjust audio-visual sync offset `-10 ms` / `+10 ms` (`[\]` resets to `0 ms`) |
+| `[Esc]` | Close tuner overlay or quit Music Studio |
 
 ---
 

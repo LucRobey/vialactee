@@ -1,98 +1,152 @@
 # API, WebSocket & UDP Wire Protocol Specification
 
 > **Location:** `docs/architecture/api_and_wire_protocol.md` (Tier 1 Canonical Specification)  
-> **Source Files:** [`connectors/Connector.py`](../../connectors/Connector.py), [`connectors/Local_Microphone.py`](../../connectors/Local_Microphone.py), [`core/CommandRouter.py`](../../core/CommandRouter.py), [`hardware/Udp_Sender.py`](../../hardware/Udp_Sender.py)  
+> **Source Files:** [`connectors/Connector.py`](../../connectors/Connector.py), [`connectors/Local_Microphone.py`](../../connectors/Local_Microphone.py), [`connectors/System_status.py`](../../connectors/System_status.py), [`core/CommandRouter.py`](../../core/CommandRouter.py), [`hardware/Udp_Sender.py`](../../hardware/Udp_Sender.py)  
 > **Enforcing Axiom:** [AXIOM-04: Network Transport Protocols](../axioms/AXIOM-04_NETWORK_PROTOCOLS.md)
 
 ---
 
 ## 1. Connectors Layer Overview (`connectors/`)
 
-The `connectors/` package bridges the external world (HTTP/WebSocket clients and physical audio capture devices) to the internal orchestration engine:
-- **[`connectors/Connector.py`](../../connectors/Connector.py):** Asynchronous `aiohttp` web server listening on `0.0.0.0:8080`. Exposes the `/api/topology` REST endpoint, manages full-duplex `/ws` WebSocket client connections, serves the compiled `wabb-interface/dist` static bundle, and throttles outbound state broadcasts to $\le 10\text{ Hz}$ (`0.1s` minimum interval) off the 30 FPS render hot path.
+The `connectors/` package bridges external HTTP/WebSocket clients and physical audio capture devices to the internal orchestration engine:
+- **[`connectors/Connector.py`](../../connectors/Connector.py):** Asynchronous `aiohttp` web server listening on `0.0.0.0:8080`. Exposes REST endpoints (`/`, `/health`, `/api/topology`, `/api/topology/reset`), manages full-duplex `/ws` WebSocket client connections, serves the compiled `wabb-interface/dist` static bundle, and throttles outbound state broadcasts to $\le 10\text{ Hz}$ (`0.1s` minimum interval) off the 30 FPS render hot path.
 - **[`connectors/Local_Microphone.py`](../../connectors/Local_Microphone.py):** Real-time audio I/O bridge built on `sounddevice`. Captures PCM frames at 44,100 Hz (`blocksize=512`), routes audio into `Listener.ingest_audio_frame()`, and (when `fakeDelay > 0.0` in presets `"spotify"`, `"spotify_aux"`, or `"aux"`) buffers raw PCM in a circular ring buffer to play delayed audio out to the physical speakers in exact alignment with the 5.0-second visual lookahead window.
+- **[`connectors/System_status.py`](../../connectors/System_status.py):** Lightweight network connectivity checker (`check_internet_connection()`).
 
 ---
 
 ## 2. HTTP REST Endpoints (`Connector.py`)
 
-### `GET /api/topology`
-Returns the unified segment geometry and UI grid layout from `config/segments_full.json` or `config/segments_small.json` (governed by **AXIOM-03**).
-- **Response (`200 OK`, `application/json`):**
-  ```json
-  {
-    "segments": [
-      {
-        "name": "v1",
-        "length": 133,
-        "orientation": "vertical",
-        "start": {"x": 15, "y": 310},
-        "step": {"x": 0, "y": -1},
-        "ui": {"id": "v1", "col": 2, "row": 2, "w": 1, "h": 6, "color": "#FF3B30"}
-      }
-    ],
-    "cables": [
-      {"from": "c1", "to": "v1", "cp1": {"x": 0, "y": 0}, "cp2": {"x": 0, "y": 0}}
-    ]
-  }
-  ```
+| Method | Path | Description |
+| :---: | :--- | :--- |
+| `GET` | `/` | Serves `wabb-interface/dist/index.html` (or a status JSON fallback if the frontend bundle is not built). |
+| `GET` | `/health` | Health probe returning `{"ok": true}`. |
+| `GET` | `/api/topology` | Returns the active hardware topology JSON (`config/segments_full.json` or `config/segments_small.json`). |
+| `POST` | `/api/topology` | Validates (`segs_1`, `cables`) and persists updated 2D simulator coordinates (`start`, `step`) and cable geometry (`cables`) to the active topology JSON file. |
+| `POST` | `/api/topology/reset` | Restores `start`, `step`, and `cables` from the corresponding `.default.json` backup (`segments_full.default.json` or `segments_small.default.json`). |
+
+### Topology Schema (`GET /api/topology`)
+Governed by **AXIOM-03 (Unified Topology Source of Truth)**:
+```json
+{
+  "segs_1": [
+    {
+      "name": "Segment v4",
+      "size": 173,
+      "way": "UP",
+      "orientation": "vertical",
+      "start": { "x": 160, "y": 546 },
+      "step": { "x": 0, "y": -2 },
+      "ui": { "id": "v4", "col": 2, "row": 2, "w": 1, "h": 6, "color": "#FF3B30" }
+    }
+  ],
+  "segs_2": [ ... ],
+  "cables": [
+    {
+      "id": "cable-0",
+      "start": { "x": 160, "y": 202 },
+      "end": { "x": 200, "y": 220 },
+      "cp1": { "x": 160, "y": 180 },
+      "cp2": { "x": 200, "y": 180 }
+    }
+  ]
+}
+```
 
 ---
 
 ## 3. WebSocket Full-Duplex Protocol (`/ws`)
 
-### A. Outbound Server-to-Client (`state_update`)
-Throttled to $\le 10\text{ Hz}$ (or event-driven on user interaction):
+### A. Outbound Server-to-Client (`mode_master_state`)
+Broadcast automatically upon connection, immediately after any state-mutating command, and periodically during runtime (throttled to $\le 10\text{ Hz}$ via `self._last_state_broadcast_time`):
 ```json
 {
-  "type": "state_update",
-  "hardwareProfile": "full",
-  "activeMood": "Cyberpunk",
-  "availableMoods": [
-    {"name": "Cyberpunk", "description": "...", "colors": ["rgb(0, 240, 255)", "..."]}
-  ],
-  "availableModes": ["Rainbow", "Bary Rainbow", "..."],
-  "segments": {
-    "v1": {"mode": "Rainbow", "direction": "UP", "isLocked": false}
-  },
-  "luminosity": 50,
-  "sensibility": 50,
-  "autoTransitionTime": 80,
-  "isLocked": false,
-  "isInTransition": false,
-  "modeSettingsCatalog": {},
-  "modeSettingsValues": {},
-  "capabilities": {
-    "canRestartPython": true,
-    "canRebootRaspberryPi": false
+  "type": "mode_master_state",
+  "payload": {
+    "hardwareProfile": "full",
+    "activeMood": "Cyberpunk",
+    "availableMoods": [
+      {
+        "name": "Cyberpunk",
+        "description": "Neon cyan, hot magenta, and electric violet",
+        "colors": ["rgb(0, 240, 255)", "rgb(255, 0, 128)", "..."]
+      }
+    ],
+    "availableModes": ["Rainbow", "Bary Rainbow", "..."],
+    "segments": [
+      {
+        "id": "v4",
+        "name": "Segment v4",
+        "channel": 1,
+        "size": 173,
+        "way": "UP",
+        "orientation": "vertical",
+        "mode": "Rainbow"
+      }
+    ],
+    "luminosity": 50,
+    "sensibility": 50,
+    "autoTransitionTime": 80,
+    "isLocked": false,
+    "isInTransition": false,
+    "modeSettingsCatalog": {
+      "Rainbow": [
+        { "key": "rainbow_steps_number", "label": "Rainbow Steps", "type": "int", "min": 10, "max": 600, "step": 10, "default": 255 }
+      ]
+    },
+    "modeSettingsValues": {
+      "Rainbow": { "rainbow_steps_number": 255 }
+    },
+    "capabilities": {
+      "canRestartPython": true,
+      "canRebootRaspberryPi": false
+    }
   }
 }
 ```
 
 ### B. Inbound Client-to-Server Commands (`CommandRouter.py`)
-All commands arrive as JSON objects with an `"action"` string, and receive an acknowledgement packet:
+The React frontend (`wabb-interface/src/utils/controlBridge.ts`) sends JSON instructions over `/ws`:
 ```json
 {
-  "type": "instruction_ack",
-  "status": "ok",
-  "action": "set_luminosity"
+  "page": "configurator",
+  "action": "select_segment_mode",
+  "payload": {
+    "segmentId": "v4",
+    "mode": "Hyper Strobe"
+  },
+  "timestamp": 1711800000000
 }
 ```
 
-| Action | Parameters | Description |
+Every inbound command receives a synchronous JSON acknowledgment on the same WebSocket connection:
+```json
+{
+  "ok": true,
+  "received": "select_segment_mode",
+  "result": {
+    "ok": true,
+    "action": "select_segment_mode",
+    "segmentId": "v4",
+    "mode": "Hyper Strobe"
+  }
+}
+```
+
+| `action` | `payload` Schema | Target Handler & Effect |
 | :--- | :--- | :--- |
-| `select_mood` | `{"mood": "Cyberpunk"}` | Switches active mood palette (`2.5s` cosine crossfade). |
-| `go_to_next_configuration` | `{}` | Triggers immediate beat-aligned global transition (`request_next`). |
-| `lock_current_configuration` | `{"locked": true}` | Freezes/unfreezes automatic transitions. |
-| `manual_drop` | `{}` | Triggers immediate high-energy drop transition (`request_drop`). |
-| `select_segment_mode` | `{"segment": "v1", "mode": "Rainbow"}` | Overrides mode on a specific segment (`1.2s` fade). |
-| `toggle_segment_direction` | `{"segment": "v1"}` | Toggles segment animation direction (`UP` / `DOWN`). |
-| `set_luminosity` | `{"value": 80}` | Sets master brightness (`1..100`) and persists to `app_config.json`. |
-| `set_sensibility` | `{"value": 60}` | Sets audio sensitivity (`1..100`) and persists to `app_config.json`. |
-| `set_auto_transition_time` | `{"value": 90}` | Sets auto-transition interval (`5..300` s) and persists to `app_config.json`. |
-| `set_mode_setting` | `{"mode": "Rainbow", "key": "speed", "value": 1.5}` | Updates live mode parameter across segments and persists to `mode_settings`. |
-| `restart_python_loop` | `{}` | Gracefully restarts the Python orchestrator process. |
-| `restart_raspberry_pi` | `{}` | Executes `sudo reboot` (only when `onRaspberry == True`). |
+| `select_mood` | `{ "mood": "<string>" }` | `Mode_master.select_mood(mood)` — initiates a `2.5s` cosine palette crossfade via `MoodService`. |
+| `go_to_next_configuration` | `{}` | `Mode_master.go_to_next_configuration()` — sets `request_next` on `TransitionService`. |
+| `lock_current_configuration` | `{ "locked": <bool> }` | `Mode_master.set_lock_state(locked)` — freezes or unfreezes automatic transitions. |
+| `manual_drop` | `{}` | `Mode_master.trigger_manual_drop()` — sets `request_drop` on `TransitionService` (`0.15s` flash cut). |
+| `select_segment_mode` | `{ "segmentId": "<id>", "mode": "<name>" }` | `Mode_master.select_segment_mode(segment_id, mode)` — starts a `1.2s` fade on the target segment. |
+| `toggle_segment_direction` | `{ "segmentId": "<id>", "direction"?: "UP"\|"DOWN" }` | `Mode_master.toggle_segment_direction(segment_id, direction)` — flips segment index reversal. |
+| `set_luminosity` | `{ "value": <1..100> }` | `Mode_master.set_luminosity(value)` — updates `infos["luminosity"]` and persists to `config/app_config.json`. |
+| `set_sensibility` | `{ "value": <1..100> }` | `Mode_master.set_sensibility(value)` — updates `infos["sensibility"]` and persists to `config/app_config.json`. |
+| `set_auto_transition_time` | `{ "value": <5..300> }` | `Mode_master.set_auto_transition_time(value)` — updates `TransitionService` timer and persists to `config/app_config.json`. |
+| `set_mode_setting` | `{ "mode": "<name>", "key": "<key>", "value": <num\|bool> }` | `Mode_master.set_mode_setting(mode, key, value)` — validates against `get_settings_schema()`, applies live across segments, and persists to `config/app_config.json`. |
+| `restart_python_loop` | `{}` | `Mode_master.restart_python_loop()` — calls `close_properly()` and `os.execv()` after `150ms`. |
+| `restart_raspberry_pi` | `{}` | `Mode_master.restart_raspberry_pi()` — executes `sudo reboot` (only when `infos["onRaspberry"] == True`). |
 
 ---
 

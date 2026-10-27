@@ -19,7 +19,7 @@ Every visual animation subclasses `modes.Mode.Mode` ([`modes/Mode.py`](../../mod
     ```python
     def render(self, buffer=None, audio_ctx=None, frame_info=None):
     ```
-  - Legacy `run(self)` remains 100% supported: `Mode.render()` redirects `self.rgb_list` to the target buffer (either the active buffer or `Segment.secondary_rgb_list` during a dual-mode transition), invokes `self.run()`, and restores `self.rgb_list` in a `finally:` block.
+  - Legacy `run(self)` remains 100% supported: `Mode.render()` redirects `self.rgb_list` to the target buffer (either the active buffer or `Segment.dual_rgb_list` during a dual-mode transition), invokes `self.run()`, and restores `self.rgb_list` in a `finally:` block.
   - **Never override `update()`** — `Mode.update()` delegates to `self.render()`.
 - **Base Vectorized Utilities:**
   - `self.smooth_vectorized(ratio, target_rgb_matrix)` / `self.smooth_segment_vectorized(ratio, start, stop, target_color)`

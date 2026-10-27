@@ -4,7 +4,7 @@
 > **Scope:** Every visual mode in [`modes/`](../../modes/) (and its base class [`modes/Mode.py`](../../modes/Mode.py)).  
 > **Authoring Tutorial:** [`docs/manuals/mode_authoring_guide.md`](../manuals/mode_authoring_guide.md)  
 > **Visual Catalog:** [`docs/reference/modes_catalog.md`](../reference/modes_catalog.md)  
-> **Enforced by:** `tests/test_all_modes_musical_context.py`, `tests/test_mode_helpers.py`, `tests/governance/test_code_governance.py`.
+> **Enforced by:** `tests/test_all_modes_musical_context.py`, `tests/test_mode_helpers.py`, `tests/test_code_governance.py`, `tests/governance/test_axiom_07_code_governance.py`.
 
 Every mode on the chandelier is a **pure visual consumer** of the three upstream sealed sectors:
 - **Music (`music/`)** — see [`docs/contracts/music_analyzer_contract.md`](./music_analyzer_contract.md)
@@ -45,10 +45,10 @@ Defined in [`docs/contracts/mood_contract.md`](./mood_contract.md). `Mode_master
 | `self.palette_lut` | `np.ndarray (256, 3)` `int32` | `0..255` | 🟢 **HIGH** | Shared 256-entry gradient `mood_colors[0] -> [1] -> [2]`, refreshed in place only when `mood_colors` changes. |
 | `self.palette_sample(t, out)` | method | `t in [0, 1]` | 🟢 **HIGH** | Allocation-free vectorized lookup into `self.palette_lut`. |
 | `self.highlight_color` | `np.ndarray (3,)` `int32` | `0..255` | 🟢 **HIGH** | Luminance-safe flash color (brightest slot of `mood_colors` pushed 40% toward white). |
-| `self.mood_pace` | `float` | `[0.75, 1.30]` | 🟢 **HIGH** | Continuous speed / drift multiplier (`~0.80` in `CHILL`, `1.00` in `GROOVE`, `~1.18` in `BUILDUP`, `~1.22` in `DROP_IMPACT`). |
-| `self.mood_sharpness` | `float` | `[0.80, 1.35]` | 🟢 **HIGH** | Beat envelope exponent multiplier (softer pulses in `CHILL`, tighter punches in `BUILDUP`/`DROP_IMPACT`). |
-| `self.mood_trail` | `float` | `[0.75, 1.30]` | 🟢 **HIGH** | Persistence / decay length multiplier (`> 1.0` = longer smooth trails in `CHILL`; `< 1.0` = crisper decay in `DROP_IMPACT`). |
-| `self.mood_accent` | `float` | `[0.00, 1.00]` | 🟢 **HIGH** | Blend weight toward `mood_colors[2]` (accent) / `highlight_color`. |
+| `self.mood_pace` | `float` | `[0.82, 1.22]` | 🟢 **HIGH** | Continuous speed / drift multiplier (`0.82` in `CHILL`, `1.00` in `GROOVE`, `1.12` in `BUILDUP`, `1.22` in `DROP_IMPACT`). |
+| `self.mood_sharpness` | `float` | `[0.78, 1.22]` | 🟢 **HIGH** | Beat envelope exponent multiplier (`0.78` in `CHILL`, `1.00` in `GROOVE`, `1.12` in `BUILDUP`, `1.22` in `DROP_IMPACT`). |
+| `self.mood_trail` | `float` | `[0.88, 1.18]` | 🟢 **HIGH** | Persistence / decay length multiplier (`1.18` in `CHILL`, `1.00` in `GROOVE`, `0.92` in `BUILDUP`, `0.88` in `DROP_IMPACT`). |
+| `self.mood_accent` | `float` | `[0.00, 0.28]` | 🟢 **HIGH** | Blend weight toward `self.highlight_color` / `mood_colors[2]` (`0.00` in `CHILL`, `0.05` in `GROOVE`, `0.15` in `BUILDUP`, `0.28` in `DROP_IMPACT`). |
 
 ---
 
@@ -78,6 +78,7 @@ The base class [`modes/Mode.py`](../../modes/Mode.py) provides pre-gated helpers
 | `self.beat_pulse(sharpness=2.2)` | `float` | `[0.0, 1.0]` | Confidence-blended beat envelope: blends a sharp `(1 - beat_phase) ** (sharpness * mood_sharpness + 1.2 * tension)` pump with continuous `energy` breathing when `beat_trust` is low. Returns `0.0` in silence. |
 | `self.drop_hit` | `bool` | `True` / `False` | **Sanctioned 1-frame trigger:** `True` for **at most 1 frame** when a drop lands (`ctx.is_drop_impact`). Safe for spawning a wave/particle or giving a physics velocity kick. Never stays `True` across frames. |
 | `self.drop_decay` | `float` | `[0.0, 1.0]` | **Sanctioned drop envelope:** Smoothly decays `1.0 -> 0.0` across the `DROP_IMPACT` dwell (`0.0` outside a drop). Safe for continuous modulation (never for hard branches or full-strip whiteouts). |
+| `self.segment_phase_offset` | `float` | `[0.0, 1.0)` | Stable per-segment phase offset to stagger identical modes across the chandelier. |
 
 ---
 
@@ -114,7 +115,7 @@ Every mode must satisfy **both** halves of the confidence blend:
 ---
 
 ### 2. Subtle Mood Governance (No `if ctx.scene == ...` Branching in Modes)
-Macro scenes (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) are **already handled upstream** by the sealed `mood/` sector (`mood/director.py` + `mood/service.py`):
+Macro scenes (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) are **already handled upstream** by the sealed `mood/` sector (`mood/scene_policy.py` + `mood/engine.py` + `mood/service.py`):
 - `mood/` debounces scene changes (`0.30s`), selects a curated palette, and crossfades `Mode.mood_colors` over `2.5s` (cosine easing).
 - `mood/` also exposes four **continuous, cosine-smoothed scene modifiers** on `Mode` (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`).
 
@@ -142,11 +143,12 @@ Macro scenes (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) are **already handled
 ---
 
 ### 5. Settings Schema Honesty
-Every setting declared in `get_settings_schema()` (and exposed in the Web UI / Mode Studio) **must actually be read and used in `run()`**. Do not leave dead schema entries whose `self.<attr>` is ignored at render time.
+Every setting declared in `get_settings_schema()` (and exposed in the Web UI / Mode Studio) **must actually be read and used in `run()`** (enforced by `tests/test_mode_helpers.py::TestDeadSettingsRatchet`). Do not leave dead schema entries whose `self.<attr>` is ignored at render time.
 
 ---
 
 ### 6. Frame Budget & Zero Allocation (AXIOM-01, AXIOM-02)
 - Pre-allocate all scratch arrays (`np.zeros`, `np.empty`, `np.linspace`, `np.arange`) in `__init__`.
 - Never allocate NumPy arrays or Python lists inside `run()` / `render()`.
+- **Never cache views of `self.rgb_list` in `__init__`**: during dual-mode transitions, `Mode.render(buffer=...)` temporarily redirects `self.rgb_list` to `Segment.dual_rgb_list`. Any view cached on `self.rgb_list` during `__init__` would write to the wrong buffer during transitions.
 - Frame-rate independence: scale per-frame increments and exponential decays with `self.dt`, `self.fps_ratio`, or `self.alpha(rate_hz)`.

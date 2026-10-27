@@ -49,7 +49,7 @@ graph TD
 
 ## 2. Prospective Spatial Transition Algorithms
 
-The following mathematical routines are conceptual targets for `transitions/techniques.py`:
+The following mathematical routines are conceptual targets for `transitions/engine.py` and `transitions/effects.py`:
 
 1. **Audio-Spatial Gravity Cannon:**
    - An invisible ray shoots upward from the floor on massive bass transients (`band_flux[0]`), punching holes in the Old Mode. Displaced pixels fall via a simulated gravitational field ($y \leftarrow y + \frac{1}{2} g t^2$), revealing the New Mode beneath.

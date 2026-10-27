@@ -26,7 +26,7 @@ To maintain 30 FPS (AXIOM-01) across all 1,304 LEDs on the Raspberry Pi:
 * **NEVER** write `for i in range(self.nb_of_leds)` or loop over indices.
 * Precompute spatial arrays (e.g. `np.linspace(0.0, 1.0, self.nb_of_leds)`) in `__init__`.
 * Compute arrays for Hue, Saturation, and Value shaped `(nb_of_leds,)`.
-* Convert colors via `RGB_HSV.fromHSV_toRGB_vectorized(h, s, v)` which returns a 2D `(nb_of_leds, 3)` RGB array, or sample `self.palette_lut` / `self.palette_sample(t, out)`.
+* Convert colors via `RGB_HSV.fromHSV_toRGB_vectorized(h, s, v, out=self._target_rgb)` into a pre-allocated `(nb_of_leds, 3)` RGB array, or sample `self.palette_lut` / `self.palette_sample(t, out)`.
 * **Immutable Color Constants**: Color constants from `utils.colors` (`red`, `green`, `blue`, `white`, etc.) and `self.white` on `Mode` are defined as immutable tuples `(R, G, B)`. They can be assigned directly to NumPy arrays (`self.rgb_list[:] = self.white`) without risk of shared mutable state corruption across segments.
 * Apply fades and blends using base class helper methods:
   - `self.smooth_vectorized(ratio, target_rgb_matrix)`: Blends current frame with target matrix.

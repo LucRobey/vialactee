@@ -15,7 +15,7 @@
 3. **Headroom Reserve:**
    A minimum timing margin of **13.33 ms (40%)** is permanently reserved for Linux kernel scheduling, ALSA audio buffer reads, thread context switches, and network I/O.
 4. **ODF Sampling Decoupling:**
-   The internal audio onset feature extractor in `core/DyadicMetricalAudioAnalyzer.py` / `core/MultiBandOnsetAudioAnalyzer.py` samples at **60.0 Hz** to preserve sub-millisecond temporal resolution for onset detection, while visual rendering paces at **30.0 FPS**.
+   The internal audio onset feature extractor in `music/DyadicMetricalAudioAnalyzer.py` / `music/MultiBandOnsetAudioAnalyzer.py` samples at **60.0 Hz** to preserve sub-millisecond temporal resolution for onset detection, while visual rendering paces at **30.0 FPS**.
 5. **Configuration Alignment:**
    `config/app_config.json` must declare `"target_fps": 30` and `"alert_threshold_ms": 20.0`. Contradictory settings (e.g. 60 FPS visual targets) violate this axiom.
 

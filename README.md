@@ -29,7 +29,7 @@ This spawns:
 
 ### 3. Run Fast CI & Governance Verification
 ```bash
-python -m pytest tests/governance/test_code_governance.py
+python -m pytest tests/governance/
 ```
 
 ---

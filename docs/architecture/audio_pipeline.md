@@ -61,7 +61,7 @@ Implemented in `music/Listener.py`:
 
 | Module | Role |
 | :--- | :--- |
-| [`music/api.py`](../../music/api.py) | **Front Door:** Re-exports `Listener`, `create_listener`, `ANALYZER_REGISTRY`, `DEFAULT_ANALYZER_MODEL`, `MusicalContext`, `MusicalContextEngine`, `BaseAudioAnalyzer`, `AudioIngestion`, `StructuralNoveltyDetector`, `RhythmConfig`, and the three analyzer classes. |
+| [`music/api.py`](../../music/api.py) | **Front Door:** Re-exports `Listener`, `ANALYZER_REGISTRY`, `DEFAULT_ANALYZER_MODEL`, `resolve_analyzer_class`, `MusicalScene`, `MusicalContextEngine`, `ListenerProtocol`, and `MusicalContextProtocol`. |
 | [`music/Listener.py`](../../music/Listener.py) | Lookahead delay ring buffer + speaker-time facade + `ANALYZER_REGISTRY`. |
 | [`music/AudioIngestion.py`](../../music/AudioIngestion.py) | Vectorized 4096-pt rFFT, 8-band & 32-band Mel filterbanks, 12-bin chromagram, ADSR & GM/LM normalization. |
 | [`music/BaseAudioAnalyzer.py`](../../music/BaseAudioAnalyzer.py) | Abstract base contract for all rhythm analyzers. |

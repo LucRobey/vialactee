@@ -5,21 +5,25 @@ Verifies documentation parity against code and configuration single sources of t
    mood/, transitions/, config/, connectors/, hardware/, tools/, wabb-interface/) or root
    (other than README.md).
 2. Link integrity: all relative markdown links in docs/** (excluding docs/archive/),
-   README.md, and .agents/AGENT.md resolve to existing files or directories.
+   README.md, and .agents/AGENT.md resolve to existing files or directories, and all
+   backticked repo paths (docs/..., core/..., music/..., etc.) in docs/** resolve.
 3. Retired symbols: Transition_Director, Transition_Engine, data/configurations_,
    /api/configurations, Configurator.tsx, MoodDirector, c:/Users/Users/, and MODE_RULES
    must not appear in docs/ outside docs/archive/.
-4. Counts that cannot drift: modes.json (21 active modes) parity with
-   docs/reference/modes_catalog.md, docs/README.md, and docs/architecture/system_overview.md.
+4. Counts & settings that cannot drift: modes.json (21 active modes) parity and
+   get_settings_schema() key parity with docs/reference/modes_catalog.md, docs/README.md,
+   and docs/architecture/system_overview.md.
 5. app_config.json keys parity with docs/reference/configuration_schemas.md.
 6. Listener & MusicalContextEngine public attributes documented in
    docs/contracts/music_analyzer_contract.md.
 """
+import importlib
 import json
 import os
 import re
 import unittest
 
+import numpy as np
 from music.api import Listener
 
 
@@ -57,6 +61,13 @@ RETIRED_DOC_SYMBOLS = (
 )
 
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+BACKTICK_REPO_PATH_RE = re.compile(
+    r"`((?:docs|core|music|modes|mood|transitions|config|connectors|hardware|tools|tests|\.agents)/[A-Za-z0-9_./:-]+)`"
+)
+ILLUSTRATIVE_PLACEHOLDER_PATHS = {
+    "modes/Your_new_mode.py",
+    "modes/My_custom_mode.py",
+}
 
 
 class TestDocsParity(unittest.TestCase):
@@ -111,8 +122,12 @@ class TestDocsParity(unittest.TestCase):
         )
 
     def test_relative_links_resolve(self):
-        """Verify relative markdown links in docs/** (except archive/), README.md, and .agents/AGENT.md exist."""
-        files_to_check = list(self._iter_active_docs_md_files())
+        """
+        Verify relative markdown links in docs/** (except archive/), README.md, and .agents/AGENT.md exist,
+        and backticked repo paths (docs/..., core/..., music/..., etc.) in docs/** resolve.
+        """
+        active_docs = list(self._iter_active_docs_md_files())
+        files_to_check = list(active_docs)
         root_readme = os.path.join(self.repo_root, "README.md")
         agent_md = os.path.join(self.repo_root, ".agents", "AGENT.md")
         for extra in (root_readme, agent_md):
@@ -125,6 +140,8 @@ class TestDocsParity(unittest.TestCase):
                 content = f.read()
             # Strip fenced code blocks before extracting links so code examples don't false-trigger
             stripped = re.sub(r"```.*?```", "", content, flags=re.DOTALL)
+            rel_src = os.path.relpath(md_path, self.repo_root).replace("\\", "/")
+
             for match in MARKDOWN_LINK_RE.finditer(stripped):
                 raw_target = match.group(1).strip()
                 if not raw_target or raw_target.startswith(("#", "http://", "https://", "mailto:", "ws://", "wss://", "file://")):
@@ -134,13 +151,22 @@ class TestDocsParity(unittest.TestCase):
                     continue
                 resolved = os.path.normpath(os.path.join(os.path.dirname(md_path), target_path))
                 if not os.path.exists(resolved):
-                    rel_src = os.path.relpath(md_path, self.repo_root).replace("\\", "/")
                     broken_links.append(f"{rel_src} -> {raw_target}")
+
+            if md_path in active_docs:
+                for match in BACKTICK_REPO_PATH_RE.finditer(stripped):
+                    raw_repo_path = match.group(1).strip()
+                    repo_path = raw_repo_path.split("::", 1)[0].split("#", 1)[0].rstrip(".,;:")
+                    if not repo_path or repo_path in ILLUSTRATIVE_PLACEHOLDER_PATHS:
+                        continue
+                    resolved_repo = os.path.normpath(os.path.join(self.repo_root, repo_path))
+                    if not os.path.exists(resolved_repo):
+                        broken_links.append(f"{rel_src} -> `{raw_repo_path}`")
 
         self.assertEqual(
             broken_links,
             [],
-            "Broken relative markdown links found:\n" + "\n".join(broken_links),
+            "Broken relative markdown links or backticked repo paths found:\n" + "\n".join(broken_links),
         )
 
     def test_no_retired_symbols_in_active_docs(self):
@@ -162,9 +188,9 @@ class TestDocsParity(unittest.TestCase):
 
     def test_modes_catalog_and_counts_parity(self):
         """
-        Verify all modes in config/modes.json appear in docs/reference/modes_catalog.md,
-        and the mode count in docs/README.md and docs/architecture/system_overview.md
-        matches len(config/modes.json).
+        Verify all modes in config/modes.json and their get_settings_schema() keys appear in
+        docs/reference/modes_catalog.md, and the mode count in docs/README.md and
+        docs/architecture/system_overview.md matches len(config/modes.json).
         """
         with open(self.modes_json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -175,14 +201,34 @@ class TestDocsParity(unittest.TestCase):
         with open(self.modes_catalog_path, "r", encoding="utf-8") as f:
             catalog_content = f.read()
 
+        listener = Listener({"useMicrophone": False})
+        rgb_buf = np.zeros((20, 3), dtype=np.int32)
+        indexes = list(range(20))
+
         missing = []
+        missing_settings = []
         for m in modes:
             mode_name = m.get("name")
+            mode_module = m.get("module")
             mode_class = m.get("class")
             if mode_name not in catalog_content and mode_class not in catalog_content:
                 missing.append(f"{mode_name} ({mode_class})")
 
+            mod = importlib.import_module(f"modes.{mode_module}")
+            cls = getattr(mod, mode_class)
+            instance = cls(mode_name, "v1", listener, None, indexes, rgb_buf, {})
+            for entry in instance.get_settings_schema():
+                key = entry.get("key")
+                if key and f"`{key}`" not in catalog_content:
+                    missing_settings.append(f"{mode_class}.{key}")
+
         self.assertEqual(missing, [], "Modes missing from docs/reference/modes_catalog.md:\n" + "\n".join(missing))
+        self.assertEqual(
+            missing_settings,
+            [],
+            "Mode settings from get_settings_schema() missing from docs/reference/modes_catalog.md:\n"
+            + "\n".join(missing_settings),
+        )
 
         for doc_path in (self.modes_catalog_path, self.docs_readme_path, self.system_overview_path):
             with open(doc_path, "r", encoding="utf-8") as f:
@@ -260,10 +306,11 @@ class TestDocsParity(unittest.TestCase):
                 )
 
     def test_guards_handle_edge_cases(self):
-        """Verify link extraction handles #anchors, ignores fenced code blocks and URLs, and retired symbols list is complete."""
+        """Verify link and backtick-path extraction handle #anchors, ignore fenced code blocks and URLs, and retired symbols list is complete."""
         sample_md = (
             "Valid [Portal](./README.md#tier-0) and [External](https://example.com/foo.md).\n"
-            "```markdown\n[IgnoredInsideFence](./non_existent_in_code_block.md)\n```\n"
+            "Backticked `docs/contracts/mode_contract.md` and broken `docs/missing_file_999.md`.\n"
+            "```markdown\n[IgnoredInsideFence](./non_existent_in_code_block.md)\n`docs/ignored_in_fence.md`\n```\n"
             "Broken [Missing](./definitely_does_not_exist_12345.md#sec1)."
         )
         stripped = re.sub(r"```.*?```", "", sample_md, flags=re.DOTALL)
@@ -271,6 +318,12 @@ class TestDocsParity(unittest.TestCase):
         self.assertIn("./README.md#tier-0", targets)
         self.assertIn("./definitely_does_not_exist_12345.md#sec1", targets)
         self.assertNotIn("./non_existent_in_code_block.md", targets)
+
+        backtick_paths = [m.group(1).strip() for m in BACKTICK_REPO_PATH_RE.finditer(stripped)]
+        self.assertIn("docs/contracts/mode_contract.md", backtick_paths)
+        self.assertIn("docs/missing_file_999.md", backtick_paths)
+        self.assertNotIn("docs/ignored_in_fence.md", backtick_paths)
+
         for required_sym in (
             "Transition_Director",
             "Transition_Engine",

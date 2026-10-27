@@ -37,68 +37,53 @@ This catalog provides the canonical visual description, orientation support, beh
 
 ---
 
-## 2. Per-Mode Configurable Settings Catalog (`get_settings_schema`)
+## 2. Live Web UI Configurable Settings (`get_settings_schema()`)
 
-Every mode exposes live-tunable parameters to the Web UI (`ModeSettings.tsx`) and `tools/mode_studio.py`:
+Eight modes override `Mode.get_settings_schema()` to expose live-tunable parameters to the Web UI (`ModeSettings.tsx`) and `tools/mode_studio.py` (persisted under `mode_settings` in `config/app_config.json`):
 
-| Mode | Setting Key | Label | Control | Type | Default | Range / Options |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| [`Rainbow_mode`](../../modes/Rainbow_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"rainbow"` |
-| | `speed_divisor` | Rainbow Speed Divisor | `slider` | `number` | `20.0` | `2.0 .. 80.0` (step `1.0`) |
-| | `fade_ratio` | Smoothness Ratio | `slider` | `number` | `0.2` | `0.02 .. 0.8` (step `0.02`) |
-| [`Bary_rainbow_mode`](../../modes/Bary_rainbow_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"rainbow"` |
-| | `fade_ratio` | Smoothness Ratio | `slider` | `number` | `0.2` | `0.02 .. 0.8` (step `0.02`) |
-| [`Middle_bar_mode`](../../modes/Middle_bar_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `fade_ratio` | Fade Speed | `slider` | `number` | `0.15` | `0.02 .. 0.5` (step `0.01`) |
-| | `bar_scale` | Bar Width Scale | `slider` | `number` | `0.85` | `0.3 .. 1.0` (step `0.05`) |
-| [`Shining_stars_mode`](../../modes/Shining_stars_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `sub_segment_size` | Star Density Size | `slider` | `integer` | `40` | `10 .. 100` (step `5`) |
-| | `fade_ratio` | Trail Fade Speed | `slider` | `number` | `0.1` | `0.02 .. 0.4` (step `0.02`) |
-| [`Proportion_rainbow_mode`](../../modes/Proportion_rainbow_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"rainbow"` |
-| | `fade_ratio` | Smoothness Ratio | `slider` | `number` | `0.2` | `0.02 .. 0.8` (step `0.02`) |
-| [`PSG_mode`](../../modes/PSG_mode.py) | `fade_ratio` | Smoothness Ratio | `slider` | `number` | `0.3` | `0.05 .. 0.8` (step `0.05`) |
-| | `center_gap_ratio` | Center Gap Ratio | `slider` | `number` | `0.2` | `0.05 .. 0.5` (step `0.05`) |
-| [`Opposite_sides_mode`](../../modes/Opposite_sides_mode.py) | `fade_ratio` | Smoothness Ratio | `slider` | `number` | `0.3` | `0.05 .. 0.8` (step `0.05`) |
-| | `gradient_width` | Center Gradient Width | `slider` | `integer` | `10` | `2 .. 30` (step `2`) |
-| [`Plasma_fire_mode`](../../modes/Plasma_fire_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"fire"` |
-| | `fire_cooling` | Fire Cooling | `slider` | `number` | `0.08` | `0.01 .. 0.25` (step `0.01`) |
-| | `fire_sparking` | Sparking Probability | `slider` | `number` | `0.6` | `0.1 .. 1.0` (step `0.05`) |
-| [`Hyper_strobe_mode`](../../modes/Hyper_strobe_mode.py) | `strobe_decay` | Strobe Decay | `slider` | `number` | `0.7` | `0.3 .. 0.95` (step `0.05`) |
-| | `strobe_Flux_thresh` | Flux Threshold | `slider` | `number` | `0.25` | `0.05 .. 0.8` (step `0.05`) |
-| [`Chromatic_chaser_mode`](../../modes/Chromatic_chaser_mode.py) | `chaser_speed` | Chaser Speed | `slider` | `number` | `1.5` | `0.2 .. 5.0` (step `0.1`) |
-| | `chaser_trail_fade` | Trail Fade | `slider` | `number` | `0.15` | `0.02 .. 0.5` (step `0.02`) |
-| | `chaser_bounce` | Bounce at Ends | `toggle` | `boolean` | `True` | `True`, `False` |
-| [`Synesthesia_mode`](../../modes/Synesthesia_mode.py) | `syn_fade_ratio` | Smoothness Ratio | `slider` | `number` | `0.2` | `0.02 .. 0.6` (step `0.02`) |
-| [`Metronome_mode`](../../modes/Metronome_mode.py) | `metro_decay` | Pulse Decay | `slider` | `number` | `0.85` | `0.5 .. 0.98` (step `0.02`) |
-| | `metro_color` | Beat Color | `list` | `string` | `"mood"` | `"mood"`, `"cyan"`, `"white"`, `"magenta"`, `"gold"`, `"green"` |
-| [`Flying_ball_mode`](../../modes/Flying_ball_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `ball_radius` | Ball Radius | `slider` | `integer` | `3` | `1 .. 10` (step `1`, `LEDs`) |
-| | `fade_ratio` | Trail Fade Speed | `slider` | `number` | `0.3` | `0.05 .. 0.8` (step `0.05`) |
-| [`Coloured_middle_wave_mode`](../../modes/Coloured_middle_wave_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `fade_ratio` | Fade Speed | `slider` | `number` | `0.1` | `0.02 .. 0.5` (step `0.02`) |
-| | `smooth_ratio` | Color Smoothness | `slider` | `number` | `0.2` | `0.05 .. 0.8` (step `0.05`) |
-| [`Rhythm_breather_mode`](../../modes/Rhythm_breather_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `sharpness` | Pulse Sharpness | `slider` | `number` | `2.5` | `1.0 .. 5.0` (step `0.25`) |
-| | `spatial_falloff` | Edge Falloff | `slider` | `number` | `0.5` | `0.0 .. 1.0` (step `0.05`) |
-| | `fade_ratio` | Smoothness | `slider` | `number` | `0.25` | `0.05 .. 0.8` (step `0.05`) |
-| [`Beat_runner_mode`](../../modes/Beat_runner_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `head_width` | Beam Width | `slider` | `number` | `2.5` | `1.0 .. 8.0` (step `0.5`, `LEDs`) |
-| | `trail_fade` | Trail Persistence | `slider` | `number` | `0.22` | `0.05 .. 0.6` (step `0.02`) |
-| | `motion_style` | Motion Style | `list` | `string` | `"bounce"` | `"bounce"`, `"sweep"` |
-| [`Impact_shockwave_mode`](../../modes/Impact_shockwave_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"vibrant_cycle"` | `"vibrant_cycle"`, `"mood"`, `"classic"` |
-| | `ring_width` | Wavefront Width | `slider` | `number` | `2.2` | `1.0 .. 6.0` (step `0.2`, `LEDs`) |
-| | `damping` | Wave Damping | `slider` | `number` | `0.02` | `0.005 .. 0.08` (step `0.005`) |
-| | `afterglow_fade` | Afterglow Persistence | `slider` | `number` | `0.25` | `0.05 .. 0.6` (step `0.05`) |
-| [`Static_wave_mode`](../../modes/Static_wave_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `fade_ratio` | Smoothness Ratio | `slider` | `number` | `0.2` | `0.02 .. 0.8` (step `0.02`) |
-| | `edge_cap_width` | White Edge Cap Width | `slider` | `integer` | `10` | `0 .. 30` (step `2`, `LEDs`) |
-| [`Power_bar_mode`](../../modes/Power_bar_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `fade_ratio` | Bar Smoothness | `slider` | `number` | `0.2` | `0.02 .. 0.8` (step `0.02`) |
-| | `peak_gravity` | Peak Dot Gravity | `slider` | `number` | `0.2` | `0.05 .. 1.0` (step `0.05`) |
-| [`Extending_waves_mode`](../../modes/Extending_waves_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `wave_speed_divisor` | Wave Speed Divisor | `slider` | `integer` | `4` | `1 .. 10` (step `1`) |
-| | `fade_ratio` | Smoothness Ratio | `slider` | `number` | `0.2` | `0.02 .. 0.8` (step `0.02`) |
-| [`Magnetic_ball_mode`](../../modes/Magnetic_ball_mode.py) | `color_mode` | Color Mode | `list` | `string` | `"mood"` | `"mood"`, `"classic"` |
-| | `spring_force` | Center Spring Force | `slider` | `number` | `5.0` | `1.0 .. 15.0` (step `0.5`) |
-| | `impulse_scale` | Audio Impulse Scale | `slider` | `number` | `50.0` | `10.0 .. 120.0` (step `5.0`) |
-| | `friction_coef` | Friction | `slider` | `number` | `0.85` | `0.5 .. 0.98` (step `0.02`) |
+| Mode | Schema Key (`key`) | Attribute (`attr`) | `infos` Startup Key | Label | Control | Default | Range / Options |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Rainbow** ([`Rainbow_mode`](../../modes/Rainbow_mode.py)) | `smoothRatio` | `smooth_ratio` | `rainbow_smooth_ratio` | Smoothing | `slider` | `0.5` | `0.0 .. 1.0` (step `0.05`) |
+| | `intensityBase` | `intensity_base` | `rainbow_intensity_base` | Base Intensity | `slider` | `0.1` | `0.0 .. 1.0` (step `0.05`) |
+| | `intensityMultiplier` | `intensity_mult` | `rainbow_intensity_mult` | Intensity Boost | `slider` | `0.9` | `0.0 .. 2.0` (step `0.05`) |
+| **Shining Stars** ([`Shining_stars_mode`](../../modes/Shining_stars_mode.py)) | `threshold` | `threshold` | `stars_threshold` | Activation Threshold | `slider` | `10.0` | `1.0 .. 100.0` (step `1.0`) |
+| | `fade_ratio` | `fade_ratio` | `stars_fade_ratio` | Star Fade Speed | `slider` | `0.1` | `0.02 .. 0.5` (step `0.02`) |
+| | `sub_segment_size` | `sub_segment_size` | `stars_sub_segment_size` | Constellation Spacing | `slider` | `40` | `5 .. 100` (step `5`, integer) |
+| **Hyper Strobe** ([`Hyper_strobe_mode`](../../modes/Hyper_strobe_mode.py)) | `fluxThreshold` | `flux_threshold` | `strobe_flux_threshold` | Trigger Threshold | `slider` | `0.7` | `0.0 .. 1.0` (step `0.05`) |
+| | `decayRatio` | `decay_ratio` | `strobe_decay_ratio` | Decay | `slider` | `0.3` | `0.01 .. 1.0` (step `0.05`) |
+| | `listenBand` | `listen_band` | `strobe_listen_band` | Trigger Band | `list` | `1` | `0 .. 7` (`Band 1`..`Band 8`) |
+| **Chromatic Chaser** ([`Chromatic_chaser_mode`](../../modes/Chromatic_chaser_mode.py)) | `speed` | `speed` | `chaser_speed` | Travel Speed | `slider` | `2.0` | `0.2 .. 8.0` (step `0.2`) |
+| | `fadeRatio` | `fade_ratio` | `chaser_fade_ratio` | Trail Fade | `slider` | `0.05` | `0.01 .. 0.5` (step `0.01`) |
+| | `bounceEnabled` | `bounce_enabled` | `chaser_bounce_enabled` | Bounce At Edges | `switch` | `True` | `True`, `False` |
+| **Metronome** ([`Metronome_mode`](../../modes/Metronome_mode.py)) | `brightnessMultiplier` | `brightness_multiplier` | `metronome_brightness` | Brightness | `slider` | `1.0` | `0.2 .. 2.0` (step `0.1`) |
+| | `alternateSubBeats` | `alternate_sub_beats` | `metronome_alternate_sub_beats` | Alternate Sub-Beats | `switch` | `True` | `True`, `False` |
+| | `accentColor` | `accent_color` | `metronome_accent_color` | Accent Color | `list` | `"blue"` | `"blue"`, `"purple"`, `"red"`, `"green"` |
+| **Rhythm Breather** ([`Rhythm_breather_mode`](../../modes/Rhythm_breather_mode.py)) | `base_hue` | `base_hue` | `rhythm_breather_base_hue` | Base Hue | `slider` | `0.6` | `0.0 .. 1.0` (step `0.05`) |
+| | `pulse_sharpness` | `pulse_sharpness` | `rhythm_breather_sharpness` | Beat Sharpness | `slider` | `2.2` | `1.0 .. 4.0` (step `0.2`) |
+| | `ambient_floor` | `ambient_floor` | `rhythm_breather_ambient_floor` | Ambient Floor | `slider` | `0.08` | `0.0 .. 0.3` (step `0.02`) |
+| | `drift_speed` | `drift_speed` | `rhythm_breather_drift_speed` | Hue Drift Speed | `slider` | `0.01` | `0.0 .. 0.05` (step `0.005`) |
+| **Beat Runner** ([`Beat_runner_mode`](../../modes/Beat_runner_mode.py)) | `motion_style` | `motion_style` | `beat_runner_motion_style` | Motion Style | `list` | `"pendulum"` | `"pendulum"`, `"sweep"` |
+| | `base_hue` | `base_hue` | `beat_runner_base_hue` | Laser Hue | `slider` | `0.08` | `0.0 .. 1.0` (step `0.05`) |
+| | `head_width` | `head_width` | `beat_runner_head_width` | Laser Width | `slider` | `1.5` | `0.8 .. 4.0` (step `0.2`) |
+| | `trail_decay` | `trail_decay` | `beat_runner_trail_decay` | Trail Decay | `slider` | `0.22` | `0.05 .. 0.5` (step `0.05`) |
+| **Impact Shockwave** ([`Impact_shockwave_mode`](../../modes/Impact_shockwave_mode.py)) | `color_mode` | `color_mode` | `shockwave_color_mode` | Color Mode | `list` | `"vibrant_cycle"` | `"vibrant_cycle"`, `"neon_palette"`, `"single_hue"` |
+| | `color_saturation` | `color_saturation` | `shockwave_saturation` | Color Saturation | `slider` | `1.0` | `0.5 .. 1.0` (step `0.05`) |
+| | `base_hue` | `base_hue` | `shockwave_base_hue` | Base Hue | `slider` | `0.55` | `0.0 .. 1.0` (step `0.05`) |
+| | `wave_width` | `wave_width` | `shockwave_width` | Wavefront Width | `slider` | `2.2` | `0.5 .. 4.0` (step `0.2`) |
+| | `enable_ghost_ripples` | `enable_ghost_ripples` | `shockwave_ghost_ripples` | Ghost Ripples in Breakdowns | `switch` | `True` | `True`, `False` |
+| | `damping` | `damping` | `shockwave_damping` | Wave Damping | `slider` | `0.02` | `0.005 .. 0.15` (step `0.005`) |
+
+---
+
+## 3. Additional `infos` Dictionary Overrides (`modes/*_mode.py`)
+
+In addition to the 8 Web UI schemas above, two modes accept optional startup/runtime overrides via the global `infos` dictionary:
+
+| `infos` Key | Consuming Mode | Default | Description |
+| :--- | :--- | :---: | :--- |
+| `fire_fade_ratio` | [`Plasma_fire_mode`](../../modes/Plasma_fire_mode.py) | `0.18` | Exponential smoothing ratio for rising plasma embers. |
+| `fire_height_multiplier` | [`Plasma_fire_mode`](../../modes/Plasma_fire_mode.py) | `1.3` | Multiplier scaling flame column height against audio power. |
+| `synesthesia_fade_ratio` | [`Synesthesia_mode`](../../modes/Synesthesia_mode.py) | `0.15` | Exponential smoothing ratio for pitch-class color transitions. |
+| `synesthesia_brightness` | [`Synesthesia_mode`](../../modes/Synesthesia_mode.py) | `1.0` | Master brightness multiplier for chromagram pitch colors. |
+
+All remaining modes (`Bary_rainbow_mode`, `Middle_bar_mode`, `Proportion_rainbow_mode`, `PSG_mode`, `Opposite_sides_mode`, `Flying_ball_mode`, `Coloured_middle_wave_mode`, `Static_wave_mode`, `Power_bar_mode`, `Extending_waves_mode`, `Magnetic_ball_mode`) self-tune their internal physics, speeds, and trails via the continuous `Mode` scene modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) and mood palette (`self.mood_colors`, `self.palette_lut`, `self.highlight_color`).

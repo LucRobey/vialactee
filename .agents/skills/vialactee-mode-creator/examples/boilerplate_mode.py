@@ -19,6 +19,7 @@ class Custom_Vectorized_Mode(Mode):
         self._hues = np.zeros(self.nb_of_leds, dtype=np.float64)
         self._saturations = np.ones(self.nb_of_leds, dtype=np.float64)
         self._values = np.zeros(self.nb_of_leds, dtype=np.float64)
+        self._target_rgb = np.zeros((self.nb_of_leds, 3), dtype=np.int32)
 
         # Internal state
         self.phase = 0.0
@@ -105,6 +106,6 @@ class Custom_Vectorized_Mode(Mode):
         np.multiply(self._values, max(0.15, self.beat_pulse(2.2)), out=self._values)
         np.clip(self._values, 0.0, 1.0, out=self._values)
 
-        # 4. Vectorized conversion from HSV to RGB matrix (nb_of_leds, 3) and smooth blend
-        target_rgb_matrix = RGB_HSV.fromHSV_toRGB_vectorized(self._hues, self._saturations, self._values)
-        self.smooth_vectorized(self.alpha(self.fade_ratio * 30.0), target_rgb_matrix)
+        # 4. Vectorized conversion from HSV to pre-allocated RGB matrix (nb_of_leds, 3) and smooth blend
+        RGB_HSV.fromHSV_toRGB_vectorized(self._hues, self._saturations, self._values, out=self._target_rgb)
+        self.smooth_vectorized(self.alpha(self.fade_ratio * 30.0), self._target_rgb)

@@ -37,6 +37,8 @@ Total Physical LEDs: **1,304 WS2812B LEDs** across 11 segments and 2 hardware ch
 | **Total Channel 2** | | | | | **519** | | |
 | **Total Chandelier** | | | | | **1,304** | | |
 
+> **Symmetry Note (`segment_v1`):** `segment_v1` spans `Y = 16 to 188` (`start.y = 188`) for exact `173`-pixel symmetry with `v2`–`v4`, connecting directly to the left endpoint of `segment_h10` (`Y = 189`) at the bottom and `segment_h00` (`Y = 16`) at the top.
+
 ---
 
 ## 3. Small Profile (`config/segments_small.json`) — 249 LEDs

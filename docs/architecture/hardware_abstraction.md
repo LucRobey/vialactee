@@ -22,6 +22,21 @@
 
 ## 2. Driver Selection Matrix (`HardwareFactory.py`)
 
+```mermaid
+graph TD
+    MM["Mode_master.py"] --> HF["HardwareFactory.create()"]
+    
+    subgraph "HardwareInterface (Polymorphic Drivers)"
+        HF -- "HARDWARE_MODE = rpi" --> RPI["Rpi_NeoPixels.py (Direct GPIO / rpi_ws281x)"]
+        HF -- "HARDWARE_MODE = esp32 / simulation / auto" --> UDP["Udp_Sender.py (Chunked UDP Stream)"]
+    end
+
+    RPI -- "GPIO 21 (785 LEDs) & GPIO 18 (519 LEDs)" --> PHYS_STRIP["Physical WS2812B Strips"]
+    UDP -- "UDP Ports 9001 & 9002 (Max 400 LEDs / 1202 B)" --> ESP32["ESP32 Microcontroller (FastLED)"]
+    UDP -- "UDP Ports 9001, 9002 & 9003 (127.0.0.1)" --> FAKE_ESP["Fake_ESP32.py -> Fake_leds.py (Pygame 2D GUI)"]
+    ESP32 -- "GPIO 4 & GPIO 5" --> PHYS_STRIP
+```
+
 | `HARDWARE_MODE` | Windows Behavior | Raspberry Pi Behavior | Output Driver |
 | :--- | :--- | :--- | :--- |
 | `"auto"` (Default) | Spawns local `Fake_ESP32.py` + Pygame visualizer | Streams UDP packets to `esp32_ip` | `Udp_Sender` |
@@ -48,21 +63,32 @@
 
 ### A. Full Profile (`config/segments_full.json`)
 - **Total LEDs:** **1,304** across **11 segments** on **2 channels**.
-- **Channel 1 (Port `9001`, GPIO `D21` on Pi / `GPIO 4` on ESP32, 785 LEDs):**
-  - `c1` (116), `c3` (78), `c2` (104), `v2` (113), `h2` (91), `v1` (133), `h1` (150)
-- **Channel 2 (Port `9002`, GPIO `D18` on Pi / `GPIO 5` on ESP32, 519 LEDs):**
-  - `v4` (112), `h4` (83), `v3` (175), `h3` (149)
+- **Channel 1 (`segs_1`, Port `9001`, GPIO `D21` on Pi / `GPIO 4` on ESP32, 785 LEDs):**
+  - `Segment v4` (`v4`, 173 LEDs, vertical)
+  - `Segment h32` (`h32`, 48 LEDs, horizontal)
+  - `Segment h31` (`h31`, 48 LEDs, horizontal)
+  - `Segment h30` (`h30`, 47 LEDs, horizontal)
+  - `Segment v3` (`v3`, 173 LEDs, vertical)
+  - `Segment h20` (`h20`, 91 LEDs, horizontal)
+  - `Segment h00` (`h00`, 205 LEDs, horizontal)
+- **Channel 2 (`segs_2`, Port `9002`, GPIO `D18` on Pi / `GPIO 5` on ESP32, 519 LEDs):**
+  - `Segment v2` (`v2`, 173 LEDs, vertical)
+  - `Segment h11` (`h11`, 87 LEDs, horizontal)
+  - `Segment h10` (`h10`, 86 LEDs, horizontal)
+  - `Segment v1` (`v1`, 173 LEDs, vertical)
 
 ### B. Small Profile (`config/segments_small.json`)
 - **Total LEDs:** **249** across **3 segments** on **1 channel**.
-- **Channel 1 (Port `9001`, GPIO `D21` on Pi / `GPIO 4` on ESP32, 249 LEDs):**
-  - `s1` (49), `s2` (108), `s3` (92)
+- **Channel 1 (`segs_1`, Port `9001`, GPIO `D21` on Pi / `GPIO 4` on ESP32, 249 LEDs):**
+  - `Segment s1` (`s1`, 49 LEDs, vertical)
+  - `Segment s2` (`s2`, 108 LEDs, vertical)
+  - `Segment s3` (`s3`, 92 LEDs, vertical)
 
 ---
 
 ## 5. The Vertical Orientation Invariant (AXIOM-03)
 
-All vertical chandelier segments (`v1`, `v2`, `v3`, `v4`) are physically wired **from bottom to top**:
+All vertical chandelier segments (`v1`, `v2`, `v3`, `v4`, and `s1`–`s3`) are physically wired **from bottom to top**:
 - Index `0` is at the bottom-most physical point (`start.y` is maximum Y).
 - Index `N - 1` is at the top-most ceiling attachment (`step.y = -1`).
 - In `Fake_leds.py`, vertical strips render upward (`y -= 2` per pixel).
