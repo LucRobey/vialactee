@@ -31,25 +31,15 @@ class Coloured_middle_wave_mode(Mode.Mode):
         self.mood_weights: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
         self.mood_3x3: np.ndarray = np.zeros((3, 3), dtype=np.float32)
         self.target_colors: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
-        self.target_half: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
-        self.target_half_int: np.ndarray = np.zeros((self.half_len, 3), dtype=np.int32)
         self._fallback_bands: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
 
-        # NOTE: views of self.rgb_list are cached keyed by buffer IDENTITY (see run()). Never cache a
-        # view without that check: Mode.render() redirects self.rgb_list to a different buffer during
-        # transitions, and a stale view would keep writing into the old one.
-        self._view_buf = None
-        self._view_r = None
-        self._view_l = None
         self.right_start = self.middle
         self.right_end = min(self.nb_of_leds - 1, self.middle + self.half_len - 1)
         self.right_len = max(0, self.right_end - self.right_start + 1)
-        self.target_sub_r = self.target_half_int[:self.right_len] if self.right_len > 0 else None
 
         self.left_end = self.middle - 1
         self.left_start = max(0, self.middle - self.half_len + 1)
         self.left_len = max(0, self.left_end - self.left_start + 1)
-        self.target_sub_l = self.target_half_int[self.left_len:0:-1] if self.left_len > 0 else None
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -117,20 +107,9 @@ class Coloured_middle_wave_mode(Mode.Mode):
         np.matmul(self.mood_weights, self.mood_3x3, out=self.target_colors)
         self.target_colors.clip(0.0, 255.0, out=self.target_colors)
 
-        # 4. Symmetrical segment smoothing
-        np.multiply(self.target_colors, 0.5, out=self.target_half)
-        self.target_half_int[:] = self.target_half
-
-        # Views are cached per target buffer (rebuilt only when Mode.render() redirects rgb_list)
-        if self._view_buf is not self.rgb_list:
-            self._view_buf = self.rgb_list
-            self._view_r = self.rgb_list[self.right_start:self.right_end + 1] if self.right_len > 0 else None
-            self._view_l = self.rgb_list[self.left_start:self.left_end + 1] if self.left_len > 0 else None
-
-        if self._view_r is not None:
-            np.right_shift(self._view_r, 1, out=self._view_r)
-            np.add(self._view_r, self.target_sub_r, out=self._view_r)
-
-        if self._view_l is not None:
-            np.right_shift(self._view_l, 1, out=self._view_l)
-            np.add(self._view_l, self.target_sub_l, out=self._view_l)
+        # 4. Symmetrical segment smoothing at full dynamic range (scaled by dt and mood_trail)
+        ratio = float(np.clip(self.alpha(18.0) / max(0.5, self.mood_trail), 0.10, 0.85))
+        if self.right_len > 0:
+            self.smooth_segment_vectorized(ratio, self.right_start, self.right_end, self.target_colors[:self.right_len])
+        if self.left_len > 0:
+            self.smooth_segment_vectorized(ratio, self.left_start, self.left_end, self.target_colors[self.left_len:0:-1])

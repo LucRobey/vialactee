@@ -71,14 +71,13 @@ class Power_bar_mode(Mode.Mode):
             self.bar_colors[:, c] = (1.0 - self.spatial_coords[:, 0]) * float(m0[c]) + self.spatial_coords[:, 0] * self.peak_color[c]
         self.dot_color[:] = hi
 
-        # 4. Render active bar and peak hold dot
+        # 4. Render active bar, fade unlit region above bar, then paint peak hold dot
         p_int = int(self.power_height)
         if p_int >= 0:
             self.smooth_segment_vectorized(0.65, 0, p_int, self.bar_colors[:p_int + 1])
 
+        if p_int + 1 < self.nb_of_leds:
+            self.fade_to_black_segment_vectorized(0.40, p_int + 1, self.nb_of_leds - 1)
+
         dot_idx = int(np.clip(self.white_dot_height, 0, self.nb_of_leds - 1))
         self.smooth_segment_vectorized(0.85, dot_idx, dot_idx, self.dot_color)
-
-        unlit_start = max(p_int + 1, dot_idx + 1)
-        if unlit_start < self.nb_of_leds:
-            self.fade_to_black_segment_vectorized(0.40, unlit_start, self.nb_of_leds - 1)

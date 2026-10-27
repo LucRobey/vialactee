@@ -6,6 +6,7 @@ and smoothly crossfades into a continuous tempo-paced sweep when beat tracking i
 Never washes out 90% of the strip on DROP_IMPACT. Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
+import math
 import numpy as np
 import modes.Mode as Mode
 
@@ -75,8 +76,6 @@ class Beat_runner_mode(Mode.Mode):
         self.dist_sq: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
         self.gauss_weights: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
 
-        self.hues: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
-        self.sats: np.ndarray = np.ones(self.nb_of_leds, dtype=np.float64)
         self.vals: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
         self.target_rgb: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.float64)
         self.beam_color: np.ndarray = np.zeros(3, dtype=np.float64)
@@ -96,6 +95,7 @@ class Beat_runner_mode(Mode.Mode):
         if self.nb_of_leds <= 1:
             return
         phase = float(getattr(self.listener, "beat_phase", 0.0))
+        count = int(getattr(self.listener, "beat_count", 0))
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
         power = float(ctx.power if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
         energy = float(ctx.energy if ctx is not None else power)
@@ -104,17 +104,18 @@ class Beat_runner_mode(Mode.Mode):
         is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
         lock = self.rhythm_lock
 
-        # Advance continuous fallback phase so the runner keeps gliding if beat_phase is stalled
-        self.free_phase = (self.free_phase + self.dt * (bpm / 60.0) * 0.65 * self.mood_pace) % 1.0
-        effective_phase = lock * phase + (1.0 - lock) * self.free_phase
+        # Advance continuous 2-beat fallback phase so the runner keeps gliding if beat_phase is stalled
+        self.free_phase = (self.free_phase + self.dt * (bpm / 60.0) * 0.65 * self.mood_pace) % 2.0
 
-        # 3. Calculate target cursor position mapped to effective_phase
+        # 3. Calculate target cursor position in position space (avoiding sawtooth phase-wrap blends)
         max_idx = float(self.nb_of_leds - 1)
         if self.motion_style == "sweep":
-            cursor_pos = effective_phase * max_idx
+            free_sweep = self.free_phase % 1.0
+            cursor_pos = (lock * phase + (1.0 - lock) * free_sweep) * max_idx
         else:
-            harmonic_factor = 0.5 * (1.0 - np.cos(2.0 * np.pi * effective_phase))
-            cursor_pos = harmonic_factor * max_idx
+            locked_pos = 0.5 * (1.0 - math.cos(math.pi * (float(count & 1) + phase)))
+            free_pos = 0.5 * (1.0 - math.cos(math.pi * self.free_phase))
+            cursor_pos = (lock * locked_pos + (1.0 - lock) * free_pos) * max_idx
 
         # 4. Confidence-Weighted Beam Width & Fallback (docs/contracts/mode_contract.md)
         sigma = (self.head_width + (1.0 - lock) * 3.0) * (1.0 - 0.20 * tension)

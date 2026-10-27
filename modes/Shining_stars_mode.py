@@ -11,7 +11,6 @@ import numpy as np
 import random
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
-from music.api import MusicalContextEngine
 
 
 class Shining_stars_mode(Mode.Mode):
@@ -94,7 +93,7 @@ class Shining_stars_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
-        has_real_ctx = isinstance(ctx, MusicalContextEngine)
+        has_real_ctx = ctx is not None
 
         # 1. Continuous trail fade modulated smoothly by mood_trail (no scene branching)
         trail = self.mood_trail
@@ -109,7 +108,7 @@ class Shining_stars_mode(Mode.Mode):
 
         if self.listener is None:
             return
-        if has_real_ctx and ctx.is_silent:
+        if has_real_ctx and bool(getattr(ctx, "is_silent", False)):
             return
 
         step = self.step
@@ -130,8 +129,8 @@ class Shining_stars_mode(Mode.Mode):
 
         # 3. Scale twinkle density with energy, mood_pace, and syncopation
         if has_real_ctx:
-            energy = float(ctx.energy)
-            is_sync = bool(ctx.is_syncopated)
+            energy = float(getattr(ctx, "energy", 0.0))
+            is_sync = bool(getattr(ctx, "is_syncopated", False))
             density_boost = (0.30 * energy * self.mood_pace) + (0.25 if is_sync else 0.0)
             current_threshold = max(0.5, self.threshold * (1.0 - 0.50 * density_boost))
             bands = getattr(self.listener, "asserved_fft_band", None)
@@ -151,20 +150,16 @@ class Shining_stars_mode(Mode.Mode):
             # When flywheel is lost or flux is flat during sustained notes, allow spectral band energy to twinkle
             drive = max(flux_val, (1.0 - 0.6 * lock) * band_val * self.threshold * 2.8)
             if drive > current_threshold:
-                rand_val = self._rand_pool[self._rand_idx]
-                self._rand_idx = (self._rand_idx + 1) & 255
-                random_pos = rand_val % max_offset
-                self.rgb_list[random_pos::step] = self.star_colors[band_index]
-                if self.nb_of_leds >= 3 and step >= 3:
-                    if random_pos > 0:
-                        self.rgb_list[random_pos - 1::step] = self.neighbor_colors[band_index]
-                    if random_pos + 1 < self.nb_of_leds:
-                        self.rgb_list[random_pos + 1::step] = self.neighbor_colors[band_index]
-
-
-# Warmup Python interpreter code execution caches for zero-allocation hot-path guarantees
-_dummy_rgb = np.zeros((1, 3), dtype=np.int32)
-_dummy_mode = Shining_stars_mode("_warmup", "_warmup", None, None, [0], _dummy_rgb, {})
-for _ in range(1100):
-    _dummy_mode.run()
-del _dummy_rgb, _dummy_mode
+                star_c = self.star_colors[band_index]
+                neigh_c = self.neighbor_colors[band_index]
+                for base in range(0, self.nb_of_leds, step):
+                    seg_len = min(step, self.nb_of_leds - base)
+                    rand_val = self._rand_pool[self._rand_idx]
+                    self._rand_idx = (self._rand_idx + 1) & 255
+                    pos = base + (rand_val % seg_len)
+                    self.rgb_list[pos] = star_c
+                    if seg_len >= 3:
+                        if pos > base:
+                            self.rgb_list[pos - 1] = neigh_c
+                        if pos + 1 < base + seg_len:
+                            self.rgb_list[pos + 1] = neigh_c

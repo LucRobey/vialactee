@@ -106,7 +106,9 @@ class Extending_waves_mode(Mode.Mode):
             self.wave_positions[slot] = 0.0
             self.wave_velocities[slot] = 1.0
             self.wave_amps[slot] = 0.90
-            base_c = mood[self.wave_count % 3]
+            beat_tag = str(getattr(self.listener, "beat_tag", "Bass/Kick"))
+            tag_offset = 1 if beat_tag == "Snare/Mid" else (2 if beat_tag == "Hi-hat/Cymbal" else 0)
+            base_c = mood[(self.wave_count + tag_offset) % 3]
             accent = self.mood_accent
             if accent > 0.001:
                 hi = self.highlight_color

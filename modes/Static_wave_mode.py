@@ -58,7 +58,7 @@ class Static_wave_mode(Mode.Mode):
         if self.real_size > self.size_int:
             self.size_int = float(int(self.real_size + 1))
         if self.real_size < self.size_int - 1.0:
-            self.size_int = max(0.0, self.size_int - 0.2)
+            self.size_int = max(0.0, self.size_int - (0.2 * self.fps_ratio) / max(0.5, self.mood_trail))
 
         if is_silent and self.real_size < 0.5 and self.size_int < 0.5:
             self.fade_to_black_segment_vectorized(0.40, 0, self.nb_of_leds - 1)
@@ -78,12 +78,12 @@ class Static_wave_mode(Mode.Mode):
 
         self.smooth_segment_vectorized(0.6, start_idx, end_idx, self.inner_color)
 
+        if start_idx > 0:
+            self.fade_to_black_segment_vectorized(0.5, 0, start_idx - 1)
+        if end_idx < self.nb_of_leds - 1:
+            self.fade_to_black_segment_vectorized(0.5, end_idx + 1, self.nb_of_leds - 1)
+
         boundary_p1 = min(self.nb_of_leds - 1, self.middle + int(self.size_int))
         boundary_p2 = max(0, self.middle - int(self.size_int))
         self.smooth_segment_vectorized(0.6, boundary_p1, boundary_p1, self.cap_color)
         self.smooth_segment_vectorized(0.6, boundary_p2, boundary_p2, self.cap_color)
-
-        if boundary_p2 > 0:
-            self.fade_to_black_segment_vectorized(0.5, 0, boundary_p2 - 1)
-        if boundary_p1 < self.nb_of_leds - 1:
-            self.fade_to_black_segment_vectorized(0.5, boundary_p1 + 1, self.nb_of_leds - 1)

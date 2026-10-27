@@ -56,12 +56,15 @@ class Proportion_rainbow_mode(Mode.Mode):
         val = float(np.clip(0.35 * energy + 0.65 * pulse, 0.0, 1.0))
         sat = float(np.clip(0.68 + 0.32 * energy - 0.25 * self.mood_accent, 0.40, 1.0))
 
-        # 3. FFT Band Proportions
-        bands = getattr(self.listener, "asserved_fft_band", None)
+        # 3. FFT Band Proportions (prefer normalized band_proportion, fallback to asserved_fft_band)
+        bands = getattr(self.listener, "band_proportion", None)
         if bands is None or len(bands) < self.nb_bands:
-            self.fft_bands_array.fill(0.0)
+            bands = getattr(self.listener, "asserved_fft_band", None)
+        if bands is None or len(bands) < self.nb_bands:
+            self.fft_bands_array.fill(0.04)
         else:
             self.fft_bands_array[:] = bands[:self.nb_bands]
+            self.fft_bands_array += 0.04
 
         if self.nb_of_leds > 1:
             sum_dhue = ((self.N + 1) / 2.0) * (self.fft_bands_array[0] + self.fft_bands_array[-1]) + self.N * float(np.sum(self.fft_bands_array[1:-1]))

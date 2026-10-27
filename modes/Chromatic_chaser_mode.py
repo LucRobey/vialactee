@@ -75,7 +75,9 @@ class Chromatic_chaser_mode(Mode.Mode):
         # 1. Synchronize chaser speed to listener.bpm (gated by rhythm_lock), tension, and mood_pace
         bpm_factor = 1.0 + self.rhythm_lock * ((bpm / 120.0) - 1.0)
         effective_speed = self.speed * bpm_factor * (1.0 + 0.55 * tension) * self.mood_pace * fps_ratio
+        prev_idx = int(np.clip(self.position, 0, self.nb_of_leds - 1))
         self.position += effective_speed * self.direction
+        wrapped = False
 
         if self.bounce_enabled:
             if self.position >= self.nb_of_leds - 1:
@@ -86,9 +88,11 @@ class Chromatic_chaser_mode(Mode.Mode):
                 self.direction = 1
         else:
             if self.position >= self.nb_of_leds:
-                self.position = 0.0
+                self.position %= float(self.nb_of_leds)
+                wrapped = True
             elif self.position < 0:
-                self.position = float(self.nb_of_leds - 1)
+                self.position %= float(self.nb_of_leds)
+                wrapped = True
             self.direction = 1
 
         # 2. Derive color from vertical_center, mood_colors, and mood_accent
@@ -99,8 +103,13 @@ class Chromatic_chaser_mode(Mode.Mode):
             base_c = (1.0 - v_center) * float(m0[c]) + v_center * float(m2[c])
             self.head_color[c] = (1.0 - warmth) * base_c + warmth * float(hi[c])
 
-        # 3. Paint the head and fade the tail (scaled by mood_trail)
+        # 3. Fade the tail first (scaled by mood_trail), then paint the continuous swept span
         head_idx = int(np.clip(self.position, 0, self.nb_of_leds - 1))
-        self.smooth_segment_vectorized(1.0, head_idx, head_idx, self.head_color)
-        effective_fade = float(np.clip(self.fade_ratio / max(0.5, self.mood_trail), 0.005, 0.60))
         self.fade_to_black_segment_vectorized(effective_fade, 0, self.nb_of_leds - 1)
+        if wrapped and not self.bounce_enabled:
+            self.smooth_segment_vectorized(1.0, prev_idx, self.nb_of_leds - 1, self.head_color)
+            self.smooth_segment_vectorized(1.0, 0, head_idx, self.head_color)
+        else:
+            span_start = min(prev_idx, head_idx)
+            span_end = max(prev_idx, head_idx)
+            self.smooth_segment_vectorized(1.0, span_start, span_end, self.head_color)

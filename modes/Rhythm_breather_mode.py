@@ -75,11 +75,6 @@ class Rhythm_breather_mode(Mode.Mode):
 
         # Pre-allocated spatial arrays (ZERO runtime heap allocation)
         self.spatial_coords: np.ndarray = np.linspace(0.0, 1.0, self.nb_of_leds, dtype=np.float64)
-        self.spatial_hue_spread: np.ndarray = self.spatial_coords * 0.12
-
-        self.hues: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
-        self.sats: np.ndarray = np.ones(self.nb_of_leds, dtype=np.float64)
-        self.vals: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
         self.target_rgb: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.float64)
         self.grad_colors: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.float64)
         self.spatial_blend: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
@@ -89,8 +84,6 @@ class Rhythm_breather_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
-        power = float(ctx.power if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
-        energy = float(ctx.energy if ctx is not None else power)
         tension = float(ctx.tension if ctx is not None else 0.0)
         spectral_tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
         lock = self.rhythm_lock
@@ -104,10 +97,10 @@ class Rhythm_breather_mode(Mode.Mode):
         # 1. Confidence-blended beat_pulse() + continuous breath wave when beat_phase is stalled
         self.breath_angle = (self.breath_angle + self.dt * 2.2 * self.mood_pace) % (2.0 * math.pi)
         pulse = self.beat_pulse(self.pulse_sharpness)
-        free_breath = 0.0 if is_silent else energy * (0.55 + 0.45 * (0.5 + 0.5 * math.sin(self.breath_angle)))
-        blended_energy = lock * pulse + (1.0 - lock) * free_breath
+        breath_mod = 0.85 + 0.15 * (0.5 + 0.5 * math.sin(self.breath_angle)) * (1.0 - lock)
+        blended_energy = pulse * breath_mod
 
-        effective_floor = 0.0 if is_silent else self.ambient_floor
+        effective_floor = self.ambient_floor
         effective_brightness = max(0.0, min(1.0, effective_floor + (1.0 - effective_floor) * blended_energy))
 
         # 2. Gated Real-Beat transient boost (1-frame only, no 1.5s scene lock)
@@ -117,19 +110,13 @@ class Rhythm_breather_mode(Mode.Mode):
         else:
             flash_punch = 0.0
 
-        # 3. Spatial color gradient derived from self.mood_colors, base_hue, drift_speed, and mood_accent
-        mood = self.mood_colors
+        # 3. Spatial color gradient across all 3 mood palette slots via palette_sample
         self.current_hue_offset = (self.current_hue_offset + self.dt * self.drift_speed * self.mood_pace) % 1.0
         hue_nudge = (self.base_hue - 0.60) * 0.35 + 0.15 * math.sin(2.0 * math.pi * self.current_hue_offset)
         shift = 0.12 * spectral_tilt + 0.08 * math.sin(self.breath_angle) + hue_nudge
         np.add(self.spatial_coords, shift, out=self.spatial_blend)
         np.clip(self.spatial_blend, 0.0, 1.0, out=self.spatial_blend)
-        m0, m1 = mood[0], mood[1]
-        for c in range(3):
-            m0_c = float(m0[c])
-            diff = float(m1[c]) - m0_c
-            np.multiply(self.spatial_blend, diff, out=self.grad_colors[:, c])
-            np.add(self.grad_colors[:, c], m0_c, out=self.grad_colors[:, c])
+        self.palette_sample(self.spatial_blend, self.grad_colors)
 
         warmth = min(1.0, self.mood_accent + flash_punch * 1.2)
         if warmth > 0.005:
