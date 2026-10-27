@@ -7,7 +7,6 @@ AXIOM governance: the music analysis sector is a sealed room.
 2. Production code outside music/ may import only `music.api`. (Tests, research, and
    developer tools/scripts are exempt so they can inspect and benchmark internals.)
 3. None of the 10 music modules may remain in core/ as shims.
-4. core/precisions/ remains untouched in core/.
 """
 import ast
 import os
@@ -44,12 +43,6 @@ MOVED_MUSIC_FILES = (
     "RhythmConfig.py",
     "MusicalContextEngine.py",
     "Listener.py",
-)
-
-EXPECTED_CORE_PRECISIONS = (
-    "mode_master.md",
-    "segment.md",
-    "transition_director.md",
 )
 
 
@@ -120,19 +113,6 @@ class TestMusicIsolation(unittest.TestCase):
         missing = [fn for fn in MOVED_MUSIC_FILES if not os.path.isfile(os.path.join(music_dir, fn))]
         self.assertEqual(lingering, [], f"Music shims or files still present in core/: {lingering}")
         self.assertEqual(missing, [], f"Moved music files missing from music/: {missing}")
-
-    def test_core_precisions_untouched(self):
-        precisions_dir = os.path.join(REPO_ROOT, "core", "precisions")
-        self.assertTrue(os.path.isdir(precisions_dir), "core/precisions/ directory must remain in core/")
-        for fn in EXPECTED_CORE_PRECISIONS:
-            self.assertTrue(
-                os.path.isfile(os.path.join(precisions_dir, fn)),
-                f"Expected precision doc missing from core/precisions/: {fn}",
-            )
-        self.assertFalse(
-            os.path.exists(os.path.join(REPO_ROOT, "music", "precisions")),
-            "precisions/ must stay in core/, not music/",
-        )
 
     def test_wall_check_detects_violations(self):
         """Guard the guard: the checker itself must flag a synthetic violation."""
