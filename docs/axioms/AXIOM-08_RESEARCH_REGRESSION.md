@@ -2,7 +2,7 @@
 
 **Tier:** Tier 0 (Untouchable Golden Axiom)  
 **Status:** Inviolable Law  
-**Enforcement:** `research/benchmarks/`, `research/LEADERBOARD.md`  
+**Enforcement:** `research/benchmarks/`, `research/experiments/LEADERBOARD.md`  
 
 ---
 
@@ -12,11 +12,11 @@
    Ground truth audio tracks, beat annotation files (`.beats.txt`), and scoring algorithms residing in `research/benchmarks/ground_truth/` are **immutable reference assets**.
    - No engineer, researcher, or AI agent may edit, trim, or adjust ground truth annotations to make a candidate rhythm algorithm score higher.
 2. **Production Promotion Gate:**
-   No candidate beat tracking model or DSP enhancement may be promoted from `research/experiments/` into `core/` unless it passes the strict two-factor gate:
+   No candidate beat tracking model or DSP enhancement may be promoted from `research/experiments/` into `music/` unless it passes the strict two-factor gate:
    - **Zero F1 Regression:** Achieves $\Delta \text{F1@50ms} \ge 0.0\%$ and $\Delta \text{F1@70ms} \ge 0.0\%$ compared to the current production baseline across the synthetic test suite.
    - **Real-Time Frame Budget:** Average per-frame computation time remains $\le \mathbf{3.0\text{ ms}}$ on ARM Cortex-A72 ($< 1.0\text{ ms}$ on desktop x86_64).
 3. **Experiment Registry Mandate:**
-   Every experimental candidate tested must be permanently logged in `research/LEADERBOARD.md` with:
+   Every experimental candidate tested must be permanently logged in `research/experiments/LEADERBOARD.md` with:
    - Candidate model name and git commit hash.
    - Evaluation metrics: `F1@50ms`, `F1@70ms`, `CMLt`, `AMLt`, Phase Jitter (ms), Avg Frame Compute (ms).
    - Mathematical innovation summary and pass/fail verdict.

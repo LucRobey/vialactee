@@ -2,7 +2,7 @@
 
 **Tier:** Tier 0 (Untouchable Golden Axiom)  
 **Status:** Inviolable Law  
-**Enforcement:** `tests/test_modes_rhythm.py`, `modes/MODE_RULES.md`, `modes/`  
+**Enforcement:** `tests/test_all_modes_musical_context.py`, `tests/test_mode_helpers.py`, `modes/MODE_RULES.md`, `modes/`  
 
 ---
 

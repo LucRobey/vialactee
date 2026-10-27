@@ -9,12 +9,12 @@
 ## 1. Specification
 
 1. **500-Line Production File Cap:**
-   No new or modified production file in `core/`, `hardware/`, `modes/`, `config/`, `connectors/`, or `Main.py` may exceed **500 physical lines of code**.
+   No new or modified production file in `core/`, `music/`, `hardware/`, `modes/`, `config/`, `connectors/`, `transitions/`, `mood/`, or `Main.py` may exceed **500 physical lines of code**.
 2. **The Grandfathered Ratchet:**
-   Three legacy core files exceed 500 lines due to complex historical algorithmic consolidation. These files are subject to a **strict one-way ratchet**: they may shrink, but they may **never expand**:
+   Two legacy music files exceed 500 lines due to complex historical algorithmic consolidation. These files are subject to a **strict one-way ratchet**: they may shrink, but they may **never expand**:
    - `music/AudioAnalyzer.py`: Maximum **598 lines**
-   - `core/Mode_master.py`: Maximum **613 lines**
    - `music/MultiBandOnsetAudioAnalyzer.py`: Maximum **621 lines**
+   *(Note: `core/Mode_master.py` was refactored below the 500-line cap and retired from the grandfathered ratchet.)*
 3. **Ratchet Lowering Mandate:**
    When refactoring or reclaiming lines in any grandfathered file, the ratchet ceiling in the governance test must be lowered to lock in the savings permanently.
 4. **Fast Headless CI Governance SLA:**
@@ -29,7 +29,6 @@
 | Grandfathered File | Historical Line Count | Ratchet Limit | Current Headroom |
 |:---|:---|:---|:---|
 | `music/AudioAnalyzer.py` | 598 | 598 | 0 lines |
-| `core/Mode_master.py` | 613 | 613 | **12 lines** (currently at 601 lines) |
 | `music/MultiBandOnsetAudioAnalyzer.py` | 621 | 621 | 0 lines |
 
 ---

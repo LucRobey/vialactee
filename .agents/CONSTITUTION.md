@@ -15,8 +15,8 @@ fully autonomous lighting at 30 FPS on Raspberry Pi 4 hardware with zero live hu
    - Pre-allocated buffers and in-place operations (`out=`, `np.putmask`, `memoryview`) are mandatory.
    - WebSocket state telemetry serialization is decoupled from the 30 FPS render loop and capped at 10 Hz.
 3. **Agent-Native Navigability (The 500-Line Rule & Ratchet)**:
-   - No new or modified production file may exceed **500 lines** (early warning triggers at 450 lines).
-   - The 3 legacy core files (`MultiBandOnsetAudioAnalyzer.py`, `Mode_master.py`, `AudioAnalyzer.py`) are grandfathered under a strict ratchet: they may shrink, but never expand.
+   - No new or modified production file in `core/`, `music/`, `hardware/`, `modes/`, `config/`, `connectors/`, `transitions/`, `mood/`, or `Main.py` may exceed **500 lines** (early warning triggers at 450 lines).
+   - The 2 legacy music files (`music/MultiBandOnsetAudioAnalyzer.py`, `music/AudioAnalyzer.py`) are grandfathered under a strict ratchet: they may shrink, but never expand.
    - No loose untyped `Dict[str, Any]` contracts in hot frame paths.
 4. **Wire & UI Compatibility (Zero Frontend Regressions)**:
    - `connectors/Connector.py` maintains `{ "segments": [...], "cables": [...] }` formatting for the React Topology Editor.

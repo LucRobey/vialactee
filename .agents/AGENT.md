@@ -14,12 +14,12 @@ Vialactée is an asynchronous Python server (Raspberry Pi 4) that drives a 1,304
 |---|---|
 | Physical/mathematical laws (frame budget, allocation, geometry, network, sync, governance) | [`docs/axioms/`](../docs/axioms/README.md) (Tier 0, human RFC required to change) |
 | How a subsystem works (audio, rhythm, transitions, hardware, API) | [`docs/architecture/`](../docs/architecture/system_overview.md) |
-| Schemas, catalogs, contracts (config, modes, coordinates, `transitions.api`, `mood.api`) | [`docs/reference/`](../docs/reference/configuration_schemas.md) |
+| Schemas, catalogs, contracts (config, modes, coordinates, `music.api`, `transitions.api`, `mood.api`) | [`docs/contracts/`](../docs/contracts/README.md), [`docs/reference/`](../docs/reference/configuration_schemas.md) |
 | How to author or operate something | [`docs/manuals/`](../docs/manuals/mode_authoring_guide.md) |
 | Why something was changed, what was tried | [`work_history/`](../work_history/README.md) + `git log` |
-| What a directory contains | the `README.md` inside it (`core/`, `connectors/`, `hardware/`, `modes/`, `tests/`) |
+| What a directory contains | [`docs/README.md`](../docs/README.md) and [`docs/architecture/`](../docs/architecture/system_overview.md) |
 | Current rhythm-research SOTA | `research/experiments/LEADERBOARD.md` |
-| Historical snapshots (never system truth) | [`docs/archive/`](../docs/archive/), `.agents/docs/`, `.agents/reviews/` |
+| Historical snapshots (never system truth) | [`docs/archive/`](../docs/archive/), `.agents/reviews/` |
 
 ## Domain skills
 
@@ -28,14 +28,12 @@ Vialactée is an asynchronous Python server (Raspberry Pi 4) that drives a 1,304
 | Orchestration, cross-domain work, onboarding | `vialactee-project` |
 | Visual modes (`modes/`) | `vialactee-mode-creator` |
 | Audio ingestion, beat tracking, Oracle flywheel | `vialactee-dsp-engine` |
-| REST/WebSocket and the web interface | `vialactee-web-connector` |
-| Hardware drivers, LED geometry, Pi deployment | `vialactee-hardware-deploy` |
 | Offline MIR experiments in `research/` | `vialactee-researcher` (worker), `vialactee-research-manager` (director) |
 
 ## Session checklist
 
 1. `git status` and `git log --oneline -n 10`. If the tree holds work that is not yours, tell the user before touching it.
-2. Make the change; respect the sealed rooms (`transitions/` via `transitions.api`, `mood/` via `mood.api`).
+2. Make the change; respect the sealed rooms (`music/` via `music.api`, `transitions/` via `transitions.api`, `mood/` via `mood.api`).
 3. `python -m pytest -q` (governance tests in `tests/governance/` enforce the axioms).
 4. Write the `work_history/` log, then commit per logical step (Conventional Commits) as described in the project skill.
 

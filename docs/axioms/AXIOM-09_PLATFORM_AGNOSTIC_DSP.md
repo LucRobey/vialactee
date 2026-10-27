@@ -15,14 +15,14 @@
    - Offline MP3/WAV playback via test runners.
    - Pure synthetic click benchmark evaluations.
 2. **Zero Platform Branching in Math Code:**
-   Code in `core/` (DSP, rhythm tracking, orchestration) and `modes/` (visual animations) is **strictly forbidden** from inspecting the host operating system or branching on environment:
-   - Prohibited checks in `core/` and `modes/`: `if sys.platform == 'linux':`, `if os.name == 'posix':`, `if is_pi:`, `if "Raspberry" in ...`.
+   Code in `core/` (orchestration), `music/` (DSP, rhythm tracking, musical context), and `modes/` (visual animations) is **strictly forbidden** from inspecting the host operating system or branching on environment:
+   - Prohibited checks in `core/`, `music/`, and `modes/`: `if sys.platform == 'linux':`, `if os.name == 'posix':`, `if is_pi:`, `if "Raspberry" in ...`.
 3. **Scoped Hardware Exemption:**
    Hardware- and OS-specific branches are strictly confined to:
    - `hardware/HardwareFactory.py`: Factory instantiation of drivers.
    - `hardware/Rpi_NeoPixels.py`: Low-level physical WS2812B GPIO/SPI hardware interface.
    - `hardware/Fake_leds.py`: Pygame simulator window.
-   - `core/Mode_master.py:380`: The single executor thread-offload branch for physical SPI transmission.
+   - `core/Mode_master.py`: The single executor thread-offload branch for physical SPI transmission (`_is_rpi_hardware`).
 
 ---
 
@@ -33,10 +33,12 @@
 │             MATHEMATICAL CORE (PURE & AGNOSTIC)        │
 │                                                        │
 │  music/AudioIngestion.py       music/Listener.py         │
-│  music/MultiBandOnsetAudioAnalyzer.py                   │
-│  music/comb_kernels.py         modes/*.py               │
+│  music/DyadicMetricalAudioAnalyzer.py                  │
+│  music/MultiBandOnsetAudioAnalyzer.py                  │
+│  music/MusicalContextEngine.py                         │
+│  music/comb_kernels.py         modes/*.py              │
 │                                                        │
-│  [ZERO OS checks, ZERO platform branching, PURE NUMPY]  │
+│  [ZERO OS checks, ZERO platform branching, PURE NUMPY] │
 └───────────────────────────┬────────────────────────────┘
                             │ (Emits RGB Array)
                             ▼
@@ -54,5 +56,5 @@
 
 ## 3. Violation Conditions
 
-- Any `sys.platform`, `platform.system()`, or `os.name` check found inside `core/` (except the isolated executor offload in `Mode_master.py`) or `modes/`.
+- Any `sys.platform`, `platform.system()`, or `os.name` check found inside `core/` (except the isolated executor offload in `Mode_master.py`), `music/`, or `modes/`.
 - Behavior where beat tracking or visual effects produce differing mathematical outputs depending on whether run on Windows or Raspberry Pi.
