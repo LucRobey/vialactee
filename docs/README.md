@@ -6,6 +6,18 @@ All documentation in this repository is governed by a strict **5-Tier Documentat
 
 ---
 
+## 🏛️ The 5-Tier Document Authority Matrix
+
+| Tier | Category | Filesystem Location | Authority & RFC Policy | Automated Enforcement |
+| :---: | :--- | :--- | :--- | :--- |
+| **Tier 0** | **Untouchable Golden Axioms** | [`docs/axioms/`](./axioms/README.md) | **Immutable Core.** Governs physical, mathematical, and architectural laws. Barred from autonomous AI modification. Changes require Human Architectural RFC. | CI governance tests in `tests/governance/` |
+| **Tier 1** | **Canonical Specifications & Contracts** | [`docs/contracts/`](./contracts/README.md), [`docs/architecture/`](./architecture/system_overview.md), [`docs/reference/`](./reference/modes_catalog.md) | **Authoritative System Truth.** Sealed sector contracts, public APIs, hardware geometry, and configuration schemas. Updated concurrently with code changes. | Parity, isolation & schema linters |
+| **Tier 2** | **Operational Manuals** | [`docs/manuals/`](./manuals/mode_authoring_guide.md) | **Engineering & Deployment Guides.** Practical step-by-step guides for developers, operators, and agents. | Link & path resolution checks |
+| **Tier 3** | **Living Memory & Skills** | [`.agents/skills/`](../.agents/skills/), [`work_history/`](../work_history/README.md) | **Continuous Agent Memory.** Session audit logs, procedural skills, and experimental ledgers updated every session to eliminate amnesia. | Skill governance & session log linting |
+| **Tier 4** | **Ideas Scratchpad & Archives** | [`docs/ideas/`](./ideas/README.md), [`docs/archive/`](./archive/), [`archive/playground/`](../archive/playground/) | **Historical / Sandbox.** Prospective concepts, user scratchpads, and legacy snapshots. Never cited as system truth. | Prominent non-authoritative banners |
+
+---
+
 ## 🧭 Task-Based Navigation Map (Where to Go Depending on Your Task)
 
 | If you are working on... | Read First (Contract / Spec) | Operational Manual / Skill |

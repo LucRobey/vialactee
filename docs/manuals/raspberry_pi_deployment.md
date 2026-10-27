@@ -24,9 +24,9 @@ This script:
 
 ---
 
-## 2. Audio Loopback & ALSA Configuration
+## 2. Audio Loopback, Bluetooth A2DP Sink & ALSA Configuration
 
-### USB Sound Card / Microphone Setup
+### A. USB Sound Card / Microphone Setup
 1. List available ALSA devices:
    ```bash
    arecord -l
@@ -37,9 +37,62 @@ This script:
    - `"aux"`: External line-in through 3.5mm / USB capture with 5.0s lookahead delay (`fakeDelay: 5.0`).
    - `"custom"`: Explicit `input_device_id` and `output_device_id`.
 
+### B. Bluetooth A2DP Sink (Smartphone Streaming)
+To stream music directly from a smartphone to the Raspberry Pi:
+1. Install `bluez-alsa` or `pulseaudio-module-bluetooth`:
+   ```bash
+   sudo apt-get install -y bluez-tools pulseaudio-module-bluetooth
+   ```
+2. Pair smartphone via `bluetoothctl`.
+3. In `config/app_config.json`, configure:
+   ```json
+   {
+     "audio_preset": "spotify_aux",
+     "HARDWARE_MODE": "esp32",
+     "hardware_profile": "full",
+     "esp32_ip": "192.168.1.41"
+   }
+   ```
+
 ---
 
-## 3. Direct GPIO NeoPixel Wiring (`HARDWARE_MODE: "rpi"`)
+## 3. Systemd Service Deployment (`vialactee.service`)
+
+To run Vialactée automatically at system boot as an unprivileged service:
+
+1. Create `/etc/systemd/system/vialactee.service`:
+   ```ini
+   [Unit]
+   Description=Vialactee LED Chandelier Orchestrator
+   After=network.target sound.target
+
+   [Service]
+   Type=simple
+   User=pi
+   WorkingDirectory=/home/pi/vialactee
+   ExecStart=/home/pi/vialactee/.venv/bin/python Main.py
+   Restart=on-failure
+   RestartSec=5s
+   Environment=PYTHONUNBUFFERED=1
+   Environment=SDL_VIDEODRIVER=dummy
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+2. Enable and start:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable vialactee.service
+   sudo systemctl start vialactee.service
+   ```
+3. Check logs:
+   ```bash
+   journalctl -u vialactee.service -f
+   ```
+
+---
+
+## 4. Direct GPIO NeoPixel Wiring (`HARDWARE_MODE: "rpi"`)
 
 When driving strips directly from the Raspberry Pi GPIO pins (requires `sudo` for DMA `/dev/mem` access):
 - **Channel 1 (785 LEDs):** `GPIO 21` (Physical Pin 40 — PCM_DOUT, conflict-free with onboard audio).
@@ -48,11 +101,11 @@ When driving strips directly from the Raspberry Pi GPIO pins (requires `sudo` fo
 
 ---
 
-## 4. Wireless ESP32 UDP Receiver (`HARDWARE_MODE: "esp32"`)
+## 5. Wireless ESP32 UDP Receiver (`HARDWARE_MODE: "esp32"`)
 
 In production, the Raspberry Pi or PC streams chunked UDP pixel frames over Wi-Fi to an ESP32 running [`hardware/esp32_firmware/`](../../hardware/esp32_firmware/).
 
-### 4.1 Firmware Directory Structure
+### 5.1 Firmware Directory Structure
 
 ```text
 hardware/esp32_firmware/
@@ -62,7 +115,7 @@ hardware/esp32_firmware/
 └── secrets.h.example             # Template for Wi-Fi credentials (copy to secrets.h)
 ```
 
-### 4.2 Profile Comparison (`FULL` vs `SMALL`)
+### 5.2 Profile Comparison (`FULL` vs `SMALL`)
 
 Matches `"hardware_profile"` in [`config/app_config.json`](../../config/app_config.json):
 
@@ -74,13 +127,13 @@ Matches `"hardware_profile"` in [`config/app_config.json`](../../config/app_conf
 | **Channel 1** | **785 LEDs** on **UDP Port `9001`** $\rightarrow$ **GPIO 4** | **249 LEDs** on **UDP Port `9001`** $\rightarrow$ **GPIO 4** |
 | **Channel 2** | **519 LEDs** on **UDP Port `9002`** $\rightarrow$ **GPIO 5** | *Disabled* |
 
-### 4.3 On-Board Status LED (`GPIO 2` Blue LED)
+### 5.3 On-Board Status LED (`GPIO 2` Blue LED)
 
 - **Rapid Blinking (`200ms` interval):** Searching for and connecting to Wi-Fi.
 - **Solid ON:** Connected to Wi-Fi and actively listening for UDP packets on port `9001` (and `9002` in `FULL` mode).
 - **Brief Flicker OFF:** Indicates Wi-Fi drop; auto-reconnection is triggered automatically.
 
-### 4.4 Hardware Wiring & Pinout (ESP32)
+### 5.4 Hardware Wiring & Pinout (ESP32)
 
 | ESP32 Pin | Label on Board | Connects To | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -95,7 +148,7 @@ Matches `"hardware_profile"` in [`config/app_config.json`](../../config/app_conf
 > 3. **Power Filtering Capacitor:** Connect a **$1000\,\mu\text{F}$ electrolytic capacitor** ($\ge 6.3\text{V}$, ideally $16\text{V}$) across `+5V` and `GND` where power enters the strips.
 > 4. **Never power LEDs through the ESP32:** Feed high-amperage 5V power directly from the external PSU to the strips (with power injection every ~150–250 LEDs).
 
-### 4.5 Flashing the ESP32
+### 5.5 Flashing the ESP32
 
 1. Install **Arduino IDE 2.x**, add the Espressif ESP32 board manager URL (`https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`), and install the **esp32** board package and **FastLED** library.
 2. Copy `hardware/esp32_firmware/secrets.h.example` to `hardware/esp32_firmware/secrets.h` (git-ignored) and set `WIFI_SSID` and `WIFI_PASSWORD`.

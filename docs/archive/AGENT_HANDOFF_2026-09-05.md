@@ -1,52 +1,167 @@
-# 📋 Agent Handoff — Sealed Transitions, Mood & Mode Upgrade (2026-09-05)
+# AGENT HANDOFF: Vialactée Music Analysis, Benchmark & Ground Truth Engine
 
 > [!WARNING]
 > **TIER 4 — HISTORICAL ARCHIVE (`docs/archive/AGENT_HANDOFF_2026-09-05.md`).**
-> This document is a point-in-time session handoff snapshot from September 2026 preserved for historical context. It is **NOT** maintained as live system truth. For current canonical specifications, see [`docs/README.md`](../README.md) and [`docs/contracts/`](../contracts/README.md).
+> This document is a point-in-time research handoff snapshot from September 5, 2026 preserved for historical context. It is **NOT** maintained as live system truth. For current canonical specifications, see [`docs/README.md`](../README.md) and [`docs/contracts/`](../contracts/README.md).
+
+> **Date:** September 5, 2026  
+> **Repository:** `vialactee`  
+> **Domain:** Audio DSP, Real-time Beat Tracking, Anticipation Flywheel ("Oracle"), Evaluation Benchmark Harness  
+> **Current Leaderboard Macro F1@50ms:** **92.0%** (Synthetic Suite)
 
 ---
 
-## 1. Current State (Clean & Green)
+## 1. Executive Summary & Objective
 
-- **Branch:** `main` (pushed to `origin/main` at `a80865d`).
-- **Working tree:** Clean (`git status` has 0 untracked or modified files).
-- **Test suite:** **441 passed, 0 failed** (`python -m pytest -q`).
-- **Session history:** All work is logged in [`work_history/README.md`](../../work_history/README.md) through session #17 (`2026-09-05_23-30_musical_context_and_mode_audit_fixes.md`).
-
----
-
-## 2. Architecture: The Three Sealed Rooms + Mode Rules
-
-The codebase has been modularized into **sealed sectors** with strict front-door contracts and AST-level isolation tests (`tests/governance/`):
-
-| Sector | Directory | Only Public Entry Point | Contract Doc | Isolation Test |
-| :--- | :--- | :--- | :--- | :--- |
-| **Transitions** | `transitions/` | [`transitions/api.py`](../../transitions/api.py) (`TransitionService`, `create_transition_service`, `AVAILABLE_TRANSITIONS`) | [`docs/contracts/transition_contract.md`](../contracts/transition_contract.md) | `tests/governance/test_transition_isolation.py` |
-| **Mood / Palettes** | `mood/` | [`mood/api.py`](../../mood/api.py) (`MoodService`, `create_mood_service`, `MOOD_PALETTES`, `MoodModifiers`) | [`docs/contracts/mood_contract.md`](../contracts/mood_contract.md) | `tests/governance/test_mood_isolation.py` |
-| **Visual Modes** | `modes/` | [`modes/Mode.py`](../../modes/Mode.py) base class | [`docs/contracts/mode_contract.md`](../contracts/mode_contract.md) | `tests/test_all_modes_musical_context.py`, `tests/test_mode_helpers.py` |
-| **Musical Context** | `music/` | [`music/MusicalContextEngine.py`](../../music/MusicalContextEngine.py) (`listener.context`) | [`docs/architecture/musical_context_engine.md`](../architecture/musical_context_engine.md) | `tests/test_musical_context_engine.py` |
-
-### Key Wiring Facts
-1. **No Presets / Playlists:** `data/configurations*.json` and `Data_reader.py` are gone. Startup randomizes per-segment modes and directions (`Mode_master._randomize_initial_segment_modes()`). Live per-mode settings persist under `mode_settings` in `config/app_config.json` via `core/AppConfigStore.py`.
-2. **Subtle Mood Governance (No `ctx.scene` Branching in Modes):**
-   - `mood/director.py` debounces `MusicalContext.scene` (`0.30s` hold) and crossfades both the `(4, 3)` RGB palette (`Mode.mood_colors`) and 4 continuous scene modifiers (`Mode.mood_pace`, `Mode.mood_sharpness`, `Mode.mood_trail`, `Mode.mood_accent`) over `2.5s` (cosine easing).
-   - **Zero concrete modes (`modes/*_mode.py`) read `ctx.scene` directly.** Modes use `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`, `self.rhythm_lock`, `self.beat_pulse()`, `self.drop_hit` (1-frame trigger), `self.drop_decay` ($1 \to 0$ envelope), `self.palette_lut` / `self.palette_sample()`, and `self.highlight_color`.
-3. **MusicalContextEngine Fixes (`music/MusicalContextEngine.py`):**
-   - `energy` uses $0.75 \cdot P + 0.25 \cdot E_{\text{rms}}$ so continuous pads/strings/synths without transients still register real energy.
-   - `BUILDUP -> DROP_IMPACT` requires `drop_countdown <= 0.40s` (or a post-silence transient) so vocal risers don't fire the drop 1–2s early.
-   - Track cuts (`live_is_song_change`) suppress lookahead buildup ramps (`_song_cut_cooldown = 5.2s`).
-   - `drop_progress` is `1.0` on the arrival frame and decays `1.0 -> 0.0` across the `1.5s` `DROP_IMPACT` dwell.
+The user is building **Vialactée**, an interactive LED chandelier whose lighting patterns react to music in real-time.
+The user was dissatisfied with past exploratory research in `playground/` because:
+1. There were no objective, fixed metrics to determine if an algorithm was actually improving.
+2. Evaluated models often claimed "flawless" BPM accuracy (e.g. 0.2% BPM error on *Palladium*), yet in reality had terrible beat tracking (F1@50ms of 6.1%) due to double-trigger chatter and phase misalignment.
+3. The user wants to radically change the math logic of `AudioAnalyzer.py` in the future while keeping the research, evaluation harness, and ground truth **fixed, reproducible, and immutable**.
+4. The system must capture rich telemetry (larger than human capacity) formatted into semantic **Failure Episodes** for AI agents to analyze failure patterns.
 
 ---
 
-## 3. Standalone Sandboxes & Studio Tools
+## 2. What Was Accomplished (Current Architecture)
 
-- **Transition Sandbox:** `python -m transitions.sandbox` (interactive Pygame preview of all 23 transitions, music simulation buttons, cooperative handshake toggle).
-- **Mode Studio:** `python -m tools.mode_studio` (single-strip workbench with live settings sliders and audio HUD).
-- **Music Studio:** `python -m tools.music_studio` (DSP & flywheel inspector).
+### A. Universal Model Contract
+- **[`music/BaseAudioAnalyzer.py`](../../music/BaseAudioAnalyzer.py)**: Universal abstract base class defining 6 functional domains:
+  1. *Execution & Clocking*: `update()`, `reset()`, `lookahead_seconds`, `hardware_latency`.
+  2. *Rhythm & Metronome*: `bpm`, `beat_phase`, `is_beat`, `is_real_beat`, `is_dropped_beat`, `beat_confidence`, `flywheel_status`, `is_downbeat`.
+  3. *Spectral Dynamics*: `band_flux`, `spectral_centroid` (`band_peak` removed).
+  4. *Macro-Structure*: `is_song_change`, `is_verse_chorus_change`, `asserved_novelty`, `combined_novelty`.
+  5. *Semantics*: `current_beat_tag`, `vocals_present`, `musical_key`.
+  6. *AI Telemetry Hook*: `capture_frame_telemetry()`, `get_model_metadata()`.
+- **[`music/AudioAnalyzer.py`](../../music/AudioAnalyzer.py)**: Production model refactored to inherit from `BaseAudioAnalyzer`. 100% backwards-compatible with `music/Listener.py` (all 21 unit tests pass).
+
+### B. Immutable Benchmark & Scorecard Engine
+- **[`research/benchmarks/engine/evaluator.py`](../../research/benchmarks/engine/evaluator.py)**:
+  - 60 FPS headless simulation loop.
+  - Computes standardized MIR metrics via `mir_eval`: `F1@50ms` (visual perception threshold), `F1@70ms`, `CMLt`, `AMLt`, `UpbeatGap` ($AMLt - CMLt$), Phase Bias, Phase Jitter, and CPU time per frame.
+  - Supports pre-cached `.npz` float32 audio arrays in `assets/musics/mp3_files/librosa/` to bypass slow Windows MP3 decoding.
+- **[`research/benchmarks/engine/episode_slicer.py`](../../research/benchmarks/engine/episode_slicer.py)**:
+  - Slices 5–10s anomaly windows into structured JSON (`failure_episodes.json`) for AI agents:
+    - `PHASE_INVERSION_UPBEAT` (180° offbeat traps).
+    - `GHOST_BEAT_BURST` (hallucinating beats during silence instead of coasting).
+    - `HIGH_PHASE_JITTER` (unstable phase snapping).
+- **[`research/benchmarks/run_benchmark.py`](../../research/benchmarks/run_benchmark.py)**: CLI runner with formatted terminal scorecard.
+- **[`research/benchmarks/compare_runs.py`](../../research/benchmarks/compare_runs.py)**: Delta comparator between baseline and candidate runs.
+
+### C. Visual Diagnostics Suite
+- **[`research/benchmarks/plot_diagnostics.py`](../../research/benchmarks/plot_diagnostics.py)**:
+  - Multi-panel visual generator rendering:
+    1. Audio Waveform with True Beats (green solid lines) vs Model Beats (magenta dashed lines).
+    2. Spectral Flux (ODF) spikes.
+    3. Continuous Flywheel Phase $\phi(t) \in [0, 1)$ sawtooth ramp.
+    4. Estimated BPM over time with shaded Failure Episode highlight zones.
+  - Outputs high-res figures to `research/experiments/plots/` (e.g. `synthetic_step_tempo_diagnostic.png`, `Palladium_diagnostic.png`).
+
+### D. Experiment Ledger & Leaderboard
+- **[`research/experiments/LEADERBOARD.md`](../../research/experiments/LEADERBOARD.md)**: Persistent markdown table tracking Git commit, model name, F1@50ms, CMLt, AMLt, Jitter, and latency.
+- **[`research/experiments/runs/`](../../research/experiments/runs/)**: Versioned run folders containing `manifest.json`, `scorecard.json`, `failure_episodes.json`, and `telemetry.npz`.
 
 ---
 
-## 4. Open User Ideas (Do NOT Auto-Implement)
+## 3. Exact State of Ground Truth (Tiers 1, 2, 3)
 
-See [`docs/ideas/IDEAS.md`](../ideas/IDEAS.md) (Tier 4 non-authoritative scratchpad). Only implement items from `docs/ideas/IDEAS.md` when the user explicitly requests them.
+The ground truth hierarchy is strictly separated into 3 tiers:
+
+### Tier 1: Synthetic "Clean Room" Tracks (Active & Verified)
+- **Location:** `research/benchmarks/ground_truth/synthetic_cache/` (8 WAVs + 8 `.beats.txt`)
+- **Origin:** Generated from scratch by `research/benchmarks/ground_truth/synthetic/generator.py`.
+- **Nature:** 100% mathematical certainty. Beat timestamps are known down to 0.0001s.
+- **Scenarios covered:**
+  - `synthetic_click_120bpm`, `synthetic_click_85bpm`, `synthetic_click_140bpm` (constant metronomes).
+  - `synthetic_step_tempo` (instant jump 120 $\to$ 140 BPM).
+  - `synthetic_breakdown_dropout` (16 bars drums $\to$ 8 bars silence $\to$ drums return).
+  - `synthetic_tempo_drift_accel` (continuous linear ramp 100 $\to$ 130 BPM over 30s).
+  - `synthetic_syncopated_reggae` (kicks on downbeats, loud hats on offbeats).
+  - `synthetic_polyrhythm_3_against_2` (triplets against quarter notes).
+
+### Tier 2: Neural Deep Learning Ground Truth (Active & Verified Across User Library)
+- **Location:** `research/benchmarks/ground_truth/neural/` (contains `.beats.txt`, `.downbeats.txt`, and `.meta.json`)
+- **Generator:** `research/benchmarks/ground_truth/extract_neural_reference.py`
+- **Engine:** **BeatNet 1.1.1** (Heydari et al., ISMIR 2021) — 1D/2D CRNN acoustic model + Dynamic Bayesian Network (DBN) inference.
+- **Windows / No-MSVC Acceleration:**
+  - Standard `madmom` fails on Windows without MSVC C++. We patched `madmom-0.16.1` using an AST-validated transpiler to convert Cython (`hmm.pyx`, `comb_filters.pyx`, `beats_crf.pyx`) into pure Python, accelerating the Viterbi search loop via `@numba.jit(nopython=True, fastmath=True)`.
+  - Installed official binary wheels for `pyaudio`.
+  - Offline inference runs in ~3-12s per full track on CPU.
+- **Nature:**
+  - **No rigid periodic grid**: Captures real human microtiming, swing, tempo drift, downbeats (measure starts: e.g. 4/4 vs 3/4 time signatures), and expressive variations.
+  - Generates `.downbeats.txt` tracking bar boundaries (e.g. 304 beats / 101 downbeats on 3/4 meter *Chanson pour l'auvergnat*).
+- **Benchmarking Real-World Traps:**
+  - Exposed genuine tracking failure episodes in `AudioAnalyzer`, such as 180° upbeat phase locking on Queen's *Another One Bites The Dust* (Upbeat Gap: 0.21) and ghost beats during quiet sections.
+
+### Tier 3: Standard Academic Datasets (Ballroom Benchmark Fully Integrated)
+- **Location:** `research/benchmarks/ground_truth/academic/loader.py` and `research/benchmarks/ground_truth/academic/data/ballroom/`
+- **Origin:** University Pompeu Fabra (MTG) & CPJKU ground-truth annotations (Krebs, Böck et al.) via `mirdata`.
+- **Dataset Chosen:** **Ballroom** (698 tracks, 8 ballroom dance styles: Cha-cha-cha, Jive, Quickstep, Rumba, Samba, Tango, Viennese Waltz, Slow Waltz).
+- **Status:**
+  - All 698 track beat annotations and metadata index downloaded into local cache.
+  - Sample exported references in `research/benchmarks/ground_truth/academic/ballroom/`.
+  - To download full audio archive (~1.35GB audio WAVs):
+    `python -m research.benchmarks.ground_truth.academic.loader --dataset ballroom --download-audio`
+
+---
+
+## 4. Key Algorithmic Fixes in `AudioAnalyzer.py`
+
+Benchmark failure slicing revealed three critical flaws that were resolved:
+
+1. **Double-Trigger Chatter Bug:**
+   - *Cause:* Phase soft-snap was snapping phase backwards across the $0.0$ boundary into $[0.85, 1.0)$ immediately following a beat, causing `_advance_flywheel` to fire a duplicate beat on the very next frame (16.6ms apart).
+   - *Fix:*
+     - Added **Backward Wrap Clamp** in `_run_oracle_sweep`: if $\phi < 0.25$, phase adjustment cannot wrap backwards across 0.
+     - Added **Refractory Period Lockout** in `_advance_flywheel`: beats cannot fire within $T_{\min} = \max(0.18\text{s}, 0.40 \times 60/\text{BPM})$.
+2. **Breakdown Dropout Hallucination:**
+   - *Cause:* `rolling_flux_baseline` decayed toward zero during silence, allowing tiny background hiss to pass the ratio test and mark beats as `is_real_beat = True`.
+   - *Fix:* Changed condition so transient energy must exceed BOTH the baseline ratio AND the absolute energy floor (`real_beat_energy_floor = 5.0`). The metronome continues freewheeling on inertia (`is_beat = True`), but kick flash flags are silenced (`is_real_beat = False`, `is_dropped_beat = True`).
+3. **Simulation Latency Alignment:**
+   - *Cause:* Production chandelier uses `fakeDelay = 5.0s` so the listener buffers audio for 5 seconds to look into the future. In headless simulation, the audio file is fed directly. Having `fakeDelay = 5.0` caused the analyzer to back-project phase by 5 seconds, causing phase shifts on all non-120 BPM tempos (e.g. 140 BPM shifted by 0.66 beats $\to$ 0% F1).
+   - *Fix:* Set `"fakeDelay": 0.0` in `evaluator.py` for simulation mode.
+
+---
+
+## 5. Performance Scorecard
+
+### Synthetic Benchmark Suite (`--suite synthetic`)
+
+| Metric | Baseline | Fixed AudioAnalyzer | Delta |
+| :--- | :---: | :---: | :---: |
+| **Macro F1@50ms** | 63.2% | **92.0%** | **+28.8%** 🚀 |
+| **Macro CMLt** | 69.5% | **91.6%** | **+22.1%** 🚀 |
+| **Macro AMLt** | 81.6% | **91.6%** | **+10.0%** |
+| **Mean Phase Jitter** | 40.3ms | **17.6ms** | **-56% reduction** |
+| **Upbeat Gap ($AMLt - CMLt$)** | 0.12 | **0.00** | **Eliminated 180° Inversion** |
+| **Failure Episodes** | 11 | **1** | Only step-tempo jitter remaining |
+| **CPU Time per Frame** | 1.86ms | **1.90ms** | $<3\text{ms}$ on Raspberry Pi |
+
+---
+
+## 6. Environment & Platform Constraints
+
+- **OS:** Windows 10/11. Shell: PowerShell.
+- **Python:** Python 3.10.11 (`python`).
+- **Terminal Encoding:** Windows default console is `cp1252`. All benchmark scripts and visualizers **must** include:
+  ```python
+  if hasattr(sys.stdout, "reconfigure"):
+      sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+  ```
+- **C++ Compilers:** No MSVC C++ build tools installed. **Do NOT attempt to pip install `madmom` from source** (it will fail C++ compilation). Use pure Python / NumPy / SciPy / Numba / `mir_eval` / `mirdata`.
+- **Audio Loading Speed:** Decoding MP3s via `librosa`/`torchaudio` on Windows can take 20s. Always prefer using the pre-cached `.npz` arrays in `assets/musics/mp3_files/librosa/` (loads in 0.05s).
+
+---
+
+## 7. Immediate Next Steps / Decision Fork for Incoming Agent
+
+The user previously asked about the ground truth data. Here are the immediate options to discuss with the user:
+
+1. **Option A: Download Tier 3 Academic MIR Dataset (Recommended for literature benchmarks)**
+   - Run `python -m research.benchmarks.ground_truth.academic.loader --dataset ballroom --download-audio`.
+   - Run benchmark on Ballroom tracks to measure against published international algorithms.
+2. **Option B: Develop Next-Gen Experimental Models (`research/experiments/models/`)**
+   - Create alternative tracking architectures (e.g. Multi-band Onset Weighting, Kalman Filter Phase Tracker, Dual-Band Judge).
+   - Evaluate against synthetic and natural suites using `python -m research.benchmarks.run_benchmark --model <Name> --save-run`.
+   - Use `python -m research.benchmarks.compare_runs` to verify improvement over the 92.0% baseline.
+3. **Option C: Acoustic / Live Track Non-Quantized Ground Truth**
+   - For tracks with human tempo drift (*Bohemian Rhapsody*, live concerts), create a tool or human annotation protocol to mark non-quantized beats.
