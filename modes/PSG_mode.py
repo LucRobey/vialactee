@@ -16,7 +16,7 @@ class PSG_mode(Mode.Mode):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
         self.maxSize: int = max(1, int(self.nb_of_leds / 3))
-        self.dot_phase: float = 0.0
+        self.dot_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.left_color: np.ndarray = np.zeros(3, dtype=np.float64)

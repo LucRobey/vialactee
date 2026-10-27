@@ -23,7 +23,7 @@ class Middle_bar_mode(Mode.Mode):
 
         self.max_size: int = int((self.nb_of_leds + 1) / 2)
         self.size: float = 0.0
-        self.breath_phase: float = 0.0
+        self.breath_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color (ZERO runtime heap allocation)
         self.bar_color: np.ndarray = np.zeros(3, dtype=np.float64)

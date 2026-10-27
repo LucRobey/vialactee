@@ -20,7 +20,7 @@ class Magnetic_ball_mode(Mode.Mode):
         self.ball_size: float = 3.0
         self.friction: float = 0.96
         self.gravity_well: float = float(self.nb_of_leds / 2.0)
-        self.orbit_phase: float = 0.0
+        self.orbit_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color vector (ZERO runtime heap allocation)
         self.ball_color: np.ndarray = np.zeros(3, dtype=np.float64)

@@ -16,7 +16,7 @@ class Synesthesia_mode(Mode.Mode):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
         self.fade_ratio: float = float(infos.get("synesthesia_fade_ratio", 0.20))
         self.brightness_multiplier: float = float(infos.get("synesthesia_brightness", 1.0))
-        self.wave_phase: float = 0.0
+        self.wave_phase: float = 2.0 * float(np.pi) * self.segment_phase_offset
 
         # Pre-compute trigonometric coordinates for the 12 chromatic pitches (C, C#, D...)
         self.angles: np.ndarray = 2.0 * np.pi * np.arange(12, dtype=np.float64) / 12.0

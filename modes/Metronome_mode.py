@@ -53,7 +53,7 @@ class Metronome_mode(Mode.Mode):
         self.brightness_multiplier = float(infos.get("metronome_brightness", infos.get("brightnessMultiplier", 1.0)))
         self.alternate_sub_beats = bool(infos.get("metronome_alternate_sub_beats", infos.get("alternateSubBeats", True)))
         self.accent_color = str(infos.get("metronome_accent_color", infos.get("accentColor", "blue")))
-        self.breath_phase: float = 0.0
+        self.breath_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.base_color: np.ndarray = np.zeros(3, dtype=np.float64)

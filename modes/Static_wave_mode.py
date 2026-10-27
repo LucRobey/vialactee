@@ -18,7 +18,7 @@ class Static_wave_mode(Mode.Mode):
         self.max_size: float = max(1.0, (self.nb_of_leds / 2.0) - 1.0)
         self.real_size: float = self.nb_of_leds / 4.0
         self.size_int: float = float(int(self.real_size + 1))
-        self.ripple_phase: float = 0.0
+        self.ripple_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.inner_color: np.ndarray = np.zeros(3, dtype=np.float64)

@@ -21,9 +21,10 @@ class Bary_rainbow_mode(Mode.Mode):
         else:
             self.middle_index = [mid, mid]
 
-        self.hue_drift: float = 0.0
+        self.hue_drift: float = self.segment_phase_offset
 
         # Pre-allocated scratch arrays (ZERO runtime heap allocation)
+        self.target_rgb: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.int32)
         left_len = self.middle_index[0]
         self.left_hues_base: np.ndarray = np.arange(left_len, dtype=np.float64) / max(1.0, float(left_len))
         self.left_hues: np.ndarray = np.zeros(left_len, dtype=np.float64)
@@ -70,19 +71,21 @@ class Bary_rainbow_mode(Mode.Mode):
         if self.middle_index[0] > 0:
             np.multiply(self.left_hues_base, middle_hue, out=self.left_hues)
             RGB_HSV.fromHSV_toRGB_vectorized(self.left_hues, sat, val, out=self.target_left)
-            self.rgb_list[:self.middle_index[0]] = self.target_left
+            self.target_rgb[:self.middle_index[0]] = self.target_left
 
         # 5. Center LEDs
         self.center_hue_arr[0] = middle_hue
         RGB_HSV.fromHSV_toRGB_vectorized(self.center_hue_arr, sat, val, out=self.center_rgb)
         if self.middle_index[0] < self.nb_of_leds:
-            self.rgb_list[self.middle_index[0]] = self.center_rgb[0]
+            self.target_rgb[self.middle_index[0]] = self.center_rgb[0]
         if self.middle_index[1] < self.nb_of_leds:
-            self.rgb_list[self.middle_index[1]] = self.center_rgb[0]
+            self.target_rgb[self.middle_index[1]] = self.center_rgb[0]
 
         # 6. Vectorize right side
         if self.target_right is not None and self.right_hues is not None and self.right_led_indices_ratio is not None:
             np.multiply(self.right_led_indices_ratio, 0.85 - middle_hue, out=self.right_hues)
             np.add(self.right_hues, middle_hue, out=self.right_hues)
             RGB_HSV.fromHSV_toRGB_vectorized(self.right_hues, sat, val, out=self.target_right)
-            self.rgb_list[self.middle_index[1] + 1:self.nb_of_leds] = self.target_right
+            self.target_rgb[self.middle_index[1] + 1:self.nb_of_leds] = self.target_right
+
+        self.smooth_vectorized(self.alpha(14.0), self.target_rgb)

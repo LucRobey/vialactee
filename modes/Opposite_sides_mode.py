@@ -17,7 +17,7 @@ class Opposite_sides_mode(Mode.Mode):
 
         self.middle_len: int = max(2, int(self.nb_of_leds / 4))
         self.maxSize: int = max(1, int(self.nb_of_leds / 3))
-        self.sway_phase: float = 0.0
+        self.sway_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.bass_color: np.ndarray = np.zeros(3, dtype=np.float64)

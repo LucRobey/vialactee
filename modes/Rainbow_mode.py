@@ -71,7 +71,7 @@ class Rainbow_mode(Mode.Mode):
         self.lut_idx: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.intp)
         lut_hues = np.linspace(0.0, 1.0, 256, endpoint=False)
         self.rainbow_lut: np.ndarray = RGB_HSV.fromHSV_toRGB_vectorized(lut_hues, 1.0, 1.0).astype(np.float64)
-        self.drift_offset: float = 0.0
+        self.drift_offset: float = self.segment_phase_offset
 
         self.low_margins: np.ndarray = (self.led_indices / self.delta_margin).astype(np.int32)
         self.high_margins: np.ndarray = np.clip(self.low_margins + 1, 0, self.nb_of_fft_band - 1)

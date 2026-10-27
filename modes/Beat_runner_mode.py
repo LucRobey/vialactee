@@ -68,7 +68,7 @@ class Beat_runner_mode(Mode.Mode):
         self.base_hue = float(infos.get("beat_runner_base_hue", 0.08))
         self.head_width = float(infos.get("beat_runner_head_width", 1.5))
         self.trail_decay = float(infos.get("beat_runner_trail_decay", 0.22))
-        self.free_phase: float = 0.0
+        self.free_phase: float = 2.0 * self.segment_phase_offset
 
         # Pre-allocated spatial arrays (ZERO runtime heap allocation)
         self.led_indices: np.ndarray = np.arange(self.nb_of_leds, dtype=np.float64)

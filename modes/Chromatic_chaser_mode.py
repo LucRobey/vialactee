@@ -47,7 +47,7 @@ class Chromatic_chaser_mode(Mode.Mode):
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
-        self.position: float = 0.0
+        self.position: float = self.segment_phase_offset * max(0, self.nb_of_leds - 1)
         self.speed: float = float(infos.get("chaser_speed", infos.get("speed", 2.0)))
         self.direction: int = 1
         self.fade_ratio: float = float(infos.get("chaser_fade_ratio", infos.get("fadeRatio", 0.05)))

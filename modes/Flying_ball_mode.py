@@ -17,7 +17,7 @@ class Flying_ball_mode(Mode.Mode):
 
         self.ball_pos: float = float(self.nb_of_leds / 2.0)
         self.ball_vel: float = 0.0
-        self.glide_phase: float = 0.0
+        self.glide_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch arrays (ZERO runtime heap allocation)
         self.indices: np.ndarray = np.arange(self.nb_of_leds, dtype=np.float64)

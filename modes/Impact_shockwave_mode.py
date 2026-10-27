@@ -149,9 +149,9 @@ class Impact_shockwave_mode(Mode.Mode):
         phase_wrapped = (phase < self.prev_phase) and (self.prev_phase > 0.5)
         self.prev_phase = phase
 
-        # 2. Advance wave propagation based on BPM and mood_pace (docs/contracts/mode_contract.md)
+        # 2. Advance wave propagation based on BPM, tension, drop_decay, and mood_pace (docs/contracts/mode_contract.md)
         frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
-        speed = (float(self.half_len) / frames_per_beat) * fps_ratio * (1.0 + 0.15 * tension) * self.mood_pace
+        speed = (float(self.half_len) / frames_per_beat) * fps_ratio * (1.0 + 0.15 * tension + 0.20 * self.drop_decay) * self.mood_pace
         effective_damping = (self.damping / max(0.5, self.mood_trail)) * fps_ratio
 
         for w in range(self.MAX_WAVES):

@@ -17,7 +17,7 @@ class Plasma_fire_mode(Mode.Mode):
 
         self.fade_ratio: float = float(infos.get("fire_fade_ratio", 0.30))
         self.height_multiplier: float = float(infos.get("fire_height_multiplier", 1.20))
-        self.flicker_phase: float = 0.0
+        self.flicker_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch arrays (ZERO runtime heap allocation)
         self.spatial_coords: np.ndarray = np.linspace(0.0, 1.0, max(1, self.nb_of_leds))[:, None]
@@ -34,17 +34,17 @@ class Plasma_fire_mode(Mode.Mode):
         is_silent = bool(ctx.is_silent if ctx is not None else False)
         mood = self.mood_colors
 
-        # 1. Continuous flame height from energy, beat_pulse(), and subtle thermal flicker
+        # 1. Continuous flame height from energy, beat_pulse(), drop_decay, and subtle thermal flicker
         self.flicker_phase = (self.flicker_phase + self.dt * 4.5 * self.mood_pace) % (2.0 * math.pi)
         flicker = 0.0 if is_silent else 0.08 * math.sin(self.flicker_phase)
-        drive = (0.60 * energy + 0.40 * self.beat_pulse() + flicker) * self.mood_pace
+        drive = (0.60 * energy + 0.40 * self.beat_pulse() + 0.20 * self.drop_decay + flicker) * self.mood_pace
         t_scale = self.transition_scale
         fire_height = int(np.clip(drive * self.height_multiplier * self.nb_of_leds * t_scale, 0, self.nb_of_leds))
 
-        # 2. Temperature gradient shifts toward highlight_color with tension and mood_accent
+        # 2. Temperature gradient shifts toward highlight_color with tension, drop_decay, and mood_accent
         m1 = mood[1]
         hi = self.highlight_color
-        tip_warmth = min(1.0, 0.55 * tension + self.mood_accent)
+        tip_warmth = min(1.0, 0.55 * tension + 0.20 * self.drop_decay + self.mood_accent)
         for c in range(3):
             self.tip_color[c] = (1.0 - tip_warmth) * float(m1[c]) + tip_warmth * float(hi[c])
 

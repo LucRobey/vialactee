@@ -18,7 +18,7 @@ class Power_bar_mode(Mode.Mode):
         self.power_height: float = 0.0
         self.white_dot_height: float = 0.0
         self.white_speed: float = float(self.nb_of_leds) / 25.0
-        self.flutter_phase: float = 0.0
+        self.flutter_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch arrays (ZERO runtime heap allocation)
         self.spatial_coords: np.ndarray = np.linspace(0.0, 1.0, max(1, self.nb_of_leds))[:, None]
@@ -37,10 +37,10 @@ class Power_bar_mode(Mode.Mode):
         is_silent = bool(ctx.is_silent if ctx is not None else False)
         mood = self.mood_colors
 
-        # 1. Drive height with energy, beat_pulse(), and subtle VU flutter when beat is lost
+        # 1. Drive height with energy, beat_pulse(), drop_decay, and subtle VU flutter when beat is lost
         self.flutter_phase = (self.flutter_phase + self.dt * 3.2 * self.mood_pace) % (2.0 * math.pi)
         flutter = 0.0 if is_silent else (1.0 - self.rhythm_lock) * 0.08 * math.sin(self.flutter_phase)
-        drive = float(np.clip((0.60 * energy + 0.40 * self.beat_pulse() + flutter) * self.mood_pace, 0.0, 1.0))
+        drive = float(np.clip((0.60 * energy + 0.40 * self.beat_pulse() + 0.20 * self.drop_decay + flutter) * self.mood_pace, 0.0, 1.0))
         target_height = drive * float(self.nb_of_leds - 1) * self.transition_scale
         self.power_height = 0.5 * (self.power_height + target_height)
         self.power_height = float(np.clip(self.power_height, 0.0, self.nb_of_leds - 1))

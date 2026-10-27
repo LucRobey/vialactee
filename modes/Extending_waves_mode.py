@@ -30,7 +30,7 @@ class Extending_waves_mode(Mode.Mode):
         self.time_since_wave: float = 1.0
         self.prev_phase: float = 0.0
         self.wave_width: float = 2.2
-        self.breath_phase: float = 0.0
+        self.breath_phase: float = 6.2831853 * self.segment_phase_offset
 
         # Coordinate and color buffers
         self.half_coords: np.ndarray = np.arange(self.half_len, dtype=np.float32)

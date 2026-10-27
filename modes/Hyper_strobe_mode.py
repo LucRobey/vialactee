@@ -59,7 +59,7 @@ class Hyper_strobe_mode(Mode.Mode):
         self.flux_threshold = float(infos.get("strobe_flux_threshold", infos.get("fluxThreshold", 0.7)))
         self.decay_ratio = float(infos.get("strobe_decay_ratio", infos.get("decayRatio", 0.3)))
         self.listen_band = int(infos.get("strobe_listen_band", infos.get("listenBand", 1)))
-        self.pulse_phase: float = 0.0
+        self.pulse_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.strobe_color: np.ndarray = np.zeros(3, dtype=np.float64)

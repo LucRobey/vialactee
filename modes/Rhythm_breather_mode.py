@@ -70,8 +70,8 @@ class Rhythm_breather_mode(Mode.Mode):
         self.drift_speed = float(infos.get("rhythm_breather_drift_speed", 0.01))
 
         # Internal state
-        self.current_hue_offset: float = 0.0
-        self.breath_angle: float = 0.0
+        self.current_hue_offset: float = self.segment_phase_offset
+        self.breath_angle: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated spatial arrays (ZERO runtime heap allocation)
         self.spatial_coords: np.ndarray = np.linspace(0.0, 1.0, self.nb_of_leds, dtype=np.float64)
@@ -137,7 +137,7 @@ class Rhythm_breather_mode(Mode.Mode):
                 np.add(self.grad_colors[:, c], warmth * float(hi[c]), out=self.grad_colors[:, c])
 
         # 4. Vectorized Intensity Synthesis (Zero Allocation)
-        final_val = min(1.0, effective_brightness + flash_punch)
+        final_val = min(1.0, effective_brightness + flash_punch + 0.20 * self.drop_decay)
         np.multiply(self.grad_colors, final_val, out=self.target_rgb)
 
         # 5. Vectorized smooth segment write
