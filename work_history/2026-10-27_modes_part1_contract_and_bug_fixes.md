@@ -5,7 +5,7 @@
 > **Agent / Model:** Antigravity  
 > **Primary Goal:** Execute Part 1 of the Modes Audit & Contract Alignment across `modes/`, `core/Segment.py`, and `transitions/mode_dna.py`: resolve systemic findings `S1`–`S7` (cooperative transition handshake, automatic `transition_scale` attenuation, `MODE_DNA` spatial roles, per-segment phase staggering, additive `drop_decay`, public `asserved_fft_band`, chroma floor subtraction, and full-strip Silence Law decay) and fix 7 concrete mode rendering bugs.  
 > **Status:** COMPLETED  
-> **Commits:** `9f39cfa`, `fe43d92`, `b63f83d`, `33699d9`, `056ebbe`  
+> **Commits:** `9f39cfa`, `fe43d92`, `b63f83d`, `33699d9`, `430a3fa`, `ed707fc`  
 > **Skills Used:** `vialactee-mode-creator`, `vialactee-project`  
 > **Skill Friction:** None
 
@@ -14,36 +14,36 @@
 ## 1. Context & Motivation
 
 * The comprehensive audit of all 21 visual modes (`modes/`), `modes/Mode.py`, `core/Segment.py`, and `transitions/mode_dna.py` against [`docs/contracts/mode_contract.md`](../docs/contracts/mode_contract.md), [`docs/contracts/transition_contract.md`](../docs/contracts/transition_contract.md), [`docs/contracts/mood_contract.md`](../docs/contracts/mood_contract.md), and [`docs/contracts/music_analyzer_contract.md`](../docs/contracts/music_analyzer_contract.md) surfaced 7 systemic issues (`S1`–`S7`) and 7 concrete per-mode rendering bugs:
-  * **S1 (`transition_scale` Adoption & Cooperative Handshake)**: Only 3 of 21 modes multiplied output by `self.transition_scale`, while `Segment.py` was missing `transition_mode_handshake`, `dual_rgb_list.fill(0)`, `np.copyto(self.rgb_list, self.dual_rgb_list)` on transition completion, and `on_transition_exit` / `on_transition_enter` / `on_transition_reset` lifecycle calls.
-  * **S2 (Multi-Segment Phase Staggering)**: 17 of 21 modes initialized phase/drift accumulators to `0.0` instead of seeding with `self.segment_phase_offset`, causing all 24 chandelier segments to pulse in rigid lockstep.
-  * **S3 (`MODE_DNA` Spatial Role Mismatch)**: `transitions/mode_dna.py` misclassified 8 modes (`Static Wave`, `PSG`, `Middle Bar`, `Coloured Middle Wave`, `Extending Waves`, `Opposite Sides`, `Chromatic Chaser`, `Beat Runner`) relative to [`docs/reference/modes_catalog.md`](../docs/reference/modes_catalog.md).
-  * **S4 (`drop_decay` Underutilization)**: Only 2 of 21 modes read `self.drop_decay`, making the 5-second post-drop sustain indistinguishable from `GROOVE`.
+  * **S1 (`MODE_DNA` Spatial Role Mismatch)**: `transitions/mode_dna.py` set `"spatial_role": "both"` on all 21 modes instead of matching the canonical orientations in [`docs/reference/modes_catalog.md`](../docs/reference/modes_catalog.md) (`"vertical"`: `Plasma Fire`, `Power Bar`; `"horizontal"`: `Middle Bar`, `PSG`, `Opposite Sides`, `Flying Ball`, `Coloured Middle Wave`, `Static Wave`, `Extending Waves`, `Magnetic Ball`; `"both"`: all 11 remaining modes).
+  * **S2 (`transition_scale` Adoption & Cooperative Handshake)**: `Mode._blend_into()` did not automatically apply `self.transition_scale` during cooperative transitions, while `Segment.py` was missing `transition_mode_handshake`, `dual_rgb_list.fill(0)`, `np.copyto(self.rgb_list, self.dual_rgb_list)` on transition completion, and `on_transition_exit` / `on_transition_enter` / `on_transition_reset` lifecycle calls.
+  * **S3 (Multi-Segment Phase Staggering)**: 17 of 21 modes initialized phase/drift accumulators to `0.0` instead of seeding with `self.segment_phase_offset`, causing all chandelier segments to oscillate in lockstep.
+  * **S4 (`alpha(rate_hz)` & `drop_decay` Underutilization)**: Modes did not use `self.drop_decay` for post-drop envelope sustain, and `Bary_rainbow_mode` wrote directly to `self.rgb_list` without `self.alpha()` temporal smoothing.
   * **S5 (Private `_delayed_asserved_fft_band` & Unfloored Chroma)**: 4 modes accessed private `_delayed_asserved_fft_band` instead of public `asserved_fft_band`, and `Synesthesia_mode` did not subtract the 85% chroma noise floor before normalizing.
-  * **S6 (Silence Law Violations)**: 14 modes failed to fade their entire strip to black under sustained `ctx.is_silent = True` (leaving frozen outer bars, bright center pixels, or un-faded background regions), and `Mode.beat_pulse()` leaked up to `0.15` when `beat_trust > 0` during brief silence cuts.
-  * **S7 (Unused `band_proportion` & `beat_tag`)**: Neither 🟢 HIGH-trust signal was consumed by any mode.
+  * **S6 (Silence Law Violations)**: Modes failed to fade their entire strip to black under sustained `ctx.is_silent = True` (leaving frozen outer bars, bright center pixels, or un-faded background regions), and `Mode.beat_pulse()` leaked non-zero values when `beat_trust > 0` during brief silence cuts.
+  * **S7 (Unused `band_proportion` & `beat_tag`)**: Neither signal was consumed by any mode.
   * **7 Mode Rendering Bugs**:
     1. `Power_bar_mode`: Unfaded gap between contracting bar (`p_int + 1`) and floating peak-hold dot (`dot_idx - 1`), plus `white_dot_height` bouncing back to `1.0` when `power_height == 0.0`.
     2. `Static_wave_mode`: Unfaded gap between shrinking inner bar and floating outer caps, plus frame-rate-dependent `-0.2` cap decay.
-    3. `Chromatic_chaser_mode`: Skipped dark LEDs when `effective_speed > 1.0` and head dimmed on the frame it was painted.
+    3. `Chromatic_chaser_mode`: Skipped dark LEDs when `effective_speed > 1.0`, dimmed head on the frame it was painted, and lacked wrap direction/multi-lap guards.
     4. `Beat_runner_mode`: Double-frequency pendulum bounce (`cos(2*pi*phase)` completing a full round-trip per beat instead of 1 sweep per beat via `beat_count & 1`) and sawtooth phase-wrap reversal when blending `phase` and `free_phase`.
-    5. `Shining_stars_mode`: Identical star offset repeated across every `sub_segment_size` window via slice step `self.rgb_list[random_pos::step]`, plus a 1,100-iteration import-time loop.
+    5. `Shining_stars_mode`: Identical star offset repeated across every `sub_segment_size` window via slice step `self.rgb_list[random_pos::step]`, missing `transition_scale` on direct pixel writes, `apply_settings` returning `None`, and a 1,100-iteration import-time loop.
     6. `Coloured_middle_wave_mode` & `Rhythm_breather_mode`: Legacy `0.5` pre-scale + bitshift view hack in `Coloured_middle_wave_mode`; dead arrays, double `rhythm_lock` gating, and 2-slot palette truncation (`mood[0]..mood[1]` only) in `Rhythm_breather_mode`.
 
 ---
 
 ## 2. Changes Made
 
-### Step 1 — Cooperative Transition Handshake, Automatic `transition_scale`, & `MODE_DNA` Spatial Roles (`S1`, `S3`)
+### Step 1 — Cooperative Transition Handshake, Automatic `transition_scale`, & `MODE_DNA` Spatial Roles (`S1`, `S2`)
 * **[MODIFY]** [`modes/Mode.py`](../modes/Mode.py):
   * Added `on_transition_reset()` to restore `_exit_progress = 0.0` and `_enter_progress = 1.0`.
   * Applied `self.transition_scale` automatically inside `_blend_into()` whenever `(self._exit_progress > 0.0 or self._enter_progress < 1.0)`, keeping steady-state blending bit-identical while giving all 21 modes cooperative transition scaling at the base-class level.
   * Added `if silent: return 0.0` at the top of `Mode.beat_pulse()` so silence cuts never leak flywheel pulses.
 * **[MODIFY]** [`core/Segment.py`](../core/Segment.py):
-  * Restored cooperative handshake lifecycle (`self.transition_mode_handshake`, `self.dual_rgb_list.fill(0)` on transition start, `np.copyto(self.rgb_list, self.dual_rgb_list)` on completion, and `on_transition_exit` / `on_transition_enter` / `on_transition_reset` calls).
-* **[MODIFY]** [`modes/Flying_ball_mode.py`](../modes/Flying_ball_mode.py), [`modes/Extending_waves_mode.py`](../modes/Extending_waves_mode.py), [`modes/Impact_shockwave_mode.py`](../modes/Impact_shockwave_mode.py):
-  * Removed redundant manual amplitude `* self.transition_scale` multiplications to prevent double attenuation (`transition_scale ** 2`).
+  * Restored cooperative handshake lifecycle (`self.transition_mode_handshake`, `self.dual_rgb_list.fill(0)` on transition start, `np.copyto(self.rgb_list, self.dual_rgb_list)` on completion, and `on_transition_exit` / `on_transition_enter` / `on_transition_reset` calls, including resetting `activ_mode` on forced transition preemption).
+* **[MODIFY]** [`modes/Flying_ball_mode.py`](../modes/Flying_ball_mode.py), [`modes/Extending_waves_mode.py`](../modes/Extending_waves_mode.py), [`modes/Impact_shockwave_mode.py`](../modes/Impact_shockwave_mode.py), [`modes/Shining_stars_mode.py`](../modes/Shining_stars_mode.py):
+  * Removed redundant manual amplitude `* self.transition_scale` multiplications to prevent double attenuation (`transition_scale ** 2`), and added `transition_scale` to `Shining_stars_mode`'s direct pixel writes.
 * **[MODIFY]** [`transitions/mode_dna.py`](../transitions/mode_dna.py):
-  * Aligned `"spatial_role"` for all 21 modes with [`docs/reference/modes_catalog.md`](../docs/reference/modes_catalog.md) (`"vertical"`: `Power Bar`, `Plasma Fire`; `"horizontal"`: `Beat Runner`, `Chromatic Chaser`, `Flying Ball`, `Magnetic Ball`; `"both"`: all 15 remaining modes).
+  * Aligned `"spatial_role"` for all 21 modes with [`docs/reference/modes_catalog.md`](../docs/reference/modes_catalog.md) (`"vertical"`: `Power Bar`, `Plasma Fire`; `"horizontal"`: `Middle Bar`, `PSG`, `Opposite Sides`, `Flying Ball`, `Coloured Middle Wave`, `Static Wave`, `Extending Waves`, `Magnetic Ball`; `"both"`: all 11 remaining modes).
 
 ### Step 2 — Per-Segment Phase Staggering, `drop_decay` Sustain, & `Bary_rainbow_mode` Smoothing (`S2`, `S4`)
 * **[MODIFY]** Seeded internal phase/drift accumulators with `self.segment_phase_offset` across 17 modes: [`Rainbow_mode.py`](../modes/Rainbow_mode.py), [`Bary_rainbow_mode.py`](../modes/Bary_rainbow_mode.py), [`Rhythm_breather_mode.py`](../modes/Rhythm_breather_mode.py), [`Beat_runner_mode.py`](../modes/Beat_runner_mode.py), [`Middle_bar_mode.py`](../modes/Middle_bar_mode.py), [`PSG_mode.py`](../modes/PSG_mode.py), [`Opposite_sides_mode.py`](../modes/Opposite_sides_mode.py), [`Plasma_fire_mode.py`](../modes/Plasma_fire_mode.py), [`Hyper_strobe_mode.py`](../modes/Hyper_strobe_mode.py), [`Synesthesia_mode.py`](../modes/Synesthesia_mode.py), [`Metronome_mode.py`](../modes/Metronome_mode.py), [`Flying_ball_mode.py`](../modes/Flying_ball_mode.py), [`Static_wave_mode.py`](../modes/Static_wave_mode.py), [`Power_bar_mode.py`](../modes/Power_bar_mode.py), [`Extending_waves_mode.py`](../modes/Extending_waves_mode.py), [`Magnetic_ball_mode.py`](../modes/Magnetic_ball_mode.py), and [`Chromatic_chaser_mode.py`](../modes/Chromatic_chaser_mode.py).
