@@ -36,17 +36,17 @@ class Static_wave_mode(Mode.Mode):
 
         # 1. Continuous pulse envelope from beat_pulse() + bass spectrum + subtle acoustic ripple
         self.ripple_phase = (self.ripple_phase + self.dt * 2.5 * self.mood_pace) % (2.0 * math.pi)
-        ripple = 0.0 if is_silent else (1.0 - self.rhythm_lock) * 0.10 * math.sin(self.ripple_phase)
-        pulse_power = 0.40 * energy + 0.60 * self.beat_pulse(1.8) + ripple
-
-        bands = getattr(self.listener, "_delayed_asserved_fft_band", None)
-        if bands is None or len(bands) < 2:
-            bands = getattr(self.listener, "asserved_fft_band", None)
-        if bands is not None and len(bands) >= 2:
-            bass_val = float(bands[0] + bands[1]) * 0.5
-            combined_drive = float(np.clip((0.55 * pulse_power + 0.45 * bass_val) * self.mood_pace, 0.0, 1.0))
+        if is_silent:
+            combined_drive = 0.0
         else:
-            combined_drive = float(np.clip(pulse_power * self.mood_pace, 0.0, 1.0))
+            ripple = (1.0 - self.rhythm_lock) * 0.10 * math.sin(self.ripple_phase)
+            pulse_power = 0.40 * energy + 0.60 * self.beat_pulse(1.8) + ripple
+            bands = getattr(self.listener, "asserved_fft_band", None)
+            if bands is not None and len(bands) >= 2:
+                bass_val = float(bands[0] + bands[1]) * 0.5
+                combined_drive = float(np.clip((0.55 * pulse_power + 0.45 * bass_val) * self.mood_pace, 0.0, 1.0))
+            else:
+                combined_drive = float(np.clip(pulse_power * self.mood_pace, 0.0, 1.0))
 
         # 2. Tighten boundaries smoothly with ctx.tension
         tightness = max(0.25, 1.0 - 0.35 * tension)
@@ -59,6 +59,10 @@ class Static_wave_mode(Mode.Mode):
             self.size_int = float(int(self.real_size + 1))
         if self.real_size < self.size_int - 1.0:
             self.size_int = max(0.0, self.size_int - 0.2)
+
+        if is_silent and self.real_size < 0.5 and self.size_int < 0.5:
+            self.fade_to_black_segment_vectorized(0.40, 0, self.nb_of_leds - 1)
+            return
 
         current_len = int(np.clip(self.real_size, 0, self.max_size))
         start_idx = max(0, self.middle - current_len)

@@ -82,7 +82,7 @@ class Beat_runner_mode(Mode.Mode):
         self.beam_color: np.ndarray = np.zeros(3, dtype=np.float64)
 
     def run(self) -> None:
-        if self.nb_of_leds <= 1:
+        if self.nb_of_leds <= 0:
             return
 
         # 1. Decay previous frame tails for smooth motion blur (scaled by mood_trail)
@@ -91,6 +91,10 @@ class Beat_runner_mode(Mode.Mode):
 
         # 2. Read rhythmic state without scene branching
         ctx = getattr(self.listener, "context", None)
+        if ctx is not None and ctx.is_silent:
+            return
+        if self.nb_of_leds <= 1:
+            return
         phase = float(getattr(self.listener, "beat_phase", 0.0))
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
         power = float(ctx.power if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))

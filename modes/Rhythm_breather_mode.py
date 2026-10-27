@@ -97,6 +97,9 @@ class Rhythm_breather_mode(Mode.Mode):
         is_locked = bool(ctx.is_locked if ctx is not None else (lock >= 0.5))
         is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
         is_silent = bool(ctx.is_silent if ctx is not None else False)
+        if is_silent:
+            self.fade_to_black_segment_vectorized(0.35, 0, self.nb_of_leds - 1)
+            return
 
         # 1. Confidence-blended beat_pulse() + continuous breath wave when beat_phase is stalled
         self.breath_angle = (self.breath_angle + self.dt * 2.2 * self.mood_pace) % (2.0 * math.pi)

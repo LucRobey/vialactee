@@ -89,16 +89,18 @@ class Rainbow_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
+        if ctx is not None and ctx.is_silent:
+            self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
+            return
+
         dt = self.dt
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.5))
 
-        delayed_bands = getattr(self.listener, "_delayed_asserved_fft_band", None)
-        if delayed_bands is None or len(delayed_bands) < self.nb_of_fft_band:
-            delayed_bands = getattr(self.listener, "asserved_fft_band", None)
-        if delayed_bands is None or len(delayed_bands) < self.nb_of_fft_band:
+        bands = getattr(self.listener, "asserved_fft_band", None)
+        if bands is None or len(bands) < self.nb_of_fft_band:
             self.fft_bands_array.fill(0.0)
         else:
-            self.fft_bands_array[:] = delayed_bands[:self.nb_of_fft_band]
+            self.fft_bands_array[:] = bands[:self.nb_of_fft_band]
 
         b_low = self.fft_bands_array[self.low_margins]
         b_high = self.fft_bands_array[self.high_margins]

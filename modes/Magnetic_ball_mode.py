@@ -41,7 +41,7 @@ class Magnetic_ball_mode(Mode.Mode):
         lock = self.rhythm_lock
 
         # 1. Rhythmic kicks on verified beats + continuous orbital force when flywheel is lost
-        if is_real or self.drop_hit:
+        if (not is_silent) and (is_real or self.drop_hit):
             kick_dir = 1.0 if (self.ball_pos <= self.gravity_well) else -1.0
             kick_force = energy * (self.nb_of_leds * 0.18) * self.mood_pace * t_scale
             self.ball_speed += kick_dir * kick_force
@@ -67,6 +67,11 @@ class Magnetic_ball_mode(Mode.Mode):
         elif self.ball_pos >= self.nb_of_leds:
             self.ball_pos = float(self.nb_of_leds - 1.1)
             self.ball_speed = -abs(self.ball_speed) * 0.85
+
+        trail_fade = float(np.clip(0.35 / max(0.5, self.mood_trail), 0.08, 0.75))
+        if is_silent:
+            self.fade_to_black_segment_vectorized(trail_fade, 0, self.nb_of_leds - 1)
+            return
 
         # 3. Continuous color blend from mood_colors + mood_accent warmth
         m0, m2 = mood[0], mood[2]

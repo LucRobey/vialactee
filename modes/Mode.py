@@ -391,11 +391,13 @@ class Mode:
             confidence = float(getattr(listener, "beat_confidence", 0.0))
             tension = 0.0
             silent = False
+        if silent:
+            return 0.0
         confidence = max(0.0, min(1.0, confidence))
         effective_sharpness = sharpness * self.mood_sharpness + 1.2 * tension
         rhythmic = max(0.0, 1.0 - phase) ** effective_sharpness
         breath = 0.5 * (1.0 + math.sin(2.0 * math.pi * phase - 0.5 * math.pi))
-        acoustic = 0.0 if silent else energy * (0.6 + 0.4 * breath)
+        acoustic = energy * (0.6 + 0.4 * breath)
         return max(0.0, min(1.0, confidence * rhythmic + (1.0 - confidence) * acoustic))
 
 

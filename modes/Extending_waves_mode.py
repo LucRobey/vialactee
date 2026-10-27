@@ -53,7 +53,7 @@ class Extending_waves_mode(Mode.Mode):
 
         tension = float(ctx.tension if ctx is not None else 0.0)
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
-        is_silent = bool(ctx.is_silent if ctx is not None else False) and (energy <= 0.05)
+        is_silent = bool(ctx.is_silent if ctx is not None else False)
         lock = self.rhythm_lock
         phase = float(getattr(self.listener, "beat_phase", 0.0))
         phase_wrapped = (phase < self.prev_phase) and (self.prev_phase > 0.5) and (not is_silent)
@@ -92,7 +92,8 @@ class Extending_waves_mode(Mode.Mode):
         min_wave_interval = 0.35 * (60.0 / bpm)
         seed_wave = self._enter_progress < 0.25 and not bool(np.any(self.wave_active))
         should_trigger = (
-            ((is_tick and self.time_since_wave >= min_wave_interval) or seed_wave)
+            (not is_silent)
+            and ((is_tick and self.time_since_wave >= min_wave_interval) or seed_wave)
             and self._exit_progress <= 0.40
         )
 

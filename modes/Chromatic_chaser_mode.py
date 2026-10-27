@@ -61,6 +61,11 @@ class Chromatic_chaser_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
+        effective_fade = float(np.clip(self.fade_ratio / max(0.5, self.mood_trail), 0.005, 0.60))
+        if ctx is not None and ctx.is_silent:
+            self.fade_to_black_segment_vectorized(max(0.25, effective_fade), 0, self.nb_of_leds - 1)
+            return
+
         fps_ratio = self.fps_ratio
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
         tension = float(ctx.tension if ctx is not None else 0.0)

@@ -32,10 +32,11 @@ class Proportion_rainbow_mode(Mode.Mode):
         self.interp_band: np.ndarray = np.zeros(count, dtype=np.float64)
         self.dhues: np.ndarray = np.zeros(count, dtype=np.float64)
         self.cum_dhues: np.ndarray = np.zeros(count, dtype=np.float64)
-        self.hues: np.ndarray = np.zeros(count, dtype=np.float64)
-        self.target_rgb: np.ndarray = np.zeros((count, 3), dtype=np.int32)
-        self.last_pixel_rgb: np.ndarray = np.zeros((1, 3), dtype=np.int32)
-        self.last_hue_arr: np.ndarray = np.array([self.maximum_hue], dtype=np.float64)
+        self.hues_full: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
+        if self.nb_of_leds > 0:
+            self.hues_full[-1] = self.maximum_hue
+        self.hues: np.ndarray = self.hues_full[:max(0, self.nb_of_leds - 1)]
+        self.target_rgb: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.int32)
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -56,32 +57,30 @@ class Proportion_rainbow_mode(Mode.Mode):
         sat = float(np.clip(0.68 + 0.32 * energy - 0.25 * self.mood_accent, 0.40, 1.0))
 
         # 3. FFT Band Proportions
-        delayed_bands = getattr(self.listener, "_delayed_asserved_fft_band", None)
-        if delayed_bands is None or len(delayed_bands) < self.nb_bands:
-            delayed_bands = getattr(self.listener, "asserved_fft_band", None)
-        if delayed_bands is None or len(delayed_bands) < self.nb_bands:
+        bands = getattr(self.listener, "asserved_fft_band", None)
+        if bands is None or len(bands) < self.nb_bands:
             self.fft_bands_array.fill(0.0)
         else:
-            self.fft_bands_array[:] = delayed_bands[:self.nb_bands]
+            self.fft_bands_array[:] = bands[:self.nb_bands]
 
-        sum_dhue = ((self.N + 1) / 2.0) * (self.fft_bands_array[0] + self.fft_bands_array[-1]) + self.N * float(np.sum(self.fft_bands_array[1:-1]))
-        if sum_dhue < 1e-4:
-            sum_dhue = 1.0
+        if self.nb_of_leds > 1:
+            sum_dhue = ((self.N + 1) / 2.0) * (self.fft_bands_array[0] + self.fft_bands_array[-1]) + self.N * float(np.sum(self.fft_bands_array[1:-1]))
+            if sum_dhue < 1e-4:
+                sum_dhue = 1.0
 
-        b_low = self.fft_bands_array[self.low_margins]
-        b_high = self.fft_bands_array[self.high_margins]
-        np.multiply(self.position_coefs, b_low, out=self.interp_band)
-        self.interp_band += (1.0 - self.position_coefs) * b_high
-        np.multiply(self.interp_band, (self.maximum_hue - self.minimum_hue) / sum_dhue, out=self.dhues)
+            b_low = self.fft_bands_array[self.low_margins]
+            b_high = self.fft_bands_array[self.high_margins]
+            np.multiply(self.position_coefs, b_low, out=self.interp_band)
+            self.interp_band += (1.0 - self.position_coefs) * b_high
+            np.multiply(self.interp_band, (self.maximum_hue - self.minimum_hue) / sum_dhue, out=self.dhues)
 
-        # 4. Zero-allocation cumulative sum
-        self.cum_dhues[0] = 0.0
-        if len(self.dhues) > 1:
-            np.cumsum(self.dhues[:-1], out=self.cum_dhues[1:])
+            # 4. Zero-allocation cumulative sum
+            self.cum_dhues[0] = 0.0
+            if len(self.dhues) > 1:
+                np.cumsum(self.dhues[:-1], out=self.cum_dhues[1:])
 
-        np.add(self.minimum_hue, self.cum_dhues, out=self.hues)
-        RGB_HSV.fromHSV_toRGB_vectorized(self.hues, sat, val, out=self.target_rgb)
+            np.add(self.minimum_hue, self.cum_dhues, out=self.hues)
 
-        self.smooth_segment_vectorized(0.5, 0, self.nb_of_leds - 2, self.target_rgb)
-        RGB_HSV.fromHSV_toRGB_vectorized(self.last_hue_arr, sat, val, out=self.last_pixel_rgb)
-        self.smooth_segment_vectorized(0.5, self.nb_of_leds - 1, self.nb_of_leds - 1, self.last_pixel_rgb[0])
+        self.hues_full[-1] = self.maximum_hue
+        RGB_HSV.fromHSV_toRGB_vectorized(self.hues_full, sat, val, out=self.target_rgb)
+        self.smooth_vectorized(0.5, self.target_rgb)

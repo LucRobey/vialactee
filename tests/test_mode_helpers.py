@@ -34,6 +34,7 @@ class _ModeTestCase(unittest.TestCase):
         self.addCleanup(BaseMode.reset_mood_colors)
         self.listener = MockListener()
         self.engine = MusicalContextEngine(self.listener)
+        self.engine._is_silent = False
         self.listener.context = self.engine
 
     def make(self, cls=BaseMode, n=40, segment="test_segment"):

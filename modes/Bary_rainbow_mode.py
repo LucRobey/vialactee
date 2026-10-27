@@ -25,23 +25,18 @@ class Bary_rainbow_mode(Mode.Mode):
 
         # Pre-allocated scratch arrays (ZERO runtime heap allocation)
         self.target_rgb: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.int32)
+        self.hues: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
         left_len = self.middle_index[0]
         self.left_hues_base: np.ndarray = np.arange(left_len, dtype=np.float64) / max(1.0, float(left_len))
-        self.left_hues: np.ndarray = np.zeros(left_len, dtype=np.float64)
-        self.target_left: np.ndarray = np.zeros((left_len, 3), dtype=np.int32)
+        self.left_hues: np.ndarray = self.hues[:left_len]
 
         right_len = max(0, self.nb_of_leds - (self.middle_index[1] + 1))
         if right_len > 0:
             self.right_led_indices_ratio: Optional[np.ndarray] = np.arange(1, right_len + 1, dtype=np.float64) / max(1.0, float(right_len))
-            self.right_hues: Optional[np.ndarray] = np.zeros(right_len, dtype=np.float64)
-            self.target_right: Optional[np.ndarray] = np.zeros((right_len, 3), dtype=np.int32)
+            self.right_hues: Optional[np.ndarray] = self.hues[self.middle_index[1] + 1:self.nb_of_leds]
         else:
             self.right_led_indices_ratio = None
             self.right_hues = None
-            self.target_right = None
-
-        self.center_rgb: np.ndarray = np.zeros((1, 3), dtype=np.int32)
-        self.center_hue_arr: np.ndarray = np.zeros(1, dtype=np.float64)
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -67,25 +62,16 @@ class Bary_rainbow_mode(Mode.Mode):
         val = float(np.clip(0.20 + 0.80 * drive, 0.0, 1.0))
         sat = float(np.clip(0.55 + 0.45 * energy - 0.20 * self.mood_accent, 0.35, 1.0))
 
-        # 4. Vectorize left side
+        # 4. Vectorize left, center, and right hues in a single contiguous buffer
         if self.middle_index[0] > 0:
             np.multiply(self.left_hues_base, middle_hue, out=self.left_hues)
-            RGB_HSV.fromHSV_toRGB_vectorized(self.left_hues, sat, val, out=self.target_left)
-            self.target_rgb[:self.middle_index[0]] = self.target_left
-
-        # 5. Center LEDs
-        self.center_hue_arr[0] = middle_hue
-        RGB_HSV.fromHSV_toRGB_vectorized(self.center_hue_arr, sat, val, out=self.center_rgb)
         if self.middle_index[0] < self.nb_of_leds:
-            self.target_rgb[self.middle_index[0]] = self.center_rgb[0]
+            self.hues[self.middle_index[0]] = middle_hue
         if self.middle_index[1] < self.nb_of_leds:
-            self.target_rgb[self.middle_index[1]] = self.center_rgb[0]
-
-        # 6. Vectorize right side
-        if self.target_right is not None and self.right_hues is not None and self.right_led_indices_ratio is not None:
+            self.hues[self.middle_index[1]] = middle_hue
+        if self.right_hues is not None and self.right_led_indices_ratio is not None:
             np.multiply(self.right_led_indices_ratio, 0.85 - middle_hue, out=self.right_hues)
             np.add(self.right_hues, middle_hue, out=self.right_hues)
-            RGB_HSV.fromHSV_toRGB_vectorized(self.right_hues, sat, val, out=self.target_right)
-            self.target_rgb[self.middle_index[1] + 1:self.nb_of_leds] = self.target_right
 
+        RGB_HSV.fromHSV_toRGB_vectorized(self.hues, sat, val, out=self.target_rgb)
         self.smooth_vectorized(self.alpha(14.0), self.target_rgb)

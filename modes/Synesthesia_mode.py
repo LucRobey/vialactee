@@ -24,6 +24,7 @@ class Synesthesia_mode(Mode.Mode):
         self.y_components: np.ndarray = np.sin(self.angles)
 
         # Pre-allocated scratch buffers (ZERO runtime heap allocation)
+        self.clean_chroma: np.ndarray = np.zeros(12, dtype=np.float64)
         self.hue_arr: np.ndarray = np.zeros(1, dtype=np.float64)
         self.sat_arr: np.ndarray = np.zeros(1, dtype=np.float64)
         self.val_arr: np.ndarray = np.zeros(1, dtype=np.float64)
@@ -53,11 +54,18 @@ class Synesthesia_mode(Mode.Mode):
         pulse = self.beat_pulse(2.0)
         brightness = float(np.clip((0.55 * energy + 0.45 * pulse) * self.brightness_multiplier, 0.0, 1.0))
 
-        total_chroma = float(np.sum(chroma)) if (chroma is not None and len(chroma) >= 12) else 0.0
+        if chroma is not None and len(chroma) >= 12:
+            self.clean_chroma[:] = chroma[:12]
+            floor = 0.85 * float(np.min(self.clean_chroma))
+            np.subtract(self.clean_chroma, floor, out=self.clean_chroma)
+            np.maximum(self.clean_chroma, 0.0, out=self.clean_chroma)
+            total_chroma = float(np.sum(self.clean_chroma))
+        else:
+            total_chroma = 0.0
 
         if total_chroma > 0.001:
-            x = float(np.sum(chroma * self.x_components))
-            y = float(np.sum(chroma * self.y_components))
+            x = float(np.dot(self.clean_chroma, self.x_components))
+            y = float(np.dot(self.clean_chroma, self.y_components))
             hue_angle = np.arctan2(y, x)
             hue = (hue_angle / (2.0 * np.pi)) % 1.0
             magnitude = float(np.sqrt(x ** 2 + y ** 2)) / total_chroma

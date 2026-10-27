@@ -56,6 +56,10 @@ class Coloured_middle_wave_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
+        if ctx is not None and ctx.is_silent:
+            self.fade_to_black_segment_vectorized(0.30, 0, self.nb_of_leds - 1)
+            return
+
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
         tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
         mood = self.mood_colors
@@ -75,9 +79,7 @@ class Coloured_middle_wave_mode(Mode.Mode):
         self.upper_idxs.clip(0, self.nb_bands - 1, out=self.upper_idxs)
         np.subtract(self.float_band_idxs, self.lower_idxs, out=self.blend_factors)
 
-        bands = getattr(self.listener, "_delayed_asserved_fft_band", None)
-        if bands is None or len(bands) < self.nb_bands:
-            bands = getattr(self.listener, "asserved_fft_band", None)
+        bands = getattr(self.listener, "asserved_fft_band", None)
         if bands is None or len(bands) < self.nb_bands:
             bands = self._fallback_bands
 

@@ -177,7 +177,8 @@ class Impact_shockwave_mode(Mode.Mode):
         )
         verified_tick = drop_hit or (is_beat and (is_real or is_locked or self.enable_ghost_ripples)) or (phase_wrapped and (is_locked or self.enable_ghost_ripples))
         should_trigger = (
-            (verified_tick or acoustic_pulse)
+            (not is_silent)
+            and (verified_tick or acoustic_pulse)
             and (self.time_since_last_wave >= min_wave_interval)
         )
 

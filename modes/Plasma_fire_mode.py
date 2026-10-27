@@ -36,8 +36,11 @@ class Plasma_fire_mode(Mode.Mode):
 
         # 1. Continuous flame height from energy, beat_pulse(), drop_decay, and subtle thermal flicker
         self.flicker_phase = (self.flicker_phase + self.dt * 4.5 * self.mood_pace) % (2.0 * math.pi)
-        flicker = 0.0 if is_silent else 0.08 * math.sin(self.flicker_phase)
-        drive = (0.60 * energy + 0.40 * self.beat_pulse() + 0.20 * self.drop_decay + flicker) * self.mood_pace
+        if is_silent:
+            drive = 0.0
+        else:
+            flicker = 0.08 * math.sin(self.flicker_phase)
+            drive = (0.60 * energy + 0.40 * self.beat_pulse() + 0.20 * self.drop_decay + flicker) * self.mood_pace
         t_scale = self.transition_scale
         fire_height = int(np.clip(drive * self.height_multiplier * self.nb_of_leds * t_scale, 0, self.nb_of_leds))
 

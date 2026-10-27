@@ -105,6 +105,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
         self.addCleanup(BaseMode.reset_mood_colors)
         self.listener = MockListener()
         self.engine = MusicalContextEngine(self.listener)
+        self.engine._is_silent = False
         self.listener.context = self.engine
 
     def _instantiate_mode(self, mode_cls, num_leds=60):
@@ -136,6 +137,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
             mode = self._instantiate_mode(mode_cls, num_leds=num_leds)
 
             # 1. CHILL Scene
+            self.engine._is_silent = False
             self.engine._current_scene = MusicalScene.CHILL
             self.engine._energy = 0.2
             self.engine._tension = 0.1

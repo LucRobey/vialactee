@@ -56,12 +56,17 @@ class Flying_ball_mode(Mode.Mode):
         self.ball_pos += self.ball_vel * dt
         self.ball_pos = float(np.clip(self.ball_pos, 0.0, self.nb_of_leds - 1))
 
+        trail_fade = float(np.clip(0.25 / max(0.5, self.mood_trail), 0.05, 0.65))
+        if is_silent:
+            self.fade_to_black_segment_vectorized(trail_fade, 0, self.nb_of_leds - 1)
+            return
+
         # 3. Scale Ball Radius and Glow by energy, beat_pulse(), and transition_scale
         t_scale = self.transition_scale
         pulse = self.beat_pulse()
         drive = 0.65 * energy + 0.35 * pulse
-        radius = ((1.5 + 3.0 * drive) if not is_silent else 1.0) * (0.4 + 0.6 * t_scale)
-        intensity = (0.25 + 0.75 * drive) if not is_silent else 0.06
+        radius = (1.5 + 3.0 * drive) * (0.4 + 0.6 * t_scale)
+        intensity = 0.25 + 0.75 * drive
 
         # 4. Vectorized Gaussian Glow calculation
         two_r_sq = 2.0 * (radius ** 2)

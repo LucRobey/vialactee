@@ -28,9 +28,13 @@ class PSG_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
+        is_silent = bool(ctx.is_silent if ctx is not None else False)
+        if is_silent:
+            self.fade_to_black_segment_vectorized(0.35, 0, self.nb_of_leds - 1)
+            return
+
         tilt = float(ctx.spectral_tilt if ctx is not None else 0.0)
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
-        is_silent = bool(ctx.is_silent if ctx is not None else False)
         mood = self.mood_colors
 
         # 1. Modulate bar power with energy, beat_pulse(), and spectral_tilt

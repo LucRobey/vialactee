@@ -40,13 +40,20 @@ class Middle_bar_mode(Mode.Mode):
 
         # 1. Continuous width drive from energy, beat_pulse(), and gentle breathing fallback
         self.breath_phase = (self.breath_phase + self.dt * 2.2 * self.mood_pace) % (2.0 * math.pi)
-        pulse = self.beat_pulse()
-        breath_nudge = 0.0 if is_silent else (1.0 - self.rhythm_lock) * 0.12 * (0.5 + 0.5 * math.sin(self.breath_phase))
-        drive = (0.55 * energy + 0.45 * pulse + breath_nudge) * self.mood_pace
+        if is_silent:
+            drive = 0.0
+        else:
+            pulse = self.beat_pulse()
+            breath_nudge = (1.0 - self.rhythm_lock) * 0.12 * (0.5 + 0.5 * math.sin(self.breath_phase))
+            drive = (0.55 * energy + 0.45 * pulse + breath_nudge) * self.mood_pace
 
         t_scale = self.transition_scale
         target_width = float(self.max_size) * drive * (0.45 + 0.95 * v_center) * t_scale
         self.size = 0.5 * (self.size + target_width)
+        if is_silent and self.size < 0.5:
+            fade_out = float(np.clip(0.5 / max(0.5, self.mood_trail), 0.1, 0.9))
+            self.fade_to_black_segment_vectorized(fade_out, 0, self.nb_of_leds - 1)
+            return
         s_int = int(np.clip(self.size, 0, self.max_size))
 
         # 2. Continuous color interpolation from mood_colors + mood_accent warmth
