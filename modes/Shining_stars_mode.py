@@ -83,10 +83,11 @@ class Shining_stars_mode(Mode.Mode):
         self._rand_pool = [rng.randint(0, 100000) for _ in range(256)]
         self._rand_idx = 0
 
-    def apply_settings(self, settings: Dict[str, Any]) -> None:
-        super().apply_settings(settings)
+    def apply_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
+        applied = super().apply_settings(settings)
         self.step = max(1, int(self.sub_segment_size))
         self.max_offset = min(self.step, self.nb_of_leds)
+        return applied
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -120,10 +121,15 @@ class Shining_stars_mode(Mode.Mode):
         lut = self.palette_lut
         hi = self.highlight_color
         accent = self.mood_accent
+        t_scale = (
+            self.transition_scale
+            if (self._exit_progress > 0.0 or self._enter_progress < 1.0)
+            else 1.0
+        )
         for i in range(self.num_bands):
             base_c = lut[self._band_lut_idx[i]]
             for c in range(3):
-                val = int((1.0 - accent) * float(base_c[c]) + accent * float(hi[c]))
+                val = int(((1.0 - accent) * float(base_c[c]) + accent * float(hi[c])) * t_scale)
                 self.star_colors[i, c] = val
                 self.neighbor_colors[i, c] = (val * 2) // 5  # 40% soft halo neighbor
 

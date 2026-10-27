@@ -226,12 +226,18 @@ class TestSegment(unittest.TestCase):
         self.segment.change_mode("Hyper Strobe", {"type": "fade_in_out", "duration": 2.0})
         self.assertEqual(self.segment.target_mode_name, mid_mode)
 
-        # Forced request overrides ongoing transition (e.g. drop explosion)
-        self.segment.change_mode("Hyper Strobe", {"type": "explosion", "duration": 0.4, "force": True})
+        # Advance cooperative transition to 50% so start_mode._exit_progress is 0.5
+        status = TransitionStatus(state="TRANSITION_DUAL", progress=0.5, is_in_transition=True, technique="fade_in_out")
+        self.segment.update(status, MagicMock(), dt=1.0)
+        self.assertAlmostEqual(self.segment.modes[start_mode]._exit_progress, 0.5, places=2)
+
+        # Forced cooperative request with start_offset > 0 must reset start_mode._exit_progress to 0.0
+        self.segment.change_mode("Hyper Strobe", {"type": "ember_dissolve", "duration": 0.4, "start_offset": 0.5, "mode_handshake": True, "force": True})
         self.assertTrue(self.segment.is_in_transition)
         self.assertEqual(self.segment.target_mode_name, "Hyper Strobe")
-        self.assertEqual(self.segment.transition_technique, "explosion")
+        self.assertEqual(self.segment.transition_technique, "ember_dissolve")
         self.assertFalse(self.segment.modes[mid_mode].isActiv)  # mid_mode terminated
+        self.assertEqual(self.segment.modes[start_mode]._exit_progress, 0.0)
 
         # Requesting active mode cancels transition and stays on active mode
         self.segment.change_mode(start_mode, {"type": "fade_in_out", "duration": 2.0})

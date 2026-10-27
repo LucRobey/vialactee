@@ -372,15 +372,15 @@ class Segment:
                 self.transition_duration = float(transition_config.get("duration", 2.0))
                 self.transition_start_offset = float(transition_config.get("start_offset", 0.0))
                 self.transition_mode_handshake = bool(transition_config.get("mode_handshake", True))
+                activ_obj = self.modes.get(self.activ_mode)
+                if activ_obj is not None and hasattr(activ_obj, "on_transition_reset"):
+                    activ_obj.on_transition_reset()
                 if self.transition_mode_handshake:
                     if hasattr(target_mode_obj, "on_transition_enter"):
                         target_mode_obj.on_transition_enter(0.0)
                 else:
                     if hasattr(target_mode_obj, "on_transition_reset"):
                         target_mode_obj.on_transition_reset()
-                    activ_obj = self.modes.get(self.activ_mode)
-                    if activ_obj is not None and hasattr(activ_obj, "on_transition_reset"):
-                        activ_obj.on_transition_reset()
                 self.transition_elapsed = 0.0
                 self.is_in_transition = True
             else:

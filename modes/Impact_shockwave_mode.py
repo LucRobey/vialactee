@@ -115,8 +115,6 @@ class Impact_shockwave_mode(Mode.Mode):
         self.half_dists: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
         self.half_intensity: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
         self.ambient_glow: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
-        self.half_hues: np.ndarray = np.zeros(self.half_len, dtype=np.float64)
-        self.half_sats: np.ndarray = np.ones(self.half_len, dtype=np.float64)
         self.half_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float64)
         self.center_falloff: np.ndarray = np.exp(- (self.half_coords ** 2) / 8.0)
         self.wave_scratch_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float64)
@@ -243,7 +241,8 @@ class Impact_shockwave_mode(Mode.Mode):
         m0 = mood[0]
         for c in range(3):
             self.glow_color[c] = (1.0 - accent) * float(m0[c]) + accent * float(hi[c])
-        np.add(self.half_rgb, self.ambient_glow[:, None] * self.glow_color, out=self.half_rgb)
+        np.multiply(self.ambient_glow[:, None], self.glow_color, out=self.wave_scratch_rgb)
+        np.add(self.half_rgb, self.wave_scratch_rgb, out=self.half_rgb)
         np.clip(self.half_rgb, 0.0, 255.0, out=self.half_rgb)
 
         # 6. Symmetrical Mirroring to Full Segment (Zero Allocation)

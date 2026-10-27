@@ -262,14 +262,39 @@ class TestModeDnaSpatialRoles(unittest.TestCase):
     def test_spatial_roles_match_modes_catalog(self):
         from transitions.mode_dna import MODE_DNA, get_mode_dna
 
-        self.assertEqual(MODE_DNA["Power Bar"]["spatial_role"], "vertical")
-        self.assertEqual(MODE_DNA["Plasma Fire"]["spatial_role"], "vertical")
-        for horiz_name in ("Beat Runner", "Chromatic Chaser", "Flying Ball", "Magnetic Ball"):
+        expected_vertical = ("Plasma Fire", "Power Bar")
+        expected_horizontal = (
+            "Middle Bar",
+            "PSG",
+            "Opposite Sides",
+            "Flying Ball",
+            "Coloured Middle Wave",
+            "Static Wave",
+            "Extending Waves",
+            "Magnetic Ball",
+        )
+        expected_both = (
+            "Rainbow",
+            "Bary Rainbow",
+            "Shining Stars",
+            "Proportion Rainbow",
+            "Hyper Strobe",
+            "Chromatic Chaser",
+            "Synesthesia",
+            "Metronome",
+            "Rhythm Breather",
+            "Beat Runner",
+            "Impact Shockwave",
+        )
+        for vert_name in expected_vertical:
+            self.assertEqual(MODE_DNA[vert_name]["spatial_role"], "vertical")
+        for horiz_name in expected_horizontal:
             self.assertEqual(MODE_DNA[horiz_name]["spatial_role"], "horizontal")
-        for both_name in ("Static Wave", "PSG", "Middle Bar", "Coloured Middle Wave", "Extending Waves", "Opposite Sides"):
+        for both_name in expected_both:
             self.assertEqual(MODE_DNA[both_name]["spatial_role"], "both")
         self.assertEqual(get_mode_dna("Power_bar_mode")["spatial_role"], "vertical")
-        self.assertEqual(get_mode_dna("Beat_runner_mode")["spatial_role"], "horizontal")
+        self.assertEqual(get_mode_dna("Middle_bar_mode")["spatial_role"], "horizontal")
+        self.assertEqual(get_mode_dna("Beat_runner_mode")["spatial_role"], "both")
         roles_present = {entry["spatial_role"] for entry in MODE_DNA.values()}
         self.assertEqual(roles_present, {"vertical", "horizontal", "both"})
 
@@ -322,6 +347,24 @@ class TestPart1ModeBugFixes(_ModeTestCase):
         for idx in range(5, head_idx + 1):
             self.assertTrue(np.any(mode.rgb_list[idx] > 0), f"Unlit gap at LED {idx}")
 
+        # Toggling bounce_enabled=False while direction==-1 near index 0 must advance forward, not wrap backward
+        mode.rgb_list.fill(0)
+        mode.position = 2.0
+        mode.direction = -1
+        mode.bounce_enabled = False
+        mode.speed = 4.0
+        mode.run()
+        self.assertEqual(mode.direction, 1)
+        self.assertTrue(np.all(mode.rgb_list[20:38] == 0))
+
+        # Multi-lap speed (>= nb_of_leds) when bounce_enabled=False must light the full strip without dark holes
+        mode.rgb_list.fill(0)
+        mode.position = 10.0
+        mode.bounce_enabled = False
+        mode.speed = 45.0
+        mode.run()
+        self.assertTrue(np.all(np.sum(mode.rgb_list, axis=1) > 0))
+
     def test_beat_runner_pendulum_alternates_direction_across_beats(self):
         from modes.Beat_runner_mode import Beat_runner_mode
 
@@ -360,11 +403,13 @@ class TestPart1ModeBugFixes(_ModeTestCase):
         from modes.Shining_stars_mode import Shining_stars_mode
 
         mode = self.make(Shining_stars_mode, n=60)
-        mode.apply_settings({"sub_segment_size": 15, "threshold": 5.0})
+        applied = mode.apply_settings({"sub_segment_size": 15, "threshold": 5.0})
+        self.assertEqual(applied, {"sub_segment_size": 15, "threshold": 5.0})
         self.listener.band_flux = np.array([20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         self.listener.asserved_fft_band = np.zeros(8)
         mode.rgb_list.fill(0)
         mode.run()
+        full_max = int(np.max(mode.rgb_list))
         # Find local peak index within each 15-LED subsegment
         local_peaks = [
             int(np.argmax(np.sum(mode.rgb_list[base:base + 15], axis=1)))
@@ -372,6 +417,13 @@ class TestPart1ModeBugFixes(_ModeTestCase):
         ]
         # Not all 4 subsegments should have identical local offset
         self.assertGreater(len(set(local_peaks)), 1)
+
+        # Verify cooperative transition entry scales star intensity down
+        mode.rgb_list.fill(0)
+        mode.on_transition_enter(0.0)
+        mode.run()
+        enter_max = int(np.max(mode.rgb_list))
+        self.assertLess(enter_max, full_max // 2)
 
 
 class TestColouredMiddleWaveBuffer(_ModeTestCase):
