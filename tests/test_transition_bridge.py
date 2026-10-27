@@ -65,7 +65,9 @@ class TestApplyOrders(unittest.TestCase):
         ack = bridge.apply_orders(mm, orders)
         self.assertEqual(ack.accepted, ("a",))
         self.assertEqual(set(ack.refused), {"b", "c", "missing"})
-        ok.change_mode.assert_called_once_with("Rainbow", {"type": "global_change", "duration": 2.0})
+        ok.change_mode.assert_called_once_with(
+            "Rainbow", {"type": "global_change", "duration": 2.0, "mode_handshake": False}
+        )
         ok.change_way.assert_called_once_with("DOWN")
         blocked.change_mode.assert_not_called()
         self.assertTrue(mm._state_dirty)

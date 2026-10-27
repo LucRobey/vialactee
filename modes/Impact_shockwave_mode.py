@@ -204,7 +204,7 @@ class Impact_shockwave_mode(Mode.Mode):
             lum = (float(lut_c[0]) + float(lut_c[1]) + float(lut_c[2])) / 3.0
             self.wave_active[slot] = True
             self.wave_positions[slot] = 0.0
-            self.wave_amps[slot] = intensity * self.transition_scale
+            self.wave_amps[slot] = intensity
             self.wave_hues[slot] = wave_hue
             for c in range(3):
                 self.wave_colors[slot, c] = (1.0 - sat) * lum + sat * float(lut_c[c])

@@ -61,7 +61,7 @@ class Flying_ball_mode(Mode.Mode):
         pulse = self.beat_pulse()
         drive = 0.65 * energy + 0.35 * pulse
         radius = ((1.5 + 3.0 * drive) if not is_silent else 1.0) * (0.4 + 0.6 * t_scale)
-        intensity = ((0.25 + 0.75 * drive) if not is_silent else 0.06) * t_scale
+        intensity = (0.25 + 0.75 * drive) if not is_silent else 0.06
 
         # 4. Vectorized Gaussian Glow calculation
         two_r_sq = 2.0 * (radius ** 2)

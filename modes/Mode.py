@@ -29,7 +29,6 @@ _FALLBACK_MOOD_MODIFIERS = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
 _FALLBACK_MOOD_MODIFIERS.flags.writeable = False
 
 class Mode:
-
     listener = None
     white = (255, 255, 255)
     _mood_colors: np.ndarray = _FALLBACK_MOOD_COLORS
@@ -60,20 +59,13 @@ class Mode:
         self.name = name
         self.segment_name = segment_name
         self.infos = infos
-
-
         self.logger = logging.getLogger(f"Mode.{self.name}")
-
-        if(self.listener==None):
+        if self.listener is None:
             self.listener = listener
-            
-        #rgb_list est la liste donnée au mode
         self.rgb_list = rgb_list
-        self.leds     = leds
+        self.leds = leds
         self.indexes = indexes
-        
         self.nb_of_leds = len(indexes)
-
         self.isActiv = False
         self.has_custom_transition = False
         self._exit_progress: float = 0.0
@@ -230,24 +222,30 @@ class Mode:
         """view = view * (1 - ratio_new) + target * ratio_new, using scratch (no per-frame allocation).
 
         `target` may be a colour tuple/(3,) array broadcast over `view`, or an (k, 3) matrix matching it.
+        During cooperative mode transitions, `target` is scaled by `self.transition_scale`.
         """
         np.multiply(view, 1.0 - ratio_new, out=view, casting='unsafe')
+        eff_ratio = (
+            ratio_new * self.transition_scale
+            if (self._exit_progress > 0.0 or self._enter_progress < 1.0)
+            else ratio_new
+        )
         if isinstance(target, np.ndarray):
             if target.ndim == 1 and target.shape[0] == 3:
                 scaled = self._scratch_color
-                np.multiply(target, ratio_new, out=scaled)
+                np.multiply(target, eff_ratio, out=scaled)
             elif target.ndim == 2 and target.shape[1] == 3 and target.shape[0] <= self._scratch_rgb.shape[0]:
                 scaled = self._scratch_rgb[:target.shape[0]]
-                np.multiply(target, ratio_new, out=scaled)
+                np.multiply(target, eff_ratio, out=scaled)
             else:
-                scaled = target * ratio_new
+                scaled = target * eff_ratio
         else:
             if len(target) == 3 and not hasattr(target[0], "__len__"):
                 scaled = self._scratch_color
                 scaled[:] = target
-                np.multiply(scaled, ratio_new, out=scaled)
+                np.multiply(scaled, eff_ratio, out=scaled)
             else:
-                scaled = np.asarray(target) * ratio_new
+                scaled = np.asarray(target) * eff_ratio
         np.add(view, scaled, out=view, casting='unsafe')
 
     def smooth_vectorized(self, ratio_new: float, target_rgb_matrix: np.ndarray):
@@ -384,10 +382,10 @@ class Mode:
         ctx = getattr(listener, "context", None)
         phase = float(getattr(listener, "beat_phase", 0.0))
         if ctx is not None:
-            energy = float(ctx.energy)
-            confidence = float(ctx.beat_trust)
-            tension = float(ctx.tension)
-            silent = bool(ctx.is_silent)
+            energy = float(getattr(ctx, "energy", 0.0))
+            confidence = float(getattr(ctx, "beat_trust", getattr(listener, "beat_confidence", 0.0)))
+            tension = float(getattr(ctx, "tension", 0.0))
+            silent = bool(getattr(ctx, "is_silent", False))
         else:
             energy = float(getattr(listener, "asserved_total_power", 0.0))
             confidence = float(getattr(listener, "beat_confidence", 0.0))
@@ -492,3 +490,8 @@ class Mode:
     def on_transition_enter(self, progress: float) -> None:
         """Lifecycle hook called while this mode is transitioning in (progress in [0.0, 1.0])."""
         self._enter_progress = max(0.0, min(1.0, float(progress)))
+
+    def on_transition_reset(self) -> None:
+        """Reset transition lifecycle progress to steady state."""
+        self._exit_progress = 0.0
+        self._enter_progress = 1.0
