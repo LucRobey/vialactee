@@ -1,7 +1,6 @@
 # Music Events Architecture: Prospective Concepts & Future Ideas
 
-> **Status:** Prospective / Research & Design Archive  
-> **Source:** Extracted from `.agents/docs/music_events_architecture.md`  
+> **Status:** Prospective / Research & Design Archive (Tier 4 — Not System Truth)  
 > **Context:** Captures conceptual music perception features, Hard Song Cut rules, Harmonic Product Spectrum vocal isolation, and multi-song mood tracking not yet active in production code.
 
 ---
@@ -21,7 +20,7 @@ When a playlist jumps tracks or a DJ hard-cuts into a brand new song at a comple
    - Declare a Hard Song Cut: `is_song_change = True`.
    - Update long-term tempo baseline to the incoming tempo.
    - Force-snap the speaker-time flywheel to the newly identified phase target.
-   - Notify `Transition_Director` to abort ongoing transitions and initiate an emergency mode shift.
+   - Notify the transition director (`transitions/director.py`) to abort ongoing transitions and initiate an emergency mode shift.
 
 ---
 

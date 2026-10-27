@@ -1,7 +1,7 @@
 """
 tests/test_analyzer_contract_compliance.py
 
-Executable version of docs/reference/audio_analyzer_contract.md (Group A rhythm core, Group C structure,
+Executable version of docs/contracts/music_analyzer_contract.md (Group A rhythm core, Group C structure,
 interface & runtime). The same checklist runs against every production rhythm analyzer
 (MultiBandOnsetAudioAnalyzer = stable fallback, DyadicMetricalAudioAnalyzer = production default),
 and Dyadic-specific metrical sub-pulse invariants are checked on top.

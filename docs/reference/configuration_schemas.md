@@ -255,7 +255,7 @@ Live per-mode parameter tweaks (Mode Settings page, `set_mode_setting`) are pers
   }
 }
 ```
-* At startup the effective value of each setting is: the mode's declared default, overridden by `mode_settings`, then by any live edit in the running session. Values are validated and clamped by `Mode.normalize_setting_value`. See `core/precisions/mode_master.md` (section 4).
+* At startup the effective value of each setting is: the mode's declared default, overridden by `mode_settings`, then by any live edit in the running session. Values are validated and clamped by `Mode.normalize_setting_value`. See [`docs/architecture/core_orchestrator.md`](../architecture/core_orchestrator.md) (section 2).
 
 ---
 

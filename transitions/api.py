@@ -10,7 +10,7 @@ Rules (enforced by tests/governance/test_transition_isolation.py):
 - Nothing outside `transitions/` imports from it except `transitions.api`.
 - Only standard library + numpy appear here, so any side can import it freely.
 
-Doors (see docs/reference/transition_contract.md):
+Doors (see docs/contracts/transition_contract.md):
   IN : MusicSnapshot, InstallationSnapshot, requests (request_*, set_*), OrderAck
   OUT: TransitionOrders (one entry per segment, optional palette request),
        blend() in place, TransitionStatus (state + progress)

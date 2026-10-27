@@ -30,7 +30,7 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 * Standalone compiled `music/comb_kernels.py` builds the dense pulse template bank for sub-millisecond class correlation without external dependencies.
 * Phase estimation is back-projected to speaker time ($T_{\text{speaker}}$).
 * Flywheel and onset detection thresholds are centralized in `music/RhythmConfig.py`.
-* Consult [flywheel_architecture.md](./references/flywheel_architecture.md) for complete mathematical definitions, Logarithmic Base-Tempo (LBT) octave folding, and dropout immunity rules.
+* Consult [`docs/architecture/rhythm_engine.md`](../../../docs/architecture/rhythm_engine.md) and [`docs/contracts/music_analyzer_contract.md`](../../../docs/contracts/music_analyzer_contract.md) for complete mathematical definitions, Logarithmic Base-Tempo (LBT) octave folding, and dropout immunity rules.
 
 ### 5. Structural Novelty Separation
 * Structural music events (Verse/Chorus boundaries, Seamless Crossfades, Silence Drops) are managed by `music/StructuralNoveltyDetector.py`.

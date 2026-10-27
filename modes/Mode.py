@@ -3,7 +3,7 @@ Base Mode Class
 Defines the core interface and execution lifecycle for all visual animation modes.
 Provides standardized buffer rendering, vectorized color conversions, smoothing, and fading utilities.
 Manages dynamic settings schemas and catalogs exposed to the React web interface.
-Subclasses implement render() or run() to generate 60 FPS LED visualizations.
+Subclasses implement render() or run() to generate 30 FPS LED visualizations.
 """
 import utils.rgb_hsv as RGB_HSV
 import math
@@ -287,7 +287,7 @@ class Mode:
         self.rgb_list[:] = color
 
     # ------------------------------------------------------------------
-    # Shared authoring helpers (see modes/MODE_RULES.md section 6)
+    # Shared authoring helpers (see docs/contracts/mode_contract.md)
     # ------------------------------------------------------------------
 
     @property
@@ -375,7 +375,7 @@ class Mode:
         return self._highlight
 
     def beat_pulse(self, sharpness: float = 2.2) -> float:
-        """Confidence-blended beat envelope in [0, 1] (MODE_RULES Rule 1, shared).
+        """Confidence-blended beat envelope in [0, 1] (docs/contracts/mode_contract.md, shared).
 
         Locked tempo -> punchy `(1 - phase) ** k` pump; lost tempo -> smooth acoustic breathing from
         energy. Tension sharpens the decay. Silence returns 0. Gate hard flashes separately on is_real_beat.

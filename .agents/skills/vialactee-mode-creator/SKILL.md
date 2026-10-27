@@ -53,8 +53,8 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 
 ### 4. Audio, Rhythm & Subtle Mood Reactivity
 * Access audio data via `self.listener` and base `Mode` helpers (`self.rhythm_lock`, `self.beat_pulse(sharpness)`, `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`, `self.palette_lut`, `self.highlight_color`, `self.drop_hit`).
-* Consult [listener_api.md](./references/listener_api.md) for full descriptions of `asserved_fft_band`, `beat_phase`, `is_real_beat`, `beat_tag`, and `chroma_values`.
-* **Three Architectural Laws ([`modes/MODE_RULES.md`](../../../modes/MODE_RULES.md))**:
+* Consult [`docs/contracts/music_analyzer_contract.md`](../../../docs/contracts/music_analyzer_contract.md) for full descriptions of `asserved_fft_band`, `beat_phase`, `is_real_beat`, `beat_tag`, and `chroma_values`.
+* **Three Architectural Laws ([`docs/contracts/mode_contract.md`](../../../docs/contracts/mode_contract.md))**:
   - **Always Alive Without the Flywheel (`self.rhythm_lock == 0.0`):** Every mode must produce a smooth, musical animation driven by continuous audio energy, 8-band spectrum, or pitch even when `beat_trust == 0.0`.
   - **Rhythm-Locked When Confident (`self.rhythm_lock -> 1.0`):** Smoothly blend the same visual algorithm with `beat_phase`, `bpm`, and `self.beat_pulse(sharpness)` as `self.rhythm_lock` rises.
   - **No `if ctx.scene == ...` Branching in Modes:** Never write hard `if scene == ...` branches in modes. The sealed `mood/` sector absorbs scene changes (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) with a `0.30s` debounce and `2.5s` cosine crossfade, exposing bounded modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) on `Mode`.
@@ -66,7 +66,7 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 ### 6. Mode Registration
 When adding a new mode:
 1. Create the mode file in `modes/<ModeName>_mode.py`.
-2. Register the mode in `modes/modes_description.md` and `docs/reference/modes_catalog.md` with visual description, orientation, and parameter schema.
+2. Register the mode in [`docs/reference/modes_catalog.md`](../../../docs/reference/modes_catalog.md) with visual description, orientation, and parameter schema.
 3. Register the mode entry in [`config/modes.json`](../../../config/modes.json):
    ```json
    {

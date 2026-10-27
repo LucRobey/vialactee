@@ -15,7 +15,7 @@ fallback / parent engine) and adds:
 3. Corrected Anti-Phase Lookahead Indexing:
    - Kick-density lookahead offsets are aligned to the observation horizon M.
 
-Listener / contract mapping (see docs/reference/audio_analyzer_contract.md):
+Listener / contract mapping (see docs/contracts/music_analyzer_contract.md):
    - ``bpm`` seen by modes is the *metrical* beat rate: ``effective_bpm`` (= 2 x tactus while the
      sub-pulse is active, else the tactus). Range [60, ~260].
    - ``beat_phase`` wraps once per metrical beat, so ``is_beat``, ``beat_count`` and ``beat_phase``

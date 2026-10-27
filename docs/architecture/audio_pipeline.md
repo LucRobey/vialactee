@@ -1,7 +1,8 @@
 # Audio Pipeline & Feature Extraction Architecture
 
 > **Location:** `docs/architecture/audio_pipeline.md` (Tier 1 Canonical Specification)  
-> **Source Files:** [`music/AudioIngestion.py`](../../music/AudioIngestion.py), [`music/Listener.py`](../../music/Listener.py), [`connectors/Local_Microphone.py`](../../connectors/Local_Microphone.py)  
+> **Source Directory:** [`music/`](../../music/) (Front Door: [`music/api.py`](../../music/api.py), Contract: [`docs/contracts/music_analyzer_contract.md`](../contracts/music_analyzer_contract.md))  
+> **Audio Connector:** [`connectors/Local_Microphone.py`](../../connectors/Local_Microphone.py)  
 > **Enforcing Axioms:** [AXIOM-01](../axioms/AXIOM-01_FRAME_BUDGET.md), [AXIOM-02](../axioms/AXIOM-02_ZERO_ALLOCATION.md), [AXIOM-05](../axioms/AXIOM-05_LOOKAHEAD_SYNC.md), [AXIOM-09](../axioms/AXIOM-09_PLATFORM_AGNOSTIC_DSP.md)
 
 ---
@@ -51,3 +52,23 @@ Implemented in `music/Listener.py`:
 - Rhythm tracking and novelty detection operate on the incoming live head of the audio ($T_{\text{ingest}}$).
 - Visual animations receive the delayed audio features ($T_{\text{ingest}} - 5.0\text{ s}$), aligning visual animations with physical speaker output cone arrival time ($T_{\text{speaker}}$).
 - Adheres strictly to **AXIOM-05 (Audio-Visual Latency Bound $< 50\text{ ms}$)**.
+
+---
+
+## 4. Sealed Sector Modules (`music/`)
+
+`music/` is a sealed sector governed by [`docs/contracts/music_analyzer_contract.md`](../contracts/music_analyzer_contract.md) and enforced by `tests/governance/test_music_isolation.py`. Production code outside `music/` imports **only** from [`music.api`](../../music/api.py).
+
+| Module | Role |
+| :--- | :--- |
+| [`music/api.py`](../../music/api.py) | **Front Door:** Re-exports `Listener`, `create_listener`, `ANALYZER_REGISTRY`, `DEFAULT_ANALYZER_MODEL`, `MusicalContext`, `MusicalContextEngine`, `BaseAudioAnalyzer`, `AudioIngestion`, `StructuralNoveltyDetector`, `RhythmConfig`, and the three analyzer classes. |
+| [`music/Listener.py`](../../music/Listener.py) | Lookahead delay ring buffer + speaker-time facade + `ANALYZER_REGISTRY`. |
+| [`music/AudioIngestion.py`](../../music/AudioIngestion.py) | Vectorized 4096-pt rFFT, 8-band & 32-band Mel filterbanks, 12-bin chromagram, ADSR & GM/LM normalization. |
+| [`music/BaseAudioAnalyzer.py`](../../music/BaseAudioAnalyzer.py) | Abstract base contract for all rhythm analyzers. |
+| [`music/DyadicMetricalAudioAnalyzer.py`](../../music/DyadicMetricalAudioAnalyzer.py) | **Production default** (`DEFAULT_ANALYZER_MODEL`): dyadic metrical hierarchy + causal sub-pulse arbiter on top of the 32-band engine. |
+| [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py) | 32-band 4-stream onset engine (`kick`, `snare`, `hat`, `mid`) + Anticipation Flywheel (stable fallback / parent engine). |
+| [`music/AudioAnalyzer.py`](../../music/AudioAnalyzer.py) | Legacy single-ODF baseline analyzer. |
+| [`music/comb_kernels.py`](../../music/comb_kernels.py) | Compiled NumPy pulse-template bank for Pearson tempo correlation. |
+| [`music/StructuralNoveltyDetector.py`](../../music/StructuralNoveltyDetector.py) | STM/LTM structural novelty, verse/chorus change, and song-cut detection. |
+| [`music/MusicalContextEngine.py`](../../music/MusicalContextEngine.py) | 3-tier visual conductor synthesizing raw DSP into `MusicalContext` (`energy`, `tension`, `scene`, badges). |
+| [`music/RhythmConfig.py`](../../music/RhythmConfig.py) | Centralized DSP and flywheel constants. |

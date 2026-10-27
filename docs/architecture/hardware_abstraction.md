@@ -1,49 +1,68 @@
-# Hardware Abstraction & Network Streaming Pipeline
+# Hardware Abstraction Layer (HAL) & Topologies
 
 > **Location:** `docs/architecture/hardware_abstraction.md` (Tier 1 Canonical Specification)  
-> **Source Files:** [`hardware/HardwareFactory.py`](../../hardware/HardwareFactory.py), [`hardware/Udp_Sender.py`](../../hardware/Udp_Sender.py), [`hardware/Fake_leds.py`](../../hardware/Fake_leds.py), [`hardware/Rpi_NeoPixels.py`](../../hardware/Rpi_NeoPixels.py)  
-> **Enforcing Axioms:** [AXIOM-03](../axioms/AXIOM-03_HARDWARE_GEOMETRY.md), [AXIOM-04](../axioms/AXIOM-04_NETWORK_PROTOCOLS.md), [AXIOM-09](../axioms/AXIOM-09_PLATFORM_AGNOSTIC_DSP.md)
+> **Source Directory:** [`hardware/`](../../hardware/)  
+> **Enforcing Axioms:** [AXIOM-03: Physical Chandelier Geometry](../axioms/AXIOM-03_HARDWARE_GEOMETRY.md), [AXIOM-04: Network Protocols](../axioms/AXIOM-04_NETWORK_PROTOCOLS.md), [AXIOM-09: Scoped DSP Math Invariance](../axioms/AXIOM-09_PLATFORM_AGNOSTIC_DSP.md)
 
 ---
 
-## 1. Hardware Pipeline Architecture
+## 1. Hardware Module Inventory (`hardware/`)
 
-Vialactée cleanly separates visual computation from hardware transmission through a unified hardware abstraction layer:
-
-```mermaid
-graph TD
-    MM["Mode_master (Renders Frame Buffers)"] --> HF["HardwareFactory._get_channel_specs()"]
-    
-    HF -->|"HARDWARE_MODE == 'simulation'"| FakeESP["Udp_Sender -> Fake_ESP32 (Pygame GUI)"]
-    HF -->|"HARDWARE_MODE == 'esp32'"| PhysESP["Udp_Sender -> Physical ESP32 (Wi-Fi UDP)"]
-    HF -->|"HARDWARE_MODE == 'rpi'"| DirectGPIO["Rpi_NeoPixels (Direct DMA GPIO)"]
-    
-    PhysESP --> Strips["Physical WS2812B Chandelier Strips"]
-```
+| File / Directory | Role |
+| :--- | :--- |
+| [`hardware/HardwareInterface.py`](../../hardware/HardwareInterface.py) | Abstract base interface implemented by all LED output drivers (`__getitem__`, `__setitem__`, `__len__`, `set_pixel()`, `clear()`, `show()`, `close()`). |
+| [`hardware/HardwareFactory.py`](../../hardware/HardwareFactory.py) | Inspects `HARDWARE_MODE`, `hardware_profile`, and host OS to instantiate one `HardwareInterface` per LED channel and optionally spawn the local `Fake_ESP32.py` simulator subprocess. |
+| [`hardware/Udp_Sender.py`](../../hardware/Udp_Sender.py) | Streams chunked binary RGB frames over UDP (`9001`/`9002`) to a physical ESP32 or local `Fake_ESP32`, plus throttled JSON sideband telemetry (`9003`) and control polling (`9004`). |
+| [`hardware/Rpi_NeoPixels.py`](../../hardware/Rpi_NeoPixels.py) | Direct Raspberry Pi GPIO DMA WS2812B driver wrapping `adafruit_neopixel` / `rpi_ws281x` (`board.D21`, `board.D18`). |
+| [`hardware/Fake_ESP32.py`](../../hardware/Fake_ESP32.py) | Local UDP receiver process that drains pixel datagrams on ports `9001`/`9002` and metadata datagrams on port `9003`, rendering into `FakeLedsVisualizer`. |
+| [`hardware/Fake_leds.py`](../../hardware/Fake_leds.py) | Interactive Pygame desktop visualizer reconstructing chandelier geometry from `config/segments_*.json` and rendering the optional live DSP HUD (`show_music_analyser_panel`). |
+| [`hardware/esp32_firmware/`](../../hardware/esp32_firmware/) | C++/Arduino FastLED sketches for physical ESP32 microcontrollers (see [`docs/manuals/raspberry_pi_deployment.md`](../manuals/raspberry_pi_deployment.md)). |
 
 ---
 
-## 2. Dynamic Hardware Profiles
+## 2. Driver Selection Matrix (`HardwareFactory.py`)
 
-Hardware channels and LED counts are loaded dynamically from the active segments file (`config/segments_full.json` or `config/segments_small.json`):
-
-### Full Profile (`"hardware_profile": "full"`)
-- **Total LEDs:** 1,304 physical LEDs across 11 segments.
-- **Channel 1 (`segs_1`):** 785 LEDs (UDP port `9001`, GPIO 21 on Pi).
-- **Channel 2 (`segs_2`):** 519 LEDs (UDP port `9002`, GPIO 18 on Pi).
-
-### Small Profile (`"hardware_profile": "small"`)
-- **Total LEDs:** 249 physical LEDs across 3 segments.
-- **Channel 1 (`segs_1`):** 249 LEDs (UDP port `9001`, GPIO 21 on Pi).
+| `HARDWARE_MODE` | Windows Behavior | Raspberry Pi Behavior | Output Driver |
+| :--- | :--- | :--- | :--- |
+| `"auto"` (Default) | Spawns local `Fake_ESP32.py` + Pygame visualizer | Streams UDP packets to `esp32_ip` | `Udp_Sender` |
+| `"simulation"` | Spawns local `Fake_ESP32.py` + Pygame visualizer | Spawns local `Fake_ESP32.py` + X11 Pygame | `Udp_Sender` (`127.0.0.1`) |
+| `"esp32"` | Streams UDP packets to `esp32_ip` | Streams UDP packets to `esp32_ip` | `Udp_Sender` (`esp32_ip`) |
+| `"rpi"` | Falls back to `"simulation"` with warning | Direct GPIO DMA via `rpi_ws281x` | `Rpi_NeoPixels` |
 
 ---
 
-## 3. Network Transport & UDP Chunking (AXIOM-04)
+## 3. UDP Port Architecture (`9001`–`9004`)
 
-Pixel frames streamed over Wi-Fi/Ethernet use UDP packets to avoid TCP head-of-line blocking.
-- **Datagram Limit:** Maximum 400 LEDs per UDP packet ($400 \times 3 = 1,200\text{ bytes}$ payload + 2 bytes header = **1,202 bytes**).
-- **Unfragmented Transmission:** 1,202 bytes sits safely below the standard 1,472-byte Wi-Fi UDP MTU, preventing packet fragmentation and frame loss.
-- **Header:**
-  - `byte[0]`: Chunk sequence index (0-indexed).
-  - `byte[1]`: Total chunks in frame.
-  - `byte[2..]`: Packed raw RGB bytes.
+`Udp_Sender.py` and `Fake_ESP32.py` communicate over four local/network UDP ports:
+
+| Port | Constant | Direction | Payload Format & Cadence |
+| :---: | :--- | :--- | :--- |
+| `9001` | `PORT_STRIP_1` | `Udp_Sender -> ESP32 / Fake_ESP32` | Binary pixel chunks (`<H` uint16 LE `start_index` + RGB bytes, $\le 400$ LEDs / $1,202\text{ B}$ per packet) for Channel 1 at 30 FPS. |
+| `9002` | `PORT_STRIP_2` | `Udp_Sender -> ESP32 / Fake_ESP32` | Binary pixel chunks for Channel 2 at 30 FPS (`full` profile only). |
+| `9003` | `SEGMENT_METADATA_PORT` | `Udp_Sender -> Fake_ESP32` | UTF-8 JSON sideband telemetry for the simulator HUD: `{"type": "segment_mode", ...}` (on transition or 1 Hz heartbeat), `{"type": "analyzer_state", ...}` (10 Hz throttle), and `{"type": "transition_state", ...}` (on change or 10 Hz throttle). Ignored by physical ESP32 hardware. |
+| `9004` | `CONTROL_PORT` | `Fake_leds UI -> Udp_Sender` | UTF-8 JSON control socket bound on `127.0.0.1:9004` allowing the Pygame simulator toolbar to trigger transitions (`{"type": "request_transition", "technique": ..., "duration": ...}`). |
+
+---
+
+## 4. Physical Topologies (`full` vs `small`)
+
+### A. Full Profile (`config/segments_full.json`)
+- **Total LEDs:** **1,304** across **11 segments** on **2 channels**.
+- **Channel 1 (Port `9001`, GPIO `D21` on Pi / `GPIO 4` on ESP32, 785 LEDs):**
+  - `c1` (116), `c3` (78), `c2` (104), `v2` (113), `h2` (91), `v1` (133), `h1` (150)
+- **Channel 2 (Port `9002`, GPIO `D18` on Pi / `GPIO 5` on ESP32, 519 LEDs):**
+  - `v4` (112), `h4` (83), `v3` (175), `h3` (149)
+
+### B. Small Profile (`config/segments_small.json`)
+- **Total LEDs:** **249** across **3 segments** on **1 channel**.
+- **Channel 1 (Port `9001`, GPIO `D21` on Pi / `GPIO 4` on ESP32, 249 LEDs):**
+  - `s1` (49), `s2` (108), `s3` (92)
+
+---
+
+## 5. The Vertical Orientation Invariant (AXIOM-03)
+
+All vertical chandelier segments (`v1`, `v2`, `v3`, `v4`) are physically wired **from bottom to top**:
+- Index `0` is at the bottom-most physical point (`start.y` is maximum Y).
+- Index `N - 1` is at the top-most ceiling attachment (`step.y = -1`).
+- In `Fake_leds.py`, vertical strips render upward (`y -= 2` per pixel).

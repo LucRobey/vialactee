@@ -1,7 +1,6 @@
 # Transition Architecture: Prospective Concepts & Future Ideas
 
-> **Status:** Prospective / Research & Design Archive  
-> **Source:** Extracted from `.agents/docs/transition_architecture.md`  
+> **Status:** Prospective / Research & Design Archive (Tier 4 — Not System Truth)  
 > **Context:** Captures conceptual transition models, probabilistic gating logic, and complex spatial routines that are not yet active in production code.
 
 ---
@@ -50,7 +49,7 @@ graph TD
 
 ## 2. Prospective Spatial Transition Algorithms
 
-The following mathematical routines are conceptual targets for `Transition_Engine.py`:
+The following mathematical routines are conceptual targets for `transitions/techniques.py`:
 
 1. **Audio-Spatial Gravity Cannon:**
    - An invisible ray shoots upward from the floor on massive bass transients (`band_flux[0]`), punching holes in the Old Mode. Displaced pixels fall via a simulated gravitational field ($y \leftarrow y + \frac{1}{2} g t^2$), revealing the New Mode beneath.

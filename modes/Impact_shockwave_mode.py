@@ -3,7 +3,7 @@ Impact Shockwave Mode
 Center-outward expanding ripple waves coupled to rhythmic beats when locked and bass spectral flux /
 acoustic energy when the beat tracker is lost. Never branches on ctx.scene (eliminating the 1.5s
 per-frame wave flood on DROP_IMPACT).
-Adheres strictly to modes/MODE_RULES.md with zero runtime heap allocations.
+Adheres strictly to docs/contracts/mode_contract.md with zero runtime heap allocations.
 """
 from typing import List, Dict, Any
 import numpy as np
@@ -149,7 +149,7 @@ class Impact_shockwave_mode(Mode.Mode):
         phase_wrapped = (phase < self.prev_phase) and (self.prev_phase > 0.5)
         self.prev_phase = phase
 
-        # 2. Advance wave propagation based on BPM and mood_pace (MODE_RULES Rule 4)
+        # 2. Advance wave propagation based on BPM and mood_pace (docs/contracts/mode_contract.md)
         frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
         speed = (float(self.half_len) / frames_per_beat) * fps_ratio * (1.0 + 0.15 * tension) * self.mood_pace
         effective_damping = (self.damping / max(0.5, self.mood_trail)) * fps_ratio

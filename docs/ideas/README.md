@@ -14,4 +14,3 @@
 
 - [`research/research_potential_ideas.md`](../../research/research_potential_ideas.md): Luc's raw rhythm-research (MIR) ideas and elaborated leads; kept in `research/` on purpose.
 - [`research/experiments/RESEARCH_IDEA_TREE.md`](../../research/experiments/RESEARCH_IDEA_TREE.md): living, status-tracked idea tree maintained by the research manager (read by `tools/eval_skills.py`).
-- [`docs/archive/prospective_transitions.md`](../archive/prospective_transitions.md) and [`docs/archive/prospective_music_events.md`](../archive/prospective_music_events.md): earlier archived copies of the transition / music-event concepts.

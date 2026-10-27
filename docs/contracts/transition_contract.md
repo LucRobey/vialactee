@@ -50,8 +50,8 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`mood
 | `drop_countdown` | `context.drop_countdown` | Schedules `pre_drop_buildup` transition gated by `5.0 s` security cooldown. |
 | `is_song_change` | `listener.is_song_change` | Speaker-time song boundary trigger, gated by `5.0 s` security cooldown and `TRANSITION_DUAL` lock. |
 | `is_verse_chorus_change` | `listener.is_verse_chorus_change` | Speaker-time structural trigger, gated by `5.0 s` security cooldown and `TRANSITION_DUAL` lock. |
-| `live_is_song_change` | `listener.live_is_song_change` | Starts `lookahead_seconds` countdown timer in `Transition_Director`, gated by security cooldown. |
-| `live_is_verse_chorus_change` | `listener.live_is_verse_chorus_change` | Starts `lookahead_seconds` structural countdown timer in `Transition_Director`, gated by security cooldown. |
+| `live_is_song_change` | `listener.live_is_song_change` | Starts `lookahead_seconds` countdown timer in `transitions/director.py`, gated by security cooldown. |
+| `live_is_verse_chorus_change` | `listener.live_is_verse_chorus_change` | Starts `lookahead_seconds` structural countdown timer in `transitions/director.py`, gated by security cooldown. |
 | `lookahead_seconds` | `analyzer.lookahead_seconds` | Lookahead horizon (`5.0 s`) used to initialize boundary countdowns. |
 
 ---
@@ -92,7 +92,7 @@ Source files (all but the last four inside the room):
                           emit SegmentOrder(segment, mode, technique, duration, mode_handshake, ...)
                           if at least 1 segment ordered:
                             set_transition_params(roll_transition_params(primary_tech))
-                            Transition_Director.start_transition(cfg) → progress 0→1
+                            director.start_transition(cfg) → progress 0→1
                                       │
                                       ▼
                         TransitionBridge.apply_orders() → Segment.change_mode()
@@ -106,7 +106,7 @@ Timing rules in `LocalTransitionManager.update(dt, music)`:
 - A queued transition is held while the Director is already in `TRANSITION_DUAL`.
 - It fires when `music.beat_phase < 0.05` (with `beat_trust >= 0.20`) **or** `music.is_beat` **or** after a 1.2 s timeout. (This is "next beat", not a true bar downbeat. The analyzer contract forbids bar assumptions.)
 - `quantize_downbeat=False` (used by `request_drop` and music-driven boundary triggers) fires immediately.
-- If all segments are blocked (`is_blocked=True`) or no segments are installed, no `SegmentOrder` is emitted and `Transition_Director.start_transition()` is not called (`state` remains `PASSATION`).
+- If all segments are blocked (`is_blocked=True`) or no segments are installed, no `SegmentOrder` is emitted and `director.start_transition()` is not called (`state` remains `PASSATION`).
 
 ---
 
@@ -118,7 +118,7 @@ Timing rules in `LocalTransitionManager.update(dt, music)`:
 | **Cohort pattern** | `scene`, `is_drop_impact`, `is_syncopated`, `is_locked` | Probability table, see §3.2. |
 | **Technique** | `is_drop_impact`, `energy`, `is_rhythmic`, `salience` | See §3.3. |
 | **Beat alignment** | `beat_phase`, `beat_trust`, `is_beat` | See §1. |
-| **Musical triggers & lookahead** | `live_is_song_change`, `live_is_verse_chorus_change`, `is_song_change`, `is_verse_chorus_change`, `lookahead_seconds`, `drop_countdown`, `is_drop_imminent`, `scene`, `is_drop_impact` | Tracked by `Transition_Director.update(dt, music)`, see §4. |
+| **Musical triggers & lookahead** | `live_is_song_change`, `live_is_verse_chorus_change`, `is_song_change`, `is_verse_chorus_change`, `lookahead_seconds`, `drop_countdown`, `is_drop_imminent`, `scene`, `is_drop_impact` | Tracked by `director.update(dt, music)`, see §4. |
 | **Mode DNA** | `transitions/mode_dna.py` (`energy`, `punch`, `rhythm`, `complexity`, `spatial_role`) | Distance to target DNA. |
 | **Geometry** | `SegmentDescriptor` (`name`, `orientation`, `available_modes`, `active_mode`, `is_blocked`) | Cohort discovery and candidate pools. |
 
@@ -206,7 +206,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | Area | Effect |
 | :--- | :--- |
 | `Segment.change_mode` | Invoked by `TransitionBridge.apply_orders()`. Zero-fills `dual_rgb_list` (preventing stale buffer ghosting), starts the target mode in the secondary buffer with local timing (`duration`, `start_offset`, `technique`, `mode_handshake`), and on completion copies `dual_rgb_list → rgb_list` so stateful trails survive handoff. |
-| `Transition_Director` | `state` (`PASSATION` or `TRANSITION_DUAL`), `transition_progress` [0..1], `transition_type`, `transition_duration`, `is_in_transition`, `cooldown_remaining`. Exposed via `TransitionService.get_status()` (which also exposes `is_pending`). |
+| `transitions/director.py` | `state` (`PASSATION` or `TRANSITION_DUAL`), `transition_progress` [0..1], `transition_type`, `transition_duration`, `is_in_transition`, `cooldown_remaining`. Exposed via `TransitionService.get_status()` (which also exposes `is_pending`). |
 | Modes (3-Layer Cooperative Handshake) | When `mode_handshake=True`, `Segment.update()` calls `activ_mode_obj.on_transition_exit(prog)` before updating the outgoing mode and `target_mode.on_transition_enter(prog)` before rendering the incoming mode. `Mode` exposes `transition_scale` (combining quadratic exit wind-down with ease-out enter bloom) and accelerates `fade_to_black` during exit. |
 | `mood.api.MoodService` | Cosine palette crossfade (default 2 s) and scene modifier smoothing (`create_mood_service(auto_scene=True)`, bound via `Mode.bind_mood_colors` and `Mode.bind_mood_modifiers`), ticked by `Mode_master` (outside the room). |
 
@@ -232,7 +232,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | Per-cohort or per-segment technique or staggering | Done. Includes `SIMULTANEOUS`, `CASCADE_DOWN`, `CASCADE_UP`, `CENTER_OUT`, `COHORT_COMPLEMENTARY`, physical $Y$-altitude cascades (`ALTITUDE_CASCADE_DOWN`, `ALTITUDE_CASCADE_UP`), and horizontal bay waves (`BAY_WAVE_LR`, `BAY_WAVE_RL`), gated by `is_staggerable(technique)`. |
 | Automatic palette change on transitions | **[GAP]** `PaletteRequest` door exists on `TransitionOrders`, and `TransitionBridge.apply_orders` forwards it to the mood sector, but transitions do not emit palette changes yet. Outside the transition room, `Mode_master` instantiates `create_mood_service(auto_scene=True)` and binds `Mode.bind_mood_colors` and `Mode.bind_mood_modifiers` (plus manual UI `select_mood`). |
 | Dwell and cooldown policy between transitions | Done. Minimum security cooldown of 5.0 seconds enforced post-transition across timer and musical triggers; urgent drop impacts and manual UI requests bypass and reset. |
-| Silence and standby behavior | **[GAP]** `MusicSnapshot.is_silent` crosses the door, but no silence/standby policy is implemented in the transition sector yet (dead `silence_*` / `is_in_standby` fields removed from `Transition_Director`). |
+| Silence and standby behavior | **[GAP]** `MusicSnapshot.is_silent` crosses the door, but no silence/standby policy is implemented in the transition sector yet (dead `silence_*` / `is_in_standby` fields removed from `transitions/director.py`). |
 | Tests | `tests/transitions/` (`test_api_contracts`, `test_families_and_handshake`, `test_transition_engine`, `test_transition_director`, `test_stagger`, `test_sandbox`), `test_mood_and_transitions`, `test_transition_bridge`, and `governance/test_transition_isolation`. |
 
 ## 7. Open design questions

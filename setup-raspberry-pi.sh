@@ -162,7 +162,7 @@ print_summary() {
   Web UI (after Main.py starts):
     http://${ip:-<PI_IP>}:5173
 
-  See connect.md in the repo for network troubleshooting.
+  See docs/manuals/web_interface_manual.md in the repo for network troubleshooting.
 
   Optional: add to ~/.bashrc:
     alias vialactee='${INSTALL_DIR}/run-vialactee.sh'

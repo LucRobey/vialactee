@@ -4,7 +4,7 @@ Ambient dark canvas where soft 3-LED stars twinkle into existence across frequen
 Never branches on ctx.scene and eliminates the 1.5s solid fill on DROP_IMPACT.
 Star trail fade scales smoothly with mood_trail, twinkle density scales with energy and mood_pace,
 and star colours are sampled across the 256-entry palette_lut for all 8 bands.
-Adheres strictly to modes/MODE_RULES.md with zero runtime heap allocations.
+Adheres strictly to docs/contracts/mode_contract.md with zero runtime heap allocations.
 """
 from typing import List, Dict, Any
 import numpy as np

@@ -97,4 +97,4 @@ For subsystems governed directly by canonical documentation and unit tests:
 * **Transitions (Sealed Room):** [`docs/contracts/transition_contract.md`](../../../docs/contracts/transition_contract.md) and [`transitions/api.py`](../../../transitions/api.py) (verified by `tests/governance/test_transition_isolation.py`).
 * **Mood (Sealed Room):** [`docs/contracts/mood_contract.md`](../../../docs/contracts/mood_contract.md) and [`mood/api.py`](../../../mood/api.py) (verified by `tests/governance/test_mood_isolation.py`).
 * **Hardware & Deployment:** [`docs/manuals/raspberry_pi_deployment.md`](../../../docs/manuals/raspberry_pi_deployment.md) and [`docs/reference/coordinates_matrix.md`](../../../docs/reference/coordinates_matrix.md).
-* **Web Remote Control:** [`docs/architecture/api_and_wire_protocol.md`](../../../docs/architecture/api_and_wire_protocol.md) and [`wabb-interface/DESIGN_SYSTEM.md`](../../../wabb-interface/DESIGN_SYSTEM.md).
+* **Web Remote Control:** [`docs/architecture/api_and_wire_protocol.md`](../../../docs/architecture/api_and_wire_protocol.md) and [`docs/manuals/web_ui_design_system.md`](../../../docs/manuals/web_ui_design_system.md).

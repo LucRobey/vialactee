@@ -29,7 +29,7 @@ This spawns:
 
 ### 3. Run Fast CI & Governance Verification
 ```bash
-python -m pytest tests/test_code_governance.py
+python -m pytest tests/governance/test_code_governance.py
 ```
 
 ---
@@ -52,8 +52,8 @@ Vialactée is strictly governed by **The 9 Untouchable Golden Axioms (Tier 0)**:
 ## 📖 Central Documentation
 
 All documentation is hierarchically classified into the [5-Tier Documentation Authority Matrix](./docs/README.md):
-- **[Documentation Portal](./docs/README.md)**: Central table of contents.
-- **[System Architecture Blueprints](./docs/architecture/system_overview.md)**: Deep dive into the audio pipeline, rhythm tracker, transition director, and hardware abstraction.
+- **[Documentation Portal](./docs/README.md)**: Central table of contents & task-based navigation map.
+- **[System Architecture Blueprints](./docs/architecture/system_overview.md)**: Deep dive into the audio pipeline, rhythm tracker, transition service, and hardware abstraction.
 - **[Reference Catalogs & Schemas](./docs/reference/modes_catalog.md)**: Complete catalog of the 21 active mounted visual modes, configuration schemas, and coordinate matrices.
 - **[Operational Manuals](./docs/manuals/mode_authoring_guide.md)**: Step-by-step guides for authoring modes, Raspberry Pi deployment, developer tools, and the web interface.
-- **[AI Agent Onboarding](./project_overview.md)**: Primary router for AI agents working in this repository.
+- **[AI Agent Onboarding](./.agents/AGENT.md)**: Primary router for AI agents working in this repository.

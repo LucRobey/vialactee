@@ -112,7 +112,7 @@ class Beat_runner_mode(Mode.Mode):
             harmonic_factor = 0.5 * (1.0 - np.cos(2.0 * np.pi * effective_phase))
             cursor_pos = harmonic_factor * max_idx
 
-        # 4. Confidence-Weighted Beam Width & Fallback (MODE_RULES Rule 1)
+        # 4. Confidence-Weighted Beam Width & Fallback (docs/contracts/mode_contract.md)
         sigma = (self.head_width + (1.0 - lock) * 3.0) * (1.0 - 0.20 * tension)
         two_sigma_sq = 2.0 * (sigma ** 2)
 
