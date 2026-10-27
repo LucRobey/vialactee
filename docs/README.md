@@ -11,10 +11,10 @@ All documentation in this repository is strictly organized into a **5-Tier Autho
 | Tier | Category | Filesystem Location | Authority & RFC Policy | Automated Enforcement |
 |:---:|:---|:---|:---|:---|
 | **Tier 0** | **Untouchable Golden Axioms** | [`docs/axioms/`](./axioms/README.md) | **Immutable Core.** Governs physical, mathematical, and architectural laws. Barred from autonomous AI modification. Changes require Human Architectural RFC. | CI governance tests in `tests/governance/` |
-| **Tier 1** | **Canonical Specifications** | [`docs/architecture/`](./architecture/system_overview.md), [`docs/reference/`](./reference/modes_catalog.md) | **Authoritative System Truth.** Public APIs, hardware geometry, and configuration schemas. Updated concurrently with code changes. | Parity & schema linters |
+| **Tier 1** | **Canonical Specifications** | [`docs/contracts/`](./contracts/README.md), [`docs/architecture/`](./architecture/system_overview.md), [`docs/reference/`](./reference/modes_catalog.md) | **Authoritative System Truth.** Sealed sector contracts, public APIs, hardware geometry, and configuration schemas. Updated concurrently with code changes. | Parity & schema linters |
 | **Tier 2** | **Operational Manuals** | [`docs/manuals/`](./manuals/mode_authoring_guide.md) | **Engineering & Deployment Guides.** Practical step-by-step guides for developers, operators, and agents. | Pointer validation & manual review |
 | **Tier 3** | **Living Memory & Skills** | [`.agents/skills/`](../.agents/skills/), [`work_history/`](../work_history/README.md) | **Continuous Agent Memory.** Session audit logs, procedural skills, and experimental ledgers updated every session to eliminate amnesia. | Session log format linting |
-| **Tier 4** | **Exploratory & Archives** | [`docs/archive/`](./archive/), [`archive/playground/`](../archive/playground/) | **Historical / Sandbox.** Prospective concepts, deprecation logs, and legacy research spikes. Never cited as system truth. | Prominent archive disclaimer banners |
+| **Tier 4** | **Exploratory & Archives** | [`docs/ideas/`](./ideas/README.md), [`docs/archive/`](./archive/), [`archive/playground/`](../archive/playground/) | **Historical / Sandbox.** Prospective concepts, deprecation logs, and legacy research spikes. Never cited as system truth. | Prominent archive disclaimer banners |
 
 ---
 
@@ -32,36 +32,44 @@ The 9 inviolable foundational principles governing real-time execution, memory b
 - [AXIOM-08: Scientific Clean-Room Zero-Regression Gate](./axioms/AXIOM-08_RESEARCH_REGRESSION.md)
 - [AXIOM-09: Scoped DSP Math & Processing Invariance](./axioms/AXIOM-09_PLATFORM_AGNOSTIC_DSP.md)
 
-### 2. [Tier 1: Architecture Specifications (`docs/architecture/`)](./architecture/system_overview.md)
+### 2. [Tier 1: Sector Contracts (`docs/contracts/`)](./contracts/README.md)
+Authoritative front doors, signal trust ratings, and isolation walls for each sealed sector:
+- [Sector Contracts Index](./contracts/README.md)
+- [Music Analyzer Sector Contract (`music.api`)](./contracts/music_analyzer_contract.md)
+- [Mood & Palette Sector Contract (`mood.api`)](./contracts/mood_contract.md)
+- [Transition Sector Contract (`transitions.api`)](./contracts/transition_contract.md)
+
+### 3. [Tier 1: Architecture Specifications (`docs/architecture/`)](./architecture/system_overview.md)
 Authoritative blueprints for each architectural domain:
 - [System Overview & Execution Flow](./architecture/system_overview.md)
 - [Audio Ingestion & Feature Pipeline](./architecture/audio_pipeline.md)
 - [Rhythm Tracking & Anticipation Flywheel ("Oracle")](./architecture/rhythm_engine.md)
 - [Structural Novelty & Drop Detection](./architecture/structural_novelty.md)
-- [Transition Sector Contract & Pipeline](./reference/transition_contract.md)
+- [Unified 3-Tier Musical Context Engine](./architecture/musical_context_engine.md)
 - [Hardware Abstraction & Dynamic Profiles](./architecture/hardware_abstraction.md)
 - [API, WebSocket & Wire Protocol](./architecture/api_and_wire_protocol.md)
 
-### 3. [Tier 1: Reference Specifications (`docs/reference/`)](./reference/modes_catalog.md)
+### 4. [Tier 1: Reference Specifications (`docs/reference/`)](./reference/modes_catalog.md)
 Comprehensive catalogs and schemas:
 - [Configuration Schemas & Parameter Master](./reference/configuration_schemas.md)
-- [Modes Visual Catalog (22 Active Modes)](./reference/modes_catalog.md)
+- [Modes Visual Catalog (21 Active Modes)](./reference/modes_catalog.md)
 - [Coordinates Matrix & Channel Mapping](./reference/coordinates_matrix.md)
 
-### 4. [Tier 2: Manuals & Operations (`docs/manuals/`)](./manuals/mode_authoring_guide.md)
+### 5. [Tier 2: Manuals & Operations (`docs/manuals/`)](./manuals/mode_authoring_guide.md)
 Operational how-to guides:
 - [Mode Authoring Guide (Vectorization, Base Class, Schemas)](./manuals/mode_authoring_guide.md)
 - [Raspberry Pi 4 Deployment & Service Management](./manuals/raspberry_pi_deployment.md)
 - [Developer Tools & Simulators Guide](./manuals/developer_tools.md)
 - [Web Interface Operator Manual](./manuals/web_interface_manual.md)
 
-### 5. [Tier 4: Ideas Hub (`docs/ideas/`)](./ideas/README.md)
+### 6. [Tier 4: Ideas Hub (`docs/ideas/`)](./ideas/README.md)
 Non-authoritative brainstorming and potential ideas (scratchpad, transitions, music events):
 - [Ideas Hub Index](./ideas/README.md)
 - [Personal Scratchpad (`IDEAS.md`)](./ideas/IDEAS.md)
+- [Potential Transition Ideas](./ideas/transition_potential_ideas.md)
+- [Potential Music Events Ideas](./ideas/music_events_potential_ideas.md)
 
-### 6. [Tier 4: Concept Archive (`docs/archive/`)](./archive/)
-Prospective research concepts and historical review archives:
-- [Prospective Transitions Concepts](./archive/prospective_transitions.md)
-- [Prospective Music Events Concepts](./archive/prospective_music_events.md)
+### 7. [Tier 4: Concept Archive (`docs/archive/`)](./archive/)
+Historical snapshots and legacy research spikes:
+- [Agent Context Snapshot (2026-10-14)](./archive/AGENT_context_snapshot_2026-10-14.md)
 - [Legacy Research Spikes & Notebooks Archive](../archive/playground/)
