@@ -102,6 +102,20 @@ def create_hardware(infos):
             raise ValueError("Invalid ESP32 IP address configured: '192.168.1.X'. Please configure esp32_ip in app_config.json")
         print(f"=== INITIALIZING ESP32 HARDWARE MODE ON IP: {esp32_ip} ({len(channel_specs)} channels) ===")
         
+        is_headless = (
+            os.environ.get("SDL_VIDEODRIVER") == "dummy"
+            or (
+                sys.platform.startswith("linux")
+                and not os.environ.get("DISPLAY")
+                and not os.environ.get("WAYLAND_DISPLAY")
+            )
+        )
+        if not is_headless:
+            import atexit
+            script_path = os.path.join(os.path.dirname(__file__), "Fake_ESP32.py")
+            proc = subprocess.Popen([sys.executable, script_path, "--hud-only"])
+            atexit.register(proc.terminate)
+        
         hardware_list = []
         for spec in channel_specs:
             sender = Udp_Sender.Udp_Sender(esp32_ip, spec["port"], spec["count"])

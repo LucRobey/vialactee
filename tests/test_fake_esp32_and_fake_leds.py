@@ -219,6 +219,38 @@ class TestFakeLedsAndFakeESP32(unittest.TestCase):
                         mock_begin.assert_called_with(1)
                         mock_end.assert_called_with(1)
 
+    def test_hud_only_compact_window_and_button_rects(self):
+        """Verify HUD-only mode renders compact panels without simulated LEDs and aligns button rects."""
+        self.visualizer._analyzer_data = None
+        try:
+            self.visualizer.set_hud_only(True)
+            self.assertTrue(self.visualizer.hud_only)
+            self.assertEqual(self.visualizer._current_window_size[0], 732)
+            self.assertLess(self.visualizer._current_window_size[1], 400)
+
+            with patch.object(self.visualizer, "handle_events"):
+                self.visualizer.show()
+                # Transition panel is drawn at (320, 12), so _rect_send is at (334, 131)
+                self.assertEqual(self.visualizer.hud._rect_send.topleft, (334, 131))
+                self.assertEqual(self.visualizer.hud._rect_prev.topleft, (334, 53))
+        finally:
+            self.visualizer.set_hud_only(False)
+
+    def test_hardware_factory_esp32_launches_hud_only_when_not_headless(self):
+        """Verify HardwareFactory launches Fake_ESP32.py --hud-only in esp32 mode on desktop."""
+        import hardware.HardwareFactory as HardwareFactory
+        infos = {"HARDWARE_MODE": "esp32", "esp32_ip": "192.168.0.29", "hardware_profile": "small"}
+        with patch.dict(os.environ, {"SDL_VIDEODRIVER": ""}, clear=False):
+            with patch("hardware.HardwareFactory.subprocess.Popen") as mock_popen:
+                with patch("atexit.register"):
+                    senders = HardwareFactory.create_hardware(infos)
+                    self.assertEqual(len(senders), 1)
+                    mock_popen.assert_called_once()
+                    cmd = mock_popen.call_args[0][0]
+                    self.assertIn("--hud-only", cmd)
+                    for s in senders:
+                        s.close()
+
 
 if __name__ == "__main__":
     unittest.main()

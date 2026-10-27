@@ -155,6 +155,21 @@ class TestUdpSenderThrottling(unittest.TestCase):
         self.assertEqual(payload["bpm"], 128.0)
         self.assertEqual(payload["phase"], 0.725)
 
+    def test_esp32_sender_routes_metadata_to_localhost_and_pixels_to_esp32(self):
+        """Verify Udp_Sender with a remote ESP32 IP sends pixels to ESP32 and metadata to 127.0.0.1."""
+        esp_sender = Udp_Sender("192.168.0.29", 9001, 50)
+        esp_sender.sock.close()
+        esp_sender.sock = MagicMock()
+
+        esp_sender.set_segment_mode("Segment v1", "Rainbow", "Aurora")
+        esp_sender.show()
+
+        pixel_targets = [c[0][1] for c in esp_sender.sock.sendto.call_args_list if c[0][1][1] == 9001]
+        meta_targets = [c[0][1] for c in esp_sender.sock.sendto.call_args_list if c[0][1][1] == SEGMENT_METADATA_PORT]
+
+        self.assertEqual(pixel_targets, [("192.168.0.29", 9001)])
+        self.assertEqual(meta_targets, [("127.0.0.1", SEGMENT_METADATA_PORT)])
+
 
 if __name__ == "__main__":
     unittest.main()

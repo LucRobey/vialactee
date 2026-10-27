@@ -35,6 +35,15 @@ class VisualizerHud:
         self._rect_dur_p5 = pygame.Rect(658, 766, 48, 26)
         self._rect_send = pygame.Rect(334, 804, 372, 34)
 
+    def _update_transition_rects(self, px: int, py: int) -> None:
+        self._rect_prev = pygame.Rect(px + 14, py + 41, 36, 28)
+        self._rect_next = pygame.Rect(px + 350, py + 41, 36, 28)
+        self._rect_dur_m5 = pygame.Rect(px + 14, py + 81, 48, 26)
+        self._rect_dur_m1 = pygame.Rect(px + 68, py + 81, 44, 26)
+        self._rect_dur_p1 = pygame.Rect(px + 288, py + 81, 44, 26)
+        self._rect_dur_p5 = pygame.Rect(px + 338, py + 81, 48, 26)
+        self._rect_send = pygame.Rect(px + 14, py + 119, 372, 34)
+
     @property
     def selected_transition(self) -> str:
         return self.transitions[self.selected_idx % len(self.transitions)]
@@ -114,7 +123,9 @@ class VisualizerHud:
         segment_modes: Dict[str, Dict[str, Any]],
         mode_font: Any,
         mode_label_cache: Dict[Any, Any],
-    ) -> None:
+        px: int = 10,
+        py: int = 185,
+    ) -> int:
         """Draw the segment-to-mode table on the left side of the simulator screen."""
         self._ensure_fonts()
         rows = []
@@ -127,7 +138,7 @@ class VisualizerHud:
         rows.sort(key=lambda r: (0 if "_v" in r[0] else 1, r[0]))
 
         row_h = 22
-        px, py, pw = 10, 185, 295
+        pw = 295
         ph = 38 + max(1, len(rows)) * row_h
         if self._modes_bg_surf is None or self._modes_bg_surf.get_height() != ph:
             self._modes_bg_surf = pygame.Surface((pw, ph), pygame.SRCALPHA)
@@ -165,11 +176,19 @@ class VisualizerHud:
                 m_surf = mode_label_cache[m_key] = mode_font.render(mode_label, True, color)
             screen.blit(m_surf, (px + 72, cy + 1))
             cy += row_h
+        return ph
 
-    def draw_transition_panel(self, screen: Any, transition_data: Optional[Dict[str, Any]]) -> None:
+    def draw_transition_panel(
+        self,
+        screen: Any,
+        transition_data: Optional[Dict[str, Any]],
+        px: int = 320,
+        py: int = 685,
+    ) -> None:
         """Draw the interactive Transition Selector + Duration + Send Request panel."""
         self._ensure_fonts()
-        px, py, pw, ph = 320, 685, 400, 205
+        pw, ph = 400, 205
+        self._update_transition_rects(px, py)
         screen.blit(self._panel_bg_surf, (px, py))
         pygame.draw.rect(screen, (60, 180, 220), (px, py, pw, ph), 2)
 
@@ -232,12 +251,12 @@ class VisualizerHud:
         surf = self._hud_value(label, (240, 248, 255))
         screen.blit(surf, surf.get_rect(center=rect.center))
 
-    def draw_analyzer_hud(self, screen: Any, d: Optional[Dict[str, Any]]) -> None:
+    def draw_analyzer_hud(self, screen: Any, d: Optional[Dict[str, Any]], px: int = 10, py: int = 545) -> None:
         """Draw the music analyzer HUD overlay in the bottom-left corner."""
         if d is None:
             return
         self._ensure_fonts()
-        px, py, pw, ph = 10, 545, 295, 345
+        pw, ph = 295, 345
         screen.blit(self._hud_bg_surf, (px, py))
         pygame.draw.rect(screen, (160, 60, 220), (px, py, pw, ph), 2)
         screen.blit(self._hud_title_surf, (px + pw // 2 - self._hud_title_surf.get_width() // 2, py + 8))

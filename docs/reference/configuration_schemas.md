@@ -138,7 +138,7 @@ The `HARDWARE_MODE` setting in `app_config.json` dictates how frames generated b
 | :--- | :--- | :--- | :--- |
 | `"auto"` (Default) | Spawns `Fake_ESP32` UDP listener and opens Pygame simulation window. | Uses `Udp_Sender` to stream packets to `esp32_ip`. | Zero-config cross-platform default. |
 | `"simulation"` | Spawns `Fake_ESP32` subprocess listening on `127.0.0.1:9001/9002` + Pygame GUI. | Same as Windows (launches X11 Pygame GUI). | Forced local visualizer. |
-| `"esp32"` | Sends UDP packets over network to `esp32_ip` ports 9001/9002. | Sends UDP packets over network to `esp32_ip` ports 9001/9002. | Production network streaming to microcontroller. |
+| `"esp32"` | Sends UDP packets over network to `esp32_ip` ports 9001/9002 and spawns the compact `Fake_ESP32 --hud-only` control panel (Segment Modes + Transition Tester). | Sends UDP packets over network to `esp32_ip` ports 9001/9002 (skips GUI when headless). | Production network streaming to microcontroller. |
 | `"rpi"` | Falls back to simulation with warning. | Uses direct GPIO DMA NeoPixels (`board.D21`, `board.D18`) via `rpi_ws281x`. | Legacy direct GPIO connection on Raspberry Pi. |
 
 ### Channel Specification Overrides

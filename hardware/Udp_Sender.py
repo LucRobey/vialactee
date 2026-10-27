@@ -122,7 +122,7 @@ class Udp_Sender(HardwareInterface):
                 "progress": round(float(st.progress), 3),
                 "technique": st.technique,
             }
-            self.sock.sendto(json.dumps(payload).encode("utf-8"), (self.ip, SEGMENT_METADATA_PORT))
+            self.sock.sendto(json.dumps(payload).encode("utf-8"), ("127.0.0.1", SEGMENT_METADATA_PORT))
         except Exception:
             pass
 
@@ -185,7 +185,7 @@ class Udp_Sender(HardwareInterface):
             }
             self.sock.sendto(
                 json.dumps(payload).encode("utf-8"),
-                (self.ip, SEGMENT_METADATA_PORT),
+                ("127.0.0.1", SEGMENT_METADATA_PORT),
             )
         except Exception:
             pass
@@ -218,7 +218,7 @@ class Udp_Sender(HardwareInterface):
         try:
             self.sock.sendto(
                 json.dumps(payload).encode("utf-8"),
-                (self.ip, SEGMENT_METADATA_PORT),
+                ("127.0.0.1", SEGMENT_METADATA_PORT),
             )
         except Exception:
             pass

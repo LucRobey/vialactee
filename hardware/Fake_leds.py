@@ -14,7 +14,7 @@ CONTROL_PORT = 9004
 class FakeLedsVisualizer:
     _instance = None
     
-    def __new__(cls):
+    def __new__(cls, hud_only=None):
         if cls._instance is None:
             cls._instance = super(FakeLedsVisualizer, cls).__new__(cls)
             try:
@@ -22,9 +22,8 @@ class FakeLedsVisualizer:
             except Exception:
                 pass
             
-            # Larger window to fit the mapped schematic
-            cls._instance.screen = pygame.display.set_mode((1300, 900))
-            pygame.display.set_caption("Vialactée - LED Simulator")
+            cls._instance.screen = None
+            cls._instance._current_window_size = None
             cls._instance.strips = []
             cls._instance.clock = pygame.time.Clock()
             # Maps the segment_def internal name (e.g. "segment_v4") to its current mode info
@@ -49,8 +48,36 @@ class FakeLedsVisualizer:
 
             # Dynamic geometry mapping based on active profile
             cls._instance.segments_def = cls._instance._load_visualizer_segments_def()
-            
+            cls._instance.hud_only = False
+            initial_hud_only = (
+                hud_only
+                if hud_only is not None
+                else ("--hud-only" in sys.argv or os.environ.get("VIALACTEE_HUD_ONLY") == "1")
+            )
+            cls._instance.set_hud_only(bool(initial_hud_only))
+        elif hud_only is not None and bool(hud_only) != cls._instance.hud_only:
+            cls._instance.set_hud_only(bool(hud_only))
+
         return cls._instance
+
+    def _compute_hud_only_size(self):
+        seen = {
+            name
+            for ch_defs in self.segments_def
+            for (_s, _o, _sx, _sy, name, _c) in ch_defs
+        }
+        modes_h = 38 + max(1, len(seen)) * 22
+        left_h = (modes_h + 12 + 345) if self._analyzer_data is not None else modes_h
+        return (732, max(205, left_h) + 24)
+
+    def set_hud_only(self, hud_only):
+        self.hud_only = bool(hud_only)
+        target_size = self._compute_hud_only_size() if self.hud_only else (1300, 900)
+        if getattr(self, "_current_window_size", None) != target_size:
+            self.screen = pygame.display.set_mode(target_size)
+            self._current_window_size = target_size
+        caption = "Vialactée - ESP32 Control Panel" if self.hud_only else "Vialactée - LED Simulator"
+        pygame.display.set_caption(caption)
 
     @property
     def _hud_bg_surf(self):
@@ -212,6 +239,26 @@ class FakeLedsVisualizer:
             pygame.font.init()
             self.font = pygame.font.SysFont('arial', 16, bold=True)
             self.mode_font = pygame.font.SysFont('arial', 11, italic=True)
+
+        if self.hud_only:
+            target_size = self._compute_hud_only_size()
+            if self._current_window_size != target_size:
+                self.screen = pygame.display.set_mode(target_size)
+                self._current_window_size = target_size
+            modes_h = self.hud.draw_segment_modes_table(
+                self.screen,
+                self.segments_def,
+                self.segment_modes,
+                self.mode_font,
+                self._mode_label_cache,
+                px=12,
+                py=12,
+            )
+            self.hud.draw_transition_panel(self.screen, self._transition_data, px=320, py=12)
+            if self._analyzer_data is not None:
+                self.hud.draw_analyzer_hud(self.screen, self._analyzer_data, px=12, py=12 + modes_h + 12)
+            pygame.display.flip()
+            return
 
         for strip_id, strip_data in enumerate(self.strips):
             if strip_id >= len(self.segments_def):

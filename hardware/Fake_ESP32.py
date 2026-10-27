@@ -56,6 +56,7 @@ def drain_metadata_packets(sock_meta, visualizer, max_packets=64):
     Drain pending segment metadata and analyzer telemetry packets.
     Updates visualizer state without disrupting LED render cadence.
     """
+    has_new_meta = False
     for _ in range(max_packets):
         try:
             data, _ = sock_meta.recvfrom(4096)
@@ -73,16 +74,22 @@ def drain_metadata_packets(sock_meta, visualizer, max_packets=64):
                         payload.get("mode"),
                         payload.get("target"),
                     )
+                    has_new_meta = True
             elif p_type == "analyzer_state":
                 visualizer.update_analyzer_data(payload)
+                has_new_meta = True
             elif p_type == "transition_state":
                 visualizer.update_transition_data(payload)
+                has_new_meta = True
         except Exception:
             pass
+    return has_new_meta
 
 
-def main():
-    logger.info("Starting Fake ESP32 Visualizer...")
+def main(hud_only=None):
+    if hud_only is None:
+        hud_only = ("--hud-only" in sys.argv)
+    logger.info("Starting Fake ESP32 %s...", "Control Panel (HUD Only)" if hud_only else "Visualizer")
 
     is_win = (sys.platform == "win32")
     timer_period_active = False
@@ -104,33 +111,38 @@ def main():
 
     try:
         # Initialize the visualizer
-        visualizer = FakeLedsVisualizer()
+        visualizer = FakeLedsVisualizer(hud_only=hud_only)
         
         from hardware.HardwareFactory import _get_channel_specs
         channel_specs = _get_channel_specs()
 
         strip_channels = []
-        for spec in channel_specs:
-            strip_id = visualizer.register_strip(spec["count"])
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.bind(('127.0.0.1', spec["port"]))
-            sock.setblocking(False)
-            strip_channels.append({
-                "strip_id": strip_id,
-                "sock": sock,
-                "port": spec["port"],
-                "count": spec["count"],
-            })
+        if not hud_only:
+            for spec in channel_specs:
+                strip_id = visualizer.register_strip(spec["count"])
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.bind(('127.0.0.1', spec["port"]))
+                sock.setblocking(False)
+                strip_channels.append({
+                    "strip_id": strip_id,
+                    "sock": sock,
+                    "port": spec["port"],
+                    "count": spec["count"],
+                })
         
         sock_meta = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock_meta.bind(('127.0.0.1', PORT_METADATA))
         sock_meta.setblocking(False)
 
-        listening_ports = [ch["port"] for ch in strip_channels]
-        logger.info(f"Fake ESP32 listening on UDP ports {listening_ports} (pixels) and {PORT_METADATA} (metadata)...")
+        if hud_only:
+            logger.info(f"ESP32 Control Panel listening on UDP port {PORT_METADATA} (metadata)...")
+        else:
+            listening_ports = [ch["port"] for ch in strip_channels]
+            logger.info(f"Fake ESP32 listening on UDP ports {listening_ports} (pixels) and {PORT_METADATA} (metadata)...")
 
         last_render = 0.0
         first_frame = True
+        idle_render_interval = 0.033 if hud_only else 0.25
 
         while True:
             has_new_data = False
@@ -141,10 +153,12 @@ def main():
                     has_new_data = True
 
             # Drain pending segment-metadata packets without resetting frame cadence
-            drain_metadata_packets(sock_meta, visualizer)
+            has_meta = drain_metadata_packets(sock_meta, visualizer)
+            if hud_only and has_meta:
+                has_new_data = True
 
             now = time.monotonic()
-            if has_new_data or first_frame or (now - last_render >= 0.25):
+            if has_new_data or first_frame or (now - last_render >= idle_render_interval):
                 visualizer.show()
                 last_render = now
                 first_frame = False
