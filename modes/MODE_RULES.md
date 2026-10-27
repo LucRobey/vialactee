@@ -37,11 +37,11 @@ Because `self.listener` is injected into every mode, modes see every public sign
 
 | Sanctioned Helper (`Mode.py`) | Internal Signals Read | What It Guarantees to Concrete Modes |
 | :--- | :--- | :--- |
-| `self.rhythm_lock` | `ctx.salience` (or `listener.rhythm_salience`), `ctx.beat_trust` (or `listener.beat_trust`) | Continuous confidence weight in $[0.0, 1.0]$ ($\sqrt{\text{trust} \cdot \text{salience}}$). |
-| `self.beat_pulse(sharpness=2.0)` | `listener.beat_phase`, `self.rhythm_lock`, `self.mood_sharpness`, `ctx.energy` | Blends a sharp phase-locked $(1 - \theta)^{\text{sharpness} \cdot \text{mood\_sharpness}}$ pulse with a smooth acoustic breathing fallback when `rhythm_lock -> 0.0`. |
+| `self.rhythm_lock` | `ctx.salience` (or `listener.rhythm_salience`), `ctx.beat_trust` (or `listener.beat_trust`) | Continuous confidence weight in $[0.0, 1.0]$ ($\text{trust} \times (0.4 + 0.6 \cdot \text{salience})$). |
+| `self.beat_pulse(sharpness=2.2)` | `listener.beat_phase`, `ctx.beat_trust`, `ctx.tension`, `ctx.is_silent`, `self.mood_sharpness`, `ctx.energy` | Blends a sharp phase-locked $(1 - \theta)^{\text{sharpness} \cdot \text{mood\_sharpness} + 1.2 \cdot \text{tension}}$ pulse with a smooth acoustic breathing fallback when `beat_trust -> 0.0` (returns `0.0` in silence). |
 | `self.drop_hit` | `ctx.is_drop_impact` | **1-frame** boolean trigger on drop arrival (`False` on all other frames), preventing 1.5 s solid whiteouts. |
 | `self.drop_decay` | `ctx.scene`, `ctx.is_drop_impact`, `ctx.drop_progress` | Smooth $1.0 \to 0.0$ envelope across the 1.5 s `DROP_IMPACT` dwell (`0.0` outside a drop). |
-| `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent` | `Mode._shared_mood_modifiers` (bound from `mood.api.modifiers()`) | Debounced (`0.30 s`) and cosine-smoothed (`2.5 s`) scene modifiers (`🟢 HIGH` trust as consumed). |
+| `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent` | `Mode._mood_modifiers` (bound from `mood.api.modifiers()` via `Mode.bind_mood_modifiers`) | Debounced (`0.30 s`) and cosine-smoothed (`2.5 s`) scene modifiers (`🟢 HIGH` trust as consumed). |
 
 ---
 
