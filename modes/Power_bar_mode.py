@@ -49,14 +49,14 @@ class Power_bar_mode(Mode.Mode):
         self.power_height = float(np.clip(self.power_height, 0.0, self.nb_of_leds - 1))
 
         # 2. Scale peak gravity with fps_ratio and mood_pace
-        if self.power_height >= self.white_dot_height:
+        if self.power_height >= 0.5 and self.power_height >= self.white_dot_height:
             self.white_dot_height = min(float(self.nb_of_leds - 1), self.power_height + 1.0)
         else:
             self.white_dot_height -= (self.white_speed * fps_ratio * self.mood_pace) / max(0.5, self.mood_trail)
             if self.white_dot_height < 0.0:
                 self.white_dot_height = 0.0
 
-        if is_silent and self.power_height < 0.5 and self.white_dot_height < 0.5:
+        if is_silent:
             self.fade_to_black_segment_vectorized(0.40, 0, self.nb_of_leds - 1)
             return
 

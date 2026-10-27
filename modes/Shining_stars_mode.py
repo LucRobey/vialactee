@@ -93,7 +93,7 @@ class Shining_stars_mode(Mode.Mode):
             return
 
         ctx = getattr(self.listener, "context", None)
-        has_real_ctx = ctx is not None
+        has_real_ctx = isinstance(getattr(ctx, "is_silent", None), bool)
 
         # 1. Continuous trail fade modulated smoothly by mood_trail (no scene branching)
         trail = self.mood_trail
@@ -108,7 +108,7 @@ class Shining_stars_mode(Mode.Mode):
 
         if self.listener is None:
             return
-        if has_real_ctx and bool(getattr(ctx, "is_silent", False)):
+        if has_real_ctx and ctx.is_silent:
             return
 
         step = self.step
@@ -144,6 +144,7 @@ class Shining_stars_mode(Mode.Mode):
         if band_flux is None and bands is None:
             return
 
+        n_leds = self.nb_of_leds
         for band_index in range(self.num_bands):
             flux_val = float(band_flux[band_index]) if (band_flux is not None and band_index < len(band_flux)) else 0.0
             band_val = float(bands[band_index]) if (bands is not None and band_index < len(bands)) else 0.0
@@ -152,8 +153,9 @@ class Shining_stars_mode(Mode.Mode):
             if drive > current_threshold:
                 star_c = self.star_colors[band_index]
                 neigh_c = self.neighbor_colors[band_index]
-                for base in range(0, self.nb_of_leds, step):
-                    seg_len = min(step, self.nb_of_leds - base)
+                base = 0
+                while base < n_leds:
+                    seg_len = step if (base + step) <= n_leds else (n_leds - base)
                     rand_val = self._rand_pool[self._rand_idx]
                     self._rand_idx = (self._rand_idx + 1) & 255
                     pos = base + (rand_val % seg_len)
@@ -163,3 +165,4 @@ class Shining_stars_mode(Mode.Mode):
                             self.rgb_list[pos - 1] = neigh_c
                         if pos + 1 < base + seg_len:
                             self.rgb_list[pos + 1] = neigh_c
+                    base += step

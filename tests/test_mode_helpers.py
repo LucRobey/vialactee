@@ -241,6 +241,138 @@ class TestBlendEquivalence(_ModeTestCase):
         mode.smooth_vectorized(0.4, target)
         np.testing.assert_array_equal(mode.rgb_list, self._reference(base, target, 0.4))
 
+    def test_cooperative_transition_scale_attenuation(self):
+        mode = self.make(n=10)
+        target = np.full((10, 3), 200, dtype=np.int32)
+        mode.on_transition_exit(0.5)
+        t_scale = mode.transition_scale
+        self.assertLess(t_scale, 1.0)
+        mode.smooth_vectorized(1.0, target)
+        expected = self._reference(np.zeros((10, 3), dtype=np.int32), target, 1.0 * t_scale)
+        np.testing.assert_array_equal(mode.rgb_list, expected)
+
+        mode.on_transition_reset()
+        self.assertEqual(mode.transition_scale, 1.0)
+        mode.rgb_list.fill(0)
+        mode.smooth_vectorized(1.0, target)
+        np.testing.assert_array_equal(mode.rgb_list, target)
+
+
+class TestModeDnaSpatialRoles(unittest.TestCase):
+    def test_spatial_roles_match_modes_catalog(self):
+        from transitions.mode_dna import MODE_DNA, get_mode_dna
+
+        self.assertEqual(MODE_DNA["Power Bar"]["spatial_role"], "vertical")
+        self.assertEqual(MODE_DNA["Plasma Fire"]["spatial_role"], "vertical")
+        for horiz_name in ("Beat Runner", "Chromatic Chaser", "Flying Ball", "Magnetic Ball"):
+            self.assertEqual(MODE_DNA[horiz_name]["spatial_role"], "horizontal")
+        for both_name in ("Static Wave", "PSG", "Middle Bar", "Coloured Middle Wave", "Extending Waves", "Opposite Sides"):
+            self.assertEqual(MODE_DNA[both_name]["spatial_role"], "both")
+        self.assertEqual(get_mode_dna("Power_bar_mode")["spatial_role"], "vertical")
+        self.assertEqual(get_mode_dna("Beat_runner_mode")["spatial_role"], "horizontal")
+        roles_present = {entry["spatial_role"] for entry in MODE_DNA.values()}
+        self.assertEqual(roles_present, {"vertical", "horizontal", "both"})
+
+
+class TestPart1ModeBugFixes(_ModeTestCase):
+    def test_power_bar_fades_gap_below_floating_peak_dot(self):
+        from modes.Power_bar_mode import Power_bar_mode
+
+        mode = self.make(Power_bar_mode, n=30)
+        mode.rgb_list[:] = 200
+        mode.power_height = 2.0
+        mode.white_dot_height = 24.0
+        self.engine._energy = 0.05
+        self.engine._beat_trust = 0.0
+        self.listener.asserved_total_power = 0.05
+        mode.run()
+        # Gap between bar top and floating peak dot must have faded below 200
+        self.assertTrue(np.all(mode.rgb_list[8:18] < 200))
+        # Floating peak dot must still be actively painted
+        dot_idx = int(np.clip(mode.white_dot_height, 0, 29))
+        self.assertTrue(np.any(mode.rgb_list[dot_idx] > 120))
+
+    def test_static_wave_fades_gap_inside_floating_caps(self):
+        from modes.Static_wave_mode import Static_wave_mode
+
+        mode = self.make(Static_wave_mode, n=41)
+        mode.rgb_list[:] = 200
+        mode.real_size = 2.0
+        mode.size_int = 15.0
+        self.engine._energy = 0.1
+        self.engine._beat_trust = 0.0
+        self.listener.asserved_fft_band = np.zeros(8)
+        mode.run()
+        # Gap between shrinking inner bar (middle=20 +- 2) and outer cap (20 +- 14) must fade
+        self.assertTrue(np.all(mode.rgb_list[25:32] < 200))
+        self.assertTrue(np.all(mode.rgb_list[9:16] < 200))
+
+    def test_chromatic_chaser_leaves_no_unlit_gaps_at_high_speed(self):
+        from modes.Chromatic_chaser_mode import Chromatic_chaser_mode
+
+        mode = self.make(Chromatic_chaser_mode, n=40)
+        mode.rgb_list.fill(0)
+        mode.position = 5.0
+        mode.speed = 6.0
+        mode.direction = 1
+        mode.run()
+        head_idx = int(np.clip(mode.position, 0, 39))
+        self.assertGreater(head_idx, 8)
+        # Every LED in the swept span [5, head_idx] must be lit with no dark holes
+        for idx in range(5, head_idx + 1):
+            self.assertTrue(np.any(mode.rgb_list[idx] > 0), f"Unlit gap at LED {idx}")
+
+    def test_beat_runner_pendulum_alternates_direction_across_beats(self):
+        from modes.Beat_runner_mode import Beat_runner_mode
+
+        mode = self.make(Beat_runner_mode, n=50)
+        mode.motion_style = "pendulum"
+        self.engine._beat_trust = 1.0
+        self.engine._salience = 1.0
+
+        # Even beat (beat_count = 0): sweeps from left to right as phase goes 0.2 -> 0.8
+        self.listener.beat_count = 0
+        self.listener.beat_phase = 0.2
+        mode.rgb_list.fill(0)
+        mode.run()
+        peak_even_early = int(np.argmax(np.sum(mode.rgb_list, axis=1)))
+
+        self.listener.beat_phase = 0.8
+        mode.rgb_list.fill(0)
+        mode.run()
+        peak_even_late = int(np.argmax(np.sum(mode.rgb_list, axis=1)))
+        self.assertLess(peak_even_early, peak_even_late)
+
+        # Odd beat (beat_count = 1): sweeps back from right to left as phase goes 0.2 -> 0.8
+        self.listener.beat_count = 1
+        self.listener.beat_phase = 0.2
+        mode.rgb_list.fill(0)
+        mode.run()
+        peak_odd_early = int(np.argmax(np.sum(mode.rgb_list, axis=1)))
+
+        self.listener.beat_phase = 0.8
+        mode.rgb_list.fill(0)
+        mode.run()
+        peak_odd_late = int(np.argmax(np.sum(mode.rgb_list, axis=1)))
+        self.assertGreater(peak_odd_early, peak_odd_late)
+
+    def test_shining_stars_randomizes_subsegments_independently(self):
+        from modes.Shining_stars_mode import Shining_stars_mode
+
+        mode = self.make(Shining_stars_mode, n=60)
+        mode.apply_settings({"sub_segment_size": 15, "threshold": 5.0})
+        self.listener.band_flux = np.array([20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.listener.asserved_fft_band = np.zeros(8)
+        mode.rgb_list.fill(0)
+        mode.run()
+        # Find local peak index within each 15-LED subsegment
+        local_peaks = [
+            int(np.argmax(np.sum(mode.rgb_list[base:base + 15], axis=1)))
+            for base in range(0, 60, 15)
+        ]
+        # Not all 4 subsegments should have identical local offset
+        self.assertGreater(len(set(local_peaks)), 1)
+
 
 class TestColouredMiddleWaveBuffer(_ModeTestCase):
     def test_draws_into_redirected_transition_buffer(self):

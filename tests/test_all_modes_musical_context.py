@@ -438,6 +438,50 @@ class TestAllModesMusicalContext(unittest.TestCase):
             fb.run()
         self.assertAlmostEqual(fb.ball_pos, 25.0, delta=2.0)
 
+    def test_all_modes_silence_decay_to_black(self):
+        """Silence Law (S6): Every mode must decay its entire buffer to black under sustained ctx.is_silent = True."""
+        num_leds = 40
+        for mode_cls in ALL_MODE_CLASSES:
+            mode = self._instantiate_mode(mode_cls, num_leds=num_leds)
+            mode.rgb_list[:] = 180
+            self.engine._is_silent = True
+            self.engine._energy = 0.0
+            self.engine._beat_trust = 0.0
+            self.engine._salience = 0.0
+            self.engine._is_real_beat = False
+            self.engine._is_drop_impact = False
+            self.listener.is_beat = False
+            self.listener.is_real_beat = False
+            self.listener.asserved_total_power = 0.0
+            for _ in range(180):
+                mode.run()
+            self.assertTrue(
+                np.all(mode.rgb_list == 0),
+                f"{mode_cls.__name__} failed to decay to black during sustained silence (max={np.max(mode.rgb_list)})",
+            )
+
+    def test_proportion_rainbow_and_beat_tag_consumption(self):
+        """Verify S7 consumption of listener.band_proportion and listener.beat_tag."""
+        pr = self._instantiate_mode(Proportion_rainbow_mode, num_leds=30)
+        self.engine._is_silent = False
+        self.engine._energy = 0.8
+        self.listener.band_proportion = np.zeros(8)
+        pr.run()
+        self.assertTrue(np.any(pr.rgb_list > 0))
+
+        hs = self._instantiate_mode(Hyper_strobe_mode, num_leds=20)
+        self.engine._is_real_beat = True
+        self.engine._beat_trust = 0.8
+        self.listener.beat_tag = "Bass/Kick"
+        hs.run()
+        kick_rgb = hs.rgb_list[0].copy()
+
+        hs.rgb_list.fill(0)
+        self.listener.beat_tag = "Snare/Mid"
+        hs.run()
+        snare_rgb = hs.rgb_list[0].copy()
+        self.assertFalse(np.array_equal(kick_rgb, snare_rgb))
+
 
 if __name__ == "__main__":
     unittest.main()
