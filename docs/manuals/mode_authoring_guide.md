@@ -31,8 +31,11 @@ Every visual animation subclasses `modes.Mode.Mode`.
 - High-energy strobes and boundary impacts must check `self.listener.is_real_beat`.
 - When beat trust drops, decay smoothly to acoustic power breathing (`self.listener.asserved_total_power`). Never cut abruptly to black.
 
-### Rule 3: Frame-Rate Independence
-- Always scale kinematics with `self.infos.get("fps_ratio", 1.0)` or `delta_time`.
+### Rule 3: Frame-Rate Independence (`self.dt`, `self.fps_ratio`, `self.alpha()`)
+- Always scale kinematics with the base-class timing helpers on `Mode`:
+  - `self.dt`: elapsed seconds since the previous frame (falls back to `1/60` when unavailable).
+  - `self.fps_ratio`: frame duration relative to 60 Hz (`self.dt * 60.0`; `1.0` at 60 Hz, `2.0` at 30 FPS).
+  - `self.alpha(rate_hz)`: frame-rate independent smoothing factor $1 - e^{-\text{dt} \cdot \text{rate\_hz}}$.
 
 ### Rule 4: Handling Signals by Trust & Subtle Mood Governance (`modes/MODE_RULES.md`)
 - Follow the Mode Sector Contract in [`modes/MODE_RULES.md`](../../modes/MODE_RULES.md). Per-signal trust is stated only in [`music_analyzer_contract.md`](../contracts/music_analyzer_contract.md); trust is guidance, not a test-enforced rule:
@@ -48,15 +51,15 @@ Every visual animation subclasses `modes.Mode.Mode`.
 from typing import Dict, Any, List
 import numpy as np
 from modes.Mode import Mode
-from utils.colors import white, blue, black
 
 class Custom_pulse_mode(Mode):
-    """A template audio-reactive pulse mode."""
+    """A template audio-reactive pulse mode (30 FPS, zero runtime heap allocations)."""
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
         self.pulse_decay = float(infos.get("custom_pulse_decay", 0.90))
         self._intensity = 0.0
+        self._color_buf = np.zeros(3, dtype=np.float64)
 
     def get_settings_schema(self) -> List[Dict[str, Any]]:
         return [
@@ -72,24 +75,25 @@ class Custom_pulse_mode(Mode):
             }
         ]
 
-    def render(self, buffer=None, audio_ctx=None, frame_info=None):
-        out_buf = self.rgb_list if buffer is None else buffer
+    def run(self) -> None:
+        if self.nb_of_leds <= 0:
+            return
+        ctx = getattr(self.listener, "context", None)
+        if ctx is not None and ctx.is_silent:
+            self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
+            return
 
-        # Check beat gating
-        if getattr(self.listener, "is_beat", False) and getattr(self.listener, "is_real_beat", False):
+        # 1. Verified transient kick or 1-frame drop_hit
+        is_real = bool(ctx.is_real_beat) if ctx is not None else bool(getattr(self.listener, "is_real_beat", False))
+        if (getattr(self.listener, "is_beat", False) and is_real and self.rhythm_lock > 0.35) or self.drop_hit:
             self._intensity = 1.0
         else:
-            self._intensity *= self.pulse_decay
+            self._intensity *= self.pulse_decay ** self.fps_ratio
 
-        # Fallback to acoustic power on low confidence
-        conf = getattr(self.listener, "beat_confidence", 1.0)
-        if conf < 0.4:
-            power = getattr(self.listener, "instant_power", 0.0)
-            self._intensity = max(self._intensity, float(np.clip(power / 100.0, 0.0, 1.0)))
-
-        # In-place buffer color write
-        color = (0, int(150 * self._intensity), int(255 * self._intensity))
-        out_buf[:] = color
+        # 2. Confidence-blended envelope fallback
+        drive = max(self._intensity, self.beat_pulse(2.2)) * self.transition_scale
+        np.multiply(self.mood_colors[0], drive, out=self._color_buf)
+        self.smooth_segment_vectorized(self.alpha(12.0), 0, self.nb_of_leds - 1, self._color_buf)
 ```
 
 ---

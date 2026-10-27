@@ -15,12 +15,12 @@ When running `Main.py` on a PC (`"HARDWARE_MODE": "simulation"` or `"auto"`), th
 
 ---
 
-## 2. Mode Studio (`mode_studio.py`)
+## 2. Mode Studio (`tools/mode_studio.py`)
 
 A focused laboratory tool for designing, tuning, and profiling individual animation modes:
 - **Usage:**
   ```bash
-  python mode_studio.py
+  python tools/mode_studio.py
   ```
 - **Features:**
   - Isolates a single segment and mode.
@@ -30,12 +30,12 @@ A focused laboratory tool for designing, tuning, and profiling individual animat
 
 ---
 
-## 3. Music Studio (`music_studio.py`)
+## 3. Music Studio (`tools/music_studio.py`)
 
 An advanced offline MIR laboratory for inspecting audio feature extraction:
 - **Usage:**
   ```bash
-  python music_studio.py
+  python tools/music_studio.py
   ```
 - **Features:**
   - Displays the 32 Mel onset derivative streams ($y_{\text{kick}}, y_{\text{snare}}, y_{\text{hat}}, y_{\text{mid}}$).
