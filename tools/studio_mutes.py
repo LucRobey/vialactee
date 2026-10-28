@@ -2,7 +2,17 @@
 tools/studio_mutes.py
 Mode Studio HUD formatter and Pygame keyboard shortcut handler for DriverMuteProxy.
 """
-from typing import Any, Optional
+from typing import Any, Dict, Optional
+
+# Single table of Pygame key names resolved via getattr(pygame, name) at call time.
+CTRL_KEY_MAP: Dict[str, str] = {
+    "K_b": "beat",
+    "K_l": "level",
+    "K_s": "spectrum",
+    "K_t": "transient",
+    "K_m": "macro",
+}
+CLEAR_MUTES_KEY: str = "K_0"
 
 
 def format_hud_line(proxy: Any, mode: Any) -> str:
@@ -17,34 +27,27 @@ def format_hud_line(proxy: Any, mode: Any) -> str:
 def handle_studio_key(proxy: Any, key: int, mod: int = 0) -> Optional[str]:
     """
     Handle Pygame KEYDOWN events for Mode Studio choreography mute toggles.
-    Bindings:
-      - F1..F5 (or Shift+B, Shift+L, S, T, M): toggle beat, level, spectrum, transient, macro
-      - 0 (K_0): clear all mutes
+    Bindings (plain Ctrl only; Shift/Alt/Meta combinations are ignored):
+      - Ctrl+B, Ctrl+L, Ctrl+S, Ctrl+T, Ctrl+M: toggle beat, level, spectrum, transient, macro
+      - Ctrl+0: clear all mutes
     Returns a status toast message if handled, else None.
     """
     import pygame
 
-    if key == pygame.K_0:
+    if not (mod & pygame.KMOD_CTRL):
+        return None
+    if mod & (pygame.KMOD_SHIFT | pygame.KMOD_ALT | getattr(pygame, "KMOD_META", 0)):
+        return None
+
+    if key == getattr(pygame, CLEAR_MUTES_KEY, None):
         proxy.clear_mutes()
         return "CHOREOGRAPHY MUTES: CLEARED"
 
-    shift = bool(mod & pygame.KMOD_SHIFT)
-    channel_by_key = {
-        pygame.K_F1: "beat",
-        pygame.K_F2: "level",
-        pygame.K_F3: "spectrum",
-        pygame.K_F4: "transient",
-        pygame.K_F5: "macro",
-        pygame.K_s: "spectrum",
-        pygame.K_t: "transient",
-        pygame.K_m: "macro",
-    }
-    if shift and key == pygame.K_b:
-        channel = "beat"
-    elif shift and key == pygame.K_l:
-        channel = "level"
-    else:
-        channel = channel_by_key.get(key)
+    channel: Optional[str] = None
+    for key_name, ch_name in CTRL_KEY_MAP.items():
+        if key == getattr(pygame, key_name, None):
+            channel = ch_name
+            break
 
     if channel is None:
         return None

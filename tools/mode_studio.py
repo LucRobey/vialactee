@@ -1693,7 +1693,7 @@ class StudioApp:
             "[C] Reset CD",
             "[N/P] Song",
             "[K/L] Sync",
-            "[F1-F5/0] Mute",
+            "[Ctrl+B/L/S/T/M] Mute  ·  [Ctrl+0] Clear",
             "[O] Orient",
             "[Esc] Exit"
         ]
