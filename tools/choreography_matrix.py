@@ -160,8 +160,12 @@ def run_mode_under_mutes(
     warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
     eval_frames: int = MATRIX_CONFIG["eval_frames"],
     nb_bands: int = DEFAULT_NB_BANDS,
-) -> Tuple[float, float]:
-    """Run `mode_cls` on the deterministic synthetic music clip under `muted_channels` and return `(R_std, R_diff)`."""
+    return_lock_trace: bool = False,
+) -> Any:
+    """
+    Run `mode_cls` on the deterministic synthetic music clip under `muted_channels`.
+    Returns `(R_std, R_diff)` by default, or `(R_std, R_diff, lock_trace)` when `return_lock_trace=True`.
+    """
     import random
     import modes.Mode as BaseModeMod
 
@@ -185,6 +189,7 @@ def run_mode_under_mutes(
     mode = mode_cls(mode_cls.__name__, "test_segment", proxy, None, indexes, rgb_list, {})
 
     recorded = np.zeros((eval_frames, num_leds, 3), dtype=np.int32)
+    lock_trace = np.zeros(eval_frames, dtype=np.float64)
     total_frames = warmup_frames + eval_frames
     try:
         for f in range(total_frames):
@@ -193,11 +198,17 @@ def run_mode_under_mutes(
             proxy.sync_macro_modifiers(BaseModeMod.Mode, live_modifiers)
             mode.run()
             if f >= warmup_frames:
-                recorded[f - warmup_frames] = mode.rgb_list
+                idx = f - warmup_frames
+                recorded[idx] = mode.rgb_list
+                if return_lock_trace:
+                    lock_trace[idx] = float(mode.rhythm_lock)
     finally:
         BaseModeMod.Mode.reset_mood_colors()
 
-    return compute_response_metrics(recorded)
+    r_std, r_diff = compute_response_metrics(recorded)
+    if return_lock_trace:
+        return r_std, r_diff, lock_trace
+    return r_std, r_diff
 
 
 def measure_mode_choreography(

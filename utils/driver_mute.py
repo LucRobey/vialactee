@@ -29,7 +29,7 @@ class ContextMuteProxy:
     @property
     def salience(self) -> float:
         if "beat" in self._parent._muted:
-            return 1.0
+            return self._parent._mean_salience
         ctx = self._ctx
         return float(getattr(ctx, "salience", getattr(self._parent._listener, "rhythm_salience", 0.0)))
 
@@ -135,6 +135,7 @@ class DriverMuteProxy:
         # Neutral mid-decay phase where (1 - phase) ** 2.2 equals its cycle mean (~0.35)
         self._frozen_beat_phase: float = 0.38
         self._frozen_beat_count: int = 0
+        self._mean_salience: float = 0.85
         self._mean_energy: float = 0.50
         self._mean_power: float = 0.50
         self._mean_tilt: float = 0.0
@@ -164,6 +165,11 @@ class DriverMuteProxy:
         if "beat" not in self._muted:
             self._frozen_beat_count = int(getattr(listener, "beat_count", self._frozen_beat_count))
 
+        raw_salience = (
+            float(getattr(ctx, "salience", getattr(listener, "rhythm_salience", 0.85)))
+            if ctx is not None
+            else float(getattr(listener, "rhythm_salience", 0.85))
+        )
         raw_power = float(getattr(listener, "asserved_total_power", 0.5))
         raw_energy = float(getattr(ctx, "energy", raw_power)) if ctx is not None else raw_power
         raw_tilt = float(getattr(ctx, "spectral_tilt", 0.0)) if ctx is not None else 0.0
@@ -174,6 +180,7 @@ class DriverMuteProxy:
             self._ensure_band_buffers(len(bands))
 
         if not self._has_observed:
+            self._mean_salience = raw_salience
             self._mean_energy = raw_energy
             self._mean_power = raw_power
             self._mean_tilt = raw_tilt
@@ -185,6 +192,9 @@ class DriverMuteProxy:
                     np.divide(bands, tot, out=self._mean_proportion)
             self._has_observed = True
             return
+
+        if "beat" not in self._muted:
+            self._mean_salience += alpha * (raw_salience - self._mean_salience)
 
         if "level" not in self._muted:
             self._mean_energy += alpha * (raw_energy - self._mean_energy)
@@ -270,7 +280,7 @@ class DriverMuteProxy:
     @property
     def rhythm_salience(self) -> float:
         if "beat" in self._muted:
-            return 1.0
+            return self._mean_salience
         return float(getattr(self._listener, "rhythm_salience", 0.0))
 
     @property

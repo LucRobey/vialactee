@@ -232,6 +232,9 @@ class TestDriverMuteProxyAndMetrics(unittest.TestCase):
 
                 rgb = np.zeros((16, 3), dtype=np.int32)
                 mode = BaseModeMod.Mode("test", "seg", proxy, None, list(range(16)), rgb, {})
+                unmuted_lock = float(
+                    listener.context.beat_trust * (0.4 + 0.6 * listener.context.salience)
+                )
 
                 pulses = []
                 phases = []
@@ -241,6 +244,8 @@ class TestDriverMuteProxyAndMetrics(unittest.TestCase):
                     proxy.observe()
                     self.assertGreaterEqual(proxy.beat_trust, 0.85)
                     self.assertGreaterEqual(proxy.context.beat_trust, 0.85)
+                    self.assertAlmostEqual(proxy.context.salience, 0.85, places=6)
+                    self.assertLess(abs(mode.rhythm_lock - unmuted_lock), 0.10)
                     self.assertTrue(proxy.context.is_locked)
                     phases.append(proxy.beat_phase)
                     counts.append(proxy.beat_count)
