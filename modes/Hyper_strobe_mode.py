@@ -12,6 +12,13 @@ import modes.Mode as Mode
 
 
 class Hyper_strobe_mode(Mode.Mode):
+    """Discrete transient strobe gated on verified beats, drop_hit, or spectral flux peaks.
+
+    Lead: transient (is_real_beat counts as an event). Secondary: none. Macro: decay via mood_trail.
+    """
+    LEAD = "transient"
+    SECONDARY = ()
+
     def get_settings_schema(self) -> List[Dict[str, Any]]:
         band_count = getattr(self.listener, "nb_of_fft_band", 8) if self.listener is not None else 8
         band_options = [

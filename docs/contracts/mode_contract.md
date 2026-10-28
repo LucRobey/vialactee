@@ -4,7 +4,7 @@
 > **Scope:** Every visual mode in [`modes/`](../../modes/) (and its base class [`modes/Mode.py`](../../modes/Mode.py)).  
 > **Authoring Tutorial:** [`docs/manuals/mode_authoring_guide.md`](../manuals/mode_authoring_guide.md)  
 > **Visual Catalog:** [`docs/reference/modes_catalog.md`](../reference/modes_catalog.md)  
-> **Enforced by:** `tests/test_all_modes_musical_context.py`, `tests/test_mode_helpers.py`, `tests/test_code_governance.py`, `tests/governance/test_axiom_07_code_governance.py`.
+> **Enforced by:** `tests/test_all_modes_musical_context.py`, `tests/test_mode_helpers.py`, `tests/test_code_governance.py`, `tests/governance/test_axiom_07_code_governance.py`, `tests/governance/test_mode_choreography.py`.
 
 Every mode on the chandelier is a **pure visual consumer** of the three upstream sealed sectors:
 - **Music (`music/`)** — see [`docs/contracts/music_analyzer_contract.md`](./music_analyzer_contract.md)

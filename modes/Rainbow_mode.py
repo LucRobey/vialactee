@@ -14,6 +14,13 @@ import utils.colors as colors
 
 
 class Rainbow_mode(Mode.Mode):
+    """Continuous rainbow spectrum modulated by per-band FFT energy.
+
+    Lead: spectrum (band brightness). Secondary: none. Macro: palette drift, hue span with tension.
+    """
+    LEAD = "spectrum"
+    SECONDARY = ()
+
     def get_settings_schema(self) -> List[Dict[str, Any]]:
         return [
             {

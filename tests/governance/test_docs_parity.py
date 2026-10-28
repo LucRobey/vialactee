@@ -207,6 +207,7 @@ class TestDocsParity(unittest.TestCase):
 
         missing = []
         missing_settings = []
+        lead_mismatches = []
         for m in modes:
             mode_name = m.get("name")
             mode_module = m.get("module")
@@ -216,6 +217,9 @@ class TestDocsParity(unittest.TestCase):
 
             mod = importlib.import_module(f"modes.{mode_module}")
             cls = getattr(mod, mode_class)
+            lead = getattr(cls, "LEAD", "")
+            if not lead or f"| `{lead}` |" not in catalog_content:
+                lead_mismatches.append(f"{mode_class}.LEAD={lead!r}")
             instance = cls(mode_name, "v1", listener, None, indexes, rgb_buf, {})
             for entry in instance.get_settings_schema():
                 key = entry.get("key")
@@ -223,6 +227,7 @@ class TestDocsParity(unittest.TestCase):
                     missing_settings.append(f"{mode_class}.{key}")
 
         self.assertEqual(missing, [], "Modes missing from docs/reference/modes_catalog.md:\n" + "\n".join(missing))
+        self.assertEqual(lead_mismatches, [], "Mode LEAD missing from docs/reference/modes_catalog.md:\n" + "\n".join(lead_mismatches))
         self.assertEqual(
             missing_settings,
             [],

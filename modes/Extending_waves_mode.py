@@ -11,6 +11,12 @@ import modes.Mode as Mode
 
 
 class Extending_waves_mode(Mode.Mode):
+    """Center-outward traveling color waves whose flow speed scales with audio energy.
+
+    Lead: level (flow speed = energy). Secondary: beat (tints stream hue/brightness). Macro: color drift, mood_pace.
+    """
+    LEAD = "level"
+    SECONDARY = ("beat",)
     MAX_WAVES: int = 8
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):

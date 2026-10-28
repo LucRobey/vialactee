@@ -12,6 +12,13 @@ import modes.Mode as Mode
 
 
 class Middle_bar_mode(Mode.Mode):
+    """Beat-pumped bar expanding symmetrically from the center.
+
+    Lead: beat (bar length). Secondary: spectrum (bass lights the caps). Macro: trail, color, tension.
+    """
+    LEAD = "beat"
+    SECONDARY = ("spectrum",)
+
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 

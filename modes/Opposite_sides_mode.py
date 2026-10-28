@@ -12,6 +12,13 @@ import modes.Mode as Mode
 
 
 class Opposite_sides_mode(Mode.Mode):
+    """Opposing low-frequency vs high-frequency bars advancing toward a central equilibrium zone.
+
+    Lead: spectrum (low vs high balance). Secondary: transient (frontier flash on drop_hit). Macro: color, tension.
+    """
+    LEAD = "spectrum"
+    SECONDARY = ("transient",)
+
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 

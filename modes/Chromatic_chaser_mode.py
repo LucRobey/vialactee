@@ -11,6 +11,13 @@ import modes.Mode as Mode
 
 
 class Chromatic_chaser_mode(Mode.Mode):
+    """Kinetic laser runner sweeping across the strip with exponential decay trail.
+
+    Lead: beat (collision on the beat). Secondary: level (spark size). Macro: period via mood_pace; tension shortens it.
+    """
+    LEAD = "beat"
+    SECONDARY = ("level",)
+
     def get_settings_schema(self) -> List[Dict[str, Any]]:
         return [
             {

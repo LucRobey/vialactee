@@ -12,6 +12,13 @@ import utils.rgb_hsv as RGB_HSV
 
 
 class Bary_rainbow_mode(Mode.Mode):
+    """Symmetrical center-mirrored rainbow whose center hue tracks the spectral centroid.
+
+    Lead: spectrum (centroid hue, heavily smoothed). Secondary: beat (faint breath). Macro: hue span.
+    """
+    LEAD = "spectrum"
+    SECONDARY = ("beat",)
+
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 

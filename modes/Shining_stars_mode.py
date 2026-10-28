@@ -14,6 +14,12 @@ import utils.rgb_hsv as RGB_HSV
 
 
 class Shining_stars_mode(Mode.Mode):
+    """Ambient dark canvas where 3-LED stars twinkle when frequency bands peak.
+
+    Lead: transient (band flux decides when a star lights). Secondary: spectrum (band decides where and in what color). Macro: density.
+    """
+    LEAD = "transient"
+    SECONDARY = ("spectrum",)
     sub_segment_size_default = 40
     threshold_default = 10.0
     fade_ratio_default = 0.1

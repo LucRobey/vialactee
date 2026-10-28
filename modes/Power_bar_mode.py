@@ -12,6 +12,13 @@ import modes.Mode as Mode
 
 
 class Power_bar_mode(Mode.Mode):
+    """Classic VU peak meter column with a floating white peak-hold dot.
+
+    Lead: level (column height). Secondary: beat (peak-dot kick). Macro: color, peak_decay via mood_trail.
+    """
+    LEAD = "level"
+    SECONDARY = ("beat",)
+
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 

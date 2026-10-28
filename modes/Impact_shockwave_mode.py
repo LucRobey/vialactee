@@ -11,6 +11,12 @@ import modes.Mode as Mode
 
 
 class Impact_shockwave_mode(Mode.Mode):
+    """Center-outward discrete shockwave rings spawned on verified transient hits.
+
+    Lead: transient (verified beat events, drop_hit, flux; one ring per event). Secondary: level (ring width/tint). Macro: palette, damping via mood_trail.
+    """
+    LEAD = "transient"
+    SECONDARY = ("level",)
     MAX_WAVES: int = 6
 
     def get_settings_schema(self) -> List[Dict[str, Any]]:

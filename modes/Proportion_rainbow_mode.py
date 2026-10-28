@@ -12,6 +12,13 @@ import utils.rgb_hsv as RGB_HSV
 
 
 class Proportion_rainbow_mode(Mode.Mode):
+    """Full-strip rainbow whose color zone widths scale with proportional FFT band energy.
+
+    Lead: spectrum (very slow smoothing). Secondary: none. Macro: slow drift and color.
+    """
+    LEAD = "spectrum"
+    SECONDARY = ()
+
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 

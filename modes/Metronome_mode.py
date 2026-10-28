@@ -11,6 +11,13 @@ import modes.Mode as Mode
 
 
 class Metronome_mode(Mode.Mode):
+    """Pure rhythmic clock pulsing with the Anticipation Flywheel.
+
+    Lead: beat (metronomic pulse). Secondary: none. Macro: accent color.
+    """
+    LEAD = "beat"
+    SECONDARY = ()
+
     def get_settings_schema(self) -> List[Dict[str, Any]]:
         return [
             {

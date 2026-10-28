@@ -11,6 +11,13 @@ import modes.Mode as Mode
 
 
 class Coloured_middle_wave_mode(Mode.Mode):
+    """Center-mirrored frequency band equalizer from bass heart to treble tips.
+
+    Lead: spectrum (band sections). Secondary: beat (zoom, modest). Macro: palette.
+    """
+    LEAD = "spectrum"
+    SECONDARY = ("beat",)
+
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
