@@ -25,8 +25,14 @@ from utils.choreography import (
     DRIVERS,
     MUTE_CHANNELS,
     NEUTRAL_MOOD_MODIFIERS,
+)
+from utils.driver_mute import (
+    ContextMuteProxy,
     DriverMuteProxy,
-    _SyntheticListener,
+)
+from tools.choreography_matrix import (
+    SyntheticContext,
+    SyntheticListener,
     compute_response_metrics,
     measure_all_registered_modes,
     step_synthetic_music,
@@ -147,7 +153,7 @@ class TestModeChoreographyGovernance(unittest.TestCase):
 class TestDriverMuteProxyAndMetrics(unittest.TestCase):
     def setUp(self):
         self.repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        self.listener = _SyntheticListener(nb_bands=8)
+        self.listener = SyntheticListener(nb_bands=8)
         self.proxy = DriverMuteProxy(self.listener)
         self.live_mods = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
 
@@ -188,7 +194,9 @@ class TestDriverMuteProxyAndMetrics(unittest.TestCase):
         missing_listener = [a for a in sorted(listener_attrs) if not hasattr(self.proxy, a)]
         missing_context = [a for a in sorted(context_attrs) if not hasattr(self.proxy.context, a)]
         self.assertEqual(missing_listener, [], f"DriverMuteProxy missing Listener attributes: {missing_listener}")
-        self.assertEqual(missing_context, [], f"_ContextMuteProxy missing context attributes: {missing_context}")
+        self.assertEqual(missing_context, [], f"ContextMuteProxy missing context attributes: {missing_context}")
+        self.assertIsInstance(self.proxy.context, ContextMuteProxy)
+        self.assertIsInstance(self.listener.context, SyntheticContext)
 
     def test_beat_mute_keeps_trust_high_and_freezes_phase_and_pulse(self):
         """Muting 'beat' keeps beat_trust=1.0 (stays on rhythmic branch) and freezes beat_phase, beat_count, and beat_pulse()."""

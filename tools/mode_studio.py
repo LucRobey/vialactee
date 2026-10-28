@@ -37,7 +37,8 @@ from music.AudioAnalyzer import AudioAnalyzer, bpm_to_class
 from music.MusicalContextEngine import MusicalScene
 from mood.api import create_mood_service
 from modes.Mode import Mode
-from utils.choreography import DriverMuteProxy
+from utils.driver_mute import DriverMuteProxy
+import tools.studio_mutes as studio_mutes
 
 
 def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]:
@@ -582,7 +583,7 @@ class StudioApp:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
-                    mute_msg = self.mode_mgr.mute_proxy.handle_studio_key(event.key, event.mod)
+                    mute_msg = studio_mutes.handle_studio_key(self.mode_mgr.mute_proxy, event.key, event.mod)
                     if mute_msg:
                         self.set_status(mute_msg, self.ACCENT_ORANGE if self.mode_mgr.mute_proxy.muted else self.ACCENT_GREEN)
                     elif event.key == pygame.K_ESCAPE:
@@ -718,7 +719,7 @@ class StudioApp:
         num_surf = self.get_text(self.font_main, mode_num, self.TEXT_DIM)
         self.screen.blit(num_surf, (title_surf.get_width() + 55, 23))
 
-        choreo_txt = self.mode_mgr.mute_proxy.format_hud_line(self.mode_mgr.active_mode_instance)
+        choreo_txt = studio_mutes.format_hud_line(self.mode_mgr.mute_proxy, self.mode_mgr.active_mode_instance)
         choreo_col = self.ACCENT_ORANGE if self.mode_mgr.mute_proxy.muted else self.TEXT_DIM
         self.screen.blit(self.get_text(self.font_small, choreo_txt, choreo_col), (40, 44))
 
