@@ -37,6 +37,7 @@ from music.AudioAnalyzer import AudioAnalyzer, bpm_to_class
 from music.MusicalContextEngine import MusicalScene
 from mood.api import create_mood_service
 from modes.Mode import Mode
+from utils.choreography import DriverMuteProxy
 
 
 def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]:
@@ -286,6 +287,7 @@ class ModeManager:
     def __init__(self, modes_dir: str, listener: Listener, nb_leds: int = 80):
         self.modes_dir = modes_dir
         self.listener = listener
+        self.mute_proxy = DriverMuteProxy(listener)
         self.nb_leds = nb_leds
 
         self.mode_catalog: List[Tuple[str, str, str]] = [] # (display_name, module_name, class_name)
@@ -344,7 +346,7 @@ class ModeManager:
             self.active_mode_instance = cls(
                 name=disp_name,
                 segment_name="studio_preview",
-                listener=self.listener,
+                listener=self.mute_proxy,
                 leds=None,
                 indexes=self.indexes,
                 rgb_list=self.rgb_buffer,
@@ -374,6 +376,8 @@ class ModeManager:
         scene_str = str(raw_scene.value if hasattr(raw_scene, "value") else raw_scene) if raw_scene is not None else None
         dt = float(getattr(self.listener, "dt", 1.0 / 60.0))
         self.mood.update(dt if dt > 0.0 else (1.0 / 60.0), scene_str)
+        self.mute_proxy.observe()
+        self.mute_proxy.sync_macro_modifiers(Mode, self.mood.modifiers())
         if self.active_mode_instance is not None:
             try:
                 self.active_mode_instance.render(buffer=self.rgb_buffer)
@@ -578,7 +582,10 @@ class StudioApp:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                    mute_msg = self.mode_mgr.mute_proxy.handle_studio_key(event.key, event.mod)
+                    if mute_msg:
+                        self.set_status(mute_msg, self.ACCENT_ORANGE if self.mode_mgr.mute_proxy.muted else self.ACCENT_GREEN)
+                    elif event.key == pygame.K_ESCAPE:
                         running = False
                     elif event.key == pygame.K_SPACE:
                         self.streamer.is_playing = not self.streamer.is_playing
@@ -710,6 +717,10 @@ class StudioApp:
         mode_num = f"Mode {self.mode_mgr.current_idx + 1}/{len(self.mode_mgr.mode_catalog)} │ Model: {self.model_name} [{self.nb_bands} bands]"
         num_surf = self.get_text(self.font_main, mode_num, self.TEXT_DIM)
         self.screen.blit(num_surf, (title_surf.get_width() + 55, 23))
+
+        choreo_txt = self.mode_mgr.mute_proxy.format_hud_line(self.mode_mgr.active_mode_instance)
+        choreo_col = self.ACCENT_ORANGE if self.mode_mgr.mute_proxy.muted else self.TEXT_DIM
+        self.screen.blit(self.get_text(self.font_small, choreo_txt, choreo_col), (40, 44))
 
         # Song Title & Status Badge
         song_name = os.path.basename(self.streamer.file_path)
@@ -1681,6 +1692,7 @@ class StudioApp:
             "[C] Reset CD",
             "[N/P] Song",
             "[K/L] Sync",
+            "[F1-F5/0] Mute",
             "[O] Orient",
             "[Esc] Exit"
         ]

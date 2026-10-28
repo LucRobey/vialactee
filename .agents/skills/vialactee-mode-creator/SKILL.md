@@ -54,19 +54,23 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 ### 4. Audio, Rhythm & Subtle Mood Reactivity
 * Access audio data via `self.listener` and base `Mode` helpers (`self.rhythm_lock`, `self.beat_pulse(sharpness)`, `self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`, `self.palette_lut`, `self.highlight_color`, `self.drop_hit`).
 * Consult [`docs/contracts/music_analyzer_contract.md`](../../../docs/contracts/music_analyzer_contract.md) for full descriptions of `asserved_fft_band`, `beat_phase`, `is_real_beat`, `beat_tag`, and `chroma_values`.
-* **Three Architectural Laws ([`docs/contracts/mode_contract.md`](../../../docs/contracts/mode_contract.md))**:
+* **Architectural Laws ([`docs/contracts/mode_contract.md`](../../../docs/contracts/mode_contract.md))**:
   - **Always Alive Without the Flywheel (`self.rhythm_lock == 0.0`):** Every mode must produce a smooth, musical animation driven by continuous audio energy, 8-band spectrum, or pitch even when `beat_trust == 0.0`.
   - **Rhythm-Locked When Confident (`self.rhythm_lock -> 1.0`):** Smoothly blend the same visual algorithm with `beat_phase`, `bpm`, and `self.beat_pulse(sharpness)` as `self.rhythm_lock` rises.
   - **No `if ctx.scene == ...` Branching in Modes:** Never write hard `if scene == ...` branches in modes. The sealed `mood/` sector absorbs scene changes (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) with a `0.30s` debounce and `2.5s` cosine crossfade, exposing bounded modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) on `Mode`.
   - **Gate Hard Flashes:** Use **Tier 3 Micro Badges** (`context.is_locked`, `context.is_real_beat`, `context.is_syncopated`) and sanctioned `Mode` helpers (`self.drop_hit`, `self.drop_decay`) to gate 1-frame transient impacts and strobes. Avoid reading heuristic flags (`scene`, `is_drop_impact`, `is_drop_imminent`, `is_song_change`, `is_verse_chorus_change`, `is_structural_cut`; trust per `music_analyzer_contract.md`) directly in concrete modes, and never flash blindly on ghost beats or lock into 1.5s full-strip whiteouts.
+  - **Law 7 — One Lead Timescale ([`docs/contracts/mode_contract.md`](../../../docs/contracts/mode_contract.md#7-one-lead-timescale-the-choreography-doctrine)):**
+    - **Three timescales:** **Macro** (seconds: `mood_pace`, `mood_sharpness`, `mood_trail`, `mood_accent`, palette, plus bounded `ctx.tension` / `drop_decay` modulators), **Meso** (beat to 1 s: `beat_pulse()`, `beat_phase`, `ctx.energy`), and **Micro** (frame to 100 ms: `asserved_fft_band`, `band_proportion`, `band_flux`, `spectral_tilt`, `vertical_center`).
+    - **Four audio drivers + `macro` mute channel:** Every concrete mode class must declare `LEAD: str` and `SECONDARY: tuple[str, ...]` (0 or 1 entry, `!= LEAD`) from `DRIVERS = ("beat", "level", "spectrum", "transient")` in [`utils/choreography.py`](../../../utils/choreography.py), plus a `Lead: ...` line in the class docstring. (`macro` is a 5th mute channel used by tests and `tools/mode_studio.py` `[F1-F5/0]`, not a driver.)
+    - **One visual dimension, one timescale:** The main shape (size, position, primary brightness) is driven by `LEAD` (~70% of visible motion); fine detail (edge shimmer, spark size, cap brightness) by at most one `SECONDARY` (~20%); color, trail, and global speed by **Macro** (~10%). Never sum three timescales onto the same visual variable.
 
 ### 5. Reference Implementation
 * Inspect [boilerplate_mode.py](./examples/boilerplate_mode.py) for a complete, production-ready template.
 
 ### 6. Mode Registration
 When adding a new mode:
-1. Create the mode file in `modes/<ModeName>_mode.py`.
-2. Register the mode in [`docs/reference/modes_catalog.md`](../../../docs/reference/modes_catalog.md) with visual description, orientation, and parameter schema.
+1. Answer the Four-Question Worksheet in [`docs/manuals/mode_authoring_guide.md`](../../../docs/manuals/mode_authoring_guide.md) and create `modes/<ModeName>_mode.py` with `LEAD`, `SECONDARY`, and a `Lead:` class docstring line.
+2. Register the mode in [`docs/reference/modes_catalog.md`](../../../docs/reference/modes_catalog.md) with `Lead`, `Secondary`, visual description, orientation, and parameter schema.
 3. Register the mode entry in [`config/modes.json`](../../../config/modes.json):
    ```json
    {

@@ -247,6 +247,45 @@ class DriverMuteProxy:
         muted_list = ", ".join(self.muted) if self._muted else "none"
         return f"LEAD: {lead} · SECONDARY: {sec} · muted: [{muted_list}]"
 
+    def handle_studio_key(self, key: int, mod: int = 0) -> Optional[str]:
+        """
+        Handle Pygame KEYDOWN events for Mode Studio choreography mute toggles.
+        Bindings:
+          - F1..F5 (or Shift+B, Shift+L, S, T, M): toggle beat, level, spectrum, transient, macro
+          - 0 (K_0): clear all mutes
+        Returns a status toast message if handled, else None.
+        """
+        import pygame
+
+        if key == pygame.K_0:
+            self.clear_mutes()
+            return "CHOREOGRAPHY MUTES: CLEARED"
+
+        shift = bool(mod & pygame.KMOD_SHIFT)
+        channel_by_key = {
+            pygame.K_F1: "beat",
+            pygame.K_F2: "level",
+            pygame.K_F3: "spectrum",
+            pygame.K_F4: "transient",
+            pygame.K_F5: "macro",
+            pygame.K_s: "spectrum",
+            pygame.K_t: "transient",
+            pygame.K_m: "macro",
+        }
+        if shift and key == pygame.K_b:
+            channel = "beat"
+        elif shift and key == pygame.K_l:
+            channel = "level"
+        else:
+            channel = channel_by_key.get(key)
+
+        if channel is None:
+            return None
+
+        state = self.toggle_mute(channel)
+        active = ", ".join(self.muted) if self._muted else "none"
+        return f"MUTE [{channel.upper()}]: {'ON' if state else 'OFF'} (muted: [{active}])"
+
     # --- Proxied Listener properties ---
 
     @property

@@ -9,7 +9,11 @@ class Custom_Vectorized_Mode(Mode):
     Template for creating high-performance visual modes in Vialactee.
     Uses pure NumPy broadcasting, pre-allocated scratch arrays, and zero runtime heap allocations
     for smooth 30 FPS execution on Raspberry Pi (AXIOM-01, AXIOM-02).
+
+    Lead: beat (primary wave envelope). Secondary: spectrum (bass-band phase boost). Macro: speed via mood_pace.
     """
+    LEAD = "beat"
+    SECONDARY = ("spectrum",)
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
@@ -103,7 +107,9 @@ class Custom_Vectorized_Mode(Mode):
         np.sin(self._values, out=self._values)
         np.multiply(self._values, 0.5, out=self._values)
         np.add(self._values, 0.5, out=self._values)
-        np.multiply(self._values, max(0.15, self.beat_pulse(2.2)), out=self._values)
+        # Law 7 budget: ~70% lead ('beat') + ~20% secondary ('spectrum' bass detail)
+        drive = max(0.15, 0.70 * self.beat_pulse(2.2) + 0.20 * (bass_boost - 1.0))
+        np.multiply(self._values, drive, out=self._values)
         np.clip(self._values, 0.0, 1.0, out=self._values)
 
         # 4. Vectorized conversion from HSV to pre-allocated RGB matrix (nb_of_leds, 3) and smooth blend

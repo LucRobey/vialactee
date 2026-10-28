@@ -66,6 +66,7 @@ python tools/mode_studio.py -s 2 -m "Chromatic Chaser" --leds 120 --model Dyadic
 | `[+]` / `[-]` | Increase / Decrease audio `sensibility` (`5`..`100`) |
 | `[O]` | Cycle strip orientation override (`Auto` -> `Horizontal` -> `Vertical`) |
 | `[K]` / `[L]` | Adjust audio-visual sync offset `-10 ms` / `+10 ms` (`[\]` resets to `0 ms`) |
+| `[F1]`–`[F5]` (or `[Shift+B]`, `[Shift+L]`, `[S]`, `[T]`, `[M]`) | Toggle choreography mute channels (`beat`, `level`, `spectrum`, `transient`, `macro`) via `DriverMuteProxy`; `[0]` clears all mutes |
 | `[Esc]` | Quit Mode Studio |
 
 ---
