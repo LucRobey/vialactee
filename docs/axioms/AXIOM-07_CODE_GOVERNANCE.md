@@ -9,7 +9,7 @@
 ## 1. Specification
 
 1. **500-Line Production File Cap:**
-   No new or modified production file in `core/`, `music/`, `hardware/`, `modes/`, `config/`, `connectors/`, `transitions/`, `mood/`, or `Main.py` may exceed **500 physical lines of code**.
+   No new or modified production file in `core/`, `music/`, `hardware/`, `modes/`, `config/`, `connectors/`, `transitions/`, `mood/`, `utils/`, or `Main.py` may exceed **500 physical lines of code**.
 2. **The Grandfathered Ratchet:**
    Two legacy music files exceed 500 lines due to complex historical algorithmic consolidation. These files are subject to a **strict one-way ratchet**: they may shrink, but they may **never expand**:
    - `music/AudioAnalyzer.py`: Maximum **598 lines**
