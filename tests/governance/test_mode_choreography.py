@@ -53,6 +53,7 @@ CONFORMING_MODES_PHASE_4A = frozenset({
     "Hyper_strobe_mode",
     "Metronome_mode",
     "Coloured_middle_wave_mode",
+    "Impact_shockwave_mode",
     "Power_bar_mode",
 })
 
@@ -348,6 +349,39 @@ class TestChoreographyStimulusMeasurement(unittest.TestCase):
             first = measure_mode_choreography(cls, **MATRIX_CONFIG, nb_bands=DEFAULT_NB_BANDS)
             second = measure_mode_choreography(cls, **MATRIX_CONFIG, nb_bands=DEFAULT_NB_BANDS)
             self.assertEqual(first, second, f"{mod_name} produced non-deterministic in-process metrics")
+
+    def test_impact_shockwave_ring_count_equals_beat_count_in_locked_state(self):
+        """On the synthetic clip, Impact_shockwave_mode spawns one ring per beat wrap (plus drop hits) and 0 beat rings when beat is muted."""
+        from modes.Impact_shockwave_mode import Impact_shockwave_mode
+
+        listener = SyntheticListener(nb_bands=8)
+        proxy = DriverMuteProxy(listener)
+        live_mods = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
+        rgb = np.zeros((40, 3), dtype=np.int32)
+        mode = Impact_shockwave_mode("Impact_shockwave_mode", "seg", proxy, None, list(range(40)), rgb, {})
+
+        # Step 85 frames (before frame 90 drop_hit) so only beat wraps occur
+        for f in range(85):
+            step_synthetic_music(listener, f, live_mods)
+            proxy.observe(alpha=0.05)
+            proxy.sync_macro_modifiers(BaseModeMod.Mode, live_mods)
+            mode.run()
+
+        self.assertGreater(listener.beat_count, 0)
+        self.assertEqual(mode.wave_count_total, listener.beat_count)
+
+        # When beat is muted, a mode running across the same 85 non-drop frames spawns 0 rings
+        listener_muted = SyntheticListener(nb_bands=8)
+        proxy_muted = DriverMuteProxy(listener_muted, initial_mutes=("beat",))
+        mode_muted = Impact_shockwave_mode(
+            "Impact_shockwave_mode", "seg", proxy_muted, None, list(range(40)), np.zeros((40, 3), dtype=np.int32), {}
+        )
+        for f in range(85):
+            step_synthetic_music(listener_muted, f, live_mods)
+            proxy_muted.observe(alpha=0.05)
+            proxy_muted.sync_macro_modifiers(BaseModeMod.Mode, live_mods)
+            mode_muted.run()
+        self.assertEqual(mode_muted.wave_count_total, 0)
 
     def test_all_registered_modes_stimulus_and_calibrated_dominance(self):
         """Run the 13 x 4 synthetic stimulus suite (8 bands); verify finite metrics and enforce dominance on conforming modes."""

@@ -11,11 +11,11 @@ import modes.Mode as Mode
 
 
 class Impact_shockwave_mode(Mode.Mode):
-    """Center-outward discrete shockwave rings spawned on verified transient hits.
+    """Center-outward discrete shockwave rings spawned on beat phase wraps and drop hits.
 
-    Lead: transient (verified beat events, drop_hit, flux; one ring per event). Secondary: level (ring width/tint). Macro: palette, damping via mood_trail.
+    Lead: beat (phase wrap spawns one ring per beat; acoustic fallback when unlocked). Secondary: level (ring intensity/glow). Macro: palette, damping via mood_trail.
     """
-    LEAD = "transient"
+    LEAD = "beat"
     SECONDARY = ("level",)
     MAX_WAVES: int = 6
 
@@ -138,7 +138,6 @@ class Impact_shockwave_mode(Mode.Mode):
         # 1. Read rhythmic and acoustic metrics without branching on ctx.scene
         ctx = getattr(self.listener, "context", None)
         phase = float(getattr(self.listener, "beat_phase", 0.0))
-        is_beat = bool(getattr(self.listener, "is_beat", False))
         is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
         is_locked = bool(ctx.is_locked if ctx is not None else (float(getattr(self.listener, "beat_confidence", 0.0)) >= 0.5))
         drop_hit = self.drop_hit
@@ -179,7 +178,7 @@ class Impact_shockwave_mode(Mode.Mode):
             and (lock < 0.35)
             and (bass_flux_peak or (energy > 0.25 and self.time_since_last_wave >= beat_period))
         )
-        verified_tick = drop_hit or (is_beat and (is_real or is_locked or self.enable_ghost_ripples)) or (phase_wrapped and (is_locked or self.enable_ghost_ripples))
+        verified_tick = drop_hit or (phase_wrapped and (is_locked or self.enable_ghost_ripples))
         should_trigger = (
             (not is_silent)
             and (verified_tick or acoustic_pulse)
