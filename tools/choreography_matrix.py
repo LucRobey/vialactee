@@ -2,12 +2,20 @@
 tools/choreography_matrix.py
 Synthetic music stimulus runner, response metrics, and 13 x 4 choreography measurement matrix.
 """
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 import math
 import numpy as np
 
 from utils.choreography import DRIVERS, MUTE_CHANNELS
 from utils.driver_mute import DriverMuteProxy
+
+SYNTHETIC_CLIP_VERSION: str = "1"
+DEFAULT_NB_BANDS: int = 8
+MATRIX_CONFIG: Dict[str, int] = {
+    "num_leds": 40,
+    "warmup_frames": 30,
+    "eval_frames": 120,
+}
 
 
 def compute_response_metrics(frames: np.ndarray) -> Tuple[float, float]:
@@ -46,7 +54,7 @@ class SyntheticContext:
 
 
 class SyntheticListener:
-    def __init__(self, nb_bands: int = 8) -> None:
+    def __init__(self, nb_bands: int = DEFAULT_NB_BANDS) -> None:
         self.dt: float = 1.0 / 60.0
         self.fps_ratio: float = 1.0
         self.bpm: float = 124.0
@@ -148,9 +156,10 @@ def step_synthetic_music(listener: SyntheticListener, frame_idx: int, live_modif
 def run_mode_under_mutes(
     mode_cls: Any,
     muted_channels: Sequence[str] = (),
-    num_leds: int = 60,
-    warmup_frames: int = 60,
-    eval_frames: int = 240,
+    num_leds: int = MATRIX_CONFIG["num_leds"],
+    warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
+    eval_frames: int = MATRIX_CONFIG["eval_frames"],
+    nb_bands: int = DEFAULT_NB_BANDS,
 ) -> Tuple[float, float]:
     """Run `mode_cls` on the deterministic synthetic music clip under `muted_channels` and return `(R_std, R_diff)`."""
     import random
@@ -159,7 +168,7 @@ def run_mode_under_mutes(
     random.seed(42)
     np.random.seed(42)
 
-    listener = SyntheticListener(nb_bands=8)
+    listener = SyntheticListener(nb_bands=nb_bands)
     proxy = DriverMuteProxy(listener)
     live_modifiers = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
 
@@ -193,9 +202,10 @@ def run_mode_under_mutes(
 
 def measure_mode_choreography(
     mode_cls: Any,
-    num_leds: int = 60,
-    warmup_frames: int = 60,
-    eval_frames: int = 240,
+    num_leds: int = MATRIX_CONFIG["num_leds"],
+    warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
+    eval_frames: int = MATRIX_CONFIG["eval_frames"],
+    nb_bands: int = DEFAULT_NB_BANDS,
 ) -> Dict[str, Any]:
     """
     Evaluate a mode across `full`, `mute_lead`, `mute_sec`, `mute_all`, and all 4 individual driver mutes.
@@ -205,10 +215,14 @@ def measure_mode_choreography(
     sec_tuple = getattr(mode_cls, "SECONDARY", ())
     sec = sec_tuple[0] if sec_tuple else None
 
-    r_std_full, r_diff_full = run_mode_under_mutes(mode_cls, (), num_leds, warmup_frames, eval_frames)
+    r_std_full, r_diff_full = run_mode_under_mutes(
+        mode_cls, (), num_leds, warmup_frames, eval_frames, nb_bands=nb_bands
+    )
     by_driver: Dict[str, Tuple[float, float]] = {}
     for drv in DRIVERS:
-        by_driver[drv] = run_mode_under_mutes(mode_cls, (drv,), num_leds, warmup_frames, eval_frames)
+        by_driver[drv] = run_mode_under_mutes(
+            mode_cls, (drv,), num_leds, warmup_frames, eval_frames, nb_bands=nb_bands
+        )
 
     r_std_mute_lead, r_diff_mute_lead = by_driver.get(lead, (r_std_full, r_diff_full))
     if sec is not None:
@@ -217,7 +231,7 @@ def measure_mode_choreography(
         r_std_mute_sec, r_diff_mute_sec = r_std_full, r_diff_full
 
     r_std_mute_all, r_diff_mute_all = run_mode_under_mutes(
-        mode_cls, MUTE_CHANNELS, num_leds, warmup_frames, eval_frames
+        mode_cls, MUTE_CHANNELS, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands
     )
 
     contributions = {drv: r_std_full - by_driver[drv][0] for drv in DRIVERS}
@@ -245,9 +259,10 @@ def measure_mode_choreography(
 
 
 def measure_all_registered_modes(
-    num_leds: int = 60,
-    warmup_frames: int = 60,
-    eval_frames: int = 240,
+    num_leds: int = MATRIX_CONFIG["num_leds"],
+    warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
+    eval_frames: int = MATRIX_CONFIG["eval_frames"],
+    nb_bands: int = DEFAULT_NB_BANDS,
 ) -> List[Dict[str, Any]]:
     """Measure all modes registered in `config/modes.json` in canonical catalog order."""
     import importlib
@@ -263,7 +278,9 @@ def measure_all_registered_modes(
     for entry in entries:
         mod = importlib.import_module(f"modes.{entry['module']}")
         cls = getattr(mod, entry["class"])
-        results.append(measure_mode_choreography(cls, num_leds, warmup_frames, eval_frames))
+        results.append(
+            measure_mode_choreography(cls, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands)
+        )
     return results
 
 
@@ -299,5 +316,19 @@ def format_measurement_report(results: Sequence[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run the 13 x 4 choreography stimulus measurement matrix.")
+    parser.add_argument(
+        "--bands",
+        type=int,
+        default=DEFAULT_NB_BANDS,
+        help=f"Number of FFT frequency bands (default: {DEFAULT_NB_BANDS})",
+    )
+    args = parser.parse_args(argv)
+    print(format_measurement_report(measure_all_registered_modes(nb_bands=args.bands)))
+
+
 if __name__ == "__main__":
-    print(format_measurement_report(measure_all_registered_modes()))
+    main()

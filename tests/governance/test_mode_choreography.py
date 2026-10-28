@@ -6,9 +6,9 @@ Governance and behavioral stimulus tests for Law 7 (One Lead Timescale) in docs/
 3. The mode class docstring contains 'Lead:' (forces a one-line human explanation).
 4. docs/reference/modes_catalog.md shows the exact same Lead and Secondary as the code.
 5. DriverMuteProxy exposes all Listener/MusicalContextEngine attributes read by modes and faithfully
-   mutes each of the 5 channels (beat, level, spectrum, transient, macro).
-6. Stimulus measurement across all 13 modes verifies finite metrics and enforces calibrated Phase 4a/4b
-   lead-dominance thresholds on conforming modes while reporting pre-redesign diagnostics.
+   mutes each of the 5 channels (beat, level, spectrum, transient, macro) across 8 and 16 bands.
+6. Stimulus measurement across all 13 modes verifies provenance, in-process determinism, finite metrics
+   (8 and 16 bands), and enforces calibrated Phase 4a/4b lead-dominance thresholds on conforming modes.
 """
 import ast
 import glob
@@ -31,10 +31,15 @@ from utils.driver_mute import (
     DriverMuteProxy,
 )
 from tools.choreography_matrix import (
+    DEFAULT_NB_BANDS,
+    MATRIX_CONFIG,
+    SYNTHETIC_CLIP_VERSION,
     SyntheticContext,
     SyntheticListener,
     compute_response_metrics,
+    format_measurement_report,
     measure_all_registered_modes,
+    measure_mode_choreography,
     step_synthetic_music,
 )
 
@@ -56,6 +61,17 @@ CONFORMING_MODES_PHASE_4A = frozenset({
 #   g = minimum fraction of R_std_full retained when only SECONDARY is muted
 CALIBRATED_LEAD_FRACTION_F = 0.30
 CALIBRATED_SEC_RETAINED_G = 0.65
+
+# Provenance lock: changing the synthetic clip, band count, or MATRIX_CONFIG requires recalibrating f/g.
+CALIBRATED_FOR = {
+    "clip_version": "1",
+    "nb_bands": 8,
+    "matrix_config": {
+        "num_leds": 40,
+        "warmup_frames": 30,
+        "eval_frames": 120,
+    },
+}
 
 
 class TestModeChoreographyGovernance(unittest.TestCase):
@@ -200,81 +216,96 @@ class TestDriverMuteProxyAndMetrics(unittest.TestCase):
 
     def test_beat_mute_keeps_trust_high_and_freezes_phase_and_pulse(self):
         """Muting 'beat' keeps beat_trust=1.0 (stays on rhythmic branch) and freezes beat_phase, beat_count, and beat_pulse()."""
-        for f in range(30):
-            step_synthetic_music(self.listener, f, self.live_mods)
-            self.proxy.observe()
+        for nb_bands in (8, 16):
+            with self.subTest(nb_bands=nb_bands):
+                listener = SyntheticListener(nb_bands=nb_bands)
+                proxy = DriverMuteProxy(listener)
+                live_mods = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
 
-        self.proxy.set_muted("beat", True)
-        self.proxy.set_muted("macro", True)
-        self.proxy.sync_macro_modifiers(BaseModeMod.Mode, self.live_mods)
+                for f in range(30):
+                    step_synthetic_music(listener, f, live_mods)
+                    proxy.observe()
 
-        rgb = np.zeros((16, 3), dtype=np.int32)
-        mode = BaseModeMod.Mode("test", "seg", self.proxy, None, list(range(16)), rgb, {})
+                proxy.set_muted("beat", True)
+                proxy.set_muted("macro", True)
+                proxy.sync_macro_modifiers(BaseModeMod.Mode, live_mods)
 
-        pulses = []
-        phases = []
-        counts = []
-        for f in range(30, 90):
-            step_synthetic_music(self.listener, f, self.live_mods)
-            self.proxy.observe()
-            self.assertGreaterEqual(self.proxy.beat_trust, 0.85)
-            self.assertGreaterEqual(self.proxy.context.beat_trust, 0.85)
-            self.assertTrue(self.proxy.context.is_locked)
-            phases.append(self.proxy.beat_phase)
-            counts.append(self.proxy.beat_count)
-            pulses.append(mode.beat_pulse())
+                rgb = np.zeros((16, 3), dtype=np.int32)
+                mode = BaseModeMod.Mode("test", "seg", proxy, None, list(range(16)), rgb, {})
 
-        self.assertEqual(len(set(phases)), 1, "beat_phase must remain frozen when 'beat' is muted")
-        self.assertEqual(len(set(counts)), 1, "beat_count must remain frozen when 'beat' is muted")
-        self.assertAlmostEqual(max(pulses), min(pulses), places=9, msg="beat_pulse() must be constant when beat+macro are muted")
+                pulses = []
+                phases = []
+                counts = []
+                for f in range(30, 90):
+                    step_synthetic_music(listener, f, live_mods)
+                    proxy.observe()
+                    self.assertGreaterEqual(proxy.beat_trust, 0.85)
+                    self.assertGreaterEqual(proxy.context.beat_trust, 0.85)
+                    self.assertTrue(proxy.context.is_locked)
+                    phases.append(proxy.beat_phase)
+                    counts.append(proxy.beat_count)
+                    pulses.append(mode.beat_pulse())
+
+                self.assertEqual(len(set(phases)), 1, "beat_phase must remain frozen when 'beat' is muted")
+                self.assertEqual(len(set(counts)), 1, "beat_count must remain frozen when 'beat' is muted")
+                self.assertAlmostEqual(max(pulses), min(pulses), places=9, msg="beat_pulse() must be constant when beat+macro are muted")
 
     def test_level_spectrum_transient_and_macro_mute_semantics(self):
-        """Verify level, spectrum, transient (including Mode.drop_hit), and macro mute channels."""
-        for f in range(30):
-            step_synthetic_music(self.listener, f, self.live_mods)
-            self.proxy.observe(alpha=0.1)
+        """Verify level, spectrum, transient (including Mode.drop_hit), and macro mute channels across 8 and 16 bands."""
+        for nb_bands in (8, 16):
+            with self.subTest(nb_bands=nb_bands):
+                listener = SyntheticListener(nb_bands=nb_bands)
+                proxy = DriverMuteProxy(listener)
+                live_mods = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
 
-        self.proxy.set_muted("level", True)
-        self.proxy.set_muted("spectrum", True)
-        self.proxy.set_muted("transient", True)
-        self.proxy.set_muted("macro", True)
+                for f in range(30):
+                    step_synthetic_music(listener, f, live_mods)
+                    proxy.observe(alpha=0.1)
 
-        rgb = np.zeros((16, 3), dtype=np.int32)
-        mode = BaseModeMod.Mode("test", "seg", self.proxy, None, list(range(16)), rgb, {})
+                proxy.set_muted("level", True)
+                proxy.set_muted("spectrum", True)
+                proxy.set_muted("transient", True)
+                proxy.set_muted("macro", True)
 
-        frozen_energy = self.proxy.context.energy
-        frozen_bands = self.proxy.asserved_fft_band.copy()
-        frozen_tilt = self.proxy.context.spectral_tilt
+                rgb = np.zeros((16, 3), dtype=np.int32)
+                mode = BaseModeMod.Mode("test", "seg", proxy, None, list(range(16)), rgb, {})
 
-        # Frame 90 has a synthetic drop impact and beat wraps occur periodically
-        for f in range(30, 120):
-            step_synthetic_music(self.listener, f, self.live_mods)
-            self.proxy.observe(alpha=0.1)
-            self.proxy.sync_macro_modifiers(BaseModeMod.Mode, self.live_mods)
+                frozen_energy = proxy.context.energy
+                frozen_bands = proxy.asserved_fft_band.copy()
+                frozen_tilt = proxy.context.spectral_tilt
+                self.assertEqual(len(frozen_bands), nb_bands)
+                self.assertEqual(len(proxy.band_proportion), nb_bands)
+                self.assertEqual(len(proxy.band_flux), nb_bands)
 
-            # Level frozen
-            self.assertAlmostEqual(self.proxy.context.energy, frozen_energy, places=9)
-            self.assertAlmostEqual(self.proxy.asserved_total_power, frozen_energy, places=9)
+                # Frame 90 has a synthetic drop impact and beat wraps occur periodically
+                for f in range(30, 120):
+                    step_synthetic_music(listener, f, live_mods)
+                    proxy.observe(alpha=0.1)
+                    proxy.sync_macro_modifiers(BaseModeMod.Mode, live_mods)
 
-            # Spectrum frozen
-            np.testing.assert_allclose(self.proxy.asserved_fft_band, frozen_bands)
-            self.assertAlmostEqual(self.proxy.context.spectral_tilt, frozen_tilt, places=9)
+                    # Level frozen
+                    self.assertAlmostEqual(proxy.context.energy, frozen_energy, places=9)
+                    self.assertAlmostEqual(proxy.asserved_total_power, frozen_energy, places=9)
 
-            # Transient suppressed (including Mode.drop_hit on frame 90)
-            self.assertFalse(self.proxy.is_beat)
-            self.assertFalse(self.proxy.is_real_beat)
-            self.assertFalse(self.proxy.context.is_real_beat)
-            self.assertFalse(self.proxy.context.is_drop_impact)
-            self.assertFalse(mode.drop_hit)
-            self.assertEqual(float(np.max(np.abs(self.proxy.band_flux))), 0.0)
+                    # Spectrum frozen
+                    np.testing.assert_allclose(proxy.asserved_fft_band, frozen_bands)
+                    self.assertAlmostEqual(proxy.context.spectral_tilt, frozen_tilt, places=9)
 
-            # Macro neutralized
-            self.assertEqual(self.proxy.context.tension, 0.0)
-            self.assertEqual(mode.drop_decay, 0.0)
-            self.assertEqual(mode.mood_pace, 1.0)
-            self.assertEqual(mode.mood_sharpness, 1.0)
-            self.assertEqual(mode.mood_trail, 1.0)
-            self.assertEqual(mode.mood_accent, 0.0)
+                    # Transient suppressed (including Mode.drop_hit on frame 90)
+                    self.assertFalse(proxy.is_beat)
+                    self.assertFalse(proxy.is_real_beat)
+                    self.assertFalse(proxy.context.is_real_beat)
+                    self.assertFalse(proxy.context.is_drop_impact)
+                    self.assertFalse(mode.drop_hit)
+                    self.assertEqual(float(np.max(np.abs(proxy.band_flux))), 0.0)
+
+                    # Macro neutralized
+                    self.assertEqual(proxy.context.tension, 0.0)
+                    self.assertEqual(mode.drop_decay, 0.0)
+                    self.assertEqual(mode.mood_pace, 1.0)
+                    self.assertEqual(mode.mood_sharpness, 1.0)
+                    self.assertEqual(mode.mood_trail, 1.0)
+                    self.assertEqual(mode.mood_accent, 0.0)
 
     def test_compute_response_metrics_static_and_oscillating(self):
         """R_std and R_diff are 0 on static frames and exact on synthetic square wave frames."""
@@ -291,9 +322,31 @@ class TestDriverMuteProxyAndMetrics(unittest.TestCase):
 
 
 class TestChoreographyStimulusMeasurement(unittest.TestCase):
+    def test_calibration_provenance_guard(self):
+        """Guard against silent drift between synthetic clip/config and calibrated thresholds."""
+        live = {
+            "clip_version": SYNTHETIC_CLIP_VERSION,
+            "nb_bands": DEFAULT_NB_BANDS,
+            "matrix_config": dict(MATRIX_CONFIG),
+        }
+        self.assertEqual(
+            live,
+            CALIBRATED_FOR,
+            "Synthetic clip version, band count, or MATRIX_CONFIG changed without updating CALIBRATED_FOR and recalibrating f/g thresholds.",
+        )
+
+    def test_in_process_measurement_determinism(self):
+        """Measuring the same mode twice in-process produces identical metrics."""
+        for mod_name in ("Bary_rainbow_mode", "Shining_stars_mode"):
+            mod = importlib.import_module(f"modes.{mod_name}")
+            cls = getattr(mod, mod_name)
+            first = measure_mode_choreography(cls, **MATRIX_CONFIG, nb_bands=DEFAULT_NB_BANDS)
+            second = measure_mode_choreography(cls, **MATRIX_CONFIG, nb_bands=DEFAULT_NB_BANDS)
+            self.assertEqual(first, second, f"{mod_name} produced non-deterministic in-process metrics")
+
     def test_all_registered_modes_stimulus_and_calibrated_dominance(self):
-        """Run the 13 x 4 synthetic stimulus suite; verify finite metrics and enforce dominance on conforming modes."""
-        results = measure_all_registered_modes(num_leds=40, warmup_frames=30, eval_frames=120)
+        """Run the 13 x 4 synthetic stimulus suite (8 bands); verify finite metrics and enforce dominance on conforming modes."""
+        results = measure_all_registered_modes(**MATRIX_CONFIG, nb_bands=DEFAULT_NB_BANDS)
         self.assertEqual(len(results), 13)
 
         conforming_failures = []
@@ -331,6 +384,18 @@ class TestChoreographyStimulusMeasurement(unittest.TestCase):
             [],
             "Conforming modes failed calibrated Law 7 stimulus checks:\n" + "\n".join(conforming_failures),
         )
+
+    def test_all_registered_modes_16_bands_diagnostic(self):
+        """Run the 13 x 4 synthetic stimulus suite at 16 bands (diagnostic only: finite metrics, prints report)."""
+        results_16 = measure_all_registered_modes(**MATRIX_CONFIG, nb_bands=16)
+        self.assertEqual(len(results_16), 13)
+        for r in results_16:
+            mode_name = r["mode"]
+            for key in ("r_std_full", "r_diff_full", "r_std_mute_lead", "r_std_mute_sec", "r_std_mute_all"):
+                val = r[key]
+                self.assertTrue(math.isfinite(val) and val >= 0.0, f"{mode_name} (16 bands): invalid {key}={val}")
+            self.assertGreater(r["r_std_full"], 1.0, f"{mode_name} (16 bands): expected non-trivial R_std(full)")
+        print("\n--- 16-Band Diagnostic Choreography Matrix ---\n" + format_measurement_report(results_16))
 
 
 if __name__ == "__main__":

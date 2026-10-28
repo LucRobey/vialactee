@@ -128,3 +128,48 @@ Runs the immutable clean-room evaluation suite across test audio tracks:
 - **Verification:**
   - Computes `F1@50ms`, `F1@70ms`, `CMLt`, `AMLt`, phase jitter, and average frame time.
   - Governed by **AXIOM-08 (Zero-Regression Gate)**.
+
+---
+
+## 5. Choreography Stimulus Matrix (`tools/choreography_matrix.py`)
+
+Evaluates all 13 registered modes in [`config/modes.json`](../../config/modes.json) against a deterministic synthetic music stimulus under selective driver mutes ([`utils/driver_mute.py`](../../utils/driver_mute.py)) to verify **Law 7: One Lead Timescale** ([`docs/contracts/mode_contract.md`](../contracts/mode_contract.md#7-one-lead-timescale-the-choreography-doctrine)).
+
+### 5.1 Usage & CLI Flags
+
+```bash
+# Run the 13 x 4 choreography matrix at the canonical 8-band configuration
+python -m tools.choreography_matrix
+
+# Run diagnostic evaluation at 16 FFT bands
+python -m tools.choreography_matrix --bands 16
+```
+
+Both the CLI report and the CI suite ([`tests/governance/test_mode_choreography.py`](../../tests/governance/test_mode_choreography.py)) share a single configuration (`MATRIX_CONFIG = {"num_leds": 40, "warmup_frames": 30, "eval_frames": 120}`).
+
+### 5.2 Matrix Columns & Metrics
+
+| Column | Definition |
+| :--- | :--- |
+| `Lead` / `Sec` | The mode's declared `LEAD` and `SECONDARY` driver from `DRIVERS = ("beat", "level", "spectrum", "transient")` in [`utils/choreography.py`](../../utils/choreography.py). |
+| `R_std(full)` | Mean per-LED temporal standard deviation across the evaluation window with all channels active (amplitude budget metric). |
+| `R_std(-lead)` | `R_std` when only the mode's declared `LEAD` driver is muted. |
+| `R_std(-sec)` | `R_std` when only the mode's declared `SECONDARY` driver is muted (`== R_std(full)` when `SECONDARY == ()`). |
+| `R_std(-all)` | `R_std` when all 5 mute channels (`beat`, `level`, `spectrum`, `transient`, `macro`) are muted simultaneously (captures constant non-audio drift). |
+| `d(lead)` / `d(sec)` | Ablation drop `R_std(full) - R_std(-lead)` and `R_std(full) - R_std(-sec)`. |
+| `R_diff` | Mean per-LED frame-to-frame absolute delta under `full` (velocity / busyness indicator). |
+| `d(beat..transient)` | Second table showing single-driver ablation `R_std(full) - R_std(-d)` for each of the 4 drivers. |
+
+### 5.3 Calibrated Thresholds (`f`, `g`), `CONFORMING_MODES_PHASE_4A`, & Recalibration
+
+In [`tests/governance/test_mode_choreography.py`](../../tests/governance/test_mode_choreography.py), every mode listed in `CONFORMING_MODES_PHASE_4A` must satisfy three hard assertions at 8 bands:
+1. **Lead dominance:** `d(lead)` is strictly the largest single-driver ablation among `{beat, level, spectrum, transient}`.
+2. **Lead audio-budget fraction (`f = 0.30`):** `d(lead) >= f * (R_std(full) - R_std(-all))`. Subtracting `R_std(-all)` cancels constant non-audio animation drift so `f` measures the lead driver's share of **audio-driven variance**.
+3. **Secondary retention (`g = 0.65`):** When `SECONDARY` is declared, `R_std(-sec) >= g * R_std(full)`, ensuring that muting the secondary driver alone leaves at least 65% of the full amplitude budget intact.
+
+Modes not yet in `CONFORMING_MODES_PHASE_4A` are pre-redesign modes tracked diagnostically until their redesign batches land.
+
+**How to recalibrate:** `CALIBRATED_FOR` in `test_mode_choreography.py` locks `(SYNTHETIC_CLIP_VERSION, DEFAULT_NB_BANDS, MATRIX_CONFIG)`. If you intentionally modify the synthetic stimulus clip (`step_synthetic_music`), default band count, or `MATRIX_CONFIG`:
+1. Increment `SYNTHETIC_CLIP_VERSION` in `tools/choreography_matrix.py`.
+2. Run `python -m tools.choreography_matrix` (with `PYTHONHASHSEED=0`), inspect the `13 x 4` table, and verify `CALIBRATED_LEAD_FRACTION_F` and `CALIBRATED_SEC_RETAINED_G` across all modes in `CONFORMING_MODES_PHASE_4A`.
+3. Update `CALIBRATED_FOR` (and `f` / `g` if required) in `tests/governance/test_mode_choreography.py`.
