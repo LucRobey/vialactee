@@ -49,6 +49,7 @@ from tools.choreography_matrix import (
 # Shining_stars, Impact_shockwave) are tracked in diagnostic mode until their redesign batches land.
 CONFORMING_MODES_PHASE_4A = frozenset({
     "Bary_rainbow_mode",
+    "Shining_stars_mode",
     "Opposite_sides_mode",
     "Hyper_strobe_mode",
     "Metronome_mode",

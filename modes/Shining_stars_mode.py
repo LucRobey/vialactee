@@ -163,7 +163,7 @@ class Shining_stars_mode(Mode.Mode):
             flux_val = float(band_flux[band_index]) if (band_flux is not None and band_index < len(band_flux)) else 0.0
             band_val = float(bands[band_index]) if (bands is not None and band_index < len(bands)) else 0.0
             # When flywheel is lost or flux is flat during sustained notes, allow spectral band energy to twinkle
-            drive = max(flux_val, (1.0 - 0.6 * lock) * band_val * self.threshold * 2.8)
+            drive = max(flux_val, (1.0 - lock) * band_val * self.threshold * 2.8)
             if drive > current_threshold:
                 star_c = self.star_colors[band_index]
                 neigh_c = self.neighbor_colors[band_index]
