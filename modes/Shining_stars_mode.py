@@ -7,6 +7,7 @@ and star colours are sampled across the 256-entry palette_lut for all 8 bands.
 Adheres strictly to docs/contracts/mode_contract.md with zero runtime heap allocations.
 """
 from typing import List, Dict, Any
+import zlib
 import numpy as np
 import random
 import modes.Mode as Mode
@@ -85,7 +86,8 @@ class Shining_stars_mode(Mode.Mode):
         self.step: int = max(1, int(self.sub_segment_size))
         self.max_offset: int = min(self.step, self.nb_of_leds)
 
-        rng = random.Random(hash((name, segment_name)) & 0xFFFFFFFF)
+        seed = zlib.crc32(f"{name}:{segment_name}".encode("utf-8"))
+        rng = random.Random(seed)
         self._rand_pool = [rng.randint(0, 100000) for _ in range(256)]
         self._rand_idx = 0
 
