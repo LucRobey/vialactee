@@ -152,3 +152,55 @@ Every setting declared in `get_settings_schema()` (and exposed in the Web UI / M
 - Never allocate NumPy arrays or Python lists inside `run()` / `render()`.
 - **Never cache views of `self.rgb_list` in `__init__`**: during dual-mode transitions, `Mode.render(buffer=...)` temporarily redirects `self.rgb_list` to `Segment.dual_rgb_list`. Any view cached on `self.rgb_list` during `__init__` would write to the wrong buffer during transitions.
 - Frame-rate independence: scale per-frame increments and exponential decays with `self.dt`, `self.fps_ratio`, or `self.alpha(rate_hz)`.
+
+---
+
+### 7. One Lead Timescale (Choreographic Clarity)
+Every mode declares exactly one **lead driver** (`beat`, `level`, `spectrum` or `transient`) and at most one **secondary** driver via class attributes (`LEAD` and `SECONDARY`). The lead owns the main shape (position, size, main brightness). The secondary owns detail only. Macro modulators (`mood_*`, `ctx.tension`, `drop_decay`) are bounded multipliers, not drivers. A dimension is driven by one timescale. If you add a second driver to the lead's dimension, you are building a second mode.
+
+**Test of truth (mute test):** muting the lead must visibly flatten the mode. Muting the secondary must not break it.
+
+See the pre-code authoring worksheet in [`docs/manuals/mode_authoring_guide.md`](../manuals/mode_authoring_guide.md) (§0).
+
+#### Three Timescales
+
+| Timescale | Duration | Signals | Role in the Light |
+| :--- | :--- | :--- | :--- |
+| **Macro** | seconds | `mood_pace`, `mood_sharpness`, `mood_trail`, `mood_accent`, palette; also `ctx.tension`, `drop_decay` as bounded modulators | The *weather*: color, trail length, global tempo of motion |
+| **Meso** | one beat to one second | `beat_pulse()`, `beat_phase`, `rhythm_lock`, loudness envelope (`ctx.energy`) | The *heartbeat* and the *breathing* |
+| **Micro** | frame to 100 ms | `asserved_fft_band`, `band_proportion`, `band_flux`, `spectral_tilt`, `vertical_center` | The *skin*: texture, shimmer, balance |
+
+#### Four Audio Drivers and One Mute Channel
+A mode's `LEAD` (and optional `SECONDARY`) is one of four audio drivers (`"beat"`, `"level"`, `"spectrum"`, `"transient"`). **`macro` is not a driver**: it is a fifth *mute channel* used by tests and Mode Studio, since every mode uses the mood for color, trail, and pace.
+
+| Driver | Timescale | What It Reads | Mute Means |
+| :--- | :--- | :--- | :--- |
+| `beat` | meso | Continuous rhythmic envelope: `beat_phase`, `beat_pulse()`, `beat_count` | `beat_trust` stays **high** (mode stays on its rhythmic branch); `beat_phase` and `beat_count` are frozen |
+| `level` | meso (slow) | `ctx.energy`, total power | Energy frozen at its running mean |
+| `spectrum` | micro | Band energies, proportions, tilt, centroid | Bands, proportions, tilt, centroid frozen at their running means |
+| `transient` | micro (event) | Discrete 1-frame events: `is_beat` / `is_real_beat`, `drop_hit`, `band_flux` onsets | No events: `is_beat` / `is_real_beat` false, flux zero, no `drop_hit` |
+| *(mute channel)* `macro` | macro | Mood modifiers and palette | Modifiers frozen at neutral `(1, 1, 1, 0)` |
+
+#### One Visual Dimension, One Timescale
+
+| Visual Dimension | Driven By |
+| :--- | :--- |
+| Size, position, brightness of the **main shape** | The **lead** |
+| Detail: edge shimmer, spark size, ring tint, cap brightness | One **secondary** driver |
+| Color, palette, trail length, global speed | **Macro** (via mood modifiers) |
+
+- **Amplitude budget (guideline):** the lead carries about 70% of the visible motion, one secondary about 20%, and everything else about 10%.
+- **Smoothing matches timescale (guideline):** slow drivers use slow smoothing (`self.alpha(2..4)` Hz), fast drivers use fast smoothing (`self.alpha(15..20)` Hz). Most jitter comes from a slow quantity driven by an unsmoothed fast one.
+
+#### Macro Modulator Bounds & Buildup Recipe
+
+| Modulator | Allowed Use | Bound |
+| :--- | :--- | :--- |
+| `mood_pace` | Multiply motion speed | already bounded by the mood sector |
+| `mood_trail` | Divide/multiply fade lengths | already bounded |
+| `mood_accent` | Accent mix | already bounded |
+| `ctx.tension` | Continuous multiplier on the **lead's rate or intensity** | at most ±30% of the lead; never a driver of its own |
+| `drop_decay` | Gentle amplitude boost after `drop_hit` | at most +20..30% (Law 3) |
+
+- **Buildup recipe (without scene branching):** `lead_rate *= 1.0 + 0.3 * ctx.tension`. For example, a runner's period shrinks, a fountain's flow speeds up, or a bar's sensitivity rises — all continuous and free of any `if scene == ...` branch.
+

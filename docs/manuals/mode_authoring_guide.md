@@ -9,6 +9,19 @@ This guide walks you through authoring high-performance, audio-reactive visual a
 
 ---
 
+## 0. Before You Write Code: The Four-Question Worksheet
+
+Before writing or refactoring a mode, answer these four questions explicitly (see **Law 7: One Lead Timescale** in [`docs/contracts/mode_contract.md`](../contracts/mode_contract.md)):
+
+1. **What does this mode *show*?** (loudness, beat, balance, timbre, history, event). Pick **one** answer.
+2. **What is its lead driver?** Which single signal (`beat`, `level`, `spectrum`, or `transient`) moves the main shape (size, position, or primary brightness)? What optional secondary driver (`SECONDARY`) adds detail (~20% of motion)?
+3. **What does it do at `rhythm_lock == 0`?** (Law 1: when the beat flywheel unlocks, the mode must stay alive via continuous acoustic energy, spectrum, or free phase.)
+4. **Which dimensions does the mood control?** (color palette, trail length via `mood_trail`, global speed via `mood_pace`, and how `ctx.tension` bends the lead by at most ±30%.)
+
+Every mode records its answer on the class (`LEAD`, `SECONDARY`) and in a `Lead:` line inside its class docstring.
+
+---
+
 ## 1. The `Mode` Base Class Lifecycle
 
 Every visual animation subclasses `modes.Mode.Mode` ([`modes/Mode.py`](../../modes/Mode.py)).
