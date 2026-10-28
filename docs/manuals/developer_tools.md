@@ -30,13 +30,13 @@ python tools/mode_studio.py
 python tools/mode_studio.py --song "stromae" --mode "Impact Shockwave"
 
 # Custom LED count + explicit analyzer model
-python tools/mode_studio.py -s 2 -m "Beat Runner" --leds 120 --model DyadicMetricalAudioAnalyzer
+python tools/mode_studio.py -s 2 -m "Chromatic Chaser" --leds 120 --model DyadicMetricalAudioAnalyzer
 ```
 
 | Flag | Default | Description |
 | :--- | :--- | :--- |
 | `--song`, `-s` | First track in `songs/` | Song filename substring, 1-based index (`1-9`), or path to an audio file. |
-| `--mode`, `-m` | First mode in `config/modes.json` | Mode name or substring (e.g. `"shockwave"`, `"breather"`). |
+| `--mode`, `-m` | First mode in `config/modes.json` | Mode name or substring (e.g. `"shockwave"`, `"chaser"`). |
 | `--leds`, `-l` | `80` | Number of simulated LEDs on the virtual strip. |
 | `--model` | `DyadicMetricalAudioAnalyzer` | Audio analyzer model (`DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `AudioAnalyzer`). |
 
@@ -58,7 +58,7 @@ python tools/mode_studio.py -s 2 -m "Beat Runner" --leds 120 --model DyadicMetri
 | :--- | :--- |
 | `[R]` | **Hot-Reload** the current mode's `.py` file from disk (`importlib.reload`) without restarting audio |
 | `[Space]` | Pause / Resume audio playback |
-| `[↑]` / `[↓]` | Cycle through all 21 modes in `config/modes.json` |
+| `[↑]` / `[↓]` | Cycle through all 13 modes in `config/modes.json` |
 | `[←]` / `[→]` | Seek `-5s` / `+5s` in the active song (or click the timeline bar) |
 | `[B]` / `[D]` / `[C]` | Trigger synthetic `BUILDUP` (`4s` ramp -> drop) / immediate `DROP_IMPACT` / reset drop cooldown |
 | `[N]` / `[P]` | Next / Previous song in `songs/` |

@@ -15,9 +15,9 @@ import tracemalloc
 import numpy as np
 
 from music.MusicalContextEngine import MusicalContextEngine, MusicalScene
-from modes.Beat_runner_mode import Beat_runner_mode
+from modes.Power_bar_mode import Power_bar_mode
 from modes.Impact_shockwave_mode import Impact_shockwave_mode
-from modes.Rhythm_breather_mode import Rhythm_breather_mode
+from modes.Middle_bar_mode import Middle_bar_mode
 
 
 class MockListener:
@@ -760,13 +760,13 @@ class TestMusicalContextEngine(unittest.TestCase):
         """Verify Beat_runner, Impact_shockwave, and Rhythm_breather sustain kinetic intensity across DROP_IMPACT dwell."""
         self.listener.context = self.engine
         rgb_runner = np.zeros((80, 3), dtype=np.int32)
-        mode_runner = Beat_runner_mode("Runner", "s1", self.listener, None, list(range(80)), rgb_runner, {})
+        mode_runner = Power_bar_mode("PowerBar", "s1", self.listener, None, list(range(80)), rgb_runner, {})
 
         rgb_shockwave = np.zeros((80, 3), dtype=np.int32)
         mode_shockwave = Impact_shockwave_mode("Shockwave", "s2", self.listener, None, list(range(80)), rgb_shockwave, {})
 
         rgb_breather = np.zeros((80, 3), dtype=np.int32)
-        mode_breather = Rhythm_breather_mode("Breather", "s3", self.listener, None, list(range(80)), rgb_breather, {})
+        mode_breather = Middle_bar_mode("MiddleBar", "s3", self.listener, None, list(range(80)), rgb_breather, {})
 
         # Trigger drop
         self.listener.analyzer.lookahead_seconds = 2.0
@@ -781,7 +781,7 @@ class TestMusicalContextEngine(unittest.TestCase):
         mode_runner.run()
         mode_shockwave.run()
         mode_breather.run()
-        f1_runner_max = float(np.max(mode_runner.vals))
+        f1_runner_max = float(np.max(rgb_runner)) / 255.0
         f1_shock_max = float(np.max(mode_shockwave.half_intensity))
         self.assertGreater(f1_runner_max, 0.20)
         self.assertGreater(f1_shock_max, 0.40)
@@ -797,7 +797,7 @@ class TestMusicalContextEngine(unittest.TestCase):
         mode_runner.run()
         mode_shockwave.run()
         mode_breather.run()
-        f2_runner_max = float(np.max(mode_runner.vals))
+        f2_runner_max = float(np.max(rgb_runner)) / 255.0
         f2_shock_max = float(np.max(mode_shockwave.half_intensity))
 
         # Verify sustained motion across dwell without full-strip flooding or per-frame wave spam

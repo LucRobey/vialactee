@@ -74,7 +74,7 @@ All documentation in this repository is governed by a strict **5-Tier Documentat
 - **[`api_and_wire_protocol.md`](./architecture/api_and_wire_protocol.md)** — HTTP REST Endpoints, Full-Duplex WebSocket Schema & Binary UDP Pixel Framing
 
 ### Reference Catalogs (`docs/reference/`)
-- **[`modes_catalog.md`](./reference/modes_catalog.md)** — Complete Visual & Behavioral Catalog of All 21 Active Mounted Modes & Settings Schemas
+- **[`modes_catalog.md`](./reference/modes_catalog.md)** — Complete Visual & Behavioral Catalog of All 13 Active Mounted Modes & Settings Schemas
 - **[`configuration_schemas.md`](./reference/configuration_schemas.md)** — Master Reference for `app_config.json`, `modes.json`, `segments_*.json` & Audio Presets
 - **[`coordinates_matrix.md`](./reference/coordinates_matrix.md)** — Exact 2D Spatial Coordinate Grid & Segment Wiring Lookup Tables
 

@@ -41,7 +41,7 @@ Implemented in `music/AudioIngestion.py`:
      - Hi-hat shimmer: 8–16 kHz
 3. **12-Tone Chromagram:**
    - Pre-computed pitch matrix maps spectral bins ($f > 30\text{ Hz}$) to the 12 chromatic semitones (C, C#, D, ..., B), smoothed with fast-attack/slow-release ADSR (`smoothed_chroma_values`).
-   - Powers harmonic color calculation in `Synesthesia_mode` (where circular pitch-class vectors are blended with `mood_colors[0]` and `mood_accent` over a traveling spatial wave).
+   - Exposed on `Listener` for pitch-aware consumers and developer studio visualization (`music_studio.py`, `mode_studio.py`).
 
 ---
 

@@ -9,7 +9,7 @@ import numpy as np
 
 from core.Segment import Segment
 from core.TransitionBridge import apply_orders
-from modes.Plasma_fire_mode import Plasma_fire_mode
+from modes.Power_bar_mode import Power_bar_mode
 from modes.Middle_bar_mode import Middle_bar_mode
 from transitions.api import (
     AVAILABLE_TRANSITIONS,
@@ -84,7 +84,7 @@ class TestTransitionFamilies(unittest.TestCase):
         # Verify that requesting staggered=True on a 2D room transition forces start_offset == 0.0
         svc = create_transition_service()
         segs = tuple(
-            SegmentDescriptor(name=f"Segment v{i}", orientation="vertical", available_modes=("Rainbow", "Plasma Fire"))
+            SegmentDescriptor(name=f"Segment v{i}", orientation="vertical", available_modes=("Rainbow", "Power Bar"))
             for i in range(1, 5)
         )
         svc.set_installation(InstallationSnapshot(segments=segs))
@@ -144,16 +144,16 @@ class TestModeCooperativeHandshake(unittest.TestCase):
         self.leds = np.zeros((40, 3), dtype=np.int32)
         self.indexes = list(range(20))
         self.seg = Segment("Segment v1", self.listener, self.leds, self.indexes, "vertical", {})
-        # Replace modes with deterministic test instances of Plasma_fire_mode and Middle_bar_mode
+        # Replace modes with deterministic test instances of Power_bar_mode and Middle_bar_mode
         self.seg.modes = {
-            "Plasma Fire": Plasma_fire_mode("Plasma Fire", "Segment v1", self.listener, self.leds, self.indexes, self.seg.rgb_list, {}),
+            "Power Bar": Power_bar_mode("Power Bar", "Segment v1", self.listener, self.leds, self.indexes, self.seg.rgb_list, {}),
             "Middle Bar": Middle_bar_mode("Middle Bar", "Segment v1", self.listener, self.leds, self.indexes, self.seg.rgb_list, {}),
         }
-        self.seg.activ_mode = "Plasma Fire"
-        self.seg.modes["Plasma Fire"].start()
+        self.seg.activ_mode = "Power Bar"
+        self.seg.modes["Power Bar"].start()
 
     def test_cooperative_mode_wind_down_and_bloom_in(self):
-        plasma = self.seg.modes["Plasma Fire"]
+        plasma = self.seg.modes["Power Bar"]
         mid_bar = self.seg.modes["Middle Bar"]
 
         # Steady state: transition_scale is 1.0
@@ -207,7 +207,7 @@ class TestModeCooperativeHandshake(unittest.TestCase):
 
         status_mid = MagicMock(state="TRANSITION_DUAL", progress=0.5, technique="flash_cut")
         self.seg.update(status_mid, TE.apply_transition, dt=0.3)
-        self.assertAlmostEqual(self.seg.modes["Plasma Fire"].transition_scale, 1.0)
+        self.assertAlmostEqual(self.seg.modes["Power Bar"].transition_scale, 1.0)
         self.assertAlmostEqual(self.seg.modes["Middle Bar"].transition_scale, 1.0)
 
 

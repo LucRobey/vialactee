@@ -262,16 +262,12 @@ class TestModeDnaSpatialRoles(unittest.TestCase):
     def test_spatial_roles_match_modes_catalog(self):
         from transitions.mode_dna import MODE_DNA, get_mode_dna
 
-        expected_vertical = ("Plasma Fire", "Power Bar")
+        expected_vertical = ("Power Bar",)
         expected_horizontal = (
             "Middle Bar",
-            "PSG",
             "Opposite Sides",
-            "Flying Ball",
             "Coloured Middle Wave",
-            "Static Wave",
             "Extending Waves",
-            "Magnetic Ball",
         )
         expected_both = (
             "Rainbow",
@@ -280,10 +276,7 @@ class TestModeDnaSpatialRoles(unittest.TestCase):
             "Proportion Rainbow",
             "Hyper Strobe",
             "Chromatic Chaser",
-            "Synesthesia",
             "Metronome",
-            "Rhythm Breather",
-            "Beat Runner",
             "Impact Shockwave",
         )
         for vert_name in expected_vertical:
@@ -294,7 +287,7 @@ class TestModeDnaSpatialRoles(unittest.TestCase):
             self.assertEqual(MODE_DNA[both_name]["spatial_role"], "both")
         self.assertEqual(get_mode_dna("Power_bar_mode")["spatial_role"], "vertical")
         self.assertEqual(get_mode_dna("Middle_bar_mode")["spatial_role"], "horizontal")
-        self.assertEqual(get_mode_dna("Beat_runner_mode")["spatial_role"], "both")
+        self.assertEqual(get_mode_dna("Chromatic_chaser_mode")["spatial_role"], "both")
         roles_present = {entry["spatial_role"] for entry in MODE_DNA.values()}
         self.assertEqual(roles_present, {"vertical", "horizontal", "both"})
 
@@ -316,21 +309,6 @@ class TestPart1ModeBugFixes(_ModeTestCase):
         # Floating peak dot must still be actively painted
         dot_idx = int(np.clip(mode.white_dot_height, 0, 29))
         self.assertTrue(np.any(mode.rgb_list[dot_idx] > 120))
-
-    def test_static_wave_fades_gap_inside_floating_caps(self):
-        from modes.Static_wave_mode import Static_wave_mode
-
-        mode = self.make(Static_wave_mode, n=41)
-        mode.rgb_list[:] = 200
-        mode.real_size = 2.0
-        mode.size_int = 15.0
-        self.engine._energy = 0.1
-        self.engine._beat_trust = 0.0
-        self.listener.asserved_fft_band = np.zeros(8)
-        mode.run()
-        # Gap between shrinking inner bar (middle=20 +- 2) and outer cap (20 +- 14) must fade
-        self.assertTrue(np.all(mode.rgb_list[25:32] < 200))
-        self.assertTrue(np.all(mode.rgb_list[9:16] < 200))
 
     def test_chromatic_chaser_leaves_no_unlit_gaps_at_high_speed(self):
         from modes.Chromatic_chaser_mode import Chromatic_chaser_mode
@@ -364,40 +342,6 @@ class TestPart1ModeBugFixes(_ModeTestCase):
         mode.speed = 45.0
         mode.run()
         self.assertTrue(np.all(np.sum(mode.rgb_list, axis=1) > 0))
-
-    def test_beat_runner_pendulum_alternates_direction_across_beats(self):
-        from modes.Beat_runner_mode import Beat_runner_mode
-
-        mode = self.make(Beat_runner_mode, n=50)
-        mode.motion_style = "pendulum"
-        self.engine._beat_trust = 1.0
-        self.engine._salience = 1.0
-
-        # Even beat (beat_count = 0): sweeps from left to right as phase goes 0.2 -> 0.8
-        self.listener.beat_count = 0
-        self.listener.beat_phase = 0.2
-        mode.rgb_list.fill(0)
-        mode.run()
-        peak_even_early = int(np.argmax(np.sum(mode.rgb_list, axis=1)))
-
-        self.listener.beat_phase = 0.8
-        mode.rgb_list.fill(0)
-        mode.run()
-        peak_even_late = int(np.argmax(np.sum(mode.rgb_list, axis=1)))
-        self.assertLess(peak_even_early, peak_even_late)
-
-        # Odd beat (beat_count = 1): sweeps back from right to left as phase goes 0.2 -> 0.8
-        self.listener.beat_count = 1
-        self.listener.beat_phase = 0.2
-        mode.rgb_list.fill(0)
-        mode.run()
-        peak_odd_early = int(np.argmax(np.sum(mode.rgb_list, axis=1)))
-
-        self.listener.beat_phase = 0.8
-        mode.rgb_list.fill(0)
-        mode.run()
-        peak_odd_late = int(np.argmax(np.sum(mode.rgb_list, axis=1)))
-        self.assertGreater(peak_odd_early, peak_odd_late)
 
     def test_shining_stars_randomizes_subsegments_independently(self):
         from modes.Shining_stars_mode import Shining_stars_mode

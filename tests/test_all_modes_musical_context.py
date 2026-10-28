@@ -1,7 +1,7 @@
 """
-Unit & Governance Tests for all 21 visual animation modes in modes/.
+Unit & Governance Tests for all 13 visual animation modes in modes/.
 Verifies:
-1. Instantiation and execution of all 21 modes.
+1. Instantiation and execution of all 13 modes.
 2. Continuous, non-snapping behavior across MusicalContextEngine scenes (CHILL, GROOVE, BUILDUP, DROP_IMPACT).
 3. Resilience when the Anticipation Flywheel is completely lost (beat_trust == 0, is_beat == False).
 4. Delegation and harmonization with the mood sector's mood_colors and mood_modifiers.
@@ -25,22 +25,14 @@ from modes.Metronome_mode import Metronome_mode
 from modes.Extending_waves_mode import Extending_waves_mode
 from modes.Coloured_middle_wave_mode import Coloured_middle_wave_mode
 from modes.Middle_bar_mode import Middle_bar_mode
-from modes.Static_wave_mode import Static_wave_mode
 from modes.Opposite_sides_mode import Opposite_sides_mode
-from modes.PSG_mode import PSG_mode
 from modes.Chromatic_chaser_mode import Chromatic_chaser_mode
-from modes.Flying_ball_mode import Flying_ball_mode
-from modes.Magnetic_ball_mode import Magnetic_ball_mode
 from modes.Power_bar_mode import Power_bar_mode
 from modes.Bary_rainbow_mode import Bary_rainbow_mode
 from modes.Proportion_rainbow_mode import Proportion_rainbow_mode
 from modes.Rainbow_mode import Rainbow_mode
-from modes.Plasma_fire_mode import Plasma_fire_mode
 from modes.Shining_stars_mode import Shining_stars_mode
-from modes.Synesthesia_mode import Synesthesia_mode
-from modes.Beat_runner_mode import Beat_runner_mode
 from modes.Impact_shockwave_mode import Impact_shockwave_mode
-from modes.Rhythm_breather_mode import Rhythm_breather_mode
 
 
 ALL_MODE_CLASSES = [
@@ -49,22 +41,14 @@ ALL_MODE_CLASSES = [
     Extending_waves_mode,
     Coloured_middle_wave_mode,
     Middle_bar_mode,
-    Static_wave_mode,
     Opposite_sides_mode,
-    PSG_mode,
     Chromatic_chaser_mode,
-    Flying_ball_mode,
-    Magnetic_ball_mode,
     Power_bar_mode,
     Bary_rainbow_mode,
     Proportion_rainbow_mode,
     Rainbow_mode,
-    Plasma_fire_mode,
     Shining_stars_mode,
-    Synesthesia_mode,
-    Beat_runner_mode,
     Impact_shockwave_mode,
-    Rhythm_breather_mode,
 ]
 
 
@@ -122,8 +106,8 @@ class TestAllModesMusicalContext(unittest.TestCase):
         )
 
     def test_all_modes_instantiation_and_mood_colors(self):
-        """All 21 modes must instantiate and expose mood_colors and mood_modifiers matching the mood service."""
-        self.assertEqual(len(ALL_MODE_CLASSES), 21)
+        """All 13 modes must instantiate and expose mood_colors and mood_modifiers matching the mood service."""
+        self.assertEqual(len(ALL_MODE_CLASSES), 13)
         for mode_cls in ALL_MODE_CLASSES:
             mode = self._instantiate_mode(mode_cls, num_leds=40)
             self.assertEqual(mode.mood_colors.shape, (4, 3))
@@ -131,7 +115,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
             np.testing.assert_array_equal(mode.mood_colors, PALETTES["Cyberpunk"])
 
     def test_all_modes_run_across_scenes(self):
-        """All 21 modes must execute run() cleanly without error across CHILL, GROOVE, BUILDUP, and DROP_IMPACT."""
+        """All 13 modes must execute run() cleanly without error across CHILL, GROOVE, BUILDUP, and DROP_IMPACT."""
         num_leds = 60
         for mode_cls in ALL_MODE_CLASSES:
             mode = self._instantiate_mode(mode_cls, num_leds=num_leds)
@@ -417,7 +401,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
         self.assertGreater(waves.wave_velocities[last_slot], 0)
 
     def test_bar_modes_and_physics_behavioral_requirements(self):
-        """Verify Middle_bar and Plasma_fire continuous scaling and Flying_ball silence settling."""
+        """Verify Middle_bar and Power_bar continuous scaling."""
         mb = self._instantiate_mode(Middle_bar_mode, num_leds=40)
         self.engine._is_silent = False
         self.engine._energy = 0.8
@@ -426,17 +410,10 @@ class TestAllModesMusicalContext(unittest.TestCase):
             mb.run()
         self.assertGreater(mb.size, 5.0)
 
-        pf = self._instantiate_mode(Plasma_fire_mode, num_leds=40)
+        pb = self._instantiate_mode(Power_bar_mode, num_leds=40)
         self.engine._energy = 0.85
-        pf.run()
-        self.assertTrue(np.any(pf.rgb_list > 0))
-
-        fb = self._instantiate_mode(Flying_ball_mode, num_leds=50)
-        fb.ball_pos = 5.0
-        self.engine._is_silent = True
-        for _ in range(120):
-            fb.run()
-        self.assertAlmostEqual(fb.ball_pos, 25.0, delta=2.0)
+        pb.run()
+        self.assertTrue(np.any(pb.rgb_list > 0))
 
     def test_all_modes_silence_decay_to_black(self):
         """Silence Law (S6): Every mode must decay its entire buffer to black under sustained ctx.is_silent = True."""

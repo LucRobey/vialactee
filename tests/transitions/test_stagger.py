@@ -25,7 +25,7 @@ class TestStagger(unittest.TestCase):
             ["Segment h30", "Segment h31"],
         ]
         self.all_segs = self.verticals + [s for r in self.rings for s in r]
-        self.allocation = {seg: "Plasma Fire" for seg in self.all_segs}
+        self.allocation = {seg: "Power Bar" for seg in self.all_segs}
 
     def test_simultaneous_pattern(self):
         configs = generate_staggered_configs(

@@ -57,7 +57,7 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(self.segment._normalize_mode_name("rainbow"), "Rainbow")
 
         # Legacy snake_case with _mode suffix
-        self.assertEqual(self.segment._normalize_mode_name("Plasma_fire_mode"), "Plasma Fire")
+        self.assertEqual(self.segment._normalize_mode_name("Power_bar_mode"), "Power Bar")
         self.assertEqual(self.segment._normalize_mode_name("Metronome_mode"), "Metronome")
         self.assertEqual(self.segment._normalize_mode_name("Hyper_strobe_mode"), "Hyper Strobe")
 
@@ -79,7 +79,7 @@ class TestSegment(unittest.TestCase):
         self.assertTrue(self.segment.isBlocked)
 
         current_mode = self.segment.activ_mode
-        other_mode = "Rainbow" if current_mode != "Rainbow" else "Plasma Fire"
+        other_mode = "Rainbow" if current_mode != "Rainbow" else "Power Bar"
 
         # Mode changes must be ignored when blocked
         self.segment.change_mode(other_mode)
@@ -92,7 +92,7 @@ class TestSegment(unittest.TestCase):
 
     def test_execute_mode_swap_instant(self):
         current_mode = self.segment.activ_mode
-        other_mode = "Rainbow" if current_mode != "Rainbow" else "Plasma Fire"
+        other_mode = "Rainbow" if current_mode != "Rainbow" else "Power Bar"
 
         self.segment.execute_mode_swap(other_mode)
         self.assertEqual(self.segment.activ_mode, other_mode)
@@ -104,7 +104,7 @@ class TestSegment(unittest.TestCase):
 
     def test_transition_dual_buffer_lifecycle(self):
         start_mode = "Rainbow"
-        target_mode = "Plasma Fire"
+        target_mode = "Power Bar"
         self.segment.execute_mode_swap(start_mode)
 
         # Start transition
@@ -141,7 +141,7 @@ class TestSegment(unittest.TestCase):
     def test_local_timing_staggered_lifecycle(self):
         """Verifies start_offset delay, local progress calculation, and completion."""
         start_mode = "Rainbow"
-        target_mode = "Plasma Fire"
+        target_mode = "Power Bar"
         self.segment.execute_mode_swap(start_mode)
 
         # Transition with 0.5s offset, 1.0s duration, vertical_wipe technique
@@ -191,7 +191,7 @@ class TestSegment(unittest.TestCase):
     def test_local_timing_not_aborted_by_idle_director_passation(self):
         """Transition must NOT abort on frame 1 when Director is in PASSATION (idle)."""
         start_mode = "Rainbow"
-        target_mode = "Plasma Fire"
+        target_mode = "Power Bar"
         self.segment.execute_mode_swap(start_mode)
 
         self.segment.change_mode(target_mode, {"type": "fade_in_out", "duration": 1.0, "start_offset": 0.0})
@@ -215,7 +215,7 @@ class TestSegment(unittest.TestCase):
     def test_forced_interruption_and_mode_cancel(self):
         """Forced transition interrupts ongoing transition; requesting active mode cancels transition."""
         start_mode = "Rainbow"
-        mid_mode = "Plasma Fire"
+        mid_mode = "Power Bar"
         self.segment.execute_mode_swap(start_mode)
 
         self.segment.change_mode(mid_mode, {"type": "fade_in_out", "duration": 2.0})
@@ -249,7 +249,7 @@ class TestSegment(unittest.TestCase):
     def test_target_mode_rendered_on_completion_frame(self):
         """On the exact frame of passation completion, target mode is rendered into rgb_list."""
         start_mode = "Rainbow"
-        target_mode = "Plasma Fire"
+        target_mode = "Power Bar"
         self.segment.execute_mode_swap(start_mode)
 
         self.segment.change_mode(target_mode, {"type": "fade_in_out", "duration": 0.2, "start_offset": 0.0})
@@ -321,7 +321,7 @@ class TestSegmentTransitionReset(unittest.TestCase):
         self.segment = Segment("Segment v4", listener, np.zeros((100, 3), dtype=np.int32),
                                list(range(20)), "vertical", {})
         self.segment.execute_mode_swap("Rainbow")
-        self.segment.change_mode("Plasma Fire", {"type": "fade_in_out", "duration": 3.5, "start_offset": 0.75})
+        self.segment.change_mode("Power Bar", {"type": "fade_in_out", "duration": 3.5, "start_offset": 0.75})
         self.assertTrue(self.segment.is_in_transition)
 
     def _assert_clean(self):
@@ -333,7 +333,7 @@ class TestSegmentTransitionReset(unittest.TestCase):
         self.assertEqual(self.segment.transition_start_offset, 0.0)
 
     def test_execute_mode_swap_clears_transition_and_timing(self):
-        incoming = self.segment.modes["Plasma Fire"]
+        incoming = self.segment.modes["Power Bar"]
         self.segment.execute_mode_swap("Rainbow")
         self._assert_clean()
         self.assertFalse(incoming.isActiv)  # the incoming mode was terminated
@@ -341,7 +341,7 @@ class TestSegmentTransitionReset(unittest.TestCase):
         self.assertTrue(self.segment.modes["Rainbow"].isActiv)
 
     def test_force_mode_clears_transition_and_timing(self):
-        incoming = self.segment.modes["Plasma Fire"]
+        incoming = self.segment.modes["Power Bar"]
         self.segment.force_mode("Metronome")
         self._assert_clean()
         self.assertFalse(incoming.isActiv)

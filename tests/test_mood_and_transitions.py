@@ -42,7 +42,7 @@ class TestModeDNA(unittest.TestCase):
     def test_all_mode_dna_bounds_and_roles(self):
         """All configured modes must define 4 metrics in [0.0, 1.0] and valid spatial_role."""
         valid_roles = {"vertical", "horizontal", "both"}
-        self.assertGreater(len(mode_dna.MODE_DNA), 15)
+        self.assertEqual(len(mode_dna.MODE_DNA), 13)
 
         for name, dna in mode_dna.MODE_DNA.items():
             with self.subTest(mode=name):
@@ -65,8 +65,8 @@ class TestModeDNA(unittest.TestCase):
         dna_lower = mode_dna.get_mode_dna("rainbow")
         self.assertEqual(dna_lower, dna_exact)
 
-        dna_under = mode_dna.get_mode_dna("beat_runner_mode")
-        self.assertEqual(dna_under["punch"], mode_dna.MODE_DNA["Beat Runner"]["punch"])
+        dna_under = mode_dna.get_mode_dna("chromatic_chaser_mode")
+        self.assertEqual(dna_under["punch"], mode_dna.MODE_DNA["Chromatic Chaser"]["punch"])
 
         # Fallback for unknown mode
         fallback = mode_dna.get_mode_dna("NonExistentSuperMode")
@@ -115,7 +115,7 @@ class TestLocalTransitionManager(unittest.TestCase):
 
     def test_weighted_lottery_probabilistic_selection(self):
         """Weighted lottery selects candidates probabilistically with non-zero chance for all."""
-        pool = ["Rainbow", "Beat Runner", "Impact Shockwave", "Shining Stars"]
+        pool = ["Rainbow", "Hyper Strobe", "Impact Shockwave", "Shining Stars"]
         target_high_energy = {"energy": 0.95, "punch": 0.95, "rhythm": 0.90, "complexity": 0.50}
 
         counts = {m: 0 for m in pool}
@@ -125,7 +125,7 @@ class TestLocalTransitionManager(unittest.TestCase):
             counts[picked] += 1
 
         # High energy modes (Beat Runner or Impact Shockwave) must dominate
-        self.assertGreater(counts["Beat Runner"] + counts["Impact Shockwave"], counts["Rainbow"] + counts["Shining Stars"])
+        self.assertGreater(counts["Hyper Strobe"] + counts["Impact Shockwave"], counts["Rainbow"] + counts["Shining Stars"])
         # Non-rigid: Even ambient modes have a non-zero probability (preserving freshness and surprise)
         self.assertGreater(counts["Rainbow"], 0)
         self.assertGreater(counts["Shining Stars"], 0)
@@ -317,7 +317,7 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
 
     def test_symmetric_pairs_produces_contrasting_modes(self):
         """SYMMETRIC_PAIRS must choose distinct modes A and B when candidate pool has > 1 mode."""
-        pool = ("Rainbow", "Beat Runner")
+        pool = ("Rainbow", "Hyper Strobe")
         self.ltm.set_installation([
             SegmentDescriptor(name="Segment v1", orientation="vertical", available_modes=pool),
             SegmentDescriptor(name="Segment v2", orientation="vertical", available_modes=pool),
@@ -431,7 +431,7 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
 
         # 2. Fire two immediate transitions before pop_orders()
         self.ltm.schedule_transition(
-            allocation={"Segment v1": "Beat Runner", "Segment v2": "Beat Runner"},
+            allocation={"Segment v1": "Chromatic Chaser", "Segment v2": "Chromatic Chaser"},
             quantize_downbeat=False,
         )
         self.ltm.schedule_transition(

@@ -53,29 +53,8 @@ MODE_DNA: Dict[str, Dict[str, Any]] = {
         "complexity": 0.40,
         "spatial_role": "both",
     },
-    "Static Wave": {
-        "energy": 0.35,
-        "punch": 0.20,
-        "rhythm": 0.40,
-        "complexity": 0.30,
-        "spatial_role": "horizontal",
-    },
-    "Rhythm Breather": {
-        "energy": 0.50,
-        "punch": 0.35,
-        "rhythm": 0.70,
-        "complexity": 0.40,
-        "spatial_role": "both",
-    },
 
     # Grooving / Wave / Intermediate Modes
-    "PSG": {
-        "energy": 0.50,
-        "punch": 0.40,
-        "rhythm": 0.45,
-        "complexity": 0.35,
-        "spatial_role": "horizontal",
-    },
     "Middle Bar": {
         "energy": 0.55,
         "punch": 0.60,
@@ -104,36 +83,8 @@ MODE_DNA: Dict[str, Dict[str, Any]] = {
         "complexity": 0.45,
         "spatial_role": "horizontal",
     },
-    "Flying Ball": {
-        "energy": 0.60,
-        "punch": 0.50,
-        "rhythm": 0.65,
-        "complexity": 0.45,
-        "spatial_role": "horizontal",
-    },
-    "Magnetic Ball": {
-        "energy": 0.65,
-        "punch": 0.55,
-        "rhythm": 0.60,
-        "complexity": 0.55,
-        "spatial_role": "horizontal",
-    },
 
-    # High Dynamic / Expressive / Synesthetic Modes
-    "Plasma Fire": {
-        "energy": 0.75,
-        "punch": 0.50,
-        "rhythm": 0.55,
-        "complexity": 0.75,
-        "spatial_role": "vertical",
-    },
-    "Synesthesia": {
-        "energy": 0.75,
-        "punch": 0.65,
-        "rhythm": 0.70,
-        "complexity": 0.75,
-        "spatial_role": "both",
-    },
+    # High Dynamic / Expressive Modes
     "Chromatic Chaser": {
         "energy": 0.70,
         "punch": 0.60,
@@ -157,13 +108,6 @@ MODE_DNA: Dict[str, Dict[str, Any]] = {
     },
 
     # High Impact / Drop / Strobe Modes
-    "Beat Runner": {
-        "energy": 0.85,
-        "punch": 0.80,
-        "rhythm": 0.90,
-        "complexity": 0.55,
-        "spatial_role": "both",
-    },
     "Hyper Strobe": {
         "energy": 0.95,
         "punch": 0.95,
@@ -195,7 +139,7 @@ def get_mode_dna(mode_name: str) -> Dict[str, Any]:
     Performs case-insensitive, normalized lookup with fallback to DEFAULT_MODE_DNA.
 
     Args:
-        mode_name: Name of the mode (e.g., 'Rainbow', 'beat_runner_mode', 'Impact Shockwave').
+        mode_name: Name of the mode (e.g., 'Rainbow', 'chromatic_chaser_mode', 'Impact Shockwave').
 
     Returns:
         Dict[str, Any] containing 'energy', 'punch', 'rhythm', 'complexity', and 'spatial_role'.

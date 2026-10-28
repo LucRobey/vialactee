@@ -506,7 +506,7 @@ class StudioApp:
         modes_dir = os.path.join(_REPO_ROOT, "modes")
         self.mode_mgr = ModeManager(modes_dir, self.listener, self.nb_leds)
 
-        # Select initial mode (default to Static_wave_mode if none specified)
+        # Select initial mode (default to Middle_bar_mode if none specified)
         target_mode = (initial_mode_name or "Static_wave").lower()
         for idx, (_, mod_name, _) in enumerate(self.mode_mgr.mode_catalog):
             if target_mode in mod_name.lower():
@@ -1696,7 +1696,7 @@ class StudioApp:
 def main():
     parser = argparse.ArgumentParser(description="Vialactée Mode Studio - Interactive Developer Visualizer")
     parser.add_argument("--song", "-s", type=str, default=None, help="Path to MP3 or WAV file")
-    parser.add_argument("--mode", "-m", type=str, default=None, help="Initial mode name (e.g. 'Static_wave_mode')")
+    parser.add_argument("--mode", "-m", type=str, default=None, help="Initial mode name (e.g. 'Middle_bar_mode')")
     parser.add_argument("--leds", "-l", type=int, default=80, help="Number of LEDs in the test bar (default: 80)")
     parser.add_argument(
         "--model",

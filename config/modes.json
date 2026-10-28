@@ -26,19 +26,9 @@
       "class": "Proportion_rainbow_mode"
     },
     {
-      "name": "PSG",
-      "module": "PSG_mode",
-      "class": "PSG_mode"
-    },
-    {
       "name": "Opposite Sides",
       "module": "Opposite_sides_mode",
       "class": "Opposite_sides_mode"
-    },
-    {
-      "name": "Plasma Fire",
-      "module": "Plasma_fire_mode",
-      "class": "Plasma_fire_mode"
     },
     {
       "name": "Hyper Strobe",
@@ -51,19 +41,9 @@
       "class": "Chromatic_chaser_mode"
     },
     {
-      "name": "Synesthesia",
-      "module": "Synesthesia_mode",
-      "class": "Synesthesia_mode"
-    },
-    {
       "name": "Metronome",
       "module": "Metronome_mode",
       "class": "Metronome_mode"
-    },
-    {
-      "name": "Flying Ball",
-      "module": "Flying_ball_mode",
-      "class": "Flying_ball_mode"
     },
     {
       "name": "Coloured Middle Wave",
@@ -71,24 +51,9 @@
       "class": "Coloured_middle_wave_mode"
     },
     {
-      "name": "Rhythm Breather",
-      "module": "Rhythm_breather_mode",
-      "class": "Rhythm_breather_mode"
-    },
-    {
-      "name": "Beat Runner",
-      "module": "Beat_runner_mode",
-      "class": "Beat_runner_mode"
-    },
-    {
       "name": "Impact Shockwave",
       "module": "Impact_shockwave_mode",
       "class": "Impact_shockwave_mode"
-    },
-    {
-      "name": "Static Wave",
-      "module": "Static_wave_mode",
-      "class": "Static_wave_mode"
     },
     {
       "name": "Power Bar",
@@ -99,11 +64,6 @@
       "name": "Extending Waves",
       "module": "Extending_waves_mode",
       "class": "Extending_waves_mode"
-    },
-    {
-      "name": "Magnetic Ball",
-      "module": "Magnetic_ball_mode",
-      "class": "Magnetic_ball_mode"
     }
   ]
 }

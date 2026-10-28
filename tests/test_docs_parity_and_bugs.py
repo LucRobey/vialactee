@@ -8,7 +8,6 @@ import time
 from music.Listener import Listener
 import transitions.engine as TE
 from hardware.Fake_leds import Fake_leds, FakeLedsVisualizer
-from modes.Magnetic_ball_mode import Magnetic_ball_mode
 
 
 class TestDocsParityAndBugs(unittest.TestCase):
@@ -84,23 +83,6 @@ class TestDocsParityAndBugs(unittest.TestCase):
         self.assertEqual(rgb_curr.shape, (nb_leds, 3))
         # Both channels should be mixed ~127
         self.assertTrue(np.all(rgb_curr >= 120) and np.all(rgb_curr <= 135))
-
-    def test_magnetic_ball_mode_wall_bounce(self):
-        """Verify Magnetic_ball_mode wall bounce sets self.ball_pos without typo."""
-        listener = Listener(self.infos_full)
-        nb_leds = 50
-        rgb_list = np.zeros((nb_leds, 3), dtype=np.uint8)
-        indexes = list(range(nb_leds))
-        mode = Magnetic_ball_mode("Magnetic Ball", "v1", listener, None, indexes, rgb_list, self.infos_full)
-
-        # Force ball_pos to trigger negative wall bounce
-        mode.ball_pos = -2.0
-        mode.ball_speed = -5.0
-        mode.run()
-
-        # ball_pos should bounce to positive position and not crash on ball_pos_pos
-        self.assertGreaterEqual(mode.ball_pos, 0.0)
-        self.assertTrue(hasattr(mode, "ball_pos"))
 
 
 if __name__ == "__main__":

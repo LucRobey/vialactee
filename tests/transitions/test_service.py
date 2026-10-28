@@ -15,7 +15,7 @@ from transitions.api import (
     create_transition_service,
 )
 
-MODES = ("Rainbow", "Plasma Fire", "Hyper Strobe", "Metronome")
+MODES = ("Rainbow", "Power Bar", "Hyper Strobe", "Metronome")
 
 
 def installation(blocked=()):

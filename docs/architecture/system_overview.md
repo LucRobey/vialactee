@@ -58,7 +58,7 @@ graph TD
 
     %% Visual Rendering Layer
     subgraph Visuals [Visual Animation Pipeline]
-        Mode["Mode Subclasses (21 Active Modes)"]
+        Mode["Mode Subclasses (13 Active Modes)"]
         Seg["Segment (Logical LED Strip)"]
         TransEng["transitions.engine (Spatial Blends)"]
     end

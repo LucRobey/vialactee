@@ -25,7 +25,7 @@ flowchart LR
     MIC["Audio Input\n(Mic / AudioFile)"] -->|"PCM chunks"| ING["music/\nAudioIngestion + Analyzer + Context"]
     ING -->|"T_speaker ring buffer\n(music.api.Listener)"| MM["core/\nMode_master + TransitionBridge"]
     MM -->|"update(dt, scene)"| MOOD["mood/\nMoodService (mood.api)"]
-    MOOD -->|"🟢 colors() (4,3) int32\n🟢 modifiers() (4,) float32"| MODE["modes/\nMode base class & 21 modes"]
+    MOOD -->|"🟢 colors() (4,3) int32\n🟢 modifiers() (4,) float32"| MODE["modes/\nMode base class & 13 modes"]
     ING -->|"physical FFT & power\nrhythm gated by rhythm_lock"| MODE
     MM -->|"update(dt, MusicSnapshot)"| TRANS["transitions/\nTransitionService (transitions.api)"]
     TRANS -->|"TransitionOrders +\nin-place blend()"| SEG["core/\nSegment dual buffers"]

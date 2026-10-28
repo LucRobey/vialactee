@@ -10,7 +10,7 @@ Verifies documentation parity against code and configuration single sources of t
 3. Retired symbols: Transition_Director, Transition_Engine, data/configurations_,
    /api/configurations, Configurator.tsx, MoodDirector, c:/Users/Users/, and MODE_RULES
    must not appear in docs/ outside docs/archive/.
-4. Counts & settings that cannot drift: modes.json (21 active modes) parity and
+4. Counts & settings that cannot drift: modes.json (13 active modes) parity and
    get_settings_schema() key parity with docs/reference/modes_catalog.md, docs/README.md,
    and docs/architecture/system_overview.md.
 5. app_config.json keys parity with docs/reference/configuration_schemas.md.

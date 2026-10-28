@@ -461,13 +461,13 @@ class Segment:
         self.unBlock()
 
 
-    #Pass from user friendly name (example : plasma fire) to the internal name (example : Plasma_Fire_mode)
+    #Pass from user friendly name (example : power bar) to the internal name (example : Power_bar_mode)
     def _normalize_mode_name(self, mode_name: str) -> str:
         """
         Normalize a mode name, resolving legacy formatting.
 
-        Converts old-style names (e.g., 'Plasma_fire_mode') to the standard 
-        human-readable keys used in the modes dictionary (e.g., 'Plasma Fire').
+        Converts old-style names (e.g., 'Power_bar_mode') to the standard 
+        human-readable keys used in the modes dictionary (e.g., 'Power Bar').
 
         Args:
             mode_name (str): The requested mode name.
@@ -479,7 +479,7 @@ class Segment:
         if mode_name in self.modes:
             return mode_name
             
-        # Legacy support for "Metronome_mode", "Plasma_fire_mode", etc.
+        # Legacy support for "Metronome_mode", "Power_bar_mode", etc.
         for name in self.modes:
             if name.replace(" ", "").lower() == mode_name.replace("_mode", "").replace("_", "").lower():
                 return name
