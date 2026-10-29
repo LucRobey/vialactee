@@ -39,6 +39,7 @@ from mood.api import create_mood_service
 from modes.Mode import Mode
 from utils.driver_mute import DriverMuteProxy
 import tools.studio_mutes as studio_mutes
+from tools.listener_config import build_listener_infos, PRODUCTION_VISUAL_FFT_BANDS
 
 
 def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAnalyzer]:
@@ -430,7 +431,14 @@ class StudioApp:
         MusicalScene.DROP_IMPACT: "💥",
     }
 
-    def __init__(self, song_path: str, initial_mode_name: Optional[str] = None, nb_leds: int = 80, model_name: str = "DyadicMetricalAudioAnalyzer"):
+    def __init__(
+        self,
+        song_path: str,
+        initial_mode_name: Optional[str] = None,
+        nb_leds: int = 80,
+        model_name: str = "DyadicMetricalAudioAnalyzer",
+        nb_fft_bands: int = PRODUCTION_VISUAL_FFT_BANDS,
+    ):
         pygame.init()
         pygame.font.init()
 
@@ -475,20 +483,15 @@ class StudioApp:
         # Rhythm Model Resolution & Dynamic Band Configuration
         self.model_class = load_studio_model_class(model_name, _REPO_ROOT)
         self.model_name = self.model_class.__name__
-        self.nb_bands = int(getattr(self.model_class, "NB_AUDIO_BANDS", 8))
+        self.nb_bands = int(nb_fft_bands)
 
         # 1. Initialize Listener with exact production config and injected analyzer
-        listener_infos = {
-            "useMicrophone": True,
-            "fakeDelay": 5.0,
-            "luminosity": 100,
-            "sensibility": 100,
-            "nb_of_fft_band": self.nb_bands,
-            "nb_of_chroma": 12,
-            "sample_rate": 44100,
-            "buffer_size": 4096
-        }
+        listener_infos = build_listener_infos(self.nb_bands)
         self.listener = Listener(listener_infos, analyzer_class=self.model_class)
+        self.analyzer_bands = int(
+            getattr(self.listener.analyzer, "nb_bands", 0)
+            or len(self.listener.ingestion.multiband_fft_values)
+        )
         # In mode_studio (direct digital audio feed), zero out the artificial microphone ADC buffer delay
         self.listener.dynamic_audio_latency = 0.0
 
@@ -715,7 +718,7 @@ class StudioApp:
         title_surf = self.get_text(self.font_title, disp_name.upper(), self.ACCENT_CYAN)
         self.screen.blit(title_surf, (40, 18))
 
-        mode_num = f"Mode {self.mode_mgr.current_idx + 1}/{len(self.mode_mgr.mode_catalog)} │ Model: {self.model_name} [{self.nb_bands} bands]"
+        mode_num = f"Mode {self.mode_mgr.current_idx + 1}/{len(self.mode_mgr.mode_catalog)} │ Model: {self.model_name} [visual FFT {self.nb_bands} · analyzer {self.analyzer_bands}]"
         num_surf = self.get_text(self.font_main, mode_num, self.TEXT_DIM)
         self.screen.blit(num_surf, (title_surf.get_width() + 55, 23))
 
@@ -1717,7 +1720,15 @@ def main():
         default="DyadicMetricalAudioAnalyzer",
         help="Rhythm analyzer model class (e.g. DyadicMetricalAudioAnalyzer (default), MultiBandOnsetAudioAnalyzer (fallback), AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
     )
+    parser.add_argument(
+        "--bands", "-b",
+        type=int,
+        default=PRODUCTION_VISUAL_FFT_BANDS,
+        help="Visual FFT band count fed to modes (default 8 = production; 16 to preview the 16-band transition). The analyzer keeps its own 32-band filterbank."
+    )
     args = parser.parse_args()
+    if args.bands not in (8, 16):
+        print(f"[Warning] --bands={args.bands} is non-standard (expected 8 for production or 16 for transition preview).")
 
     # Default fallback song
     song_path = args.song
@@ -1743,6 +1754,7 @@ def main():
     print("=" * 70)
     print(f"  Song: {os.path.basename(song_path)}")
     print(f"  Model: {args.model}")
+    print(f"  Visual FFT Bands: {args.bands} (analyzer filterbank: 32)")
     print(f"  LED Count: {args.leds}")
     print("  Initializing Audio Engine & Anticipation Flywheel...")
 
@@ -1755,7 +1767,13 @@ def main():
             pass
 
     try:
-        app = StudioApp(song_path=song_path, initial_mode_name=args.mode, nb_leds=args.leds, model_name=args.model)
+        app = StudioApp(
+            song_path=song_path,
+            initial_mode_name=args.mode,
+            nb_leds=args.leds,
+            model_name=args.model,
+            nb_fft_bands=args.bands,
+        )
         app.run()
     finally:
         if is_win:
