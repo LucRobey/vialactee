@@ -2,7 +2,7 @@
 tools/choreography_matrix.py
 Synthetic music stimulus runner, response metrics, and 13 x 4 choreography measurement matrix.
 """
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import math
 import numpy as np
 
@@ -211,29 +211,22 @@ def run_mode_under_mutes(
     return r_std, r_diff
 
 
-def measure_mode_choreography(
-    mode_cls: Any,
-    num_leds: int = MATRIX_CONFIG["num_leds"],
-    warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
-    eval_frames: int = MATRIX_CONFIG["eval_frames"],
-    nb_bands: int = DEFAULT_NB_BANDS,
-) -> Dict[str, Any]:
+Runner = Callable[[Any, Sequence[str]], Tuple[float, float]]  # (mode_cls, muted_channels) -> (R_std, R_diff)
+
+
+def measure_with_runner(mode_cls: Any, runner: Runner) -> Dict[str, Any]:
     """
-    Evaluate a mode across `full`, `mute_lead`, `mute_sec`, `mute_all`, and all 4 individual driver mutes.
-    Returns a dictionary of R_std, R_diff, and ablation contributions `R_std(full) - R_std(mute_d)`.
+    Evaluate a mode across `full`, `mute_lead`, `mute_sec`, `mute_all`, and all 4 individual driver mutes
+    using the supplied `runner(mode_cls, muted_channels) -> (R_std, R_diff)` callable.
     """
     lead = getattr(mode_cls, "LEAD", "")
     sec_tuple = getattr(mode_cls, "SECONDARY", ())
     sec = sec_tuple[0] if sec_tuple else None
 
-    r_std_full, r_diff_full = run_mode_under_mutes(
-        mode_cls, (), num_leds, warmup_frames, eval_frames, nb_bands=nb_bands
-    )
+    r_std_full, r_diff_full = runner(mode_cls, ())
     by_driver: Dict[str, Tuple[float, float]] = {}
     for drv in DRIVERS:
-        by_driver[drv] = run_mode_under_mutes(
-            mode_cls, (drv,), num_leds, warmup_frames, eval_frames, nb_bands=nb_bands
-        )
+        by_driver[drv] = runner(mode_cls, (drv,))
 
     r_std_mute_lead, r_diff_mute_lead = by_driver.get(lead, (r_std_full, r_diff_full))
     if sec is not None:
@@ -241,9 +234,7 @@ def measure_mode_choreography(
     else:
         r_std_mute_sec, r_diff_mute_sec = r_std_full, r_diff_full
 
-    r_std_mute_all, r_diff_mute_all = run_mode_under_mutes(
-        mode_cls, MUTE_CHANNELS, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands
-    )
+    r_std_mute_all, r_diff_mute_all = runner(mode_cls, MUTE_CHANNELS)
 
     contributions = {drv: r_std_full - by_driver[drv][0] for drv in DRIVERS}
     lead_contrib = contributions.get(lead, 0.0)
@@ -269,13 +260,27 @@ def measure_mode_choreography(
     }
 
 
-def measure_all_registered_modes(
+def measure_mode_choreography(
+    mode_cls: Any,
     num_leds: int = MATRIX_CONFIG["num_leds"],
     warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
     eval_frames: int = MATRIX_CONFIG["eval_frames"],
     nb_bands: int = DEFAULT_NB_BANDS,
-) -> List[Dict[str, Any]]:
-    """Measure all modes registered in `config/modes.json` in canonical catalog order."""
+) -> Dict[str, Any]:
+    """
+    Evaluate a mode across `full`, `mute_lead`, `mute_sec`, `mute_all`, and all 4 individual driver mutes.
+    Returns a dictionary of R_std, R_diff, and ablation contributions `R_std(full) - R_std(mute_d)`.
+    """
+    return measure_with_runner(
+        mode_cls,
+        lambda cls, muted: run_mode_under_mutes(
+            cls, muted, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands
+        ),
+    )
+
+
+def load_registered_mode_classes() -> List[type]:
+    """Load all mode classes registered in `config/modes.json` in canonical catalog order."""
     import importlib
     import json
     import os
@@ -285,14 +290,24 @@ def measure_all_registered_modes(
     with open(modes_json, "r", encoding="utf-8") as f:
         entries = json.load(f).get("standard_modes", [])
 
-    results: List[Dict[str, Any]] = []
+    classes: List[type] = []
     for entry in entries:
         mod = importlib.import_module(f"modes.{entry['module']}")
-        cls = getattr(mod, entry["class"])
-        results.append(
-            measure_mode_choreography(cls, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands)
-        )
-    return results
+        classes.append(getattr(mod, entry["class"]))
+    return classes
+
+
+def measure_all_registered_modes(
+    num_leds: int = MATRIX_CONFIG["num_leds"],
+    warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
+    eval_frames: int = MATRIX_CONFIG["eval_frames"],
+    nb_bands: int = DEFAULT_NB_BANDS,
+) -> List[Dict[str, Any]]:
+    """Measure all modes registered in `config/modes.json` in canonical catalog order."""
+    return [
+        measure_mode_choreography(cls, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands)
+        for cls in load_registered_mode_classes()
+    ]
 
 
 def format_measurement_report(results: Sequence[Dict[str, Any]]) -> str:
@@ -329,6 +344,7 @@ def format_measurement_report(results: Sequence[Dict[str, Any]]) -> str:
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
     import argparse
+    import os
 
     parser = argparse.ArgumentParser(description="Run the 13 x 4 choreography stimulus measurement matrix.")
     parser.add_argument(
@@ -337,7 +353,44 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         default=DEFAULT_NB_BANDS,
         help=f"Number of FFT frequency bands (default: {DEFAULT_NB_BANDS})",
     )
+    parser.add_argument(
+        "--track",
+        type=str,
+        default=None,
+        help="Optional path to a real audio file (.mp3/.wav) to evaluate modes offline through the real Listener.",
+    )
+    parser.add_argument(
+        "--start",
+        type=float,
+        default=25.0,
+        help="Start offset in seconds when --track is provided (default: 25.0).",
+    )
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=45.0,
+        help="Evaluation window duration in seconds when --track is provided (default: 45.0).",
+    )
     args = parser.parse_args(argv)
+    if args.track:
+        from tools.choreography_probe import (
+            capture_telemetry,
+            format_telemetry_summary,
+            load_audio_mono,
+            measure_all_modes_on_audio,
+        )
+
+        print(f"Probing real audio track {os.path.basename(args.track)!r} across 13 modes x 6 mute passes (~3-4 min)...")
+        mono = load_audio_mono(args.track)
+        telemetry = capture_telemetry(mono, start_s=args.start, duration_s=args.duration, nb_bands=args.bands)
+        print(format_telemetry_summary(os.path.basename(args.track), telemetry.summary()))
+        print("")
+        results = measure_all_modes_on_audio(
+            mono, start_s=args.start, duration_s=args.duration, nb_bands=args.bands
+        )
+        print(format_measurement_report(results))
+        return
+
     print(format_measurement_report(measure_all_registered_modes(nb_bands=args.bands)))
 
 
