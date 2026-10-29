@@ -9,8 +9,29 @@ import numpy as np
 from utils.choreography import DRIVERS, MUTE_CHANNELS
 from utils.driver_mute import DriverMuteProxy
 
-SYNTHETIC_CLIP_VERSION: str = "1"
+SYNTHETIC_CLIP_VERSION: str = "2"
 DEFAULT_NB_BANDS: int = 8
+DEFAULT_PROFILE: str = "high_lock"
+LOCK_CONFOUND_TOLERANCE: float = 0.10
+SYNTHETIC_PROFILES: Dict[str, Dict[str, Any]] = {
+    "high_lock": {
+        "beat_trust": 0.90,
+        "salience": 0.85,
+        "is_locked": True,
+    },
+    "groove_lock": {
+        "beat_trust": 0.68,
+        "salience": 0.55,
+        "is_locked": True,
+    },
+    "loose_lock": {
+        "beat_trust": 0.38,
+        "salience": 0.45,
+        "is_locked": False,
+    },
+}
+PROFILE_NAMES: Tuple[str, ...] = ("high_lock", "groove_lock", "loose_lock")
+LOCKED_PROFILES: Tuple[str, ...] = ("high_lock", "groove_lock")
 MATRIX_CONFIG: Dict[str, int] = {
     "num_leds": 40,
     "warmup_frames": 30,
@@ -33,14 +54,17 @@ def compute_response_metrics(frames: np.ndarray) -> Tuple[float, float]:
 
 
 class SyntheticContext:
-    def __init__(self) -> None:
+    def __init__(self, profile: str = DEFAULT_PROFILE) -> None:
+        if profile not in SYNTHETIC_PROFILES:
+            raise ValueError(f"Unknown synthetic profile {profile!r}; expected one of {PROFILE_NAMES}")
+        spec = SYNTHETIC_PROFILES[profile]
         self.is_silent: bool = False
         self.energy: float = 0.5
         self.power: float = 0.5
         self.tension: float = 0.2
-        self.beat_trust: float = 0.90
-        self.salience: float = 0.85
-        self.is_locked: bool = True
+        self.beat_trust: float = float(spec["beat_trust"])
+        self.salience: float = float(spec["salience"])
+        self.is_locked: bool = bool(spec["is_locked"])
         self.is_real_beat: bool = False
         self.is_syncopated: bool = False
         self.is_drop_impact: bool = False
@@ -54,7 +78,13 @@ class SyntheticContext:
 
 
 class SyntheticListener:
-    def __init__(self, nb_bands: int = DEFAULT_NB_BANDS) -> None:
+    def __init__(self, nb_bands: int = DEFAULT_NB_BANDS, profile: str = DEFAULT_PROFILE) -> None:
+        if profile not in SYNTHETIC_PROFILES:
+            raise ValueError(f"Unknown synthetic profile {profile!r}; expected one of {PROFILE_NAMES}")
+        spec = SYNTHETIC_PROFILES[profile]
+        trust = float(spec["beat_trust"])
+        salience = float(spec["salience"])
+        self.profile: str = profile
         self.dt: float = 1.0 / 60.0
         self.fps_ratio: float = 1.0
         self.bpm: float = 124.0
@@ -62,10 +92,10 @@ class SyntheticListener:
         self.beat_count: int = 0
         self.is_beat: bool = False
         self.is_real_beat: bool = False
-        self.beat_confidence: float = 0.90
-        self.beat_trust: float = 0.90
-        self.rhythm_salience: float = 0.85
-        self.live_rhythm_salience: float = 0.85
+        self.beat_confidence: float = trust
+        self.beat_trust: float = trust
+        self.rhythm_salience: float = salience
+        self.live_rhythm_salience: float = salience
         self.asserved_total_power: float = 0.5
         self.smoothed_total_power: float = 0.5
         self.live_asserved_total_power: float = 0.5
@@ -80,7 +110,7 @@ class SyntheticListener:
         self.beat_tag: str = "Bass/Kick"
         self.is_song_change: bool = False
         self.is_verse_chorus_change: bool = False
-        self.context: SyntheticContext = SyntheticContext()
+        self.context: SyntheticContext = SyntheticContext(profile=profile)
 
 
 def step_synthetic_music(listener: SyntheticListener, frame_idx: int, live_modifiers: np.ndarray) -> None:
@@ -161,6 +191,7 @@ def run_mode_under_mutes(
     eval_frames: int = MATRIX_CONFIG["eval_frames"],
     nb_bands: int = DEFAULT_NB_BANDS,
     return_lock_trace: bool = False,
+    profile: str = DEFAULT_PROFILE,
 ) -> Any:
     """
     Run `mode_cls` on the deterministic synthetic music clip under `muted_channels`.
@@ -172,7 +203,7 @@ def run_mode_under_mutes(
     random.seed(42)
     np.random.seed(42)
 
-    listener = SyntheticListener(nb_bands=nb_bands)
+    listener = SyntheticListener(nb_bands=nb_bands, profile=profile)
     proxy = DriverMuteProxy(listener)
     live_modifiers = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
 
@@ -211,22 +242,37 @@ def run_mode_under_mutes(
     return r_std, r_diff
 
 
-Runner = Callable[[Any, Sequence[str]], Tuple[float, float]]  # (mode_cls, muted_channels) -> (R_std, R_diff)
+Runner = Callable[[Any, Sequence[str]], Any]
 
 
-def measure_with_runner(mode_cls: Any, runner: Runner) -> Dict[str, Any]:
+def _unpack_run(res: Any) -> Tuple[float, float, Optional[np.ndarray]]:
+    if len(res) == 3:
+        return float(res[0]), float(res[1]), res[2]
+    return float(res[0]), float(res[1]), None
+
+
+def measure_with_runner(
+    mode_cls: Any,
+    runner: Runner,
+    profile: str = DEFAULT_PROFILE,
+) -> Dict[str, Any]:
     """
     Evaluate a mode across `full`, `mute_lead`, `mute_sec`, `mute_all`, and all 4 individual driver mutes
-    using the supplied `runner(mode_cls, muted_channels) -> (R_std, R_diff)` callable.
+    using the supplied `runner(mode_cls, muted_channels)` callable.
     """
     lead = getattr(mode_cls, "LEAD", "")
     sec_tuple = getattr(mode_cls, "SECONDARY", ())
     sec = sec_tuple[0] if sec_tuple else None
 
-    r_std_full, r_diff_full = runner(mode_cls, ())
+    r_std_full, r_diff_full, lock_full = _unpack_run(runner(mode_cls, ()))
+    lock_mean_full = float(np.mean(lock_full)) if lock_full is not None else 0.0
+
     by_driver: Dict[str, Tuple[float, float]] = {}
+    delta_lock: Dict[str, float] = {}
     for drv in DRIVERS:
-        by_driver[drv] = runner(mode_cls, (drv,))
+        rs, rd, lt = _unpack_run(runner(mode_cls, (drv,)))
+        by_driver[drv] = (rs, rd)
+        delta_lock[drv] = (float(np.mean(lt)) - lock_mean_full) if lt is not None else 0.0
 
     r_std_mute_lead, r_diff_mute_lead = by_driver.get(lead, (r_std_full, r_diff_full))
     if sec is not None:
@@ -234,14 +280,18 @@ def measure_with_runner(mode_cls: Any, runner: Runner) -> Dict[str, Any]:
     else:
         r_std_mute_sec, r_diff_mute_sec = r_std_full, r_diff_full
 
-    r_std_mute_all, r_diff_mute_all = runner(mode_cls, MUTE_CHANNELS)
+    r_std_mute_all, r_diff_mute_all, _ = _unpack_run(runner(mode_cls, MUTE_CHANNELS))
 
     contributions = {drv: r_std_full - by_driver[drv][0] for drv in DRIVERS}
     lead_contrib = contributions.get(lead, 0.0)
     sec_contrib = contributions.get(sec, 0.0) if sec is not None else 0.0
+    lock_confounded_drivers = tuple(
+        drv for drv in DRIVERS if abs(delta_lock[drv]) > LOCK_CONFOUND_TOLERANCE
+    )
 
     return {
         "mode": mode_cls.__name__,
+        "profile": profile,
         "lead": lead,
         "secondary": sec or "none",
         "r_std_full": r_std_full,
@@ -257,6 +307,9 @@ def measure_with_runner(mode_cls: Any, runner: Runner) -> Dict[str, Any]:
         "lead_share": (lead_contrib / r_std_full) if r_std_full > 1e-6 else 0.0,
         "sec_retained": (r_std_mute_sec / r_std_full) if r_std_full > 1e-6 else 1.0,
         "contributions": contributions,
+        "lock_mean_full": lock_mean_full,
+        "delta_lock": delta_lock,
+        "lock_confounded_drivers": lock_confounded_drivers,
     }
 
 
@@ -266,6 +319,7 @@ def measure_mode_choreography(
     warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
     eval_frames: int = MATRIX_CONFIG["eval_frames"],
     nb_bands: int = DEFAULT_NB_BANDS,
+    profile: str = DEFAULT_PROFILE,
 ) -> Dict[str, Any]:
     """
     Evaluate a mode across `full`, `mute_lead`, `mute_sec`, `mute_all`, and all 4 individual driver mutes.
@@ -274,8 +328,16 @@ def measure_mode_choreography(
     return measure_with_runner(
         mode_cls,
         lambda cls, muted: run_mode_under_mutes(
-            cls, muted, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands
+            cls,
+            muted,
+            num_leds,
+            warmup_frames,
+            eval_frames,
+            nb_bands=nb_bands,
+            return_lock_trace=True,
+            profile=profile,
         ),
+        profile=profile,
     )
 
 
@@ -302,10 +364,13 @@ def measure_all_registered_modes(
     warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
     eval_frames: int = MATRIX_CONFIG["eval_frames"],
     nb_bands: int = DEFAULT_NB_BANDS,
+    profile: str = DEFAULT_PROFILE,
 ) -> List[Dict[str, Any]]:
     """Measure all modes registered in `config/modes.json` in canonical catalog order."""
     return [
-        measure_mode_choreography(cls, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands)
+        measure_mode_choreography(
+            cls, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands, profile=profile
+        )
         for cls in load_registered_mode_classes()
     ]
 
@@ -354,6 +419,12 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         help=f"Number of FFT frequency bands (default: {DEFAULT_NB_BANDS})",
     )
     parser.add_argument(
+        "--profile",
+        choices=(*PROFILE_NAMES, "all"),
+        default="all",
+        help="Synthetic rhythm-lock profile to evaluate (default: all).",
+    )
+    parser.add_argument(
         "--track",
         type=str,
         default=None,
@@ -391,7 +462,19 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         print(format_measurement_report(results))
         return
 
-    print(format_measurement_report(measure_all_registered_modes(nb_bands=args.bands)))
+    profiles = PROFILE_NAMES if args.profile == "all" else (args.profile,)
+    for idx, prof in enumerate(profiles):
+        if idx > 0:
+            print("")
+        spec = SYNTHETIC_PROFILES[prof]
+        bt = float(spec["beat_trust"])
+        sal = float(spec["salience"])
+        lock = bt * (0.4 + 0.6 * sal)
+        print(
+            f"=== Profile: {prof} "
+            f"(beat_trust={bt:.2f}, salience={sal:.2f}, is_locked={spec['is_locked']}, rhythm_lock={lock:.2f}) ==="
+        )
+        print(format_measurement_report(measure_all_registered_modes(nb_bands=args.bands, profile=prof)))
 
 
 if __name__ == "__main__":

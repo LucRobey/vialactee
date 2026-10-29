@@ -33,6 +33,7 @@ from utils.driver_mute import (
 from tools.choreography_matrix import (
     DEFAULT_NB_BANDS,
     MATRIX_CONFIG,
+    PROFILE_NAMES,
     SYNTHETIC_CLIP_VERSION,
     SyntheticContext,
     SyntheticListener,
@@ -64,10 +65,11 @@ CONFORMING_MODES_PHASE_4A = frozenset({
 CALIBRATED_LEAD_FRACTION_F = 0.30
 CALIBRATED_SEC_RETAINED_G = 0.65
 
-# Provenance lock: changing the synthetic clip, band count, or MATRIX_CONFIG requires recalibrating f/g.
+# Provenance lock: changing the synthetic clip, band count, profiles, or MATRIX_CONFIG requires recalibrating f/g.
 CALIBRATED_FOR = {
-    "clip_version": "1",
+    "clip_version": "2",
     "nb_bands": 8,
+    "profiles": ("high_lock", "groove_lock", "loose_lock"),
     "matrix_config": {
         "num_leds": 40,
         "warmup_frames": 30,
@@ -334,12 +336,13 @@ class TestChoreographyStimulusMeasurement(unittest.TestCase):
         live = {
             "clip_version": SYNTHETIC_CLIP_VERSION,
             "nb_bands": DEFAULT_NB_BANDS,
+            "profiles": PROFILE_NAMES,
             "matrix_config": dict(MATRIX_CONFIG),
         }
         self.assertEqual(
             live,
             CALIBRATED_FOR,
-            "Synthetic clip version, band count, or MATRIX_CONFIG changed without updating CALIBRATED_FOR and recalibrating f/g thresholds.",
+            "Synthetic clip version, band count, profiles, or MATRIX_CONFIG changed without updating CALIBRATED_FOR and recalibrating f/g thresholds.",
         )
 
     def test_in_process_measurement_determinism(self):
