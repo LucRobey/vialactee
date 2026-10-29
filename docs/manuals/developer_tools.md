@@ -6,6 +6,13 @@
 
 This manual covers the offline graphical workbenches, interactive studios, and simulation tools available in Vialactée. Both studios in `tools/` run completely standalone on Windows, macOS, or Linux — no ESP32, no Raspberry Pi, and no web server required.
 
+### Development & Benchmark Dependencies (`requirements-dev.txt`)
+Core runtime dependencies live in [`requirements.txt`](../../requirements.txt). Offline real-audio resampling (`48 kHz -> 44.1 kHz` in `tools/choreography_probe.py`) and academic MIR benchmark suites (`research/benchmarks/`) use `scipy` and `mir_eval`, declared in [`requirements-dev.txt`](../../requirements-dev.txt):
+```bash
+pip install -r requirements-dev.txt
+```
+Standard unit and governance tests (`pytest -q`) run in a clean environment without `mir_eval`; [`tests/conftest.py`](../../tests/conftest.py) skips heavy `@pytest.mark.benchmark` modules unless `-m benchmark` is explicitly passed.
+
 ---
 
 ## 1. The Pygame Visualizer (`Fake_leds.py`)
@@ -23,14 +30,14 @@ A hot-reloading visual laboratory for creating, tuning, and debugging light mode
 ### 2.1 Usage & CLI Flags
 
 ```bash
-# Launch with the first song in songs/ and the first registered mode
+# Launch with the first song in songs/, the first registered mode, and 8 visual FFT bands (production default)
 python tools/mode_studio.py
 
 # Launch a specific song and mode (fuzzy substring match on both)
 python tools/mode_studio.py --song "stromae" --mode "Impact Shockwave"
 
-# Custom LED count + explicit analyzer model
-python tools/mode_studio.py -s 2 -m "Chromatic Chaser" --leds 120 --model DyadicMetricalAudioAnalyzer
+# Custom LED count, 16-band diagnostic spectrum, + explicit analyzer model
+python tools/mode_studio.py -s 2 -m "Chromatic Chaser" --leds 120 --bands 16 --model DyadicMetricalAudioAnalyzer
 ```
 
 | Flag | Default | Description |
@@ -38,13 +45,14 @@ python tools/mode_studio.py -s 2 -m "Chromatic Chaser" --leds 120 --model Dyadic
 | `--song`, `-s` | First track in `songs/` | Song filename substring, 1-based index (`1-9`), or path to an audio file. |
 | `--mode`, `-m` | First mode in `config/modes.json` | Mode name or substring (e.g. `"shockwave"`, `"chaser"`). |
 | `--leds`, `-l` | `80` | Number of simulated LEDs on the virtual strip. |
+| `--bands` | `8` (`{8, 16}`) | Visual FFT band count (`listener.nb_of_fft_band`) exposed to modes (`asserved_fft_band` and coarse Mel `band_flux`). Defaults to `8` to match `Main.py` production; the beat tracker always uses its internal 32-band log-Mel filterbank (`[visual FFT 8 · analyzer 32]`). |
 | `--model` | `DyadicMetricalAudioAnalyzer` | Audio analyzer model (`DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `AudioAnalyzer`). |
 
 ### 2.2 HUD Layout (`1480 × 940`)
 
-- **Header (`54 px`):** Current mode name, orientation badge (`HORIZONTAL` / `VERTICAL`), song title, analyzer dropdown (`DyadicMetrical` / `MultiBandOnset` / `Legacy`), `Sens`, `Sync` offset (`ms`), and per-frame `mode.update()` execution time in `ms` (color-coded against the **AXIOM-01** frame budget).
+- **Header (`54 px`):** Current mode name, orientation badge (`HORIZONTAL` / `VERTICAL`), song title, analyzer dropdown (`DyadicMetrical` / `MultiBandOnset` / `Legacy`), `[visual FFT 8 · analyzer 32]` band badge, `Sens`, `Sync` offset (`ms`), and per-frame `mode.update()` execution time in `ms` (color-coded against the **AXIOM-01** frame budget).
 - **Card 0 — Virtual LED Strip (`150 px`):** Simulated glowing LEDs (`80` default) rendered in horizontal strip or vertical column layout, plus an interactive **Song Timeline Scrubber** (click anywhere to seek).
-- **Card 1 — 8-Band Mel Spectrum (`145 px`):** Live normalized `asserved_fft_band[0..7]` bars (`Sub-Bass` through `Brilliance`) with peak-hold markers and `band_flux` transient bars.
+- **Card 1 — Mel Spectrum (`145 px`):** Live normalized `asserved_fft_band` bars (`8` bands by default, or `16` with `--bands 16`) with peak-hold markers and coarse Mel `band_flux` transient bars matching the exact signals fed to modes in `Main.py` ([`tools/listener_config.py`](../../tools/listener_config.py)).
 - **Card 2 — Mode Settings (`145 px`):** Auto-generated interactive controls (`slider`, `toggle`, `list`) from the active mode's `get_settings_schema()`, with a **Reset Defaults** button.
 - **Card 3 — Musical Context & Mood (`210 px`):**
   - **Left (`30%`):** Macro `scene` badge (`CHILL` / `GROOVE` / `BUILDUP` / `DROP_IMPACT`), `rhythm_salience`, `beat_trust`, and live `mood/` palette swatches (`mood_colors[0..3]` + `highlight_color`) with a clickable **Mood selector dropdown**.
@@ -120,10 +128,12 @@ python tools/music_studio.py --song "losing" --model DyadicMetricalAudioAnalyzer
 
 ## 4. Benchmark Runner (`research/benchmarks/run_benchmark.py`)
 
-Runs the immutable clean-room evaluation suite across test audio tracks:
+Runs the immutable clean-room evaluation suite across test audio tracks (requires `pip install -r requirements-dev.txt`):
 - **Usage:**
   ```bash
   python research/benchmarks/run_benchmark.py
+  # Or via pytest marker:
+  pytest -m benchmark
   ```
 - **Verification:**
   - Computes `F1@50ms`, `F1@70ms`, `CMLt`, `AMLt`, phase jitter, and average frame time.
@@ -131,23 +141,41 @@ Runs the immutable clean-room evaluation suite across test audio tracks:
 
 ---
 
-## 5. Choreography Stimulus Matrix (`tools/choreography_matrix.py`)
+## 5. Choreography Stimulus Matrix & Real-Audio Probe (`tools/choreography_matrix.py`, `tools/choreography_probe.py`)
 
-Evaluates all 13 registered modes in [`config/modes.json`](../../config/modes.json) against a deterministic synthetic music stimulus under selective driver mutes ([`utils/driver_mute.py`](../../utils/driver_mute.py)) to verify **Law 7: One Lead Timescale** ([`docs/contracts/mode_contract.md`](../contracts/mode_contract.md#7-one-lead-timescale-the-choreography-doctrine)).
+Evaluates all 13 registered modes in [`config/modes.json`](../../config/modes.json) against either a deterministic synthetic music stimulus (`tools/choreography_matrix.py`) or offline real audio through the production `Listener` and `Mood` service ([`tools/choreography_probe.py`](../../tools/choreography_probe.py)) under selective driver mutes ([`utils/driver_mute.py`](../../utils/driver_mute.py)) to verify **Law 1: Always Alive Without the Flywheel** and **Law 7: One Lead Timescale** ([`docs/contracts/mode_contract.md`](../contracts/mode_contract.md#7-one-lead-timescale-choreographic-clarity)).
 
 ### 5.1 Usage & CLI Flags
 
 ```bash
-# Run the 13 x 4 choreography matrix at the canonical 8-band configuration
+# Run the 13 x 4 choreography matrix across all 3 synthetic lock profiles at 8 bands
 python -m tools.choreography_matrix
 
+# Run a single synthetic profile (high_lock, groove_lock, or loose_lock)
+python -m tools.choreography_matrix --profile groove_lock
+
 # Run diagnostic evaluation at 16 FFT bands
-python -m tools.choreography_matrix --bands 16
+python -m tools.choreography_matrix --bands 16 --profile high_lock
+
+# Probe all 13 modes offline on a real audio file (45s window starting at 25s)
+python -m tools.choreography_matrix --track "songs/Queen - Another One Bites the Dust.mp3" --start 25 --duration 45
 ```
 
-Both the CLI report and the CI suite ([`tests/governance/test_mode_choreography.py`](../../tests/governance/test_mode_choreography.py)) share a single configuration (`MATRIX_CONFIG = {"num_leds": 40, "warmup_frames": 30, "eval_frames": 120}`).
+Both the CLI report and the CI governance suites ([`tests/governance/test_mode_choreography.py`](../../tests/governance/test_mode_choreography.py) and [`tests/governance/test_mode_choreography_profiles.py`](../../tests/governance/test_mode_choreography_profiles.py)) share a single synthetic configuration (`MATRIX_CONFIG = {"num_leds": 40, "warmup_frames": 30, "eval_frames": 120}`).
 
-### 5.2 Matrix Columns & Metrics
+### 5.2 Synthetic Rhythm-Lock Profiles (`SYNTHETIC_PROFILES`) & Beat-Mute `Δlock`
+
+Real songs span different flywheel confidence regimes. `tools/choreography_matrix.py` (`SYNTHETIC_CLIP_VERSION = "2"`) defines three synthetic profiles:
+
+| Profile | `beat_trust` | `salience` | `is_locked` | `Mode.rhythm_lock` | What It Tests |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| `high_lock` | `0.90` | `0.85` | `True` | `0.82` | Crisp percussive lock; `|Δlock| <= 0.10` under all mutes. Enforces Law 7 (`f = 0.30`, `g = 0.65`, strict `LEAD` dominance). |
+| `groove_lock` | `0.68` | `0.55` | `True` | `0.50` | Typical groove/funk lock (`Another One Bites The Dust`, `Boogie Wonderland`). Enforces all 3 Law 7 assertions on `CONFORMING_MODES_PHASE_4A`. |
+| `loose_lock` | `0.38` | `0.45` | `False` | `0.25` | Unlocked / jazz / brass-swell regime (`Django`, `Feeling Good`). Enforces **Law 1**: every mode must stay alive (`R_std(full) > 1.0` and `R_std(full) >= 0.20 * R_std(high_lock)`). |
+
+**Beat-mute `Δlock` (`LOCK_CONFOUNDED`) behavior:** Muting `beat` in `DriverMuteProxy` sets `beat_trust = 1.0` and `is_locked = True` while freezing `beat_phase` and `beat_count` so beat-led modes stay on their rhythmic branch instead of switching to their Law 1 fallback. When unmuted `beat_trust` is below `0.85` (`groove_lock` or `loose_lock`), muting `beat` increases `Mode.rhythm_lock` by `|Δlock| > 0.10` (`LOCK_CONFOUND_TOLERANCE = 0.10`), which is recorded in `result["delta_lock"]["beat"]` and `result["lock_confounded_drivers"]`.
+
+### 5.3 Matrix Columns & Metrics
 
 | Column | Definition |
 | :--- | :--- |
@@ -160,16 +188,16 @@ Both the CLI report and the CI suite ([`tests/governance/test_mode_choreography.
 | `R_diff` | Mean per-LED frame-to-frame absolute delta under `full` (velocity / busyness indicator). |
 | `d(beat..transient)` | Second table showing single-driver ablation `R_std(full) - R_std(-d)` for each of the 4 drivers. |
 
-### 5.3 Calibrated Thresholds (`f`, `g`), `CONFORMING_MODES_PHASE_4A`, & Recalibration
+### 5.4 Calibrated Thresholds (`f`, `g`), `CONFORMING_MODES_PHASE_4A`, & Recalibration
 
-In [`tests/governance/test_mode_choreography.py`](../../tests/governance/test_mode_choreography.py), every mode listed in `CONFORMING_MODES_PHASE_4A` must satisfy three hard assertions at 8 bands:
+In [`tests/governance/test_mode_choreography.py`](../../tests/governance/test_mode_choreography.py) and [`tests/governance/test_mode_choreography_profiles.py`](../../tests/governance/test_mode_choreography_profiles.py), every mode listed in `CONFORMING_MODES_PHASE_4A` must satisfy three hard assertions on the locked profiles (`high_lock`, `groove_lock`) at 8 bands:
 1. **Lead dominance:** `d(lead)` is strictly the largest single-driver ablation among `{beat, level, spectrum, transient}`.
 2. **Lead audio-budget fraction (`f = 0.30`):** `d(lead) >= f * (R_std(full) - R_std(-all))`. Subtracting `R_std(-all)` cancels constant non-audio animation drift so `f` measures the lead driver's share of **audio-driven variance**.
 3. **Secondary retention (`g = 0.65`):** When `SECONDARY` is declared, `R_std(-sec) >= g * R_std(full)`, ensuring that muting the secondary driver alone leaves at least 65% of the full amplitude budget intact.
 
 Modes not yet in `CONFORMING_MODES_PHASE_4A` are pre-redesign modes tracked diagnostically until their redesign batches land.
 
-**How to recalibrate:** `CALIBRATED_FOR` in `test_mode_choreography.py` locks `(SYNTHETIC_CLIP_VERSION, DEFAULT_NB_BANDS, MATRIX_CONFIG)`. If you intentionally modify the synthetic stimulus clip (`step_synthetic_music`), default band count, or `MATRIX_CONFIG`:
+**How to recalibrate:** `CALIBRATED_FOR` in `test_mode_choreography.py` locks `(SYNTHETIC_CLIP_VERSION, DEFAULT_NB_BANDS, PROFILE_NAMES, MATRIX_CONFIG)`. If you intentionally modify the synthetic stimulus clip (`step_synthetic_music`), default band count, profiles, or `MATRIX_CONFIG`:
 1. Increment `SYNTHETIC_CLIP_VERSION` in `tools/choreography_matrix.py`.
-2. Run `python -m tools.choreography_matrix` (with `PYTHONHASHSEED=0`), inspect the `13 x 4` table, and verify `CALIBRATED_LEAD_FRACTION_F` and `CALIBRATED_SEC_RETAINED_G` across all modes in `CONFORMING_MODES_PHASE_4A`.
+2. Run `python -m tools.choreography_matrix` (with `PYTHONHASHSEED=0`), inspect the `13 x 4` tables across all 3 profiles, and verify `CALIBRATED_LEAD_FRACTION_F` and `CALIBRATED_SEC_RETAINED_G` across all modes in `CONFORMING_MODES_PHASE_4A`.
 3. Update `CALIBRATED_FOR` (and `f` / `g` if required) in `tests/governance/test_mode_choreography.py`.

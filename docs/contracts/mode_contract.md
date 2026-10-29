@@ -30,7 +30,7 @@ Defined and trust-rated in [`docs/contracts/music_analyzer_contract.md`](./music
 
 | Trust Level (from `music_analyzer_contract.md`) | How `modes/` Should Handle Signals at This Trust Level |
 | :--- | :--- |
-| 🟢 **HIGH** | **Use directly every frame.** Physical energy, 8-band spectrum, pitch, spectral shape, silence, and rhythmic salience are continuous and reliable even when beat tracking fails. |
+| 🟢 **HIGH** | **Use directly every frame.** Physical energy, `nb_of_fft_band` spectrum (`asserved_fft_band`), pitch, spectral shape, silence, and rhythmic salience are continuous and reliable even when beat tracking fails. |
 | 🟡 **MEDIUM** | **Always blend or gate with confidence (`self.rhythm_lock` or `self.beat_pulse()`).** Tempo and beat phase can drift on ambient, vocal, or polyrhythmic passages. Never write a mode that freezes, goes dark, or teleports when `beat_trust == 0.0`. Always blend rhythmic drive with a `HIGH`-trust continuous fallback (`energy`, `band_energy`, `free_phase`). |
 | 🟠 **LOW** | **Avoid reading directly in concrete modes.** Heuristic scene labels (`scene`), buildup countdowns (`is_drop_imminent`, `drop_countdown`), and structural boundary flags (`is_song_change`, `is_verse_chorus_change`, `is_structural_cut`) are noisy by nature and are already absorbed upstream by `mood/` (`2.5s` cosine crossfade + `0.30s` debounce) and `transitions/`. Modes should consume the resulting smoothed `self.mood_*` modifiers and the two sanctioned helpers on `Mode` (`self.drop_hit`, `self.drop_decay`) documented below. |
 
@@ -138,7 +138,7 @@ Macro scenes (`CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`) are **already handled
 ### 4. Palette Usage (`mood_colors`, `palette_lut`, `highlight_color`)
 - Modes using `"mood"` color mode should draw from `self.mood_colors`, `self.palette_lut` / `self.palette_sample(t, out)`, and `self.highlight_color`.
 - **Do not assume `mood_colors[3]` is bright.** Slot 3 is `Background / Highlight` and is intentionally near-black on dark palettes (e.g. *Deep Ocean* `(0, 30, 60)`). For flashes, sparks, or peak dots, always use `self.highlight_color` (which picks the brightest palette slot and lifts it toward white).
-- When mapping 8 frequency bands (`0..7`) to colors in `"mood"` mode, sample across the 256-entry gradient (`self.palette_lut[int(b * 255 / 7)]`) rather than `mood_colors[b % 4]` (which collapses 8 bands onto 4 colors and hides bands landing on dark slot 3).
+- When mapping `num_bands` (`listener.nb_of_fft_band`) frequency bands (`0..num_bands-1`) to colors in `"mood"` mode, sample across the 256-entry gradient (`self.palette_lut[int(b * 255 / max(1, num_bands - 1))]`) rather than `mood_colors[b % 4]` (which collapses multiple bands onto 4 colors and hides bands landing on dark slot 3).
 
 ---
 
