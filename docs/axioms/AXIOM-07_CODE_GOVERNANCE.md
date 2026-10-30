@@ -2,7 +2,7 @@
 
 **Tier:** Tier 0 (Untouchable Golden Axiom)  
 **Status:** Inviolable Law  
-**Enforcement:** `tests/governance/test_axiom_07_code_governance.py` (and legacy `tests/test_code_governance.py`)  
+**Enforcement:** `tests/governance/test_axiom_07_code_governance.py`  
 
 ---
 

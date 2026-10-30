@@ -7,6 +7,7 @@ import numpy as np
 from music.BaseAudioAnalyzer import BaseAudioAnalyzer
 from music.AudioAnalyzer import AudioAnalyzer
 from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
+from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 from music.AudioIngestion import AudioIngestion
 from music.RhythmConfig import RhythmConfig
 
@@ -104,6 +105,22 @@ class TestBaseAudioAnalyzerContract(unittest.TestCase):
 
         meta = analyzer.get_model_metadata()
         self.assertEqual(meta["model_class"], "MultiBandOnsetAudioAnalyzer")
+        self.assertIn("config", meta)
+
+    def test_dyadic_analyzer_inherits_and_conforms(self):
+        analyzer = DyadicMetricalAudioAnalyzer(self.ingestion, self.infos)
+        self.assertIsInstance(analyzer, BaseAudioAnalyzer)
+        self.assertEqual(analyzer.lookahead_seconds, 5.0)
+        self.assertEqual(analyzer.bpm, 120.0)
+        self.assertEqual(analyzer.beat_phase, 0.0)
+        self.assertFalse(analyzer.is_beat)
+        self.assertFalse(analyzer.is_real_beat)
+        self.assertEqual(analyzer.beat_count, 0)
+        self.assertIsInstance(analyzer.flywheel_status, str)
+        self.assertAlmostEqual(analyzer.rhythm_salience, 0.0)
+        self.assertAlmostEqual(analyzer.live_rhythm_salience, 0.0)
+        meta = analyzer.get_model_metadata()
+        self.assertEqual(meta["model_class"], "DyadicMetricalAudioAnalyzer")
         self.assertIn("config", meta)
 
     def test_minimal_subclass_defaults(self):

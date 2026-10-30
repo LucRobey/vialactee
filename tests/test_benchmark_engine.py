@@ -2,12 +2,14 @@
 tests/test_benchmark_engine.py - Verifies the immutable benchmark evaluation engine.
 """
 
+import importlib.util
 import os
 import unittest
 import numpy as np
 import pytest
 
 from music.AudioAnalyzer import AudioAnalyzer
+from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 from research.benchmarks.ground_truth.synthetic.generator import generate_click_120bpm
 from research.benchmarks.engine.evaluator import run_benchmark_on_track, compute_scorecard
 from research.benchmarks.engine.episode_slicer import extract_failure_episodes
@@ -29,27 +31,29 @@ class TestBenchmarkEngine(unittest.TestCase):
             shutil.rmtree(cls.test_dir, ignore_errors=True)
 
     def test_run_benchmark_on_click_track(self):
-        result = run_benchmark_on_track(
-            analyzer_class=AudioAnalyzer,
-            audio_path=self.wav_path,
-            beats_path=self.beats_path,
-            fps=60.0
-        )
-        self.assertIn("scorecard", result)
-        self.assertIn("true_beats", result)
-        self.assertIn("est_beats", result)
-        self.assertIn("telemetry", result)
+        for analyzer_cls in (AudioAnalyzer, DyadicMetricalAudioAnalyzer):
+            with self.subTest(analyzer=analyzer_cls.__name__):
+                result = run_benchmark_on_track(
+                    analyzer_class=analyzer_cls,
+                    audio_path=self.wav_path,
+                    beats_path=self.beats_path,
+                    fps=60.0
+                )
+                self.assertIn("scorecard", result)
+                self.assertIn("true_beats", result)
+                self.assertIn("est_beats", result)
+                self.assertIn("telemetry", result)
 
-        sc = result["scorecard"]
-        self.assertIn("f1_50ms", sc)
-        self.assertIn("f1_70ms", sc)
-        self.assertIn("cmlt", sc)
-        self.assertIn("amlt", sc)
-        self.assertIn("phase_jitter_ms", sc)
-        self.assertIn("avg_frame_time_ms", sc)
+                sc = result["scorecard"]
+                self.assertIn("f1_50ms", sc)
+                self.assertIn("f1_70ms", sc)
+                self.assertIn("cmlt", sc)
+                self.assertIn("amlt", sc)
+                self.assertIn("phase_jitter_ms", sc)
+                self.assertIn("avg_frame_time_ms", sc)
 
-        # Ensure frame computation time is well under the 16.6ms real-time limit
-        self.assertLess(sc["avg_frame_time_ms"], 5.0)
+                # Ensure frame computation time is well under the 16.6ms real-time limit
+                self.assertLess(sc["avg_frame_time_ms"], 5.0)
 
     def test_compute_scorecard_perfect_match(self):
         beats = np.arange(0.5, 10.0, 0.5)
@@ -97,6 +101,7 @@ class TestBenchmarkEngine(unittest.TestCase):
             self.assertTrue(os.path.exists(beats_p))
 
     @pytest.mark.benchmark
+    @unittest.skipIf(importlib.util.find_spec("mirdata") is None, "mirdata is not installed")
     def test_academic_loader_ballroom_annotations(self):
         from research.benchmarks.ground_truth.academic.loader import load_academic_tracks
         tracks = load_academic_tracks("ballroom", limit=5, require_audio=False)

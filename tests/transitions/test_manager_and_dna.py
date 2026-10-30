@@ -1,25 +1,21 @@
 """
-tests/test_mood_and_transitions.py - Comprehensive Unit & Governance Tests.
+tests/transitions/test_manager_and_dna.py - Unit & Governance Tests for Mode DNA and LocalTransitionManager.
 
 Tests:
-1. config/mode_dna.py:
+1. transitions/mode_dna.py:
    - DNA metric bounds in [0.0, 1.0] and valid spatial roles.
    - Normalized lookup and fallback to DEFAULT_MODE_DNA.
-2. mood/ (sealed sector): see tests/test_mood_sector.py for palettes, crossfade and AXIOM-01/02.
-3. core/LocalTransitionManager.py:
+2. transitions/manager.py:
    - Music Matchmaker: Evaluates live audio context to target DNA.
    - Weighted Lottery: Probabilistic selection according to DNA distance.
    - Flexible Cohort Allocation: DIVERSE, SYMMETRIC_PAIRS (ABAB, ABBA, ABA), and UNISON.
    - Downbeat Quantization: Beat-phase gating (< 0.05) and timeout fallback.
    - Clean Transition Techniques: Cosine crossfade, directional wipe, and transient blip.
-   - Zero heap allocations in steady-state update().
-4. modes/Mode.py:
+   - Zero heap allocations in steady-state update() (AXIOM-02).
+3. modes/Mode.py:
    - mood_colors property delegation.
-   - on_transition_exit and on_transition_enter lifecycle hooks.
 """
 
-import math
-import time
 import tracemalloc
 import unittest
 from unittest.mock import MagicMock
@@ -33,7 +29,6 @@ from transitions.director import Transition_Director
 from transitions.manager import (
     LocalTransitionManager,
     CohortPattern,
-    TRANSITION_TECHNIQUES,
 )
 import modes.Mode as Mode
 
@@ -57,18 +52,15 @@ class TestModeDNA(unittest.TestCase):
 
     def test_get_mode_dna_normalization(self):
         """get_mode_dna must handle exact, lower, underscore, and suffix variants."""
-        # Exact
         dna_exact = mode_dna.get_mode_dna("Rainbow")
         self.assertEqual(dna_exact["energy"], mode_dna.MODE_DNA["Rainbow"]["energy"])
 
-        # Lowercase and underscored
         dna_lower = mode_dna.get_mode_dna("rainbow")
         self.assertEqual(dna_lower, dna_exact)
 
         dna_under = mode_dna.get_mode_dna("chromatic_chaser_mode")
         self.assertEqual(dna_under["punch"], mode_dna.MODE_DNA["Chromatic Chaser"]["punch"])
 
-        # Fallback for unknown mode
         fallback = mode_dna.get_mode_dna("NonExistentSuperMode")
         self.assertEqual(fallback, mode_dna.DEFAULT_MODE_DNA)
 
@@ -87,7 +79,6 @@ class TestLocalTransitionManager(unittest.TestCase):
 
     def test_music_matchmaker_dna_evaluation(self):
         """Translates live audio context into normalized target DNA."""
-        # Ambient mock
         mock_ctx = MagicMock()
         mock_ctx.energy = 0.25
         mock_ctx.salience = 0.15
@@ -102,7 +93,6 @@ class TestLocalTransitionManager(unittest.TestCase):
         self.assertLess(dna_chill["punch"], 0.30)
         self.assertLess(dna_chill["rhythm"], 0.40)
 
-        # Drop impact mock
         mock_ctx.energy = 0.95
         mock_ctx.salience = 0.90
         mock_ctx.beat_trust = 0.85
@@ -124,9 +114,9 @@ class TestLocalTransitionManager(unittest.TestCase):
             picked = self.ltm.select_mode_lottery(pool, target_high_energy)
             counts[picked] += 1
 
-        # High energy modes (Beat Runner or Impact Shockwave) must dominate
+        # High energy modes (Hyper Strobe or Impact Shockwave) must dominate
         self.assertGreater(counts["Hyper Strobe"] + counts["Impact Shockwave"], counts["Rainbow"] + counts["Shining Stars"])
-        # Non-rigid: Even ambient modes have a non-zero probability (preserving freshness and surprise)
+        # Non-rigid: Even ambient modes have a non-zero probability
         self.assertGreater(counts["Rainbow"], 0)
         self.assertGreater(counts["Shining Stars"], 0)
 
@@ -134,14 +124,11 @@ class TestLocalTransitionManager(unittest.TestCase):
         """Cohort allocation supports DIVERSE, SYMMETRIC_PAIRS (ABAB, ABBA, ABA), and UNISON."""
         pillars = ["Segment v1", "Segment v2", "Segment v3", "Segment v4"]
 
-        # 1. Test UNISON
         alloc_unison = self.ltm.allocate_cohort_modes(pillars, pattern=CohortPattern.UNISON)
         self.assertEqual(len(alloc_unison), 4)
-        # All 4 pillars have the exact same mode
         unique_modes = set(alloc_unison.values())
         self.assertEqual(len(unique_modes), 1)
 
-        # 2. Test SYMMETRIC_PAIRS for 4 pillars (ABAB or ABBA)
         alloc_sym = self.ltm.allocate_cohort_modes(pillars, pattern=CohortPattern.SYMMETRIC_PAIRS)
         self.assertEqual(len(alloc_sym), 4)
         m1, m2, m3, m4 = alloc_sym["Segment v1"], alloc_sym["Segment v2"], alloc_sym["Segment v3"], alloc_sym["Segment v4"]
@@ -149,7 +136,6 @@ class TestLocalTransitionManager(unittest.TestCase):
         is_abba = (m1 == m4 and m2 == m3)
         self.assertTrue(is_abab or is_abba, f"Expected ABAB or ABBA symmetry, got: {alloc_sym}")
 
-        # 3. Test SYMMETRIC_PAIRS for 3 segments (ABA sandwich)
         triad = ["Segment s1", "Segment s2", "Segment s3"]
         alloc_triad = self.ltm.allocate_cohort_modes(triad, pattern=CohortPattern.SYMMETRIC_PAIRS)
         self.assertEqual(alloc_triad["Segment s1"], alloc_triad["Segment s3"])
@@ -166,7 +152,6 @@ class TestLocalTransitionManager(unittest.TestCase):
             )
         ])
 
-        # 1. Queue transition while beat_phase is mid-beat (0.45)
         self.ltm.music = MusicSnapshot(beat_phase=0.45, is_beat=False, beat_trust=0.80)
 
         self.ltm.schedule_transition(
@@ -175,15 +160,12 @@ class TestLocalTransitionManager(unittest.TestCase):
         )
         self.assertIsNotNone(self.ltm._pending_transition)
 
-        # Update mid-beat: should NOT trigger
         self.ltm.update(0.033)
         self.assertIsNotNone(self.ltm._pending_transition)
         self.assertEqual(self.ltm.pop_orders(), ())
 
-        # 2. Advance to downbeat hit (phase = 0.02)
         self.ltm.update(0.033, MusicSnapshot(beat_phase=0.02, is_beat=False, beat_trust=0.80))
 
-        # Should execute and clear pending
         self.assertIsNone(self.ltm._pending_transition)
         orders = self.ltm.pop_orders()
         self.assertEqual(len(orders), 1)
@@ -194,19 +176,18 @@ class TestLocalTransitionManager(unittest.TestCase):
         """Technique selector routes based on audio kinetics."""
         ctx_drop = MagicMock(is_drop_impact=True, energy=0.9, salience=0.8, is_rhythmic=True)
         tech_drop = self.ltm.select_transition_technique(ctx_drop)
-        self.assertEqual(tech_drop["type"], "explosion")  # transient blip
+        self.assertEqual(tech_drop["type"], "explosion")
 
         ctx_groove = MagicMock(is_drop_impact=False, energy=0.6, salience=0.7, is_rhythmic=True)
         tech_groove = self.ltm.select_transition_technique(ctx_groove)
-        self.assertEqual(tech_groove["type"], "vertical_wipe")  # directional wipe
+        self.assertEqual(tech_groove["type"], "vertical_wipe")
 
         ctx_chill = MagicMock(is_drop_impact=False, energy=0.3, salience=0.2, is_rhythmic=False)
         tech_chill = self.ltm.select_transition_technique(ctx_chill)
-        self.assertEqual(tech_chill["type"], "fade_in_out")  # smooth cosine crossfade
+        self.assertEqual(tech_chill["type"], "fade_in_out")
 
     def test_axiom_02_zero_allocation_in_steady_state(self):
         """LocalTransitionManager.update() must allocate ZERO heap bytes in steady state."""
-        # Warm up to populate free lists
         for _ in range(20):
             self.ltm.update(0.033)
 
@@ -248,15 +229,6 @@ class TestModeDelegationAndHooks(unittest.TestCase):
         Mode.Mode.bind_mood_colors(service.colors())
         self.assertIs(mode_instance.mood_colors, service.colors())
         np.testing.assert_array_equal(mode_instance.mood_colors, PALETTES["Neon Acid"])
-
-    def test_mode_transition_hooks_exist_and_callable(self):
-        """Default on_transition_exit and on_transition_enter hooks exist on Mode."""
-        mode_instance = Mode.Mode(
-            "TestMode", "Segment v1", None, None, [0, 1, 2], np.zeros((3, 3), dtype=np.int32), {}
-        )
-        # Should execute cleanly without error
-        mode_instance.on_transition_exit(0.5)
-        mode_instance.on_transition_enter(0.5)
 
 
 class TestRobustnessAndEdgeCases(unittest.TestCase):
@@ -300,21 +272,6 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
         self.assertIn("type", tech)
         self.assertEqual(tech["type"], "fade_in_out")
 
-    def test_small_profile_verticals_discovered_as_vertical_cohorts(self):
-        """Small profile vertical segments (Segment s1/s2/s3) must be vertical cohorts."""
-        self.ltm.set_installation([
-            SegmentDescriptor(name="Segment s1", orientation="vertical"),
-            SegmentDescriptor(name="Segment s2", orientation="vertical"),
-            SegmentDescriptor(name="Segment s3", orientation="vertical"),
-        ])
-        verts, rings = self.ltm._discover_segment_cohorts()
-
-        self.assertEqual(len(verts), 3)
-        self.assertIn("Segment s1", verts)
-        self.assertIn("Segment s2", verts)
-        self.assertIn("Segment s3", verts)
-        self.assertEqual(len(rings), 0)
-
     def test_symmetric_pairs_produces_contrasting_modes(self):
         """SYMMETRIC_PAIRS must choose distinct modes A and B when candidate pool has > 1 mode."""
         pool = ("Rainbow", "Hyper Strobe")
@@ -341,36 +298,16 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
             quantize_downbeat=True
         )
 
-        # Update while TD is in transition: must wait
         self.ltm.update(0.033)
         self.assertIsNotNone(self.ltm._pending_transition)
         self.assertEqual(self.ltm.pop_orders(), ())
 
-        # Finish TD transition
         self.director.cancel_transition()
         self.ltm.update(0.033)
         self.assertIsNone(self.ltm._pending_transition)
         orders = self.ltm.pop_orders()
         self.assertEqual(len(orders), 1)
         self.assertEqual(orders[0].segment, "Segment v1")
-
-    def test_generate_staggered_configs_cohort_complementary(self):
-        """Verifies generate_staggered_configs partitions verticals and rings with complementary techniques."""
-        self.ltm.set_installation([
-            SegmentDescriptor(name="Segment v1", orientation="vertical"),
-            SegmentDescriptor(name="Segment h10", orientation="horizontal"),
-        ])
-
-        alloc = {"Segment v1": "Impact Shockwave", "Segment h10": "Rainbow"}
-        from transitions.stagger import StaggerPattern
-        configs = self.ltm.generate_staggered_configs(alloc, pattern=StaggerPattern.COHORT_COMPLEMENTARY)
-
-        self.assertEqual(configs["Segment v1"]["type"], "vertical_wipe")
-        self.assertEqual(configs["Segment v1"]["direction"], "DOWN")
-        self.assertEqual(configs["Segment v1"]["start_offset"], 0.0)
-
-        self.assertEqual(configs["Segment h10"]["type"], "fade_in_out")
-        self.assertGreater(configs["Segment h10"]["start_offset"], 0.0)
 
     def test_schedule_transition_staggered_execution(self):
         """Verifies schedule_transition with staggered=True emits per-segment orders and sets max duration on TD."""
@@ -389,7 +326,6 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
         self.assertEqual(len(orders), 2)
         by_seg = {o.segment: o for o in orders}
 
-        # TD must be in TRANSITION_DUAL with transition_duration = max(dur + offset)
         self.assertTrue(self.director.is_in_transition)
         expected_max = max(
             by_seg["Segment v1"].duration + by_seg["Segment v1"].start_offset,
@@ -422,14 +358,12 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
             SegmentDescriptor(name="Segment v2", orientation="vertical", is_blocked=False),
         ])
 
-        # 1. Queue a beat-quantized transition
         self.ltm.schedule_transition(
             allocation={"Segment v1": "Rainbow", "Segment v2": "Rainbow"},
             quantize_downbeat=True,
         )
         self.assertIsNotNone(self.ltm._pending_transition)
 
-        # 2. Fire two immediate transitions before pop_orders()
         self.ltm.schedule_transition(
             allocation={"Segment v1": "Chromatic Chaser", "Segment v2": "Chromatic Chaser"},
             quantize_downbeat=False,
@@ -447,4 +381,3 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -359,6 +359,9 @@ def load_registered_mode_classes() -> List[type]:
     return classes
 
 
+_MATRIX_CACHE: Dict[Tuple[int, int, int, int, str, str], List[Dict[str, Any]]] = {}
+
+
 def measure_all_registered_modes(
     num_leds: int = MATRIX_CONFIG["num_leds"],
     warmup_frames: int = MATRIX_CONFIG["warmup_frames"],
@@ -367,11 +370,17 @@ def measure_all_registered_modes(
     profile: str = DEFAULT_PROFILE,
 ) -> List[Dict[str, Any]]:
     """Measure all modes registered in `config/modes.json` in canonical catalog order."""
+    key = (num_leds, warmup_frames, eval_frames, nb_bands, profile, SYNTHETIC_CLIP_VERSION)
+    if key not in _MATRIX_CACHE:
+        _MATRIX_CACHE[key] = [
+            measure_mode_choreography(
+                cls, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands, profile=profile
+            )
+            for cls in load_registered_mode_classes()
+        ]
     return [
-        measure_mode_choreography(
-            cls, num_leds, warmup_frames, eval_frames, nb_bands=nb_bands, profile=profile
-        )
-        for cls in load_registered_mode_classes()
+        {**r, "contributions": dict(r["contributions"]), "delta_lock": dict(r["delta_lock"])}
+        for r in _MATRIX_CACHE[key]
     ]
 
 

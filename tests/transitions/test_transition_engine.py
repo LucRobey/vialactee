@@ -179,6 +179,7 @@ class TestTransitionEngine(unittest.TestCase):
         """Verify that every transition known to the system executes safely without raising exceptions."""
         all_transitions = [
             "fade_to_black",
+            "fade_in_out",
             "global_change",
             "wipe_left_to_right",
             "wipe_right_to_left",
@@ -209,9 +210,13 @@ class TestTransitionEngine(unittest.TestCase):
                 TE.apply_transition(old, self.new_rgb, progress=0.5, transition_name=trans, coords=self.coords)
                 self.assertEqual(old.shape, (self.num_leds, 3))
                 self.assertTrue(np.all(old >= 0) and np.all(old <= 255))
+                probe = old.copy()
+                if np.array_equal(probe, self.old_rgb):
+                    TE.apply_transition(probe, self.new_rgb, progress=0.7, transition_name=trans, coords=self.coords)
+                self.assertFalse(np.array_equal(probe, self.old_rgb), f"{trans} did not mutate buffer during transition")
 
     def test_new_strip_intrinsic_transitions_endpoints_and_midpoint(self):
-        """Every new transition must preserve old_rgb at progress=0.0, reach new_rgb at progress=1.0, and mutate in-place at 0.5."""
+        """Every new transition must preserve old_rgb at progress=0.0, reach new_rgb at progress=1.0, and mutate in-place."""
         new_transitions = [
             "ember_dissolve",
             "luma_melt",
@@ -243,6 +248,9 @@ class TestTransitionEngine(unittest.TestCase):
                 self.assertEqual(id(buf_mid), buf_id)
                 self.assertEqual(buf_mid.shape, (self.num_leds, 3))
                 self.assertTrue(np.all(buf_mid >= 0) and np.all(buf_mid <= 255))
+                if np.array_equal(buf_mid, self.old_rgb):
+                    TE.apply_transition(buf_mid, self.new_rgb, progress=0.7, transition_name=trans, coords=None)
+                self.assertFalse(np.array_equal(buf_mid, self.old_rgb), f"{trans} did not mutate buffer during transition")
 
     def test_apply_transition_missing_coords_fallback(self):
         """When coords=None, spatial transitions must safely fall back to dual fade."""

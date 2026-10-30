@@ -132,21 +132,23 @@ class TestFrontDoorBehavior(unittest.TestCase):
         self.svc.update(0.033, MusicSnapshot(live_is_song_change=True, lookahead_seconds=0.10))
         # 2. Advance 0.05s: countdown not reached 0 yet
         self.assertIsNone(self.svc.update(0.05, MusicSnapshot(beat_phase=0.5)))
-        # 3. Advance past 0.10s: countdown reaches 0.0, downbeat hit
-        orders = self.svc.update(0.06, beat_music())
+        # 3. Advance past 0.10s: countdown reaches 0.0 and emits immediately off-beat
+        orders = self.svc.update(0.06, MusicSnapshot(beat_phase=0.7, is_beat=False))
         self.assertIsNotNone(orders)
         self.assertEqual(orders.reason, "song_change")
+        self.assertTrue(any(o.start_offset > 0.0 for o in orders.orders))
 
     def test_structural_change_countdown_triggers_front_door_orders(self):
         self.svc.update(0.033, MusicSnapshot(live_is_verse_chorus_change=True, lookahead_seconds=0.08))
         self.assertIsNone(self.svc.update(0.04, MusicSnapshot(beat_phase=0.5)))
-        orders = self.svc.update(0.05, beat_music())
+        orders = self.svc.update(0.05, MusicSnapshot(beat_phase=0.6, is_beat=False))
         self.assertIsNotNone(orders)
         self.assertEqual(orders.reason, "structural_change")
+        self.assertTrue(any(o.start_offset > 0.0 for o in orders.orders))
 
     def test_pre_drop_buildup_triggers_front_door_orders(self):
-        # Buildup with 4.0s countdown -> duration 5.0s (4.0 / 0.80)
-        orders = self.svc.update(0.033, beat_music(scene="BUILDUP", drop_countdown=4.0, lookahead_seconds=4.0))
+        # Buildup with 4.0s countdown -> duration 5.0s (4.0 / 0.80), emits immediately off-beat
+        orders = self.svc.update(0.033, MusicSnapshot(scene="BUILDUP", drop_countdown=4.0, lookahead_seconds=4.0, beat_phase=0.50, is_beat=False))
         self.assertIsNotNone(orders)
         self.assertEqual(orders.reason, "pre_drop_buildup")
         for o in orders.orders:
@@ -183,26 +185,6 @@ class TestFrontDoorBehavior(unittest.TestCase):
             self.assertIsNone(o.direction)
             self.assertAlmostEqual(o.duration, 2.0)
 
-
-    def test_pre_drop_buildup_emits_immediately_without_waiting_for_downbeat(self):
-        # Off-beat frame (beat_phase = 0.50, is_beat = False)
-        orders = self.svc.update(0.033, MusicSnapshot(scene="BUILDUP", drop_countdown=4.0, beat_phase=0.50, is_beat=False))
-        self.assertIsNotNone(orders)
-        self.assertEqual(orders.reason, "pre_drop_buildup")
-        for o in orders.orders:
-            self.assertEqual(o.technique, "explosion")
-            self.assertAlmostEqual(o.duration, 5.0, places=2)
-
-    def test_song_change_countdown_emits_immediately_off_beat(self):
-        # 1. Arm song change with 0.1s lookahead
-        self.svc.update(0.033, MusicSnapshot(live_is_song_change=True, lookahead_seconds=0.10))
-        # 2. Advance 0.05s: countdown not reached 0 yet
-        self.assertIsNone(self.svc.update(0.05, MusicSnapshot(beat_phase=0.5)))
-        # 3. Advance past 0.10s: countdown reaches 0.0, off-beat (beat_phase=0.7, is_beat=False)
-        orders = self.svc.update(0.06, MusicSnapshot(beat_phase=0.7, is_beat=False))
-        self.assertIsNotNone(orders)
-        self.assertEqual(orders.reason, "song_change")
-
     # --- staggering policy: automatic = staggered, manual / drop = instant -------
 
     def test_auto_timer_transition_is_staggered(self):
@@ -214,22 +196,6 @@ class TestFrontDoorBehavior(unittest.TestCase):
                 break
         self.assertIsNotNone(orders)
         self.assertEqual(orders.reason, "timer")
-        self.assertTrue(any(o.start_offset > 0.0 for o in orders.orders))
-
-    def test_song_change_transition_is_staggered(self):
-        self.svc.update(0.033, MusicSnapshot(live_is_song_change=True, lookahead_seconds=0.10))
-        self.assertIsNone(self.svc.update(0.05, MusicSnapshot(beat_phase=0.5)))
-        orders = self.svc.update(0.06, beat_music())
-        self.assertIsNotNone(orders)
-        self.assertEqual(orders.reason, "song_change")
-        self.assertTrue(any(o.start_offset > 0.0 for o in orders.orders))
-
-    def test_structural_change_transition_is_staggered(self):
-        self.svc.update(0.033, MusicSnapshot(live_is_verse_chorus_change=True, lookahead_seconds=0.08))
-        self.assertIsNone(self.svc.update(0.04, MusicSnapshot(beat_phase=0.5)))
-        orders = self.svc.update(0.05, beat_music())
-        self.assertIsNotNone(orders)
-        self.assertEqual(orders.reason, "structural_change")
         self.assertTrue(any(o.start_offset > 0.0 for o in orders.orders))
 
     def test_manual_request_next_stays_instant(self):

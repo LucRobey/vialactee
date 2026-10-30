@@ -196,6 +196,18 @@ class TestListener(unittest.TestCase):
         self.assertTrue(np.all(self.listener._ring_beat_trust == 0.0))
         self.assertEqual(self.listener.context.scene, "CHILL")
 
+    def test_listener_delayed_flags_reset(self):
+        """Verify delayed novelty flags reset to False when no queued event matches."""
+        self.listener._delayed_is_song_change = True
+        self.listener._delayed_is_verse_chorus_change = True
+        self.listener.update()
+        self.assertFalse(self.listener.is_song_change)
+        self.assertFalse(self.listener.is_verse_chorus_change)
+
+    def test_listener_standalone_phase(self):
+        """Verify listener exposes standalone_phase alias matching beat_phase."""
+        self.assertEqual(self.listener.standalone_phase, self.listener.beat_phase)
+
 
 if __name__ == '__main__':
     unittest.main()

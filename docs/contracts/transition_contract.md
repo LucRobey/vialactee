@@ -214,7 +214,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 - One transition at a time installation-wide. The Director holds a single `state` and `transition_progress` spanning the maximum `(start_offset + duration)` of the emitted orders.
 - Every non-blocked segment is retargeted on each transition. If all segments are blocked, no transition starts.
 - The Director clock advances by `dt` in `Director.update(dt, music)`.
-- Hot path: `transitions/manager.py` `update` must satisfy AXIOM-01 (≤ 0.01 ms) and AXIOM-02 (zero allocation). It is covered by `tests/test_mood_and_transitions.py`.
+- Hot path: `transitions/manager.py` `update` must satisfy AXIOM-01 (≤ 0.01 ms) and AXIOM-02 (zero allocation). It is covered by `tests/transitions/test_manager_and_dna.py`.
 
 ---
 
@@ -233,7 +233,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | Automatic palette change on transitions | **[GAP]** `PaletteRequest` door exists on `TransitionOrders`, and `TransitionBridge.apply_orders` forwards it to the mood sector, but transitions do not emit palette changes yet. Outside the transition room, `Mode_master` instantiates `create_mood_service(auto_scene=True)` and binds `Mode.bind_mood_colors` and `Mode.bind_mood_modifiers` (plus manual UI `select_mood`). |
 | Dwell and cooldown policy between transitions | Done. Minimum security cooldown of 5.0 seconds enforced post-transition across timer and musical triggers; urgent drop impacts and manual UI requests bypass and reset. |
 | Silence and standby behavior | **[GAP]** `MusicSnapshot.is_silent` crosses the door, but no silence/standby policy is implemented in the transition sector yet (dead `silence_*` / `is_in_standby` fields removed from `transitions/director.py`). |
-| Tests | `tests/transitions/` (`test_api_contracts`, `test_families_and_handshake`, `test_transition_engine`, `test_transition_director`, `test_stagger`, `test_sandbox`), `test_mood_and_transitions`, `test_transition_bridge`, and `governance/test_transition_isolation`. |
+| Tests | `tests/transitions/` (`test_api_contracts`, `test_families_and_handshake`, `test_manager_and_dna`, `test_transition_engine`, `test_transition_director`, `test_stagger`, `test_sandbox`), `test_transition_bridge`, and `governance/test_transition_isolation`. |
 
 ## 7. Open design questions
 1. Which musical events should trigger a transition (drop, structural cut, song change, scene change) versus the timer?

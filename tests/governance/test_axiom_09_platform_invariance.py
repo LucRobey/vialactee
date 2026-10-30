@@ -30,6 +30,16 @@ class PlatformCheckVisitor(ast.NodeVisitor):
                 self.violations.append(f"{self.filename}:{node.lineno} calls platform.{node.func.attr}()")
         self.generic_visit(node)
 
+    def visit_ImportFrom(self, node):
+        # Detect `from sys import platform`, `from os import name`, or `from platform import ...`
+        if node.module == "platform":
+            self.violations.append(f"{self.filename}:{node.lineno} imports from platform")
+        elif node.module == "sys" and any(a.name == "platform" for a in node.names):
+            self.violations.append(f"{self.filename}:{node.lineno} imports sys.platform")
+        elif node.module == "os" and any(a.name == "name" for a in node.names):
+            self.violations.append(f"{self.filename}:{node.lineno} imports os.name")
+        self.generic_visit(node)
+
 
 class TestAxiom09PlatformInvariance(unittest.TestCase):
     def setUp(self):
@@ -46,10 +56,7 @@ class TestAxiom09PlatformInvariance(unittest.TestCase):
                     continue
                 file_path = os.path.join(root, file_name)
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                    try:
-                        tree = ast.parse(f.read(), filename=file_name)
-                    except SyntaxError:
-                        continue
+                    tree = ast.parse(f.read(), filename=file_name)
                 visitor = PlatformCheckVisitor(file_name)
                 visitor.visit(tree)
                 violations.extend(visitor.violations)
@@ -57,10 +64,10 @@ class TestAxiom09PlatformInvariance(unittest.TestCase):
         self.assertEqual(violations, [], "Platform branching found in modes/:\n" + "\n".join(violations))
 
     def test_core_dsp_has_zero_platform_checks(self):
-        """Verify core/ and music/ modules have zero platform checks."""
+        """Verify core/, music/, mood/, and transitions/ modules have zero platform checks."""
         violations = []
 
-        for pkg in ("core", "music"):
+        for pkg in ("core", "music", "mood", "transitions"):
             pkg_dir = os.path.join(self.repo_root, pkg)
             for root, _, files in os.walk(pkg_dir):
                 for file_name in files:
@@ -68,15 +75,12 @@ class TestAxiom09PlatformInvariance(unittest.TestCase):
                         continue
                     file_path = os.path.join(root, file_name)
                     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                        try:
-                            tree = ast.parse(f.read(), filename=file_name)
-                        except SyntaxError:
-                            continue
+                        tree = ast.parse(f.read(), filename=file_name)
                     visitor = PlatformCheckVisitor(file_name)
                     visitor.visit(tree)
                     violations.extend(visitor.violations)
 
-        self.assertEqual(violations, [], "Platform branching found in core/ or music/:\n" + "\n".join(violations))
+        self.assertEqual(violations, [], "Platform branching found in core/music/mood/transitions:\n" + "\n".join(violations))
 
 
 if __name__ == "__main__":

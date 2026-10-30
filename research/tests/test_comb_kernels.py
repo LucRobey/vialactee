@@ -1,15 +1,12 @@
 """
-research/tests/test_comb_kernels.py - Unit tests for research/dsp/comb_kernels.py.
+research/tests/test_comb_kernels.py - Unit tests for research/dsp/comb_kernels.py and music/comb_kernels.py.
 """
-
-import sys
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import unittest
 import time
 import numpy as np
 
+from music.comb_kernels import build_dense_phase_bank as build_prod_dense_phase_bank
 from research.dsp.comb_kernels import (
     build_fourier_comb_bank,
     build_sparse_impulse_comb_bank,
@@ -109,10 +106,21 @@ class TestCombKernels(unittest.TestCase):
                 self.assertLess(Q, 0.0)
 
     def test_dense_phase_bank(self):
-        T = build_dense_phase_bank(120.0, fps=self.fps, buffer_len=self.M)
         tau = int(np.ceil(60.0 * self.fps / 120.0))  # 30
-        self.assertEqual(T.shape, (tau, self.M))
-        self.assertEqual(T.dtype, np.float64)
+        for shape in ("triangular", "hann", "boxcar"):
+            T_res = build_dense_phase_bank(120.0, fps=self.fps, buffer_len=self.M, pulse_shape=shape)
+            T_prod = build_prod_dense_phase_bank(120.0, fps=self.fps, buffer_len=self.M, pulse_shape=shape)
+            self.assertEqual(T_res.shape, (tau, self.M))
+            self.assertEqual(T_res.dtype, np.float64)
+            np.testing.assert_allclose(T_prod, T_res, rtol=1e-12, atol=1e-12)
+
+    def test_project_complex_resonators(self):
+        W = build_fourier_comb_bank(self.bpms, fps=self.fps, buffer_len=self.M)
+        y = np.ones(self.M, dtype=np.float64)
+        out = project_complex_resonators(W, y)
+        self.assertEqual(out.shape, (141,))
+        self.assertEqual(out.dtype, np.complex128)
+        self.assertTrue(np.all(np.abs(out) < 1e-10))
 
     def test_zero_allocation_and_latency_budget(self):
         W_I, W_Q = build_sparse_impulse_comb_bank(self.bpms, fps=self.fps, buffer_len=self.M)

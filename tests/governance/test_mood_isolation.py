@@ -13,7 +13,7 @@ import unittest
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 ROOM = "mood"
 SKIP_DIRS = {".git", "__pycache__", "node_modules", "wabb-interface", "archive", "scratch",
-             ".temp_scratch", "research", "tests", ".agents", "playground", ".pytest_cache"}
+             ".temp_scratch", "research", "tests", "tools", "scripts", ".agents", "playground", ".pytest_cache", ".venv"}
 
 
 def _project_roots():

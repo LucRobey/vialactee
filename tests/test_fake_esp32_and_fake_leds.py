@@ -10,7 +10,7 @@ import json
 import sys
 import os
 
-from hardware.Fake_leds import FakeLedsVisualizer
+from hardware.Fake_leds import Fake_leds, FakeLedsVisualizer
 import hardware.Fake_ESP32 as Fake_ESP32
 
 
@@ -250,6 +250,25 @@ class TestFakeLedsAndFakeESP32(unittest.TestCase):
                     self.assertIn("--hud-only", cmd)
                     for s in senders:
                         s.close()
+
+    def test_fake_leds_dynamic_reconstruction_full_and_small(self):
+        """Verify Fake_leds dynamically reconstructs 1,304 LEDs (full) and 249 LEDs (small) with vertical_up wiring."""
+        infos_full = {"HARDWARE_MODE": "simulation", "hardware_profile": "full"}
+        defs_full = Fake_leds._load_visualizer_segments_def(infos_full)
+        self.assertEqual(sum(seg[0] for ch in defs_full for seg in ch), 1304)
+        self.assertEqual(sum(len(ch) for ch in defs_full), 11)
+        verticals = [seg for ch in defs_full for seg in ch if "vertical" in seg[1]]
+        self.assertGreater(len(verticals), 0)
+        for seg in verticals:
+            self.assertEqual(seg[1], "vertical_up")
+
+        infos_small = {"HARDWARE_MODE": "simulation", "hardware_profile": "small"}
+        defs_small = Fake_leds._load_visualizer_segments_def(infos_small)
+        self.assertEqual(sum(seg[0] for ch in defs_small for seg in ch), 249)
+        self.assertEqual(sum(len(ch) for ch in defs_small), 3)
+        for ch in defs_small:
+            for seg in ch:
+                self.assertEqual(seg[1], "vertical_up")
 
 
 if __name__ == "__main__":

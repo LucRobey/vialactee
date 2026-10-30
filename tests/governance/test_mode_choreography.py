@@ -45,9 +45,7 @@ from tools.choreography_matrix import (
 )
 
 
-# Modes that already conform to Law 7 before the Batch 1-4 redesigns.
-# Pre-redesign modes (Middle_bar, Chromatic_chaser, Extending_waves, Rainbow, Proportion_rainbow)
-# are tracked in diagnostic mode until their redesign batches land.
+# All 13 registered modes conform to Law 7 (Batches 1-4 redesigns landed).
 CONFORMING_MODES_PHASE_4A = frozenset({
     "Bary_rainbow_mode",
     "Shining_stars_mode",
@@ -57,6 +55,11 @@ CONFORMING_MODES_PHASE_4A = frozenset({
     "Coloured_middle_wave_mode",
     "Impact_shockwave_mode",
     "Power_bar_mode",
+    "Rainbow_mode",
+    "Proportion_rainbow_mode",
+    "Middle_bar_mode",
+    "Chromatic_chaser_mode",
+    "Extending_waves_mode",
 })
 
 # Calibrated thresholds from the Phase 4a 13 x 4 empirical measurement matrix:
