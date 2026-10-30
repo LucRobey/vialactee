@@ -2,10 +2,11 @@
 Proportion Rainbow Mode
 Full rainbow gradient spanning the strip whose color regions scale with FFT band energy.
 Pre-allocates cumulative hue scratch buffers in __init__ (zero heap allocations).
-Modulates brightness and saturation continuously with ctx.energy and self.beat_pulse()
-without branching on ctx.scene. Fades to black in silence.
+Zone widths follow band_proportion and per-LED brightness follows the interpolated asserved_fft_band
+(one lead timescale: spectrum), without branching on ctx.scene. Fades to black in silence.
 """
 from typing import List, Dict, Any
+import math
 import numpy as np
 import modes.Mode as Mode
 import utils.rgb_hsv as RGB_HSV
@@ -14,7 +15,7 @@ import utils.rgb_hsv as RGB_HSV
 class Proportion_rainbow_mode(Mode.Mode):
     """Full-strip rainbow whose color zone widths scale with proportional FFT band energy.
 
-    Lead: spectrum (very slow smoothing). Secondary: none. Macro: slow drift and color.
+    Lead: spectrum (zone widths and per-LED brightness). Secondary: none. Macro: hue sway via mood_pace, saturation via mood_accent.
     """
     LEAD = "spectrum"
     SECONDARY = ()
@@ -37,12 +38,17 @@ class Proportion_rainbow_mode(Mode.Mode):
 
         self.fft_bands_array: np.ndarray = np.zeros(self.nb_bands, dtype=np.float64)
         self.interp_band: np.ndarray = np.zeros(count, dtype=np.float64)
+        self.abs_bands_array: np.ndarray = np.zeros(self.nb_bands, dtype=np.float64)
+        self.val_full: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
+        self.val_body: np.ndarray = self.val_full[:count]
         self.dhues: np.ndarray = np.zeros(count, dtype=np.float64)
         self.cum_dhues: np.ndarray = np.zeros(count, dtype=np.float64)
         self.hues_full: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
         if self.nb_of_leds > 0:
             self.hues_full[-1] = self.maximum_hue
         self.hues: np.ndarray = self.hues_full[:max(0, self.nb_of_leds - 1)]
+        self.drift_hues: np.ndarray = np.zeros(self.nb_of_leds, dtype=np.float64)
+        self.drift_offset: float = 2.0 * math.pi * self.segment_phase_offset
         self.target_rgb: np.ndarray = np.zeros((self.nb_of_leds, 3), dtype=np.int32)
 
     def run(self) -> None:
@@ -56,12 +62,12 @@ class Proportion_rainbow_mode(Mode.Mode):
             self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
             return
 
-        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
-        pulse = self.beat_pulse(2.0)
+        # 1b. Slow macro hue sway (mood_pace) keeps the gradient alive even on a perfectly static spectrum
+        self.drift_offset = (self.drift_offset + self.dt * 0.35 * self.mood_pace) % (2.0 * math.pi)
+        hue_sway = 0.05 * math.sin(self.drift_offset)
 
-        # 2. Continuous confidence-blended brightness & saturation (no scene branching)
-        val = float(np.clip(0.35 * energy + 0.65 * pulse, 0.0, 1.0))
-        sat = float(np.clip(0.68 + 0.32 * energy - 0.25 * self.mood_accent, 0.40, 1.0))
+        # 2. Saturation is macro-only (mood_accent); brightness is per-LED spectrum (computed below)
+        sat = float(np.clip(0.90 - 0.25 * self.mood_accent, 0.40, 1.0))
 
         # 3. FFT Band Proportions (prefer normalized band_proportion, fallback to asserved_fft_band)
         bands = getattr(self.listener, "band_proportion", None)
@@ -72,6 +78,12 @@ class Proportion_rainbow_mode(Mode.Mode):
         else:
             self.fft_bands_array[:] = bands[:self.nb_bands]
             self.fft_bands_array += 0.04
+
+        abs_bands = getattr(self.listener, "asserved_fft_band", None)
+        if abs_bands is None or len(abs_bands) < self.nb_bands:
+            self.abs_bands_array.fill(0.0)
+        else:
+            self.abs_bands_array[:] = abs_bands[:self.nb_bands]
 
         if self.nb_of_leds > 1:
             sum_dhue = ((self.N + 1) / 2.0) * (self.fft_bands_array[0] + self.fft_bands_array[-1]) + self.N * float(np.sum(self.fft_bands_array[1:-1]))
@@ -91,6 +103,19 @@ class Proportion_rainbow_mode(Mode.Mode):
 
             np.add(self.minimum_hue, self.cum_dhues, out=self.hues)
 
+            # Per-LED brightness from the interpolated absolute band energy (spectrum lead)
+            a_low = self.abs_bands_array[self.low_margins]
+            a_high = self.abs_bands_array[self.high_margins]
+            np.multiply(self.position_coefs, a_low, out=self.val_body)
+            self.val_body += (1.0 - self.position_coefs) * a_high
+            np.multiply(self.val_body, 0.88, out=self.val_body)
+            self.val_body += 0.12
+            np.clip(self.val_body, 0.0, 1.0, out=self.val_body)
+            self.val_full[-1] = self.val_full[-2]
+        else:
+            self.val_full.fill(0.5)
+
         self.hues_full[-1] = self.maximum_hue
-        RGB_HSV.fromHSV_toRGB_vectorized(self.hues_full, sat, val, out=self.target_rgb)
+        np.add(self.hues_full, hue_sway, out=self.drift_hues)
+        RGB_HSV.fromHSV_toRGB_vectorized(self.drift_hues, sat, self.val_full, out=self.target_rgb)
         self.smooth_vectorized(0.5, self.target_rgb)

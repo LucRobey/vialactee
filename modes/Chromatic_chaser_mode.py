@@ -1,8 +1,9 @@
 """
 Chromatic Chaser Mode
 Concentrated laser head sweeping across the strip leaving an exponential decay trail.
-Synchronizes chaser speed to listener.bpm, ctx.tension, and mood_pace, while scaling trail
-persistence with mood_trail and color warmth with mood_accent.
+The head surges and brightens on every beat via self.beat_pulse() (rhythm-locked pump, or acoustic
+energy breathing when the flywheel is lost), a spark halo ahead of the head grows with ctx.energy,
+while bpm/tension/mood_pace scale the macro period, mood_trail the trail and mood_accent the warmth.
 Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
@@ -13,7 +14,7 @@ import modes.Mode as Mode
 class Chromatic_chaser_mode(Mode.Mode):
     """Kinetic laser runner sweeping across the strip with exponential decay trail.
 
-    Lead: beat (collision on the beat). Secondary: level (spark size). Macro: period via mood_pace; tension shortens it.
+    Lead: beat (head surge and brightness on the beat). Secondary: level (spark halo size). Macro: period via mood_pace; tension shortens it.
     """
     LEAD = "beat"
     SECONDARY = ("level",)
@@ -62,6 +63,7 @@ class Chromatic_chaser_mode(Mode.Mode):
 
         # Pre-allocated scratch color vector (ZERO runtime heap allocation)
         self.head_color: np.ndarray = np.zeros(3, dtype=np.float64)
+        self.spark_color: np.ndarray = np.zeros(3, dtype=np.float64)
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -77,11 +79,14 @@ class Chromatic_chaser_mode(Mode.Mode):
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
         tension = float(ctx.tension if ctx is not None else 0.0)
         v_center = float(ctx.vertical_center if ctx is not None else 0.5)
+        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        pulse = self.beat_pulse()
         mood = self.mood_colors
 
-        # 1. Synchronize chaser speed to listener.bpm (gated by rhythm_lock), tension, and mood_pace
+        # 1. Head velocity surges with beat_pulse() (lead); bpm (gated by rhythm_lock), tension and mood_pace are macro
         bpm_factor = 1.0 + self.rhythm_lock * ((bpm / 120.0) - 1.0)
-        effective_speed = self.speed * bpm_factor * (1.0 + 0.55 * tension) * self.mood_pace * fps_ratio
+        beat_surge = 0.9 + 0.5 * pulse
+        effective_speed = self.speed * bpm_factor * beat_surge * (1.0 + 0.55 * tension) * self.mood_pace * fps_ratio
         if not self.bounce_enabled:
             self.direction = 1
         prev_idx = int(np.clip(self.position, 0, self.nb_of_leds - 1))
@@ -111,7 +116,7 @@ class Chromatic_chaser_mode(Mode.Mode):
         warmth = min(1.0, max(0.0, (tension - 0.35) * 0.5) + self.mood_accent)
         for c in range(3):
             base_c = (1.0 - v_center) * float(m0[c]) + v_center * float(m2[c])
-            self.head_color[c] = (1.0 - warmth) * base_c + warmth * float(hi[c])
+            self.head_color[c] = ((1.0 - warmth) * base_c + warmth * float(hi[c])) * (0.30 + 0.70 * pulse)
 
         # 3. Fade the tail first (scaled by mood_trail), then paint the continuous swept span
         head_idx = int(np.clip(self.position, 0, self.nb_of_leds - 1))
@@ -129,3 +134,12 @@ class Chromatic_chaser_mode(Mode.Mode):
             span_start = min(prev_idx, head_idx)
             span_end = max(prev_idx, head_idx)
             self.smooth_segment_vectorized(1.0, span_start, span_end, self.head_color)
+
+            # 4. Secondary (level): spark halo ahead of the head, longer with louder audio
+            halo = int(round(3.0 * energy))
+            if halo > 0:
+                ahead = int(np.clip(head_idx + self.direction * halo, 0, self.nb_of_leds - 1))
+                hi_c = self.highlight_color
+                for c in range(3):
+                    self.spark_color[c] = 0.5 * (self.head_color[c] + float(hi_c[c]) * (0.30 + 0.70 * pulse))
+                self.smooth_segment_vectorized(0.6, min(head_idx, ahead), max(head_idx, ahead), self.spark_color)

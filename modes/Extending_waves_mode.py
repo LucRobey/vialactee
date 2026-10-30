@@ -1,6 +1,7 @@
 """
 Extending Waves Mode
-Subpixel wave propagation driven by dt * speed(bpm, tension) * mood_pace.
+Subpixel wave propagation whose flow speed, spawn amplitude and brightness scale with ctx.energy
+(level lead), while self.beat_pulse() adds a subtle crest shimmer (beat secondary).
 Wave injection on every rhythmic tempo tick (flywheel listener.is_beat, real beat, or phase wrap).
 Waves always propagate outward from the center with no scene branching.
 Harmonized with the mood sector's mood_colors and mood_modifiers with zero runtime heap allocations.
@@ -46,6 +47,8 @@ class Extending_waves_mode(Mode.Mode):
         self.half_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
         self.center_falloff: np.ndarray = np.exp(- (self.half_coords ** 2) / 8.0).astype(np.float32)
         self.glow_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
+        self.half_pos: np.ndarray = (self.half_coords / max(1.0, float(self.half_len))).astype(np.float32)
+        self.bed_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -78,7 +81,9 @@ class Extending_waves_mode(Mode.Mode):
 
         # 1. Subpixel Wave Propagation Speed (nudged smoothly by mood_pace)
         frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
-        base_speed = (float(self.half_len) / frames_per_beat) * fps_ratio * (1.0 + 0.6 * tension) * self.mood_pace
+        lvl = min(1.0, 1.45 * energy)  # real-audio energy rarely exceeds ~0.7: normalize to the full 0..1 range
+        flow_gain = 0.45 + 1.10 * lvl  # Lead (level): louder audio -> faster outward flow
+        base_speed = (float(self.half_len) / frames_per_beat) * fps_ratio * flow_gain * (1.0 + 0.6 * tension) * self.mood_pace
         damping = (0.035 / max(0.5, self.mood_trail)) * fps_ratio
 
         for w in range(self.MAX_WAVES):
@@ -111,7 +116,7 @@ class Extending_waves_mode(Mode.Mode):
             self.wave_count += 1
             self.wave_positions[slot] = 0.0
             self.wave_velocities[slot] = 1.0
-            self.wave_amps[slot] = 0.90
+            self.wave_amps[slot] = 0.55 + 0.45 * min(1.0, energy)  # Lead (level): louder audio -> brighter wavefront
             beat_tag = str(getattr(self.listener, "beat_tag", "Bass/Kick"))
             tag_offset = 1 if beat_tag == "Snare/Mid" else (2 if beat_tag == "Hi-hat/Cymbal" else 0)
             base_c = mood[(self.wave_count + tag_offset) % 3]
@@ -124,8 +129,17 @@ class Extending_waves_mode(Mode.Mode):
             else:
                 self.wave_colors[slot] = base_c
 
-        # 3. Synthesize Half-Strip Energy & Colors
+        # 3. Synthesize Half-Strip Energy & Colors (level sets live brightness; beat_pulse() adds crest shimmer)
         self.half_rgb.fill(0.0)
+        # Level bed: a dim center-outward glow whose reach follows ctx.energy (the outward "fountain" level)
+        if not is_silent:
+            np.subtract(1.15 * lvl, self.half_pos, out=self.bed_profile)
+            np.clip(self.bed_profile, 0.0, 1.0, out=self.bed_profile)
+            np.multiply(self.bed_profile, 1.00 * self.transition_scale, out=self.bed_profile)
+            m1 = mood[1]
+            for c in range(3):
+                np.multiply(self.bed_profile, float(m1[c]), out=self.half_rgb[:, c])
+        crest_gain = 0.60 * (0.45 + 0.55 * lvl) * (0.94 + 0.06 * self.beat_pulse())
         two_w_sq = 2.0 * ((self.wave_width * (1.0 - 0.20 * tension)) ** 2)
         inv_two_w_sq = float(-1.0 / two_w_sq) if two_w_sq > 0 else -1.0
 
@@ -135,7 +149,7 @@ class Extending_waves_mode(Mode.Mode):
                 np.square(self.half_dists, out=self.half_dists)
                 np.multiply(self.half_dists, inv_two_w_sq, out=self.wave_profile)
                 np.exp(self.wave_profile, out=self.wave_profile)
-                np.multiply(self.wave_profile, self.wave_amps[w], out=self.wave_profile)
+                np.multiply(self.wave_profile, self.wave_amps[w] * crest_gain, out=self.wave_profile)
                 col = self.wave_colors[w]
                 for c in range(3):
                     np.multiply(self.wave_profile, float(col[c]), out=self.wave_scratch_rgb[:, c])

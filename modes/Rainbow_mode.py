@@ -2,8 +2,9 @@
 Rainbow Mode
 Continuous smooth rainbow spectrum distributed across the strip with uninterrupted hue drift.
 Never branches on ctx.scene (eliminating the snap back to 0.0 when leaving CHILL and the 1.5s
-flat override on DROP_IMPACT). Modulates intensity continuously with band_energy and beat_pulse(),
-while mood_pace and mood_accent gently nudge drift speed and highlight warmth.
+flat override on DROP_IMPACT). Modulates intensity continuously with the per-LED interpolated
+band_energy only (Law 7: one lead timescale), while mood_pace and mood_accent gently nudge drift
+speed and highlight warmth.
 Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
@@ -101,7 +102,6 @@ class Rainbow_mode(Mode.Mode):
             return
 
         dt = self.dt
-        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.5))
 
         bands = getattr(self.listener, "asserved_fft_band", None)
         if bands is None or len(bands) < self.nb_of_fft_band:
@@ -122,12 +122,11 @@ class Rainbow_mode(Mode.Mode):
         self.lut_idx[:] = self.active_hues
         np.take(self.rainbow_lut, self.lut_idx, axis=0, out=self.base_rgb, mode="clip")
 
-        # 2. Continuous intensity from spectrum + confidence-blended beat_pulse()
-        pulse = self.beat_pulse()
-        np.multiply(self.band_energy, 0.40, out=self.intensities)
-        self.intensities += 0.60 * (0.35 * energy + 0.65 * pulse)
+        # 2. Intensity is driven by the spectrum alone (single lead timescale, Law 7). The spectrum is
+        #    always live, so the mode stays alive without the flywheel (Law 1) with no beat/level terms.
+        np.square(self.band_energy, out=self.intensities)  # contrast: peaks stand out, quiet bands dim
         np.multiply(self.intensities, self.intensity_mult, out=self.intensities)
-        self.intensities += self.intensity_base * (0.75 + 0.25 * pulse)
+        self.intensities += self.intensity_base
         np.clip(self.intensities, 0.0, 1.0, out=self.intensities)
 
         np.multiply(self.base_rgb, self.intensities[:, None], out=self.target_float_rgb)
