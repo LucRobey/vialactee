@@ -5,7 +5,7 @@
 > **Agent / Model:** Gemini 4 Argon (High)  
 > **Primary Goal:** Align Mode Studio with production `Main.py` 8-band visual FFT & coarse Mel flux (S1), declare dev/benchmark dependencies and guard default `pytest` collection (S2), add an offline real-audio choreography probe (S3), fix `Shining_stars_mode.py` dominant-band onset clarity and spectral brightness scaling (S4a), add realistic synthetic rhythm-lock profiles and Law 1/Law 7 governance tests (S4b), and synchronize all documentation and skills (S5–S6).  
 > **Status:** COMPLETED  
-> **Commits:** `c68fb03` `08ca520` `4708f63` `d06e53b` `dc47f44` (pushed: yes)  
+> **Commits:** `c68fb03` `08ca520` `4708f63` `d06e53b` `dc47f44` `2297efa` (pushed: yes)  
 > **Skills Used:** `vialactee-project`, `vialactee-mode-creator`  
 > **Skill Friction:** `vialactee-mode-creator`: referenced hardcoded `"8-band spectrum"` instead of band-count-agnostic `nb_of_fft_band` / `int(b * 255 / max(1, num_bands - 1))` (updated in Phase S5).
 
@@ -14,7 +14,7 @@
 ## 1. Context & Motivation
 
 1. **Mode Studio vs Production Mismatch (`S1`):** `tools/mode_studio.py` previously initialized `Listener` with `nb_of_fft_band = 16` without `"visual_flux_source": "coarse_mel"`, whereas production `Main.py` runs `nb_of_fft_band = 8` with coarse Mel `band_flux`. Modes tuned in Studio therefore saw half the per-band energy and a different flux distribution than on the chandelier.
-2. **Test Environment & Benchmark Collection (`S2`):** Running plain `pytest -q` collected `tests/test_benchmark_regression.py` (`mir_eval`), and resampling `48 kHz` MP3s required `scipy`, neither of which was isolated in `requirements-dev.txt` or guarded in `tests/conftest.py`.
+2. **Test Environment & Benchmark Collection (`S2`):** Running plain `pytest -q` collected `tests/test_benchmark_engine.py` (`mir_eval`), and resampling `48 kHz` MP3s required `scipy`, neither of which was isolated in `requirements-dev.txt` or guarded in `tests/conftest.py`.
 3. **Real-Audio Telemetry & `Shining_stars_mode` Saturation (`S3`, `S4a`):** Probing real songs (`Queen - Another One Bites the Dust.mp3`, `Earth, Wind & Fire - Boogie Wonderland.mp3`, `Django.mp3`, `Michael Bublé - Feeling Good.mp3`) revealed that real-audio `rhythm_lock` averages `0.21–0.51` (much lower than the synthetic `0.82`). In `Shining_stars_mode.py`, the `(1.0 - lock) * band_val * self.threshold * 2.8` fallback fired every frame on steady band volume whenever `lock < 0.65`, spawning `198–397 stars/sec` across multiple harmonic-bleed bands at constant brightness.
 4. **Synthetic Lock Profiles & Law 1 / Law 7 Interaction (`S4b`):** A single `high_lock` (`0.82`) synthetic clip did not test `groove_lock` (`0.50`) or `loose_lock` (`0.25`) regimes, nor did it document the `LOCK_CONFOUNDED` (`|Δlock| > 0.10`) effect when muting `beat` lifts `beat_trust -> 1.0`.
 
@@ -27,14 +27,14 @@
   * Centralizes `PRODUCTION_VISUAL_FFT_BANDS = 8`, `SUPPORTED_STUDIO_FFT_BANDS = (8, 16)`, and `build_listener_infos(nb_bands)` setting `"visual_flux_source": "coarse_mel"`.
 * **[MODIFY]** [`tools/mode_studio.py`](../tools/mode_studio.py):
   * Defaults to `8` visual FFT bands (`--bands {8, 16}`), displays `[visual FFT {N} · analyzer 32]` in the header, and dynamically renders `8` or `16` spectrum + flux bars in Card 1.
-* **[NEW]** [`tests/test_mode_studio_listener_config.py`](../tests/test_mode_studio_listener_config.py):
+* **[NEW]** [`tests/test_studio_visual_bands.py`](../tests/test_studio_visual_bands.py):
   * Verifies `build_listener_infos()` parity with `Main.py` across 8 and 16 bands.
 
 ### Phase S2 — Dev Dependencies & Pytest Collection Guard (`08ca520`)
 * **[NEW]** [`requirements-dev.txt`](../requirements-dev.txt):
   * Declares `-r requirements.txt`, `scipy>=1.11.0`, and `mir_eval>=0.7`.
-* **[MODIFY]** [`tests/conftest.py`](../tests/conftest.py) & **[NEW]** [`tests/test_pytest_collection_guard.py`](../tests/test_pytest_collection_guard.py):
-  * Skips `@pytest.mark.benchmark` modules during default `pytest -q` runs unless `-m benchmark` is explicitly requested.
+* **[MODIFY]** [`tests/conftest.py`](../tests/conftest.py):
+  * Skips `@pytest.mark.benchmark` modules during default `pytest -q` runs when optional benchmark dependencies are absent.
 
 ### Phase S3 — Offline Real-Audio Choreography Probe (`4708f63`)
 * **[NEW]** [`tools/choreography_probe.py`](../tools/choreography_probe.py) & **[NEW]** [`tests/test_choreography_probe.py`](../tests/test_choreography_probe.py):
@@ -90,7 +90,7 @@
   * **Result**: `471 passed, 5 deselected, 91 subtests passed` (0 failures).
 * **Command**: `.\.venv\Scripts\python.exe -m pytest tests/governance/ -q -p no:cacheprovider`
   * **Result**: All governance tests (including `test_axiom_07_code_governance.py`, `test_docs_parity.py`, `test_mode_choreography.py`, and `test_mode_choreography_profiles.py`) pass with 0 violations.
-* **AXIOM-07 Line Cap**: All governed production `.py` files and new test/tool files are well below the 500-line cap (`Shining_stars_mode.py`: 218 lines, `tools/choreography_matrix.py`: 396 lines, `tests/governance/test_mode_choreography.py`: 445 lines, `tests/governance/test_mode_choreography_profiles.py`: 176 lines).
+* **AXIOM-07 Line Cap**: All governed production `.py` files and new test/tool files are well below the 500-line cap (`Shining_stars_mode.py`: 218 lines, `tools/choreography_matrix.py`: 490 lines, `tests/governance/test_mode_choreography.py`: 445 lines, `tests/governance/test_mode_choreography_profiles.py`: 186 lines).
 
 ---
 
