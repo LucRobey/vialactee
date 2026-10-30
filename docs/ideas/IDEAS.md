@@ -27,6 +27,19 @@
   - White waves start coming toward the middle / end of the segment.
   - When a white wave reaches the end, **it does not disappear** — instead, the white builds up and stacks wave after wave until the entire strip is completely white, and then transitions into the next mode.
 
+### 4. Revisit `Opposite_sides_mode` Firework Sparkles ("Pop-Depop" Crackle)
+- The bass-vs-treble VU tug-of-war bars and fixed 8% core are in place, but the **sparkle effect still needs visual tuning**.
+- **Target look:** When the beat is locked and `beat_phase` reaches `1.0`, the sparkles should look like a **firework crackle** — many tiny, ultra-bright, strictly local (1-LED) pure-white pinpoints that pop and depop rapidly one after another ("pop de pop pop depop") at scattered locations rather than appearing/fading together as a group.
+- Revisit timing, contrast against the underlying colored bars (e.g., briefly punching through or darkening a 1-LED hole around the pinpoint, or tuning hold/depop cadence in Mode Studio) in a future session.
+
+### 5. Mode-Coherence Engine — Deferred Extensions (after the simple v1 works)
+Context: the v1 picks one grouping (from a human-written catalogue) and one mode per group, scored by rules. These are the "life" ideas parked for later:
+- **Wildcard / surprise:** with a small probability (e.g. 5–10%) per transition, ignore the *soft* rules (rewards/discouragements) so unexpected-but-safe combinations appear. **Hard rules (forbid) are never relaxed.** Optionally also a short list of explicitly declared "spicy" combinations that are normally forbidden.
+- **Partial re-roll:** a transition changes only some groups (e.g. only the horizontals) while the others keep playing, so the chandelier evolves gradually. Needs a small edit to the "every non-blocked segment is retargeted" invariant; the kept groups act as fixed constraints for the new draw.
+- **Adjacency rules:** rules about *touching* groups (e.g. "these two modes must not play on neighbouring groups"), using physical neighbours derived from the segment layout.
+- **Deeper nested groupings:** groups that contain sub-groupings with their own alternatives (v1 format reserved for this, v1 itself stays 2 levels).
+- **Rules that act on the grouping choice itself** (e.g. "v1 and v2 like to be together" as a rule instead of a catalogue weight).
+
 ---
 
 ## 📝 Random Notes / Future Session Reminders
