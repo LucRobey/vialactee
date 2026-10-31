@@ -34,6 +34,7 @@ class DefaultTransitionService(TransitionService):
     """Synchronous front door of the transition sector."""
 
     def __init__(self, infos: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(infos)
         service_infos = dict(infos or {})
         if "min_time_between_transitions" not in service_infos:
             service_infos["min_time_between_transitions"] = 5.0
@@ -43,10 +44,25 @@ class DefaultTransitionService(TransitionService):
         self._drop_requested = False
         self._last_orders: Dict[str, str] = {}
 
+    # --- configuration & allocation ------------------------------------------
+
+    def configure(self, policy_raw: Dict[str, Any]) -> None:
+        """Configure the sector policy, delegating to the transition manager."""
+        super().configure(policy_raw)
+        if hasattr(self._manager, "configure"):
+            self._manager.configure(policy_raw)
+
+    def allocate_initial(self, music: Optional[MusicSnapshot] = None) -> Dict[str, str]:
+        """Allocate initial modes, delegating to manager or falling back to snapshot."""
+        if hasattr(self._manager, "allocate_initial"):
+            return self._manager.allocate_initial(music)
+        return super().allocate_initial(music)
+
     # --- inputs --------------------------------------------------------------
 
     def set_installation(self, installation: InstallationSnapshot) -> None:
-        self._manager.set_installation(installation.segments)
+        super().set_installation(installation)
+        self._manager.set_installation(installation.segments, getattr(installation, "modes", ()))
         if installation.room_bounds is not None:
             engine.set_room_bounds(*installation.room_bounds)
 

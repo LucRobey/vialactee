@@ -17,7 +17,7 @@ Use this skill as the primary architectural authority for the Vialactée music-r
 * `music/`: `music/` is a sealed room (audio ingestion, beat tracking, structural novelty, 3-tier `MusicalContextEngine`, and `Listener` delay facade) reached by production code only through [`music.api`](../../../music/api.py) (see [`docs/contracts/music_analyzer_contract.md`](../../../docs/contracts/music_analyzer_contract.md)). Enforced by `tests/governance/test_music_isolation.py` and `tests/governance/test_docs_parity.py`.
 * `core/`: The runtime orchestrator (`Mode_master.py`, `Segment.py`, `TransitionBridge.py`, `CommandRouter.py`, `AppConfigStore.py`, `Webapp_instruction_logger.py`).
 * `modes/`: Visual light animation modes inheriting from `modes.Mode`.
-* `config/`: Hardware profiles (`hardware_profile` in `app_config.json`), unified physical geometry + UI layout (`segments_full.json`, `segments_small.json`), and dynamic path resolution (`Configuration_manager.py`).
+* `config/`: Hardware profiles (`hardware_profile` in `app_config.json`), unified physical geometry + UI layout + segment tags (`segments_full.json`, `segments_small.json`), mode fingerprints & vocabulary (`modes.json`), declarative mode coherence policies (`coherence_full.json`, `coherence_small.json`, `coherence.schema.json`, `coherence_loader.py`), and dynamic path resolution (`Configuration_manager.py`).
 * `hardware/`: Physical abstractions (`Fake_leds.py`, `Rpi_NeoPixels.py`, `Udp_Sender.py`, `HardwareFactory.py`, `Fake_ESP32.py`).
 * `connectors/`: Asynchronous integrations (`Connector.py` aiohttp server exposing `/ws` and `/api/topology`, plus `Local_Microphone.py`).
 * `wabb-interface/`: React-based remote control web interface.

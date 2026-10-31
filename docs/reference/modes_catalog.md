@@ -63,3 +63,24 @@ Seven modes override `Mode.get_settings_schema()` to expose live-tunable paramet
 ## 3. Mood-Modulated Autonomous Modes (`modes/*_mode.py`)
 
 All remaining modes (`Bary_rainbow_mode`, `Middle_bar_mode`, `Proportion_rainbow_mode`, `Coloured_middle_wave_mode`, `Power_bar_mode`, `Extending_waves_mode`) self-tune their internal physics, speeds, and trails via the continuous `Mode` scene modifiers (`self.mood_pace`, `self.mood_sharpness`, `self.mood_trail`, `self.mood_accent`) and mood palette (`self.mood_colors`, `self.palette_lut`, `self.highlight_color`).
+
+---
+
+## 4. Mode Fingerprints: `dna` & Vocabulary `tags` ([`config/modes.json`](../../config/modes.json))
+
+| Mode Name | `dna` `(energy, punch, rhythm, complexity)` | `tags` |
+| :--- | :---: | :--- |
+| **Rainbow** | `(0.35, 0.10, 0.20, 0.30)` | `lead:spectrum`, `form:field`, `origin:global`, `color:own-hue`, `layer:bed` |
+| **Bary Rainbow** | `(0.40, 0.15, 0.30, 0.35)` | `lead:spectrum`, `form:field`, `origin:center`, `color:own-hue`, `layer:bed` |
+| **Middle Bar** | `(0.55, 0.60, 0.50, 0.30)` | `lead:beat`, `axis:horizontal`, `form:bar`, `origin:center`, `color:palette`, `layer:pulse` |
+| **Shining Stars** | `(0.30, 0.20, 0.25, 0.40)` | `lead:transient`, `form:sparkle`, `origin:scatter`, `color:palette`, `layer:accent` |
+| **Proportion Rainbow** | `(0.45, 0.25, 0.35, 0.40)` | `lead:spectrum`, `form:field`, `origin:global`, `color:own-hue`, `layer:bed` |
+| **Opposite Sides** | `(0.65, 0.55, 0.65, 0.45)` | `lead:spectrum`, `axis:horizontal`, `form:bar`, `origin:center`, `color:palette`, `layer:meter` |
+| **Hyper Strobe** | `(0.95, 0.95, 0.85, 0.40)` | `lead:transient`, `form:flash`, `origin:global`, `color:palette`, `layer:accent` |
+| **Chromatic Chaser** | `(0.70, 0.60, 0.80, 0.50)` | `lead:beat`, `form:head`, `origin:sweep`, `color:palette`, `layer:pulse` |
+| **Metronome** | `(0.65, 0.85, 0.95, 0.30)` | `lead:beat`, `form:flash`, `origin:global`, `color:palette`, `layer:pulse` |
+| **Coloured Middle Wave** | `(0.60, 0.55, 0.60, 0.50)` | `lead:spectrum`, `axis:horizontal`, `form:wave`, `origin:center`, `color:palette`, `layer:meter` |
+| **Impact Shockwave** | `(0.90, 0.95, 0.85, 0.60)` | `lead:beat`, `form:wave`, `origin:center`, `color:palette`, `layer:accent` |
+| **Power Bar** | `(0.70, 0.75, 0.60, 0.35)` | `lead:level`, `axis:vertical`, `form:bar`, `origin:bottom`, `color:palette`, `layer:meter` |
+| **Extending Waves** | `(0.60, 0.50, 0.60, 0.50)` | `lead:level`, `axis:horizontal`, `form:wave`, `origin:center`, `color:palette`, `layer:meter` |
+

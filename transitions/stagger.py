@@ -9,6 +9,7 @@ Provides spatial and cohort-aware timing patterns:
 1. Cascading ripples (top-down / bottom-up / center-out)
 2. Complementary techniques across cohorts (e.g. vertical wipes on pillars,
    radial fades/expansions on horizontal rings)
+3. Tag-based altitude tier and bay column derivation with seamless legacy fallback
 
 Guarantees:
 - AXIOM-01: Zero overhead in steady-state; configuration generation is fast (< 0.05 ms).
@@ -17,7 +18,7 @@ Guarantees:
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 
 class StaggerPattern(str, Enum):
@@ -33,14 +34,14 @@ class StaggerPattern(str, Enum):
     BAY_WAVE_RL = "BAY_WAVE_RL"
 
 
-# Canonical physical Y-altitude tier mapping for full-profile horizontal segments
+# Canonical physical Y-altitude tier mapping for full-profile horizontal segments (legacy fallback)
 _ALTITUDE_TIER_BY_SUFFIX: Dict[str, int] = {
     "h30": 0, "h00": 0, "h20": 0,  # Canopy tier (Y = 1..16)
     "h11": 1, "h32": 1,            # Mid tier (Y = 73..85)
     "h31": 2, "h10": 2,            # Low tier (Y = 171..189)
 }
 
-# Canonical left-to-right horizontal bay column order across the full chandelier
+# Canonical left-to-right horizontal bay column order across the full chandelier (legacy fallback)
 _BAY_COLUMN_BY_SUFFIX: Dict[str, int] = {
     "h00": 0,
     "v1": 1, "s1": 0,
@@ -51,6 +52,175 @@ _BAY_COLUMN_BY_SUFFIX: Dict[str, int] = {
     "h30": 6, "h31": 6, "h32": 6,
     "v4": 7,
 }
+
+_TIER_NAME_TO_INT: Dict[str, int] = {
+    "canopy": 0,
+    "top": 0,
+    "mid": 1,
+    "middle": 1,
+    "center": 1,
+    "low": 2,
+    "bottom": 2,
+}
+
+
+def _segment_suffix(seg_name: str) -> str:
+    """Extracts the terminal token/suffix from a segment identifier or name."""
+    parts = seg_name.strip().lower().split()
+    return parts[-1] if parts else seg_name.lower()
+
+
+def _extract_segment_info(seg: Any) -> Tuple[str, Tuple[str, ...], str]:
+    """
+    Extracts (name, tags, suffix) from a segment identifier, SegmentDescriptor, dict, or object.
+    Robust to strings, dataclasses, dicts, and None values.
+    """
+    if seg is None:
+        return "", (), ""
+    if isinstance(seg, str):
+        suffix = _segment_suffix(seg)
+        return seg, (), suffix
+    if isinstance(seg, dict):
+        name = str(seg.get("name") or seg.get("id") or "")
+        raw_tags = seg.get("tags") or ()
+        tags = tuple(raw_tags) if isinstance(raw_tags, (list, tuple, set)) else ()
+        suffix = str(seg.get("id") or _segment_suffix(name)).strip().lower()
+        return name, tags, suffix
+
+    # Objects (SegmentDescriptor, Segment, SimpleNamespace, etc.)
+    name = str(getattr(seg, "name", "") or getattr(seg, "id", "") or str(seg))
+    raw_tags = getattr(seg, "tags", ()) or ()
+    tags = tuple(raw_tags) if isinstance(raw_tags, (list, tuple, set)) else ()
+    seg_id = getattr(seg, "id", "")
+    suffix = str(seg_id or _segment_suffix(name)).strip().lower()
+    return name, tags, suffix
+
+
+def get_segment_altitude_tier(seg: Any, default: int = 1) -> int:
+    """
+    Resolves the physical altitude tier index (0=Canopy, 1=Mid, 2=Low).
+    Inspects segment tags first ('tier:canopy', 'tier:mid', 'tier:low', or numeric 'tier:0'),
+    then seamlessly falls back to legacy suffix table _ALTITUDE_TIER_BY_SUFFIX.
+    """
+    _, tags, suffix = _extract_segment_info(seg)
+    for tag in tags:
+        if isinstance(tag, str) and tag.startswith("tier:"):
+            val = tag[5:].strip().lower()
+            if val in _TIER_NAME_TO_INT:
+                return _TIER_NAME_TO_INT[val]
+            if val.isdigit():
+                return int(val)
+    return _ALTITUDE_TIER_BY_SUFFIX.get(suffix, default)
+
+
+_BAY_BY_GEOMETRY_TAGS: Dict[Tuple[str, str], int] = {
+    ("left", "size:long"): 0,
+    ("left", "pos:outer"): 1,
+    ("left", "size:medium"): 2,
+    ("left", "pos:inner"): 3,
+    ("right", "size:medium"): 4,
+    ("right", "pos:inner"): 5,
+    ("right", "size:short"): 6,
+    ("right", "pos:outer"): 7,
+}
+
+
+def get_segment_bay_column(seg: Any, default: int = 0) -> int:
+    """
+    Resolves the horizontal bay column index (0..7 left-to-right).
+    Inspects segment tags first ('half:*' + 'pos:*'/'size:*' or 'pos:<int>'),
+    then seamlessly falls back to legacy suffix table _BAY_COLUMN_BY_SUFFIX.
+    """
+    _, tags, suffix = _extract_segment_info(seg)
+    pos_num: Optional[int] = None
+    half_side: Optional[str] = None
+    pos_or_size: Optional[str] = None
+    for tag in tags:
+        if not isinstance(tag, str):
+            continue
+        if tag.startswith("pos:"):
+            val = tag[4:].strip().lower()
+            if val.isdigit():
+                pos_num = int(val)
+            elif val in ("outer", "inner"):
+                pos_or_size = f"pos:{val}"
+        elif tag.startswith("size:"):
+            val = tag[5:].strip().lower()
+            if val in ("long", "medium", "short"):
+                pos_or_size = f"size:{val}"
+        elif tag == "half:left":
+            half_side = "left"
+        elif tag == "half:right":
+            half_side = "right"
+    if pos_num is not None:
+        return pos_num
+    if half_side is not None and pos_or_size is not None:
+        mapped = _BAY_BY_GEOMETRY_TAGS.get((half_side, pos_or_size))
+        if mapped is not None:
+            return mapped
+    if suffix in _BAY_COLUMN_BY_SUFFIX:
+        return _BAY_COLUMN_BY_SUFFIX[suffix]
+    if half_side is not None:
+        return 0 if half_side == "left" else 1
+    return default
+
+
+def resolve_stagger_tags(seg: Any) -> Tuple[int, int]:
+    """
+    Convenience helper resolving (altitude_tier, bay_column) from segment tags or legacy fallbacks.
+    """
+    return (get_segment_altitude_tier(seg), get_segment_bay_column(seg))
+
+
+def stagger_by_altitude_tier(
+    segments: Sequence[Any],
+    reverse: bool = False,
+) -> List[List[str]]:
+    """
+    Partitions segments by physical Y-altitude tier (Canopy -> Mid -> Low).
+    Accepts flat segment sequences or nested ring cohorts.
+    Inspects segment tags first with graceful fallback to legacy suffix tables.
+    Returns a list of cohorts (one list per tier), each cohort sorted by segment name.
+    """
+    tiers: Dict[int, List[str]] = {}
+    flat_items = []
+    for item in segments:
+        if isinstance(item, (list, tuple)):
+            flat_items.extend(item)
+        else:
+            flat_items.append(item)
+
+    for seg in flat_items:
+        name, _, _ = _extract_segment_info(seg)
+        tier = get_segment_altitude_tier(seg)
+        tiers.setdefault(tier, []).append(name)
+
+    return [sorted(tiers[k]) for k in sorted(tiers.keys(), reverse=reverse)]
+
+
+def stagger_by_bay_column(
+    segments: Sequence[Any],
+    reverse: bool = False,
+) -> List[List[str]]:
+    """
+    Partitions segments by horizontal bay column index (0..7 left-to-right).
+    Inspects segment tags first with graceful fallback to legacy suffix tables.
+    Returns a list of cohorts (one list per bay column), each cohort sorted by segment name.
+    """
+    cols: Dict[int, List[str]] = {}
+    flat_items = []
+    for item in segments:
+        if isinstance(item, (list, tuple)):
+            flat_items.extend(item)
+        else:
+            flat_items.append(item)
+
+    for seg in flat_items:
+        name, _, _ = _extract_segment_info(seg)
+        col = get_segment_bay_column(seg)
+        cols.setdefault(col, []).append(name)
+
+    return [sorted(cols[k]) for k in sorted(cols.keys(), reverse=reverse)]
 
 
 def select_stagger_pattern(context: Optional[Any] = None) -> StaggerPattern:
@@ -94,8 +264,16 @@ def discover_segment_cohorts(segments: List[Any]) -> Tuple[List[str], List[List[
     rings_dict: Dict[str, List[str]] = {}
 
     for seg in segments:
-        name = getattr(seg, "name", "")
+        name, tags, _ = _extract_segment_info(seg)
         orientation = getattr(seg, "orientation", "")
+        for tag in tags:
+            if tag == "orientation:vertical":
+                orientation = "vertical"
+                break
+            elif tag == "orientation:horizontal":
+                orientation = "horizontal"
+                break
+
         if orientation == "vertical" or " v" in name or " s" in name:
             verticals.append(name)
         elif orientation == "horizontal" or " h" in name:
@@ -109,19 +287,9 @@ def discover_segment_cohorts(segments: List[Any]) -> Tuple[List[str], List[List[
     return verticals, rings
 
 
-def _segment_suffix(seg_name: str) -> str:
-    parts = seg_name.strip().lower().split()
-    return parts[-1] if parts else seg_name.lower()
-
-
 def _group_rings_by_altitude(rings: List[List[str]]) -> List[List[str]]:
     """Re-groups horizontal segments by physical Y-altitude tier (Canopy -> Mid -> Low)."""
-    tiers: Dict[int, List[str]] = {}
-    for ring in rings:
-        for seg in ring:
-            tier = _ALTITUDE_TIER_BY_SUFFIX.get(_segment_suffix(seg), 1)
-            tiers.setdefault(tier, []).append(seg)
-    return [sorted(tiers[k]) for k in sorted(tiers.keys())]
+    return stagger_by_altitude_tier(rings)
 
 
 def _step_distance(idx: int, total: int, pattern: StaggerPattern) -> float:
@@ -142,6 +310,7 @@ def generate_staggered_configs(
     pattern: StaggerPattern = StaggerPattern.CASCADE_DOWN,
     step_delay: float = 0.15,
     pillar_wipe: bool = True,
+    segments: Optional[Sequence[Any]] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """
     Builds per-segment transition configurations with staggered start offsets
@@ -150,6 +319,18 @@ def generate_staggered_configs(
     configs: Dict[str, Dict[str, Any]] = {}
     if not allocation:
         return configs
+
+    seg_map: Dict[str, Any] = {}
+    if segments:
+        for s in segments:
+            n, _, _ = _extract_segment_info(s)
+            seg_map[n] = s
+            sid = getattr(s, "id", None)
+            if sid:
+                seg_map[sid] = s
+
+    def _resolve_col(seg_key: str) -> int:
+        return get_segment_bay_column(seg_map.get(seg_key, seg_key))
 
     if pattern == StaggerPattern.SIMULTANEOUS:
         for seg in allocation:
@@ -163,12 +344,12 @@ def generate_staggered_configs(
 
     if pattern in (StaggerPattern.BAY_WAVE_LR, StaggerPattern.BAY_WAVE_RL):
         reverse_wave = pattern == StaggerPattern.BAY_WAVE_RL
-        cols = sorted({_BAY_COLUMN_BY_SUFFIX.get(_segment_suffix(s), 0) for s in allocation})
+        cols = sorted({_resolve_col(s) for s in allocation})
         num_cols = max(1, len(cols))
         col_rank = {c: (num_cols - 1 - i if reverse_wave else i) for i, c in enumerate(cols)}
         vert_set = set(verticals)
         for seg in allocation:
-            rank = col_rank.get(_BAY_COLUMN_BY_SUFFIX.get(_segment_suffix(seg), 0), 0)
+            rank = col_rank.get(_resolve_col(seg), 0)
             is_vert = seg in vert_set
             h_wipe = "silk_wipe_reverse" if reverse_wave else "silk_wipe"
             tech = ("iris_open" if base_technique == "fade_in_out" else base_technique) if is_vert else (
@@ -182,11 +363,15 @@ def generate_staggered_configs(
             }
         return configs
 
-    active_rings = (
-        _group_rings_by_altitude(rings)
-        if pattern in (StaggerPattern.ALTITUDE_CASCADE_DOWN, StaggerPattern.ALTITUDE_CASCADE_UP)
-        else rings
-    )
+    if pattern in (StaggerPattern.ALTITUDE_CASCADE_DOWN, StaggerPattern.ALTITUDE_CASCADE_UP):
+        if segments:
+            tagged_rings = [[seg_map.get(s, s) for s in r] for r in rings]
+            active_rings = stagger_by_altitude_tier(tagged_rings)
+        else:
+            active_rings = stagger_by_altitude_tier(rings)
+    else:
+        active_rings = rings
+
     has_rings = any(len(r) > 0 for r in active_rings)
     is_complementary = pattern == StaggerPattern.COHORT_COMPLEMENTARY
     vert_tech = (

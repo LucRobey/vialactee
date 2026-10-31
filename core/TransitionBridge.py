@@ -5,15 +5,20 @@ Everything that translates between project objects (Listener, Segment, Mode_mast
 and the doors of `transitions.api` lives here, so the sector itself never sees a
 project object and the rest of the project never sees sector internals.
 
-- build_music_snapshot:        Listener            -> MusicSnapshot   (Music door)
+- build_music_snapshot:        Listener            -> MusicSnapshot        (Music door)
+- build_mode_profiles:         modes.json dict     -> Tuple[ModeProfile]   (Mode profiles door)
 - build_installation_snapshot: Segment list        -> InstallationSnapshot (Installation door)
-- apply_orders:                TransitionOrders    -> OrderAck        (Orders + Acknowledgement doors;
-                                                                   also forwards orders.palette to the mood sector)
+- apply_orders:                TransitionOrders    -> OrderAck             (Orders + Acknowledgement doors;
+                                                                            also forwards orders.palette to the mood sector)
 """
-from typing import Any, List, Optional, Tuple
+import json
+import os
+from typing import Any, Dict, List, Optional, Tuple
 
+import core.Segment as Segment
 from transitions.api import (
     InstallationSnapshot,
+    ModeProfile,
     MusicSnapshot,
     OrderAck,
     SegmentDescriptor,
@@ -80,22 +85,66 @@ def build_music_snapshot(listener: Any) -> MusicSnapshot:
     )
 
 
+def build_mode_profiles(modes_config: Optional[Dict[str, Any]] = None) -> Tuple[ModeProfile, ...]:
+    """Build frozen ModeProfile objects from config/modes.json (or cached Segment config)."""
+    cfg = modes_config
+    if cfg is None:
+        if Segment.Segment._MODES_CONFIG_CACHE:
+            cfg = next(iter(Segment.Segment._MODES_CONFIG_CACHE.values()))
+        else:
+            config_path = os.path.join(os.path.dirname(__file__), "..", "config", "modes.json")
+            try:
+                key = (os.path.abspath(config_path), os.stat(config_path).st_mtime_ns)
+                with open(config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                Segment.Segment._MODES_CONFIG_CACHE.clear()
+                Segment.Segment._MODES_CONFIG_CACHE[key] = cfg
+            except Exception:
+                cfg = {}
+
+    profiles: List[ModeProfile] = []
+    for entry in (cfg or {}).get("standard_modes", []):
+        if not isinstance(entry, dict) or not entry.get("name"):
+            continue
+        dna_raw = entry.get("dna") or {}
+        dna = (
+            _f(dna_raw.get("energy", 0.5), 0.5),
+            _f(dna_raw.get("punch", 0.5), 0.5),
+            _f(dna_raw.get("rhythm", 0.5), 0.5),
+            _f(dna_raw.get("complexity", 0.5), 0.5),
+        )
+        tags = tuple(str(t) for t in (entry.get("tags") or ()))
+        profiles.append(ModeProfile(name=str(entry["name"]), dna=dna, tags=tags))
+    return tuple(profiles)
+
+
+def _segment_descriptor(seg: Any) -> SegmentDescriptor:
+    name = str(getattr(seg, "name", ""))
+    ori = str(getattr(seg, "orientation", "vertical"))
+    sid = str(getattr(seg, "id", "") or (name[8:].strip() if name.startswith("Segment ") else name))
+    raw_tags = tuple(str(t) for t in (getattr(seg, "tags", ()) or ()) if t)
+    tags = tuple(dict.fromkeys([*raw_tags, f"orientation:{ori}"]))
+    return SegmentDescriptor(
+        name=name,
+        orientation=ori,
+        available_modes=tuple(getattr(seg, "modes", {}).keys()),
+        active_mode=str(getattr(seg, "activ_mode", "")),
+        is_blocked=bool(getattr(seg, "isBlocked", False)),
+        id=sid,
+        tags=tags,
+    )
+
+
 def build_installation_snapshot(
     segments: List[Any],
     room_bounds: Optional[Tuple[float, float]] = None,
+    modes: Optional[Tuple[ModeProfile, ...]] = None,
 ) -> InstallationSnapshot:
-    """Describe the physical segments to the sector."""
+    """Describe the physical segments and mode profiles to the sector."""
+    mode_profiles = modes if modes is not None else build_mode_profiles()
     return InstallationSnapshot(
-        segments=tuple(
-            SegmentDescriptor(
-                name=seg.name,
-                orientation=str(getattr(seg, "orientation", "vertical")),
-                available_modes=tuple(getattr(seg, "modes", {}).keys()),
-                active_mode=str(getattr(seg, "activ_mode", "")),
-                is_blocked=bool(getattr(seg, "isBlocked", False)),
-            )
-            for seg in segments
-        ),
+        segments=tuple(_segment_descriptor(seg) for seg in segments),
+        modes=mode_profiles,
         room_bounds=room_bounds,
     )
 

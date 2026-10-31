@@ -1,18 +1,16 @@
 """
-tests/transitions/test_manager_and_dna.py - Unit & Governance Tests for Mode DNA and LocalTransitionManager.
+tests/transitions/test_manager_and_dna.py - Unit & Governance Tests for LocalTransitionManager and Mode Delegation.
 
 Tests:
-1. transitions/mode_dna.py:
-   - DNA metric bounds in [0.0, 1.0] and valid spatial roles.
-   - Normalized lookup and fallback to DEFAULT_MODE_DNA.
-2. transitions/manager.py:
+1. transitions/manager.py:
    - Music Matchmaker: Evaluates live audio context to target DNA.
-   - Weighted Lottery: Probabilistic selection according to DNA distance.
-   - Flexible Cohort Allocation: DIVERSE, SYMMETRIC_PAIRS (ABAB, ABBA, ABA), and UNISON.
+   - Coherence Allocation: allocate_all_segments and allocate_initial via cast_transition.
+   - Memory Recording Lifecycle: History recorded ONLY when _execute_transition emits orders
+     (not when a queued transition is overwritten before firing).
    - Downbeat Quantization: Beat-phase gating (< 0.05) and timeout fallback.
    - Clean Transition Techniques: Cosine crossfade, directional wipe, and transient blip.
    - Zero heap allocations in steady-state update() (AXIOM-02).
-3. modes/Mode.py:
+2. modes/Mode.py:
    - mood_colors property delegation.
 """
 
@@ -21,48 +19,13 @@ import unittest
 from unittest.mock import MagicMock
 import numpy as np
 
-import transitions.mode_dna as mode_dna
 from mood.api import create_mood_service
 from mood.palettes import PALETTES
 from transitions.api import MusicSnapshot, SegmentDescriptor
 from transitions.director import Transition_Director
-from transitions.manager import (
-    LocalTransitionManager,
-    CohortPattern,
-)
+from transitions.fakes import FAKE_MODE_PROFILES, make_fake_installation
+from transitions.manager import LocalTransitionManager
 import modes.Mode as Mode
-
-
-class TestModeDNA(unittest.TestCase):
-    def test_all_mode_dna_bounds_and_roles(self):
-        """All configured modes must define 4 metrics in [0.0, 1.0] and valid spatial_role."""
-        valid_roles = {"vertical", "horizontal", "both"}
-        self.assertEqual(len(mode_dna.MODE_DNA), 13)
-
-        for name, dna in mode_dna.MODE_DNA.items():
-            with self.subTest(mode=name):
-                for metric in ("energy", "punch", "rhythm", "complexity"):
-                    self.assertIn(metric, dna, f"Missing {metric} in DNA of {name}")
-                    val = dna[metric]
-                    self.assertIsInstance(val, (int, float))
-                    self.assertTrue(0.0 <= val <= 1.0, f"{name}.{metric} out of bounds: {val}")
-
-                self.assertIn("spatial_role", dna, f"Missing spatial_role in {name}")
-                self.assertIn(dna["spatial_role"], valid_roles, f"Invalid role in {name}")
-
-    def test_get_mode_dna_normalization(self):
-        """get_mode_dna must handle exact, lower, underscore, and suffix variants."""
-        dna_exact = mode_dna.get_mode_dna("Rainbow")
-        self.assertEqual(dna_exact["energy"], mode_dna.MODE_DNA["Rainbow"]["energy"])
-
-        dna_lower = mode_dna.get_mode_dna("rainbow")
-        self.assertEqual(dna_lower, dna_exact)
-
-        dna_under = mode_dna.get_mode_dna("chromatic_chaser_mode")
-        self.assertEqual(dna_under["punch"], mode_dna.MODE_DNA["Chromatic Chaser"]["punch"])
-
-        fallback = mode_dna.get_mode_dna("NonExistentSuperMode")
-        self.assertEqual(fallback, mode_dna.DEFAULT_MODE_DNA)
 
 
 class TestLocalTransitionManager(unittest.TestCase):
@@ -103,54 +66,65 @@ class TestLocalTransitionManager(unittest.TestCase):
         self.assertEqual(dna_drop["punch"], 1.0)
         self.assertGreater(dna_drop["rhythm"], 0.80)
 
-    def test_weighted_lottery_probabilistic_selection(self):
-        """Weighted lottery selects candidates probabilistically with non-zero chance for all."""
-        pool = ["Rainbow", "Hyper Strobe", "Impact Shockwave", "Shining Stars"]
-        target_high_energy = {"energy": 0.95, "punch": 0.95, "rhythm": 0.90, "complexity": 0.50}
+    def test_allocate_all_segments_respects_policy_budget_and_forbids(self):
+        """allocate_all_segments delegates to cast_transition and enforces policy constraints."""
+        from transitions.policy import DEFAULT_POLICY
 
-        counts = {m: 0 for m in pool}
-        draws = 1000
-        for _ in range(draws):
-            picked = self.ltm.select_mode_lottery(pool, target_high_energy)
-            counts[picked] += 1
+        inst = make_fake_installation()
+        raw = dict(DEFAULT_POLICY)
+        raw["rules"] = [
+            {"id": "forbid-vertical-axis-on-horizontals", "when": [{"at": "orientation:horizontal", "tag": "axis:vertical"}], "effect": "forbid"},
+            {"id": "no-horizontal-axis-on-verticals", "when": [{"at": "orientation:vertical", "tag": "axis:horizontal"}], "weight": 0.15},
+        ]
+        self.ltm.set_installation(inst.segments, inst.modes)
+        self.ltm.configure(raw)
+        target_dna = self.ltm.evaluate_target_dna(self.music)
+        alloc = self.ltm.allocate_all_segments(target_dna)
+        self.assertEqual(len(alloc), 11)
+        self.assertLessEqual(len(set(alloc.values())), 3)
+        for seg in inst.segments:
+            if seg.orientation == "horizontal":
+                self.assertNotEqual(alloc[seg.name], "Power Bar")
 
-        # High energy modes (Hyper Strobe or Impact Shockwave) must dominate
-        self.assertGreater(counts["Hyper Strobe"] + counts["Impact Shockwave"], counts["Rainbow"] + counts["Shining Stars"])
-        # Non-rigid: Even ambient modes have a non-zero probability
-        self.assertGreater(counts["Rainbow"], 0)
-        self.assertGreater(counts["Shining Stars"], 0)
+    def test_allocate_initial_records_first_history_entry(self):
+        """allocate_initial returns a coherent allocation keyed by segment name and records history."""
+        inst = make_fake_installation()
+        self.ltm.set_installation(inst.segments, inst.modes)
+        self.assertEqual(len(self.ltm.memory), 0)
+        alloc = self.ltm.allocate_initial(self.music)
+        self.assertEqual(len(alloc), 11)
+        self.assertEqual(set(alloc.keys()), {s.name for s in inst.segments})
+        self.assertEqual(len(self.ltm.memory), 1)
 
-    def test_flexible_cohort_allocation_symmetries_and_unison(self):
-        """Cohort allocation supports DIVERSE, SYMMETRIC_PAIRS (ABAB, ABBA, ABA), and UNISON."""
-        pillars = ["Segment v1", "Segment v2", "Segment v3", "Segment v4"]
+    def test_memory_recorded_only_when_transition_actually_fires(self):
+        """Queued transitions that are overwritten before firing must NOT pollute TransitionMemory."""
+        inst = make_fake_installation()
+        self.ltm.set_installation(inst.segments, inst.modes)
+        self.assertEqual(len(self.ltm.memory), 0)
 
-        alloc_unison = self.ltm.allocate_cohort_modes(pillars, pattern=CohortPattern.UNISON)
-        self.assertEqual(len(alloc_unison), 4)
-        unique_modes = set(alloc_unison.values())
-        self.assertEqual(len(unique_modes), 1)
+        # Schedule a quantized transition while mid-beat (does not fire yet)
+        self.ltm.music = MusicSnapshot(beat_phase=0.45, is_beat=False, beat_trust=0.80)
+        self.ltm.schedule_transition(quantize_downbeat=True)
+        self.assertIsNotNone(self.ltm._pending_transition)
+        self.assertEqual(len(self.ltm.memory), 0)
 
-        alloc_sym = self.ltm.allocate_cohort_modes(pillars, pattern=CohortPattern.SYMMETRIC_PAIRS)
-        self.assertEqual(len(alloc_sym), 4)
-        m1, m2, m3, m4 = alloc_sym["Segment v1"], alloc_sym["Segment v2"], alloc_sym["Segment v3"], alloc_sym["Segment v4"]
-        is_abab = (m1 == m3 and m2 == m4)
-        is_abba = (m1 == m4 and m2 == m3)
-        self.assertTrue(is_abab or is_abba, f"Expected ABAB or ABBA symmetry, got: {alloc_sym}")
-
-        triad = ["Segment s1", "Segment s2", "Segment s3"]
-        alloc_triad = self.ltm.allocate_cohort_modes(triad, pattern=CohortPattern.SYMMETRIC_PAIRS)
-        self.assertEqual(alloc_triad["Segment s1"], alloc_triad["Segment s3"])
+        # Overwrite with an immediate transition before the queued one fires
+        self.ltm.schedule_transition(quantize_downbeat=False)
+        self.assertIsNone(self.ltm._pending_transition)
+        self.assertEqual(len(self.ltm.memory), 1)
 
     def test_downbeat_quantization_lifecycle(self):
         """Transitions do not fire mid-beat; they wait for beat_phase < 0.05 or beat hit."""
         self.ltm.set_installation([
             SegmentDescriptor(
                 name="Segment v1",
+                id="v1",
                 orientation="vertical",
                 available_modes=("Rainbow", "Impact Shockwave"),
                 active_mode="Rainbow",
                 is_blocked=False,
             )
-        ])
+        ], FAKE_MODE_PROFILES)
 
         self.ltm.music = MusicSnapshot(beat_phase=0.45, is_beat=False, beat_trust=0.80)
 
@@ -272,25 +246,14 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
         self.assertIn("type", tech)
         self.assertEqual(tech["type"], "fade_in_out")
 
-    def test_symmetric_pairs_produces_contrasting_modes(self):
-        """SYMMETRIC_PAIRS must choose distinct modes A and B when candidate pool has > 1 mode."""
-        pool = ("Rainbow", "Hyper Strobe")
-        self.ltm.set_installation([
-            SegmentDescriptor(name="Segment v1", orientation="vertical", available_modes=pool),
-            SegmentDescriptor(name="Segment v2", orientation="vertical", available_modes=pool),
-        ])
-
-        alloc = self.ltm.allocate_cohort_modes(["Segment v1", "Segment v2"], pattern=CohortPattern.SYMMETRIC_PAIRS)
-        self.assertNotEqual(alloc["Segment v1"], alloc["Segment v2"])
-
     def test_queued_transition_waits_for_active_transition(self):
         """Queued downbeat transition must wait until TD is no longer in transition."""
         self.director.start_transition({"type": "fade_in_out", "duration": 2.0})
         self.assertTrue(self.director.is_in_transition)
 
         self.ltm.set_installation([
-            SegmentDescriptor(name="Segment v1", orientation="vertical", is_blocked=False),
-        ])
+            SegmentDescriptor(name="Segment v1", id="v1", orientation="vertical", is_blocked=False),
+        ], FAKE_MODE_PROFILES)
         self.ltm.music = MusicSnapshot(beat_phase=0.01, is_beat=True, beat_trust=0.80)
 
         self.ltm.schedule_transition(
@@ -312,9 +275,9 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
     def test_schedule_transition_staggered_execution(self):
         """Verifies schedule_transition with staggered=True emits per-segment orders and sets max duration on TD."""
         self.ltm.set_installation([
-            SegmentDescriptor(name="Segment v1", orientation="vertical", is_blocked=False),
-            SegmentDescriptor(name="Segment h10", orientation="horizontal", is_blocked=False),
-        ])
+            SegmentDescriptor(name="Segment v1", id="v1", orientation="vertical", is_blocked=False),
+            SegmentDescriptor(name="Segment h10", id="h10", orientation="horizontal", is_blocked=False),
+        ], FAKE_MODE_PROFILES)
 
         self.ltm.schedule_transition(
             allocation={"Segment v1": "Impact Shockwave", "Segment h10": "Rainbow"},
@@ -336,9 +299,9 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
     def test_all_blocked_segments_do_not_start_director_transition(self):
         """When all targeted segments are blocked, _execute_transition must not start Transition_Director."""
         self.ltm.set_installation([
-            SegmentDescriptor(name="Segment v1", orientation="vertical", is_blocked=True),
-            SegmentDescriptor(name="Segment v2", orientation="vertical", is_blocked=True),
-        ])
+            SegmentDescriptor(name="Segment v1", id="v1", orientation="vertical", is_blocked=True),
+            SegmentDescriptor(name="Segment v2", id="v2", orientation="vertical", is_blocked=True),
+        ], FAKE_MODE_PROFILES)
         self.director.is_pending = True
 
         self.ltm.schedule_transition(
@@ -354,9 +317,9 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
     def test_immediate_schedule_transition_clears_pending_and_replaces_undrained_orders(self):
         """schedule_transition(quantize_downbeat=False) clears _pending_transition and does not duplicate un-popped orders."""
         self.ltm.set_installation([
-            SegmentDescriptor(name="Segment v1", orientation="vertical", is_blocked=False),
-            SegmentDescriptor(name="Segment v2", orientation="vertical", is_blocked=False),
-        ])
+            SegmentDescriptor(name="Segment v1", id="v1", orientation="vertical", is_blocked=False),
+            SegmentDescriptor(name="Segment v2", id="v2", orientation="vertical", is_blocked=False),
+        ], FAKE_MODE_PROFILES)
 
         self.ltm.schedule_transition(
             allocation={"Segment v1": "Rainbow", "Segment v2": "Rainbow"},

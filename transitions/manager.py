@@ -1,15 +1,17 @@
 """
-transitions/manager.py - Music Matchmaker, Probabilistic Cohort Allocator, & Downbeat Quantizer.
-Evaluates musical context, allocates modes with weighted lotteries, and quantizes transitions.
-Guarantees: AXIOM-01 (<= 0.01 ms), AXIOM-02 (zero heap alloc), AXIOM-07 (<= 500 lines).
+transitions/manager.py - Music Matchmaker, Mode Coherence Orchestrator, & Downbeat Quantizer.
+
+Evaluates musical context, delegates segment mode allocation to transitions/casting.py,
+records transition history in transitions/memory.py on order emission, and quantizes transitions.
+Guarantees: AXIOM-01 (<= 0.01 ms), AXIOM-02 (zero heap alloc in steady-state), AXIOM-07 (<= 500 lines).
 """
 
 from dataclasses import replace
-from enum import Enum
 import random
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from transitions.api import MusicSnapshot, SegmentDescriptor, SegmentOrder
+from transitions.api import ModeProfile, MusicSnapshot, SegmentDescriptor, SegmentOrder
+from transitions.casting import CastResult, cast_transition
 from transitions.director import Transition_Director
 from transitions.effects import set_transition_params
 from transitions.families import (
@@ -18,7 +20,8 @@ from transitions.families import (
     is_staggerable,
     roll_transition_params,
 )
-from transitions.mode_dna import MODE_DNA, get_mode_dna
+from transitions.memory import TransitionMemory
+from transitions.policy import CompiledPolicy, compile_policy, get_default_policy
 from transitions.stagger import (
     StaggerPattern,
     discover_segment_cohorts,
@@ -26,31 +29,26 @@ from transitions.stagger import (
     select_stagger_pattern,
 )
 
-
-class CohortPattern(str, Enum):
-    """Structural allocation pattern for segment cohorts."""
-    DIVERSE = "DIVERSE"
-    SYMMETRIC_PAIRS = "SYMMETRIC_PAIRS"
-    UNISON = "UNISON"
-
-
 TRANSITION_TECHNIQUES: Dict[str, Dict[str, Any]] = {
-    "smooth_cosine_crossfade": {"type": "fade_in_out", "duration": 2.0},
-    "directional_wipe": {"type": "vertical_wipe", "duration": 1.2},
-    "transient_blip": {"type": "explosion", "duration": 0.4},
-    "ember_dissolve": {"type": "ember_dissolve", "duration": 1.8},
-    "luma_melt": {"type": "luma_melt", "duration": 1.6},
-    "breath_dip": {"type": "breath_dip", "duration": 2.0},
-    "silk_wipe": {"type": "silk_wipe", "duration": 1.2},
-    "silk_wipe_reverse": {"type": "silk_wipe_reverse", "duration": 1.2},
-    "iris_open": {"type": "iris_open", "duration": 1.2},
-    "iris_close": {"type": "iris_close", "duration": 1.2},
-    "zipper_merge": {"type": "zipper_merge", "duration": 1.2},
-    "collider": {"type": "collider", "duration": 1.0},
-    "prism_sweep": {"type": "prism_sweep", "duration": 1.4},
-    "flash_cut": {"type": "flash_cut", "duration": 0.5},
-    "staccato_shutter": {"type": "staccato_shutter", "duration": 0.8},
-    "transformer_cut": {"type": "transformer_cut", "duration": 1.0},
+    k: {"type": t, "duration": d}
+    for k, (t, d) in {
+        "smooth_cosine_crossfade": ("fade_in_out", 2.0),
+        "directional_wipe": ("vertical_wipe", 1.2),
+        "transient_blip": ("explosion", 0.4),
+        "ember_dissolve": ("ember_dissolve", 1.8),
+        "luma_melt": ("luma_melt", 1.6),
+        "breath_dip": ("breath_dip", 2.0),
+        "silk_wipe": ("silk_wipe", 1.2),
+        "silk_wipe_reverse": ("silk_wipe_reverse", 1.2),
+        "iris_open": ("iris_open", 1.2),
+        "iris_close": ("iris_close", 1.2),
+        "zipper_merge": ("zipper_merge", 1.2),
+        "collider": ("collider", 1.0),
+        "prism_sweep": ("prism_sweep", 1.4),
+        "flash_cut": ("flash_cut", 0.5),
+        "staccato_shutter": ("staccato_shutter", 0.8),
+        "transformer_cut": ("transformer_cut", 1.0),
+    }.items()
 }
 
 
@@ -63,32 +61,93 @@ def _safe_float(val: Any, default: float = 0.0) -> float:
 
 
 class LocalTransitionManager:
-    """Evaluates musical intent, draws weighted lottery candidates, and quantizes transitions."""
+    """Evaluates musical intent, delegates mode casting to the coherence engine, and quantizes transitions."""
 
     def __init__(
         self,
         director: Optional[Transition_Director] = None,
         segments: Sequence[SegmentDescriptor] = (),
         music: Optional[MusicSnapshot] = None,
+        policy_raw: Optional[Dict[str, Any]] = None,
+        modes: Sequence[ModeProfile] = (),
     ) -> None:
-        """Initialize the LocalTransitionManager with optional director, segments, and music."""
         self.director = director
         self.music: MusicSnapshot = music if music is not None else MusicSnapshot()
         self.segments: List[SegmentDescriptor] = []
+        self.modes: Tuple[ModeProfile, ...] = tuple(modes)
         self._segments_by_name: Dict[str, SegmentDescriptor] = {}
+        self._policy_raw: Optional[Dict[str, Any]] = policy_raw
+        self._compiled_policy: Optional[CompiledPolicy] = None
+        self.memory: TransitionMemory = TransitionMemory(depth=8)
+        self.last_cast_result: Optional[CastResult] = None
 
         self._pending_transition: Optional[Dict[str, Any]] = None
         self._downbeat_timeout: float = 1.20
         self._dwell_timer: float = 0.0
         self._orders: List[SegmentOrder] = []
-        self._cached_available_modes: List[str] = list(MODE_DNA.keys())
         if segments:
-            self.set_installation(segments)
+            self.set_installation(segments, modes)
 
-    def set_installation(self, segments: Sequence[SegmentDescriptor]) -> None:
-        """Update the installation segment descriptors."""
+    def configure(self, policy_raw: Optional[Dict[str, Any]]) -> None:
+        """Store raw coherence policy dict and compile immediately if installation is set."""
+        self._policy_raw = policy_raw
+        self._compiled_policy = None
+        if self._policy_raw is not None and self.segments:
+            self._compile_active_policy()
+
+    def _compile_active_policy(self) -> CompiledPolicy:
+        """Compile active or default policy and sync memory depth."""
+        raw = self._policy_raw if self._policy_raw is not None else get_default_policy(self.segments)
+        self._compiled_policy = compile_policy(raw, tuple(self.segments), self.modes)
+        self.memory.set_depth(self._compiled_policy.settings.memory_depth)
+        return self._compiled_policy
+
+    @property
+    def compiled_policy(self) -> CompiledPolicy:
+        """Return the compiled coherence policy, compiling on demand if needed."""
+        if self._compiled_policy is None:
+            return self._compile_active_policy()
+        return self._compiled_policy
+
+    @property
+    def policy(self) -> Dict[str, Any]:
+        """Return active raw policy or built-in default policy."""
+        return self._policy_raw if self._policy_raw is not None else get_default_policy(self.segments)
+
+    def set_installation(
+        self,
+        segments: Sequence[SegmentDescriptor],
+        modes: Sequence[ModeProfile] = (),
+    ) -> None:
+        """Update installation segment descriptors and mode profiles, recompiling policy."""
         self.segments = list(segments)
         self._segments_by_name = {s.name: s for s in self.segments}
+        if modes:
+            self.modes = tuple(modes)
+        self._compiled_policy = None
+        if self.segments:
+            self._compile_active_policy()
+
+    def allocate_initial(self, music: Optional[MusicSnapshot] = None) -> Dict[str, str]:
+        """
+        Run the coherence allocator once at boot, record the boot cast in history,
+        and return Dict[segment_name, mode_name].
+        """
+        if not self.segments:
+            return {}
+        ctx = music if music is not None else self.music
+        target_dna = self.evaluate_target_dna(ctx)
+        cp = self.compiled_policy
+        res = cast_transition(cp, target_dna, self.segments, self.memory)
+        self.last_cast_result = res
+        self.memory.record(res.full_cast_by_id, res.groupings_by_zone)
+
+        boot_map: Dict[str, str] = {}
+        for sid, mode_name in res.full_cast_by_id.items():
+            seg_name = cp.segment_id_to_name.get(sid, sid)
+            boot_map[seg_name] = mode_name
+            self.set_active_mode(seg_name, mode_name)
+        return boot_map
 
     def set_active_mode(self, segment_name: str, mode_name: str) -> None:
         """Record that a segment accepted its target mode."""
@@ -96,17 +155,11 @@ class LocalTransitionManager:
         if seg is not None:
             updated = replace(seg, active_mode=mode_name)
             self._segments_by_name[segment_name] = updated
-            for idx, existing in enumerate(self.segments):
-                if existing.name == segment_name:
-                    self.segments[idx] = updated
-                    break
+            self.segments = [updated if s.name == segment_name else s for s in self.segments]
 
     def pop_orders(self) -> Tuple[SegmentOrder, ...]:
         """Drain and return emitted segment orders since the last check."""
-        if not self._orders:
-            return ()
-        orders = tuple(self._orders)
-        self._orders.clear()
+        orders, self._orders = tuple(self._orders), []
         return orders
 
     def update(self, dt: float, music: Optional[MusicSnapshot] = None) -> None:
@@ -119,32 +172,30 @@ class LocalTransitionManager:
             if self.director is not None and self.director.is_in_transition:
                 return
 
-            phase = _safe_float(getattr(self.music, "beat_phase", 0.0), 0.0)
+            phase = _safe_float(getattr(self.music, "beat_phase", 0.0))
             is_beat = bool(getattr(self.music, "is_beat", False))
             self._pending_transition["elapsed"] = self._pending_transition.get("elapsed", 0.0) + dt
-            elapsed = self._pending_transition["elapsed"]
-
-            is_beat_trustworthy = _safe_float(getattr(self.music, "beat_trust", 0.0), 0.0) >= 0.20
-            downbeat_hit = (phase < 0.05 and is_beat_trustworthy) or is_beat
-            if downbeat_hit or elapsed >= self._downbeat_timeout:
-                allocation = self._pending_transition["allocation"]
-                config = self._pending_transition["config"]
-                self._pending_transition = None
-                self._execute_transition(allocation, config)
+            is_beat_trustworthy = _safe_float(getattr(self.music, "beat_trust", 0.0)) >= 0.20
+            if ((phase < 0.05 and is_beat_trustworthy) or is_beat) or self._pending_transition["elapsed"] >= self._downbeat_timeout:
+                pending, self._pending_transition = self._pending_transition, None
+                self._execute_transition(
+                    pending["allocation"],
+                    pending["config"],
+                    pending.get("cast_result"),
+                )
 
     # 1. MUSIC MATCHMAKER: Live Context -> Target DNA
 
     def evaluate_target_dna(self, context: Optional[Any] = None) -> Dict[str, float]:
         """Translates live music snapshot metrics into a target mode DNA vector in [0.0, 1.0]."""
         ctx = context if context is not None else self.music
-        e = _safe_float(getattr(ctx, "energy", 0.50), 0.50)
-        s = _safe_float(getattr(ctx, "salience", 0.50), 0.50)
-        t = _safe_float(getattr(ctx, "beat_trust", 0.50), 0.50)
-        nov = _safe_float(getattr(ctx, "novelty", 0.40), 0.40)
-        tension = _safe_float(getattr(ctx, "tension", 0.30), 0.30)
+        e = _safe_float(getattr(ctx, "energy", 0.5), 0.5)
+        s = _safe_float(getattr(ctx, "salience", 0.5), 0.5)
+        t = _safe_float(getattr(ctx, "beat_trust", 0.5), 0.5)
+        nov = _safe_float(getattr(ctx, "novelty", 0.4), 0.4)
+        tension = _safe_float(getattr(ctx, "tension", 0.3), 0.3)
         is_drop = bool(getattr(ctx, "is_drop_impact", False))
         is_sync = bool(getattr(ctx, "is_syncopated", False))
-
         return {
             "energy": round(max(0.0, min(1.0, e)), 4),
             "punch": round(1.0 if is_drop else max(0.0, min(1.0, 0.60 * s + 0.40 * e)), 4),
@@ -152,168 +203,31 @@ class LocalTransitionManager:
             "complexity": round(max(0.0, min(1.0, 0.40 * nov + 0.30 * tension + (0.30 if is_sync else 0.10))), 4),
         }
 
-    # 2. WEIGHTED LOTTERY: Probabilistic Mode Selection
-
-    def select_mode_lottery(
-        self,
-        candidate_pool: List[str],
-        target_dna: Optional[Dict[str, float]] = None,
-        current_mode: Optional[str] = None,
-        spatial_orientation: Optional[str] = None,
-        penalty_mode: Optional[str] = None,
-    ) -> str:
-        """Draws a mode from candidates using Euclidean DNA distance weighting."""
-        if not candidate_pool:
-            return "Rainbow"
-
-        target = target_dna if isinstance(target_dna, dict) else self.evaluate_target_dna()
-        et = _safe_float(target.get("energy", 0.5), 0.5)
-        pt = _safe_float(target.get("punch", 0.5), 0.5)
-        rt = _safe_float(target.get("rhythm", 0.5), 0.5)
-        ct = _safe_float(target.get("complexity", 0.5), 0.5)
-
-        weights: List[float] = []
-        for name in candidate_pool:
-            dna = get_mode_dna(name)
-            de = dna["energy"] - et
-            dp = dna["punch"] - pt
-            dr = dna["rhythm"] - rt
-            dc = dna["complexity"] - ct
-            dist_sq = (de * de) + (dp * dp) + (dr * dr) + (dc * dc)
-
-            w = 1.0 / (1.0 + 4.0 * dist_sq)
-            if spatial_orientation is not None:
-                role = dna.get("spatial_role", "both")
-                if role != "both" and role != spatial_orientation:
-                    w *= 0.15
-            if current_mode is not None and name.lower() == current_mode.lower():
-                w *= 0.20
-            if penalty_mode is not None and name.lower() == penalty_mode.lower():
-                w *= 0.05
-            weights.append(max(0.001, w))
-
-        return random.choices(candidate_pool, weights=weights, k=1)[0]
-
-    # 3. FLEXIBLE COHORT ALLOCATION: Non-rigid Symmetries & Unison
-
-    def choose_cohort_pattern(self, context: Optional[Any] = None) -> CohortPattern:
-        """Probabilistically chooses DIVERSE, SYMMETRIC_PAIRS, or UNISON based on music."""
-        ctx = context if context is not None else self.music
-        p_unison, p_sym, p_div = 0.20, 0.35, 0.45
-
-        if ctx is not None:
-            raw_scene = getattr(ctx, "scene", None)
-            scene_str = str(getattr(raw_scene, "value", raw_scene) or "").upper()
-            if getattr(ctx, "is_drop_impact", False):
-                p_unison, p_sym, p_div = 0.55, 0.30, 0.15
-            elif scene_str == "BUILDUP":
-                p_unison, p_sym, p_div = 0.40, 0.40, 0.20
-            elif getattr(ctx, "is_syncopated", False) or getattr(ctx, "is_locked", False):
-                p_unison, p_sym, p_div = 0.15, 0.45, 0.40
-            elif scene_str == "CHILL":
-                p_unison, p_sym, p_div = 0.10, 0.40, 0.50
-
-        return random.choices(
-            [CohortPattern.DIVERSE, CohortPattern.SYMMETRIC_PAIRS, CohortPattern.UNISON],
-            weights=[p_div, p_sym, p_unison],
-            k=1,
-        )[0]
-
-    def allocate_cohort_modes(
-        self,
-        segment_names: List[str],
-        target_dna: Optional[Dict[str, float]] = None,
-        pattern: Optional[CohortPattern] = None,
-        spatial_orientation: Optional[str] = None,
-    ) -> Dict[str, str]:
-        """Allocates modes across a cohort of segments using the selected pattern."""
-        if not segment_names:
-            return {}
-
-        target = target_dna or self.evaluate_target_dna()
-        chosen_pattern = pattern or self.choose_cohort_pattern()
-        n = len(segment_names)
-        pool = self._get_candidate_pool_for_segments(segment_names)
-        allocation: Dict[str, str] = {}
-
-        if chosen_pattern == CohortPattern.UNISON or n == 1:
-            mode_unison = self.select_mode_lottery(pool, target, spatial_orientation=spatial_orientation)
-            for seg in segment_names:
-                allocation[seg] = mode_unison
-            return allocation
-
-        if chosen_pattern == CohortPattern.SYMMETRIC_PAIRS:
-            mode_a = self.select_mode_lottery(pool, target, spatial_orientation=spatial_orientation)
-            pool_b = [m for m in pool if m.lower() != mode_a.lower()] or pool
-            mode_b = self.select_mode_lottery(pool_b, target, spatial_orientation=spatial_orientation, penalty_mode=mode_a)
-
-            if n == 4:
-                mapping = [mode_a, mode_b, mode_a, mode_b] if random.random() < 0.50 else [mode_a, mode_b, mode_b, mode_a]
-                for idx, seg in enumerate(segment_names):
-                    allocation[seg] = mapping[idx]
-            elif n == 3:
-                mapping = [mode_a, mode_b, mode_a]
-                for idx, seg in enumerate(segment_names):
-                    allocation[seg] = mapping[idx]
-            elif n == 2:
-                allocation[segment_names[0]] = mode_a
-                allocation[segment_names[1]] = mode_b
-            else:
-                for idx, seg in enumerate(segment_names):
-                    allocation[seg] = mode_a if (idx % 2 == 0) else mode_b
-            return allocation
-
-        for seg in segment_names:
-            cur_mode = self._get_current_mode_name(seg)
-            allocation[seg] = self.select_mode_lottery(
-                pool, target, current_mode=cur_mode, spatial_orientation=spatial_orientation
-            )
-        return allocation
+    # 2. COHERENCE CASTING DELEGATION
 
     def allocate_all_segments(
         self,
         target_dna: Optional[Dict[str, float]] = None,
-        force_pattern: Optional[CohortPattern] = None,
     ) -> Dict[str, str]:
-        """Partitions the installation into natural cohorts and allocates modes across all segments."""
-        target = target_dna or self.evaluate_target_dna()
-        verts, rings = self._discover_segment_cohorts()
-        full_allocation: Dict[str, str] = {}
+        """Delegates installation mode allocation to the Mode Coherence casting engine."""
+        if not self.segments:
+            return {}
+        target = target_dna if isinstance(target_dna, dict) else self.evaluate_target_dna()
+        cp = self.compiled_policy
+        res = cast_transition(cp, target, self.segments, self.memory)
+        self.last_cast_result = res
+        return dict(res.orders_by_segment_name)
 
-        if verts:
-            full_allocation.update(
-                self.allocate_cohort_modes(verts, target_dna=target, pattern=force_pattern, spatial_orientation="vertical")
-            )
-        for ring_cohort in rings:
-            if ring_cohort:
-                full_allocation.update(
-                    self.allocate_cohort_modes(ring_cohort, target_dna=target, pattern=force_pattern, spatial_orientation="horizontal")
-                )
-
-        all_segs = [s.name for s in self.segments]
-        remainder = [s for s in all_segs if s not in full_allocation]
-        if remainder:
-            pool = self._get_candidate_pool_for_segments(remainder)
-            for s in remainder:
-                full_allocation[s] = self.select_mode_lottery(pool, target)
-
-        return full_allocation
-
-    # 4. DOWNBEAT QUANTIZATION & CLEAN TECHNIQUES
+    # 3. DOWNBEAT QUANTIZATION & CLEAN TECHNIQUES
 
     def select_transition_technique(self, context: Optional[Any] = None) -> Dict[str, Any]:
         """Picks a transition technique based on audio kinetics (drop -> explosion, rhythmic -> wipe, chill -> fade)."""
         ctx = context if context is not None else self.music
         if ctx is not None:
-            is_drop = bool(getattr(ctx, "is_drop_impact", False))
-            energy = _safe_float(getattr(ctx, "energy", 0.0), 0.0)
-            salience = _safe_float(getattr(ctx, "salience", 0.0), 0.0)
-            is_rhythmic = bool(getattr(ctx, "is_rhythmic", False))
-            if is_drop or energy >= 0.85:
+            if bool(getattr(ctx, "is_drop_impact", False)) or _safe_float(getattr(ctx, "energy", 0.0)) >= 0.85:
                 return dict(TRANSITION_TECHNIQUES["transient_blip"])
-            if is_rhythmic or salience >= 0.50:
+            if bool(getattr(ctx, "is_rhythmic", False)) or _safe_float(getattr(ctx, "salience", 0.0)) >= 0.50:
                 return dict(TRANSITION_TECHNIQUES["directional_wipe"])
-
         return dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
 
     def generate_staggered_configs(
@@ -325,8 +239,7 @@ class LocalTransitionManager:
     ) -> Dict[str, Dict[str, Any]]:
         """Builds per-segment transition configurations respecting TransitionFamily stagger contracts."""
         cfg = base_config or self.select_transition_technique()
-        base_tech = str(cfg.get("type", "fade_in_out"))
-        base_dur = float(cfg.get("duration", 2.0))
+        base_tech, base_dur = str(cfg.get("type", "fade_in_out")), float(cfg.get("duration", 2.0))
         if not is_staggerable(base_tech):
             stagger_pat = StaggerPattern.SIMULTANEOUS
         elif pattern is not None:
@@ -346,6 +259,7 @@ class LocalTransitionManager:
             base_duration=base_dur,
             pattern=stagger_pat,
             step_delay=step_delay,
+            segments=self.segments,
         )
 
     def schedule_transition(
@@ -357,7 +271,13 @@ class LocalTransitionManager:
         stagger_pattern: Optional[StaggerPattern] = None,
     ) -> None:
         """Queues or immediately triggers an installation mode transition."""
-        target_alloc = allocation if allocation is not None else self.allocate_all_segments()
+        if allocation is not None:
+            target_alloc = allocation
+            cast_res = None
+        else:
+            target_alloc = self.allocate_all_segments()
+            cast_res = self.last_cast_result
+
         if staggered:
             base_cfg = transition_config if (isinstance(transition_config, dict) and "type" in transition_config) else None
             target_cfg = self.generate_staggered_configs(target_alloc, base_config=base_cfg, pattern=stagger_pattern)
@@ -368,13 +288,23 @@ class LocalTransitionManager:
 
         if not quantize_downbeat:
             self._pending_transition = None
-            self._execute_transition(target_alloc, target_cfg)
+            self._execute_transition(target_alloc, target_cfg, cast_res)
             return
 
-        self._pending_transition = {"allocation": target_alloc, "config": target_cfg, "elapsed": 0.0}
+        self._pending_transition = {
+            "allocation": target_alloc,
+            "config": target_cfg,
+            "cast_result": cast_res,
+            "elapsed": 0.0,
+        }
 
-    def _execute_transition(self, allocation: Dict[str, str], transition_config: Any) -> None:
-        """Builds SegmentOrders for non-blocked segments, rolls family parameters, and starts Transition_Director."""
+    def _execute_transition(
+        self,
+        allocation: Dict[str, str],
+        transition_config: Any,
+        cast_result: Optional[CastResult] = None,
+    ) -> None:
+        """Builds SegmentOrders for non-blocked segments, records history, and starts Transition_Director."""
         self._orders.clear()
         if not allocation:
             if self.director is not None:
@@ -393,11 +323,7 @@ class LocalTransitionManager:
         for seg_name, mode_name in allocation.items():
             segment = self._segments_by_name.get(seg_name)
             if segment is not None and not segment.is_blocked:
-                seg_cfg = (
-                    transition_config[seg_name]
-                    if (is_per_seg and seg_name in transition_config)
-                    else (transition_config or {})
-                )
+                seg_cfg = transition_config[seg_name] if (is_per_seg and seg_name in transition_config) else (transition_config or {})
                 tech = str(seg_cfg.get("type", "fade_in_out"))
                 dur = float(seg_cfg.get("duration", 2.0))
                 offset = float(seg_cfg.get("start_offset", 0.0))
@@ -413,46 +339,46 @@ class LocalTransitionManager:
                     )
                 )
                 emitted += 1
-                if offset + dur > max_duration:
-                    max_duration = offset + dur
+                max_duration = max(max_duration, offset + dur)
                 if primary_tech == "fade_in_out" and seg_cfg.get("type"):
                     primary_tech = str(seg_cfg["type"])
 
         if emitted > 0:
+            # Record cast and groupings in history ONLY when orders are emitted (§4 Step 7)
+            if cast_result is not None:
+                self.memory.record(cast_result.full_cast_by_id, cast_result.groupings_by_zone)
+            elif self.segments:
+                cp = self.compiled_policy
+                manual_cast: Dict[str, str] = {}
+                for s in self.segments:
+                    sid = cp.segment_name_to_id.get(s.name, s.name)
+                    if not s.is_blocked and s.name in allocation:
+                        manual_cast[sid] = allocation[s.name]
+                    elif s.active_mode:
+                        manual_cast[sid] = s.active_mode
+                self.memory.record(manual_cast)
+
             set_transition_params(roll_transition_params(primary_tech))
             if self.director is not None:
-                if is_per_seg:
-                    self.director.start_transition(
-                        {"type": primary_tech, "duration": max_duration, "total_duration": max_duration}
+                cfg = (
+                    {"type": primary_tech, "duration": max_duration, "total_duration": max_duration}
+                    if is_per_seg
+                    else (
+                        dict(transition_config)
+                        if isinstance(transition_config, dict)
+                        else {"type": primary_tech, "duration": max_duration}
                     )
-                else:
-                    cfg = dict(transition_config) if isinstance(transition_config, dict) else {"type": primary_tech, "duration": max_duration}
-                    if max_duration > float(cfg.get("duration", 0.0)):
-                        cfg["total_duration"] = max_duration
-                    self.director.start_transition(cfg)
+                )
+                if not is_per_seg and max_duration > float(cfg.get("duration", 0.0)):
+                    cfg["total_duration"] = max_duration
+                self.director.start_transition(cfg)
             self._dwell_timer = 0.0
         elif self.director is not None:
             self.director.is_pending = False
-
-    # INTERNAL HELPERS
 
     def _discover_segment_cohorts(self) -> Tuple[List[str], List[List[str]]]:
         """Discovers vertical pillars and horizontal rings from installation segments."""
         return discover_segment_cohorts(self.segments)
 
-    def _get_candidate_pool_for_segments(self, segment_names: List[str]) -> List[str]:
-        """Aggregates mode names available across the given segments."""
-        pool_set = set()
-        for name in segment_names:
-            seg = self._segments_by_name.get(name)
-            if seg is not None and seg.available_modes:
-                pool_set.update(seg.available_modes)
-        if pool_set:
-            return sorted(pool_set)
-        return list(self._cached_available_modes)
 
-    def _get_current_mode_name(self, segment_name: str) -> Optional[str]:
-        seg = self._segments_by_name.get(segment_name)
-        if seg is not None and seg.active_mode:
-            return seg.active_mode
-        return None
+TransitionManager = LocalTransitionManager

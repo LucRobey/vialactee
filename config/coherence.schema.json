@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "config/coherence.schema.json",
+  "title": "Vialactee Mode Coherence Policy Schema (v1)",
+  "description": "JSON Schema (Draft-07) for declarative mode coherence policies (coherence_full.json, coherence_small.json).",
+  "type": "object",
+  "required": ["settings", "zones", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "settings": {
+      "type": "object",
+      "required": ["maxDifferentModes", "temperature", "memoryDepth", "repeatPenalty"],
+      "additionalProperties": false,
+      "properties": {
+        "maxDifferentModes": { "type": "integer", "minimum": 1 },
+        "temperature": { "type": "number", "minimum": 0.05, "maximum": 5.0 },
+        "memoryDepth": { "type": "integer", "minimum": 0 },
+        "repeatPenalty": { "type": "number", "minimum": 0.0 }
+      }
+    },
+    "zones": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["segments", "groupings"],
+        "additionalProperties": false,
+        "properties": {
+          "segments": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "groupings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "weight", "groups"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "weight": { "type": "number", "exclusiveMinimum": 0.0 },
+                "groups": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": { "type": "string", "minLength": 1 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "when"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "enabled": { "type": "boolean" },
+          "note": { "type": "string" },
+          "when": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "at": { "type": "string", "minLength": 1 },
+                "mode": { "type": "string", "minLength": 1 },
+                "tag": { "type": "string", "pattern": "^[a-z0-9_-]+:[a-z0-9_-]+$" },
+                "match": { "type": "string", "enum": ["any", "all"] }
+              },
+              "oneOf": [
+                { "required": ["mode"] },
+                { "required": ["tag"] }
+              ]
+            }
+          },
+          "effect": { "type": "string", "enum": ["forbid"] },
+          "weight": { "type": "number", "exclusiveMinimum": 0.0 }
+        },
+        "oneOf": [
+          { "required": ["effect"] },
+          { "required": ["weight"] }
+        ]
+      }
+    }
+  }
+}

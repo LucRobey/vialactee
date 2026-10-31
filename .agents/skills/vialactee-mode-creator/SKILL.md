@@ -71,12 +71,14 @@ def get_settings_schema(self) -> List[Dict[str, Any]]:
 When adding a new mode:
 1. Answer the Four-Question Worksheet in [`docs/manuals/mode_authoring_guide.md`](../../../docs/manuals/mode_authoring_guide.md) and create `modes/<ModeName>_mode.py` with `LEAD`, `SECONDARY`, and a `Lead:` class docstring line.
 2. Register the mode in [`docs/reference/modes_catalog.md`](../../../docs/reference/modes_catalog.md) with `Lead`, `Secondary`, visual description, orientation, and parameter schema.
-3. Register the mode entry in [`config/modes.json`](../../../config/modes.json):
+3. Register the mode entry in [`config/modes.json`](../../../config/modes.json) with its 4-float `dna` vector and controlled vocabulary `tags` (`lead:<LEAD>` must match the class `LEAD` attribute):
    ```json
    {
      "name": "Display Name",
      "module": "<ModeName>_mode",
-     "class": "<ModeName>_mode"
+     "class": "<ModeName>_mode",
+     "dna": { "energy": 0.60, "punch": 0.70, "rhythm": 0.80, "complexity": 0.40 },
+     "tags": ["lead:beat", "form:bar", "origin:center", "color:palette", "layer:pulse"]
    }
    ```
-   Each segment in `core/Segment.py` reads `modes.json` on boot and dynamically imports/instantiates the mode.
+   Each segment in `core/Segment.py` reads `modes.json` on boot and dynamically imports/instantiates the mode, while `TransitionBridge.build_mode_profiles()` forwards `dna` and `tags` to the `transitions/` coherence engine.

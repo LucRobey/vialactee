@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "settings": {
+    "maxDifferentModes": 3,
+    "temperature": 1.0,
+    "memoryDepth": 8,
+    "repeatPenalty": 3.0
+  },
+  "zones": {
+    "pillars": {
+      "segments": ["v1", "v2", "v3", "v4"],
+      "groupings": [
+        { "id": "pillars-all",    "weight": 3, "groups": [["v1", "v2", "v3", "v4"]] },
+        { "id": "pillars-halves", "weight": 2, "groups": [["v1", "v2"], ["v3", "v4"]] },
+        { "id": "pillars-inner",  "weight": 2, "groups": [["v2", "v3"], ["v1", "v4"]] }
+      ]
+    },
+    "horizontals": {
+      "segments": ["h00", "h10", "h11", "h20", "h30", "h31", "h32"],
+      "groupings": [
+        { "id": "h-all",    "weight": 1, "groups": [["all"]] },
+        { "id": "h-tiers",  "weight": 2, "groups": [["tier:canopy"], ["tier:mid"], ["tier:low"]] },
+        { "id": "h-halves", "weight": 2, "groups": [["half:left"], ["half:right"]] }
+      ]
+    }
+  },
+  "rules": [
+    { "id": "no-vertical-axis-on-horizontals", "when": [ {"at": "orientation:horizontal", "tag": "axis:vertical"} ],   "weight": 0.15 },
+    { "id": "no-horizontal-axis-on-verticals", "when": [ {"at": "orientation:vertical",   "tag": "axis:horizontal"} ], "weight": 0.15 },
+    { "id": "example-forbid", "enabled": false, "when": [ {"mode": "Hyper Strobe"}, {"mode": "Metronome"} ], "effect": "forbid" },
+    { "id": "example-recipe", "enabled": false, "when": [ {"at": "v1", "mode": "Power Bar"}, {"at": "v2", "mode": "Shining Stars"} ], "weight": 1.5 }
+  ]
+}

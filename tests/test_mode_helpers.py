@@ -258,38 +258,104 @@ class TestBlendEquivalence(_ModeTestCase):
         np.testing.assert_array_equal(mode.rgb_list, target)
 
 
-class TestModeDnaSpatialRoles(unittest.TestCase):
-    def test_spatial_roles_match_modes_catalog(self):
-        from transitions.mode_dna import MODE_DNA, get_mode_dna
+class TestModesJsonRegistryAndTags(unittest.TestCase):
+    """Verifies that config/modes.json is the single source of truth for mode DNA and tags (§3.2)."""
 
-        expected_vertical = ("Power Bar",)
-        expected_horizontal = (
-            "Middle Bar",
-            "Opposite Sides",
-            "Coloured Middle Wave",
-            "Extending Waves",
-        )
-        expected_both = (
-            "Rainbow",
-            "Bary Rainbow",
-            "Shining Stars",
-            "Proportion Rainbow",
-            "Hyper Strobe",
-            "Chromatic Chaser",
-            "Metronome",
-            "Impact Shockwave",
-        )
-        for vert_name in expected_vertical:
-            self.assertEqual(MODE_DNA[vert_name]["spatial_role"], "vertical")
-        for horiz_name in expected_horizontal:
-            self.assertEqual(MODE_DNA[horiz_name]["spatial_role"], "horizontal")
-        for both_name in expected_both:
-            self.assertEqual(MODE_DNA[both_name]["spatial_role"], "both")
-        self.assertEqual(get_mode_dna("Power_bar_mode")["spatial_role"], "vertical")
-        self.assertEqual(get_mode_dna("Middle_bar_mode")["spatial_role"], "horizontal")
-        self.assertEqual(get_mode_dna("Chromatic_chaser_mode")["spatial_role"], "both")
-        roles_present = {entry["spatial_role"] for entry in MODE_DNA.values()}
-        self.assertEqual(roles_present, {"vertical", "horizontal", "both"})
+    def setUp(self):
+        import json
+        import os
+        self.repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        self.modes_json_path = os.path.join(self.repo_root, "config", "modes.json")
+        with open(self.modes_json_path, "r", encoding="utf-8") as f:
+            self.data = json.load(f)
+        self.vocab = self.data.get("vocabulary", {})
+        self.modes = self.data.get("standard_modes", [])
+        self.modes_by_name = {m["name"]: m for m in self.modes}
+
+    def test_vocabulary_declarations(self):
+        expected = {
+            "lead": ["beat", "level", "spectrum", "transient"],
+            "axis": ["vertical", "horizontal"],
+            "form": ["field", "bar", "wave", "head", "sparkle", "flash"],
+            "origin": ["center", "bottom", "sweep", "global", "scatter"],
+            "color": ["own-hue", "palette"],
+            "layer": ["bed", "pulse", "meter", "accent"],
+        }
+        self.assertEqual(set(self.vocab.keys()), set(expected.keys()))
+        for ns, vals in expected.items():
+            spec = self.vocab[ns]
+            self.assertIsInstance(spec, dict)
+            self.assertTrue(spec.get("single"))
+            self.assertEqual(spec.get("values"), vals)
+        self.assertTrue(self.vocab["axis"].get("optional"))
+
+    def test_all_13_modes_present_with_valid_dna_and_tags(self):
+        self.assertEqual(len(self.modes), 13)
+        expected_axes = {
+            "Power Bar": "axis:vertical",
+            "Middle Bar": "axis:horizontal",
+            "Opposite Sides": "axis:horizontal",
+            "Coloured Middle Wave": "axis:horizontal",
+            "Extending Waves": "axis:horizontal",
+            "Rainbow": None,
+            "Bary Rainbow": None,
+            "Shining Stars": None,
+            "Proportion Rainbow": None,
+            "Hyper Strobe": None,
+            "Chromatic Chaser": None,
+            "Metronome": None,
+            "Impact Shockwave": None,
+        }
+
+        for name, expected_axis in expected_axes.items():
+            self.assertIn(name, self.modes_by_name)
+            entry = self.modes_by_name[name]
+
+            dna = entry.get("dna", {})
+            for metric in ("energy", "punch", "rhythm", "complexity"):
+                self.assertIn(metric, dna)
+                val = dna[metric]
+                self.assertIsInstance(val, (int, float))
+                self.assertTrue(0.0 <= val <= 1.0)
+
+            tags = entry.get("tags", [])
+            by_ns = {}
+            for tag in tags:
+                self.assertIn(":", tag)
+                ns, val = tag.split(":", 1)
+                self.assertIn(ns, self.vocab)
+                self.assertIn(val, self.vocab[ns]["values"])
+                by_ns.setdefault(ns, []).append(val)
+
+            for ns, spec in self.vocab.items():
+                count = len(by_ns.get(ns, []))
+                if spec.get("optional"):
+                    self.assertIn(count, (0, 1), f"{name} namespace {ns} count={count}")
+                else:
+                    self.assertEqual(count, 1, f"{name} missing required single namespace {ns}")
+
+            if expected_axis is None:
+                self.assertNotIn("axis", by_ns, f"{name} should omit optional axis tag")
+            else:
+                self.assertIn(expected_axis, tags)
+
+    def test_lead_tags_match_implementation_code_ast(self):
+        import os
+        for entry in self.modes:
+            mod_path = os.path.join(self.repo_root, "modes", f"{entry['module']}.py")
+            with open(mod_path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read(), filename=mod_path)
+            code_lead = None
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef) and node.name == entry["class"]:
+                    for item in node.body:
+                        if isinstance(item, ast.Assign):
+                            for target in item.targets:
+                                if isinstance(target, ast.Name) and target.id == "LEAD":
+                                    if isinstance(item.value, ast.Constant):
+                                        code_lead = item.value.value
+            self.assertIsNotNone(code_lead, f"Could not find LEAD constant on {entry['class']}")
+            self.assertIn(f"lead:{code_lead}", entry["tags"])
 
 
 class TestPart1ModeBugFixes(_ModeTestCase):

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "settings": {
+    "maxDifferentModes": 2,
+    "temperature": 1.0,
+    "memoryDepth": 8,
+    "repeatPenalty": 3.0
+  },
+  "zones": {
+    "strips": {
+      "segments": ["s1", "s2", "s3"],
+      "groupings": [
+        { "id": "strips-all",   "weight": 3, "groups": [["all"]] },
+        { "id": "strips-outer", "weight": 2, "groups": [["s1", "s3"], ["s2"]] },
+        { "id": "strips-each",  "weight": 1, "groups": [["s1"], ["s2"], ["s3"]] }
+      ]
+    }
+  },
+  "rules": [
+    { "id": "no-horizontal-axis-on-verticals", "when": [ {"at": "orientation:vertical", "tag": "axis:horizontal"} ], "weight": 0.15 }
+  ]
+}

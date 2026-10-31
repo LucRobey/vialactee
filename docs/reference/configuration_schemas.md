@@ -177,62 +177,73 @@ Granular loop profiling parameters inside `app_config.json`:
 
 ---
 
-## 6. Mode Registry: `config/modes.json`
+## 6. Mode Registry & Fingerprints: `config/modes.json`
 
-Maps human-readable visual mode names to Python module and class names in `/modes/`.
+Maps human-readable visual mode names to Python module/class names in `/modes/`, and serves as the single source of truth for each mode's 4-float `dna` vector and controlled `tags` vocabulary.
 
 ```json
 {
+  "vocabulary": {
+    "lead":   { "single": true, "values": ["beat", "level", "spectrum", "transient"] },
+    "axis":   { "single": true, "optional": true, "values": ["vertical", "horizontal"] },
+    "form":   { "single": true, "values": ["field", "bar", "wave", "head", "sparkle", "flash"] },
+    "origin": { "single": true, "values": ["center", "bottom", "sweep", "global", "scatter"] },
+    "color":  { "single": true, "values": ["own-hue", "palette"] },
+    "layer":  { "single": true, "values": ["bed", "pulse", "meter", "accent"] }
+  },
   "standard_modes": [
     {
       "name": "Rainbow",
       "module": "Rainbow_mode",
-      "class": "Rainbow_mode"
-    },
-    {
-      "name": "Hyper Strobe",
-      "module": "Hyper_strobe_mode",
-      "class": "Hyper_strobe_mode"
+      "class": "Rainbow_mode",
+      "dna": { "energy": 0.35, "punch": 0.10, "rhythm": 0.20, "complexity": 0.30 },
+      "tags": ["lead:spectrum", "form:field", "origin:global", "color:own-hue", "layer:bed"]
     }
   ]
 }
 ```
 
-* **Dynamic Discovery:** `Mode_master` reads `modes.json` at startup and dynamically imports `modes.<module>.<class>`.
-* **Adding a New Mode:** To register a custom mode, write `modes/My_custom_mode.py` inheriting from `modes.Mode`, then append an entry to `modes.json`.
+* **Dynamic Discovery:** `Mode_master` reads `modes.json` at startup, dynamically imports `modes.<module>.<class>`, and passes `ModeProfile(name, dna, tags)` into `TransitionService` via `TransitionBridge.build_mode_profiles()`.
+* **Vocabulary Enforcement:** `tests/test_mode_helpers.py` verifies that every mode in `standard_modes` defines valid `dna` floats in `[0.0, 1.0]`, carries valid `namespace:value` tags matching `vocabulary`, and has `lead:<X>` matching its Python `LEAD` constant.
 
 ---
 
-## 7. Physical Geometry & UI Topology: `segments_full.json` & `segments_small.json`
+## 7. Physical Geometry, Tags & UI Topology: `segments_full.json` & `segments_small.json`
 
-These files represent the **single source of truth** uniting physical LED mapping with the Wabb Topology Web UI.
+These files represent the **single source of truth** uniting physical LED mapping, geometry tags, and the Wabb Topology Web UI.
 
 ### Segment Definition Schema
 
 ```json
 {
-  "name": "v1",
-  "size": 133,
-  "orientation": "vertical",
-  "start": { "x": 0, "y": 0 },
-  "step": { "x": 0, "y": 1 },
-  "order": 0,
-  "channel": 1,
-  "ui": {
-    "id": "v1",
-    "col": 1,
-    "row": 2,
-    "w": 1,
-    "h": 4,
-    "color": "#4A90E2"
-  }
+  "vocabulary": {
+    "tier": { "single": true, "optional": true, "values": ["canopy", "mid", "low"] },
+    "half": { "single": true, "optional": true, "values": ["left", "right"] },
+    "pos":  { "single": true, "optional": true, "values": ["outer", "inner"] },
+    "size": { "single": true, "optional": true, "values": ["long", "medium", "short"] }
+  },
+  "segs_1": [
+    {
+      "id": "v4",
+      "name": "Segment v4",
+      "size": 133,
+      "orientation": "vertical",
+      "tags": ["half:right", "pos:outer"],
+      "start": { "x": 6, "y": 4 },
+      "step": { "x": 0, "y": -0.030303030303030304 },
+      "order": 0,
+      "channel": 1,
+      "ui": { "col": 7, "row": 2, "w": 1, "h": 4, "color": "#4A90E2" }
+    }
+  ]
 }
 ```
 
-* **Physical Geometry (for spatial transitions & visualizer):**
+* **Physical Geometry & Tags (for spatial transitions, coherence rules & visualizer):**
   * `size` (or `length`): Number of physical LEDs on this strip.
-  * `orientation`: `"horizontal"`, `"vertical"`, `"vertical_up"`. (Vertical strips strictly follow the Vertical Invariant: AXIOM-03).
-  * `start` & `step`: 2D spatial coordinate vectors used by `Configurations_manager.get_segment_coordinates()` to compute spatial wave effects across strips.
+  * `orientation`: `"horizontal"`, `"vertical"`, `"vertical_up"`. (Vertical strips strictly follow the Vertical Invariant: AXIOM-03). Also exposed implicitly as `orientation:vertical` / `orientation:horizontal` to coherence rules.
+  * `tags`: Controlled geometry tags (`tier:canopy|mid|low`, `half:left|right`, `pos:outer|inner`, `size:long|medium|short`) used by `transitions/policy.py` and `transitions/stagger.py`.
+  * `start` & `step`: 2D spatial coordinate vectors used by `Configuration_manager.get_segment_coordinates()` to compute spatial wave effects across strips.
   * `channel`: Hardware output channel (1 or 2).
 * **UI Grid Topology (for Wabb React Interface):**
   * `ui.col`, `ui.row`, `ui.w`, `ui.h`: Studio grid positioning and sizing in the topology designer.
@@ -242,9 +253,13 @@ These files represent the **single source of truth** uniting physical LED mappin
 
 ---
 
-## 8. Persisted Mode Settings (`mode_settings`)
+## 8. Mode Coherence Policy (`config/coherence_full.json`, `config/coherence_small.json`) & Persisted Mode Settings (`mode_settings`)
 
-Presets and playlists no longer exist (`data/configurations*.json` and `Data_reader.py` have been removed). Every run starts from a random mode and direction per segment, and the `transitions/` sector changes modes live from the music.
+Mode allocation at startup (`allocate_initial`) and on every transition (`cast_transition`) is governed by the declarative coherence policy loaded via `config/coherence_loader.py` and validated against [`config/coherence.schema.json`](../../config/coherence.schema.json) and `transitions/policy.py`:
+
+* **`settings`:** `maxDifferentModes` (global active mode budget, default `3` on full, `2` on small), `temperature` (`1.0`), `memoryDepth` (`8`), and `repeatPenalty` (`3.0`).
+* **`zones`:** Disjoint segment zones, each with weighted `groupings` (`[{"id": "...", "weight": 1.0, "groups": [[...]]}]`) that partition the zone's segments into unison groups.
+* **`rules`:** Declarative constraints and preferences (`[{"id": "...", "when": [{"at"?: "...", "mode"|"tag": "...", "match"?: "any" | "all"}], "effect": "forbid" | "weight": number}]`).
 
 Live per-mode parameter tweaks (Mode Settings page, `set_mode_setting`) are persisted in `config/app_config.json` via `AppConfigStore` under the optional `mode_settings` key, created on the first edit:
 

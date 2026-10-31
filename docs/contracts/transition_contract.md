@@ -13,8 +13,8 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`mood
 | # | Door | Dir | Shape (in `api.py`) | Notes |
 | :-: | :--- | :-: | :--- | :--- |
 | 1 | Music | in | `MusicSnapshot` | Read-only, speaker-time + lookahead triggers. Fields have defaults; the trust of each `music/` signal is stated only in [`music_analyzer_contract.md`](music_analyzer_contract.md). |
-| 2 | Installation | in | `InstallationSnapshot`, `SegmentDescriptor` | Segments, orientation, modes available, active mode, blocked. `room_bounds` comes from the layout. |
-| 3 | Requests | in | `request_next`, `request_drop`, `set_locked`, `set_auto_interval` | The UI and manual input all arrive as requests. |
+| 2 | Installation | in | `InstallationSnapshot`, `SegmentDescriptor`, `ModeProfile` | Segments (`id`, `orientation`, `tags`, `available_modes`, `active_mode`, `is_blocked`), `ModeProfile` (`name`, `dna`, `tags`), and `room_bounds`. |
+| 3 | Requests | in | `configure`, `allocate_initial`, `request_next`, `request_drop`, `set_locked`, `set_auto_interval` | Policy configuration (`configure(policy)`), startup allocation (`allocate_initial(music)`), UI, and manual input. |
 | 4 | Orders | out | `TransitionOrders` containing one `SegmentOrder` per segment | Each entry has its own mode, technique, duration, direction, `start_offset`, and `mode_handshake`. |
 | 5 | Acknowledgement | in | `OrderAck` | The caller says which segments accepted (a segment already in transition refuses). |
 | 6 | Blending | out | `blend(dest, incoming, progress, technique, coords)` | **In place**, returns nothing, zero allocation per frame. |
@@ -39,11 +39,11 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`mood
 | `is_beat` | `listener.is_beat` | Beat quantization trigger with `1.2 s` timeout fallback if the flywheel stalls. |
 | `salience` | `context.salience` | Soft weight in target DNA (`punch`, `rhythm`) and technique selection. |
 | `beat_trust` | `context.beat_trust` | Gates `beat_phase` quantization (`>= 0.20`) and weights `rhythm` DNA. |
-| `is_locked` | `context.is_locked` | Soft probability weight in cohort pattern lottery. |
-| `is_syncopated` | `context.is_syncopated` | Soft probability weight in complexity DNA and cohort lottery. |
+| `is_locked` | `context.is_locked` | Soft probability weight in stagger selection. |
+| `is_syncopated` | `context.is_syncopated` | Soft probability weight in complexity DNA. |
 | `novelty` | `context.novelty` | Soft weight (`0.4 * novelty`) in target `complexity` DNA. |
 | `tension` | `context.tension` | Soft weight (`0.3 * tension`) in target `complexity` DNA. |
-| `scene` | `context.scene.value` | Soft probability bias in cohort lottery (`CHILL` vs `BUILDUP`); pre-drop trigger gated by cooldown. |
+| `scene` | `context.scene.value` | Soft probability bias in stagger pattern selection; pre-drop trigger gated by cooldown. |
 | `is_rhythmic` | `context.is_rhythmic` | Selects `directional_wipe` vs `smooth_cosine_crossfade` when transition fires. |
 | `is_drop_impact` | `context.is_drop_impact` | Triggers `drop_impact` transition (`explosion` `0.4 s`), resetting cooldown timer. |
 | `is_drop_imminent` | `context.is_drop_imminent` | Pre-drop indicator from lookahead countdown. |
@@ -56,19 +56,25 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`mood
 
 ---
 
-## Part B: Current internals (as built, 2026-10-15)
+## Part B: Current internals (as built, 2026-10-30)
 
 > This part describes the implementation inside the sealed room and its boundary glue. Sections marked **[GAP]** are not wired or not implemented yet.
 
-Source files (all but the last four inside the room):
+Source files (first ten inside the room, remaining outside):
+[`transitions/api.py`](../../transitions/api.py) (doors & DTOs) ·
+[`transitions/policy.py`](../../transitions/policy.py) (coherence policy compiler, static satisfiability & 200-cast feasibility probe) ·
+[`transitions/casting.py`](../../transitions/casting.py) (joint transition caster & Gibbs refinement) ·
+[`transitions/memory.py`](../../transitions/memory.py) (ring buffer & exponential variety decay) ·
 [`transitions/manager.py`](../../transitions/manager.py) (decision & parameter rolling) ·
 [`transitions/director.py`](../../transitions/director.py) (clock + trigger) ·
 [`transitions/engine.py`](../../transitions/engine.py) (2D spatial blending & dispatcher) ·
 [`transitions/effects.py`](../../transitions/effects.py) (1D strip-intrinsic & organic shaders) ·
 [`transitions/families.py`](../../transitions/families.py) (multi-family contracts & generative parameters) ·
-[`transitions/stagger.py`](../../transitions/stagger.py) (staggered cohort configs) ·
+[`transitions/stagger.py`](../../transitions/stagger.py) (tag-first staggered cohort configs) ·
 [`transitions/service.py`](../../transitions/service.py) (front door) ·
-[`transitions/mode_dna.py`](../../transitions/mode_dna.py) (mode fingerprints) ·
+[`config/modes.json`](../../config/modes.json) (mode DNA & vocabulary tags) ·
+[`config/coherence_full.json`](../../config/coherence_full.json) & [`config/coherence_small.json`](../../config/coherence_small.json) (declarative coherence policies) ·
+[`config/coherence_loader.py`](../../config/coherence_loader.py) (outside policy loader) ·
 [`core/TransitionBridge.py`](../../core/TransitionBridge.py) (outside glue) ·
 [`core/Segment.py`](../../core/Segment.py) (per-segment dual buffer + 3-layer mode handshake) ·
 [`mood/api.py`](../../mood/api.py) (palettes, separate sealed sector) ·
@@ -79,18 +85,21 @@ Source files (all but the last four inside the room):
 ## 1. Pipeline: how a transition happens
 
 ```
- TRIGGER                DECIDE (LocalTransitionManager)                 EXECUTE
- ───────                ────────────────────────────────                ───────
+ TRIGGER                DECIDE (LocalTransitionManager + Casting)       EXECUTE
+ ───────                ─────────────────────────────────────────       ───────
  Director timer   ─┐    1. evaluate_target_dna(music) → target DNA
- (20 s default)    │    2. choose_cohort_pattern(music) → DIVERSE/SYM/UNISON
- Music triggers    ├──► 3. allocate_all_segments()    → {segment: mode}
- request_next      │    4. select_transition_technique(music) → {type, duration}
- request_drop     ─┘    5. schedule_transition(): queue, wait for beat
+ (20 s default)    │    2. cast_transition(policy, segs, dna, memory):
+ Music triggers    ├──►    a. Zone grouping lottery (memory-decayed)
+ request_next      │       b. Log-domain initial draw + Gibbs sweeps
+ request_drop     ─┘       c. Anti-repeat guard → {segment: mode}
+                        3. select_transition_technique(music) → {type, duration}
+                        4. schedule_transition(): queue, wait for beat
                                       │
                                       ▼
                         _execute_transition(): for each non-blocked segment
                           emit SegmentOrder(segment, mode, technique, duration, mode_handshake, ...)
                           if at least 1 segment ordered:
+                            memory.record(history_entry)
                             set_transition_params(roll_transition_params(primary_tech))
                             director.start_transition(cfg) → progress 0→1
                                       │
@@ -106,21 +115,22 @@ Timing rules in `LocalTransitionManager.update(dt, music)`:
 - A queued transition is held while the Director is already in `TRANSITION_DUAL`.
 - It fires when `music.beat_phase < 0.05` (with `beat_trust >= 0.20`) **or** `music.is_beat` **or** after a 1.2 s timeout. (This is "next beat", not a true bar downbeat. The analyzer contract forbids bar assumptions.)
 - `quantize_downbeat=False` (used by `request_drop` and music-driven boundary triggers) fires immediately.
+- History is recorded into `TransitionMemory` **only** when `_execute_transition()` actually emits orders (or during `allocate_initial()`), never when a queued transition is overwritten before firing.
 - If all segments are blocked (`is_blocked=True`) or no segments are installed, no `SegmentOrder` is emitted and `director.start_transition()` is not called (`state` remains `PASSATION`).
 
 ---
 
-## 2. Inputs: what it needs (via `MusicSnapshot` and `InstallationSnapshot`)
+## 2. Inputs: what it needs (via `MusicSnapshot`, `InstallationSnapshot`, and `configure(policy)`)
 
 | Decision | Variables read | How |
 | :--- | :--- | :--- |
 | **Target DNA** (what the music wants) | `energy`, `salience`, `beat_trust`, `novelty`, `tension`, `is_drop_impact`, `is_syncopated` | `energy = energy`; `punch = 1.0 if drop else 0.6·salience + 0.4·energy`; `rhythm = 0.7·beat_trust + 0.3·salience`; `complexity = 0.4·novelty + 0.3·tension + (0.3 if syncopated else 0.1)`. |
-| **Cohort pattern** | `scene`, `is_drop_impact`, `is_syncopated`, `is_locked` | Probability table, see §3.2. |
+| **Zone Groupings & Rules** | `configure(policy)` (`settings`, `zones`, `rules`) | Compiled and validated by `transitions/policy.py` against `SegmentDescriptor` and `ModeProfile`. |
 | **Technique** | `is_drop_impact`, `energy`, `is_rhythmic`, `salience` | See §3.3. |
 | **Beat alignment** | `beat_phase`, `beat_trust`, `is_beat` | See §1. |
 | **Musical triggers & lookahead** | `live_is_song_change`, `live_is_verse_chorus_change`, `is_song_change`, `is_verse_chorus_change`, `lookahead_seconds`, `drop_countdown`, `is_drop_imminent`, `scene`, `is_drop_impact` | Tracked by `director.update(dt, music)`, see §4. |
-| **Mode DNA** | `transitions/mode_dna.py` (`energy`, `punch`, `rhythm`, `complexity`, `spatial_role`) | Distance to target DNA. |
-| **Geometry** | `SegmentDescriptor` (`name`, `orientation`, `available_modes`, `active_mode`, `is_blocked`) | Cohort discovery and candidate pools. |
+| **Mode Profiles** | `ModeProfile` (`name`, `dna`, `tags`) from `config/modes.json` | 4-float DNA tuple `(energy, punch, rhythm, complexity)` + vocabulary tags (`lead`, `axis`, `form`, `origin`, `color`, `layer`). |
+| **Geometry & Tags** | `SegmentDescriptor` (`name`, `id`, `orientation`, `tags`, `available_modes`, `active_mode`, `is_blocked`) | Segment tags (`tier:*`, `half:*`, `pos:*`, `size:*`, plus implicit `orientation:*`) drive both policy rules and stagger ordering. |
 
 **[GAP]** Analyzer gradients (`salience_gradient`, `power_gradient`, `is_structural_cut`) and `is_silent` are not consumed by the transition sector yet.
 
@@ -128,25 +138,19 @@ Timing rules in `LocalTransitionManager.update(dt, music)`:
 
 ## 3. Decisions: what is chosen
 
-### 3.1 Which modes (weighted lottery)
-Per candidate: `w = 1 / (1 + 4·d²)`, where `d²` is the squared Euclidean distance between mode DNA and target DNA over 4 axes. Multipliers:
-- `×0.15` if the mode's `spatial_role` conflicts with the cohort orientation.
-- `×0.20` if it is the segment's current mode (recency).
-- `×0.05` if it equals mode A while drawing mode B (pair contrast).
-- Floor `0.001`, so no mode is ever impossible.
+### 3.1 Joint Transition Casting (`transitions/casting.py`)
+Every transition (and startup `allocate_initial`) executes a 6-step joint cast over the compiled `CompiledPolicy`:
+1. **Zone Grouping Lottery:** Each zone draws a grouping (partition of segments into unison groups $G_1, \dots, G_k$) with weights decayed by `TransitionMemory.grouping_weight()`.
+2. **Blocked Segments as Fixed Placements:** Any segment with `is_blocked=True` keeps its `active_mode`, counts toward `maxDifferentModes`, and participates in rule evaluation.
+3. **Initial Feasible Draw (Log-Domain):** Groups are ordered most-constrained-first. Candidate modes are scored in log space using $\log \text{musicFit}(m, \text{targetDNA}) + \log \text{ruleMultiplier} + \log \text{varietyFactor}$. When distinct modes reach `maxDifferentModes`, remaining groups must reuse an already-picked mode unless no allowed mode exists in the active set.
+4. **Gibbs Refinement (`N_SWEEPS = 3`):** Each sweep resamples single groups and performs a **joint mode-class move** across all non-blocked groups sharing a mode so multi-group recipes remain reachable even when `maxDifferentModes` is full.
+5. **Anti-Repeat Guard (`MAX_REDRAWS = 5`):** Redraws if the resulting assignment is identical to the immediately preceding transition.
 
-### 3.2 Which segments get which pattern
-Cohorts are **vertical pillars** (orientation `vertical`, or name containing ` v` / ` s`) and **horizontal rings** (grouped by the first 2 characters of the segment id). Each cohort draws a pattern independently:
-
-| Context | UNISON | SYMMETRIC_PAIRS | DIVERSE |
-| :--- | :-: | :-: | :-: |
-| default | 0.20 | 0.35 | 0.45 |
-| `is_drop_impact` | 0.55 | 0.30 | 0.15 |
-| scene `BUILDUP` | 0.40 | 0.40 | 0.20 |
-| `is_syncopated` or `is_locked` | 0.15 | 0.45 | 0.40 |
-| scene `CHILL` | 0.10 | 0.40 | 0.50 |
-
-SYMMETRIC_PAIRS: n=4 gives ABAB or ABBA (50/50); n=3 gives ABA; n=2 gives AB; otherwise alternating.
+### 3.2 Declarative Policy Compilation (`transitions/policy.py`)
+`compile_policy(raw_dict, segments, modes)` validates:
+- **Zone partitions:** Every grouping in a zone must be a disjoint, complete partition of the zone's segments.
+- **Rule clauses (`when`):** Clauses match `at` (segment ID, zone name, `orientation:*`, or segment tag) and `mode` / `tag` with `match: "any"` (default) or `match: "all"`. Rules specify either `"effect": "forbid"` or a positive `"weight"`.
+- **Static & Monte Carlo Feasibility:** Checks per-group non-empty allowed modes and runs a 200-cast seeded feasibility probe (`seed=0xC0FFEE`) per grouping. Raises `PolicyError` on any violation and emits `PolicyWarning` on neutral weights (`1.0`) or unused mode tags.
 
 ### 3.3 Which transition technique (one for the whole installation by default)
 
@@ -222,8 +226,8 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 
 | Area | State |
 | :--- | :--- |
-| Mode matchmaking (DNA lottery) | Done, tested. DNA entries exist for the modes. Not tuned against real music. |
-| Cohort patterns | Done, tested. Cohort detection relies on `orientation` and name-string heuristics. |
+| Mode matchmaking & Coherence Casting | Done, tested. Driven by `config/modes.json` (`dna` + `tags`), `config/segments_*.json` (`tags`), and `config/coherence_*.json` (`zones`, `rules`, `settings`) via `transitions/policy.py`, `transitions/casting.py`, and `transitions/memory.py`. |
+| Zone groupings & Stagger tags | Done, tested. Zone groupings partition segments declaratively; `transitions/stagger.py` resolves tiers (`tier:*`) and halves (`half:*`) from segment tags with legacy suffix fallback. |
 | Technique selection, Families & Effects | Done. 23 transition effects mapped across 8 `TransitionFamily` contracts (`transitions/families.py`) with dynamic generative parameter rolling (`roll_transition_params`) and the `Fake_leds.py` / `VisualizerHud.py` Transition Tester UI + left-side `SEGMENT MODES` table. |
 | Beat quantization | Done (`beat_phase < 0.05` gated by `beat_trust >= 0.20`, or `is_beat`, or 1.2 s timeout). |
 | Music-driven triggers | Done (`song_change`, `structural_change`, `pre_drop_buildup`, `drop_impact`). |
@@ -233,7 +237,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | Automatic palette change on transitions | **[GAP]** `PaletteRequest` door exists on `TransitionOrders`, and `TransitionBridge.apply_orders` forwards it to the mood sector, but transitions do not emit palette changes yet. Outside the transition room, `Mode_master` instantiates `create_mood_service(auto_scene=True)` and binds `Mode.bind_mood_colors` and `Mode.bind_mood_modifiers` (plus manual UI `select_mood`). |
 | Dwell and cooldown policy between transitions | Done. Minimum security cooldown of 5.0 seconds enforced post-transition across timer and musical triggers; urgent drop impacts and manual UI requests bypass and reset. |
 | Silence and standby behavior | **[GAP]** `MusicSnapshot.is_silent` crosses the door, but no silence/standby policy is implemented in the transition sector yet (dead `silence_*` / `is_in_standby` fields removed from `transitions/director.py`). |
-| Tests | `tests/transitions/` (`test_api_contracts`, `test_families_and_handshake`, `test_manager_and_dna`, `test_transition_engine`, `test_transition_director`, `test_stagger`, `test_sandbox`), `test_transition_bridge`, and `governance/test_transition_isolation`. |
+| Tests | `tests/transitions/` (`test_api_contracts`, `test_policy`, `test_casting_and_memory`, `test_families_and_handshake`, `test_manager_and_dna`, `test_transition_engine`, `test_transition_director`, `test_stagger`, `test_sandbox`), `test_coherence_loader`, `test_transition_bridge`, and `governance/test_transition_isolation`. |
 
 ## 7. Open design questions
 1. Which musical events should trigger a transition (drop, structural cut, song change, scene change) versus the timer?

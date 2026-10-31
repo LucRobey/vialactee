@@ -12,7 +12,11 @@ from transitions.stagger import (
     discover_segment_cohorts,
     generate_staggered_configs,
     get_max_transition_duration,
+    get_segment_altitude_tier,
+    get_segment_bay_column,
     select_stagger_pattern,
+    stagger_by_altitude_tier,
+    stagger_by_bay_column,
 )
 
 
@@ -281,6 +285,153 @@ class TestStagger(unittest.TestCase):
         self.assertLess(rl_cfg["Segment v4"]["start_offset"], rl_cfg["Segment v1"]["start_offset"])
         self.assertLess(rl_cfg["Segment v1"]["start_offset"], rl_cfg["Segment h00"]["start_offset"])
         self.assertEqual(rl_cfg["Segment h00"]["type"], "silk_wipe_reverse")
+
+    def test_stagger_by_altitude_tier_with_legacy_names(self):
+        rings_with_h00 = [
+            ["Segment h00"],
+            ["Segment h10", "Segment h11"],
+            ["Segment h20"],
+            ["Segment h30", "Segment h31", "Segment h32"],
+        ]
+        tiers = stagger_by_altitude_tier(rings_with_h00)
+        self.assertEqual(len(tiers), 3)
+        # Tier 0 (Canopy)
+        self.assertEqual(tiers[0], ["Segment h00", "Segment h20", "Segment h30"])
+        # Tier 1 (Mid)
+        self.assertEqual(tiers[1], ["Segment h11", "Segment h32"])
+        # Tier 2 (Low)
+        self.assertEqual(tiers[2], ["Segment h10", "Segment h31"])
+
+        tiers_rev = stagger_by_altitude_tier(rings_with_h00, reverse=True)
+        self.assertEqual(tiers_rev[0], ["Segment h10", "Segment h31"])
+        self.assertEqual(tiers_rev[1], ["Segment h11", "Segment h32"])
+        self.assertEqual(tiers_rev[2], ["Segment h00", "Segment h20", "Segment h30"])
+
+    def test_stagger_by_altitude_tier_with_tagged_descriptors(self):
+        tagged_rings = [
+            [SimpleNamespace(name="Segment h00", tags=["tier:canopy", "pos:0"])],
+            [SimpleNamespace(name="Segment h10", tags=["tier:low", "pos:2"]),
+             SimpleNamespace(name="Segment h11", tags=["tier:mid", "pos:2"])],
+            [SimpleNamespace(name="Segment h20", tags=["tier:canopy", "pos:4"])],
+            [SimpleNamespace(name="Segment h30", tags=["tier:0", "pos:6"]),
+             SimpleNamespace(name="Segment h31", tags=["tier:2", "pos:6"]),
+             SimpleNamespace(name="Segment h32", tags=["tier:1", "pos:6"])],
+        ]
+        tiers = stagger_by_altitude_tier(tagged_rings)
+        self.assertEqual(len(tiers), 3)
+        self.assertEqual(tiers[0], ["Segment h00", "Segment h20", "Segment h30"])
+        self.assertEqual(tiers[1], ["Segment h11", "Segment h32"])
+        self.assertEqual(tiers[2], ["Segment h10", "Segment h31"])
+
+    def test_stagger_by_altitude_tier_untagged_descriptors_parity(self):
+        untagged_rings = [
+            [SimpleNamespace(name="Segment h00", tags=[])],
+            [SimpleNamespace(name="Segment h10", tags=[]), SimpleNamespace(name="Segment h11", tags=[])],
+            [SimpleNamespace(name="Segment h20", tags=[])],
+            [SimpleNamespace(name="Segment h30", tags=[]), SimpleNamespace(name="Segment h31", tags=[]), SimpleNamespace(name="Segment h32", tags=[])],
+        ]
+        tiers = stagger_by_altitude_tier(untagged_rings)
+        self.assertEqual(tiers[0], ["Segment h00", "Segment h20", "Segment h30"])
+        self.assertEqual(tiers[1], ["Segment h11", "Segment h32"])
+        self.assertEqual(tiers[2], ["Segment h10", "Segment h31"])
+
+    def test_stagger_by_bay_column_with_legacy_names(self):
+        segs = [
+            "Segment v4", "Segment h00", "Segment v1", "Segment h10",
+            "Segment h11", "Segment v2", "Segment h20", "Segment v3",
+            "Segment h30", "Segment h31", "Segment h32"
+        ]
+        cols = stagger_by_bay_column(segs)
+        self.assertEqual(len(cols), 8)
+        self.assertEqual(cols[0], ["Segment h00"])
+        self.assertEqual(cols[1], ["Segment v1"])
+        self.assertEqual(cols[2], ["Segment h10", "Segment h11"])
+        self.assertEqual(cols[3], ["Segment v2"])
+        self.assertEqual(cols[4], ["Segment h20"])
+        self.assertEqual(cols[5], ["Segment v3"])
+        self.assertEqual(cols[6], ["Segment h30", "Segment h31", "Segment h32"])
+        self.assertEqual(cols[7], ["Segment v4"])
+
+        cols_rev = stagger_by_bay_column(segs, reverse=True)
+        self.assertEqual(cols_rev[0], ["Segment v4"])
+        self.assertEqual(cols_rev[7], ["Segment h00"])
+
+    def test_stagger_by_bay_column_with_tagged_descriptors(self):
+        descriptors = [
+            SimpleNamespace(name="Segment h00", tags=["tier:canopy", "pos:0"]),
+            SimpleNamespace(name="Segment v1", tags=["tier:pillar", "pos:1"]),
+            SimpleNamespace(name="Segment h10", tags=["tier:low", "pos:2"]),
+            SimpleNamespace(name="Segment h11", tags=["tier:mid", "pos:2"]),
+            SimpleNamespace(name="Segment v2", tags=["tier:pillar", "pos:3"]),
+            SimpleNamespace(name="Segment h20", tags=["tier:canopy", "pos:4"]),
+            SimpleNamespace(name="Segment v3", tags=["tier:pillar", "pos:5"]),
+            SimpleNamespace(name="Segment h30", tags=["tier:canopy", "pos:6"]),
+            SimpleNamespace(name="Segment h31", tags=["tier:low", "pos:6"]),
+            SimpleNamespace(name="Segment h32", tags=["tier:mid", "pos:6"]),
+            SimpleNamespace(name="Segment v4", tags=["tier:pillar", "pos:7"]),
+        ]
+        cols = stagger_by_bay_column(descriptors)
+        self.assertEqual(len(cols), 8)
+        self.assertEqual(cols[0], ["Segment h00"])
+        self.assertEqual(cols[1], ["Segment v1"])
+        self.assertEqual(cols[2], ["Segment h10", "Segment h11"])
+        self.assertEqual(cols[3], ["Segment v2"])
+        self.assertEqual(cols[4], ["Segment h20"])
+        self.assertEqual(cols[5], ["Segment v3"])
+        self.assertEqual(cols[6], ["Segment h30", "Segment h31", "Segment h32"])
+        self.assertEqual(cols[7], ["Segment v4"])
+
+    def test_stagger_tag_and_suffix_edge_cases(self):
+        # 1. Malformed tags fall back to suffix
+        malformed = SimpleNamespace(name="Segment h30", tags=["tier:invalid", "pos:not_a_num"])
+        self.assertEqual(get_segment_altitude_tier(malformed), 0)
+        self.assertEqual(get_segment_bay_column(malformed), 6)
+
+        # 2. Unknown suffix with tags
+        custom_seg = SimpleNamespace(name="Segment custom_ring", tags=["tier:mid", "pos:5"])
+        self.assertEqual(get_segment_altitude_tier(custom_seg), 1)
+        self.assertEqual(get_segment_bay_column(custom_seg), 5)
+
+        # 3. Numeric tier tags
+        num_seg = SimpleNamespace(name="Segment x", tags=["tier:2", "pos:3"])
+        self.assertEqual(get_segment_altitude_tier(num_seg), 2)
+        self.assertEqual(get_segment_bay_column(num_seg), 3)
+
+        # 4. Unknown segment without tags or suffix match
+        unknown_seg = SimpleNamespace(name="Segment mystery")
+        self.assertEqual(get_segment_altitude_tier(unknown_seg), 1)
+        self.assertEqual(get_segment_bay_column(unknown_seg), 0)
+
+        # 5. Half tags fallback when pos tag is absent
+        half_l = SimpleNamespace(name="Segment custom", tags=["half:left"])
+        self.assertEqual(get_segment_bay_column(half_l), 0)
+        half_r = SimpleNamespace(name="Segment custom", tags=["half:right"])
+        self.assertEqual(get_segment_bay_column(half_r), 1)
+
+        # 6. Empty list inputs
+        self.assertEqual(stagger_by_altitude_tier([]), [])
+        self.assertEqual(stagger_by_bay_column([]), [])
+
+    def test_segments_full_vocabulary_tags_exact_parity(self):
+        from transitions.fakes import make_fake_installation
+        inst = make_fake_installation()
+        # Rename segments so suffix fallback cannot match; rely purely on tags
+        renamed = [
+            SimpleNamespace(name=f"Custom_{s.id}", tags=s.tags)
+            for s in inst.segments
+        ]
+        for orig, ren in zip(inst.segments, renamed):
+            if orig.orientation == "horizontal":
+                self.assertEqual(
+                    get_segment_altitude_tier(ren),
+                    get_segment_altitude_tier(orig.name),
+                    f"Altitude tier mismatch for {orig.id} tags={orig.tags}",
+                )
+            self.assertEqual(
+                get_segment_bay_column(ren),
+                get_segment_bay_column(orig.name),
+                f"Bay column mismatch for {orig.id} tags={orig.tags}",
+            )
 
 
 if __name__ == "__main__":

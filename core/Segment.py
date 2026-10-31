@@ -21,7 +21,7 @@ class Segment:
     # Parsed config/modes.json shared by every segment: {(abs_path, mtime_ns): parsed_json}
     _MODES_CONFIG_CACHE: Dict[Any, Dict[str, Any]] = {}
 
-    def __init__(self, name: str, listener: Any, leds: Any, indexes: List[int], orientation: str, infos: Dict[str, Any]) -> None:
+    def __init__(self, name: str, listener: Any, leds: Any, indexes: List[int], orientation: str, infos: Dict[str, Any], seg_id: str = "", tags: Any = ()) -> None:
         """
         Initialize a new Segment.
 
@@ -34,6 +34,8 @@ class Segment:
             infos: Additional configuration metadata.
         """
         self.name = name
+        self.id = str(seg_id or (name[8:].strip() if name.startswith("Segment ") else name))
+        self.tags = tuple(dict.fromkeys([*(tags or ()), f"orientation:{orientation}"]))
         self.logger = logging.getLogger(f"Segment.{self.name}")
         self.leds = leds
         self.indexes = indexes

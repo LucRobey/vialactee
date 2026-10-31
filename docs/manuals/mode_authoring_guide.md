@@ -129,12 +129,14 @@ class Custom_pulse_mode(Mode):
 ## 4. Registration & Testing Workflow
 
 1. Place your mode in `modes/Your_new_mode.py`.
-2. Register in [`config/modes.json`](../../config/modes.json):
+2. Register in [`config/modes.json`](../../config/modes.json) with its 4-float `dna` vector and controlled vocabulary `tags` (`lead:<LEAD>` must match the class `LEAD` attribute):
    ```json
    {
      "name": "Your New Mode",
      "module": "Your_new_mode",
-     "class": "Your_new_mode"
+     "class": "Your_new_mode",
+     "dna": { "energy": 0.60, "punch": 0.70, "rhythm": 0.80, "complexity": 0.40 },
+     "tags": ["lead:beat", "form:bar", "origin:center", "color:palette", "layer:pulse"]
    }
    ```
 3. Document the mode in [`docs/reference/modes_catalog.md`](../reference/modes_catalog.md) and update the mode count in [`docs/README.md`](../README.md) and [`docs/architecture/system_overview.md`](../architecture/system_overview.md).
@@ -144,5 +146,5 @@ class Custom_pulse_mode(Mode):
    ```
 5. Verify contract compliance and zero-allocation invariants:
    ```bash
-   python -m pytest tests/test_all_modes_musical_context.py tests/governance/
+   python -m pytest tests/test_all_modes_musical_context.py tests/test_mode_helpers.py tests/governance/
    ```

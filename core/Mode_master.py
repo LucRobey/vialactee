@@ -16,6 +16,7 @@ from transitions.api import create_transition_service
 from mood.api import create_mood_service
 from modes.Mode import Mode
 from config.Configuration_manager import resolve_segments_file_path
+from config.coherence_loader import load_coherence_config
 import utils.Profiler as Profiler
 from core.CommandRouter import router as command_router
 from core.AppConfigStore import AppConfigStore
@@ -241,7 +242,7 @@ class Mode_master:
         segments = []
         for segment in self.segments_list:
             segments.append({
-                "id": segment.name.replace("Segment ", "", 1),
+                "id": getattr(segment, "id", "") or segment.name.replace("Segment ", "", 1),
                 "name": segment.name,
                 "mode": segment.get_current_mode(),
                 "direction": segment.way,
@@ -354,19 +355,33 @@ class Mode_master:
 
     def initiate_modes(self) -> None:
         """
-        Pure random startup: pick a valid mode and direction for every segment,
-        apply persisted mode settings, and push installation to transitions.
+        Coherent startup: configure coherence policy, push installation, allocate
+        initial modes via TransitionService.allocate_initial, and apply them without animation.
         """
+        try:
+            self.transitions.configure(load_coherence_config(self.infos))
+            self._push_installation()
+        except Exception as exc:
+            self.logger.warning("(MM) Could not load coherence policy, using default: %s", exc)
+            self.transitions.configure(None)  # type: ignore[arg-type]
+            self._push_installation()
+
+        music = TransitionBridge.build_music_snapshot(self.listener)
+        initial_alloc = self.transitions.allocate_initial(music) if hasattr(self.transitions, "allocate_initial") else {}
+
         for segment in self.segments_list:
             avail = list(segment.modes.keys())
-            mode_name = random.choice(avail) if avail else "Rainbow"
+            mode_name = (
+                initial_alloc.get(segment.name)
+                or initial_alloc.get(getattr(segment, "id", ""))
+                or (random.choice(avail) if avail else "Rainbow")
+            )
             direction = random.choice(["UP", "DOWN"])
             segment.change_mode(mode_name)
             segment.change_way(direction)
 
         self.mode_settings = self._get_effective_mode_settings({})
         self._apply_active_mode_settings()
-        self._push_installation()
         self._state_dirty = True
 
     def initiate_segments(self) -> None:
@@ -378,7 +393,16 @@ class Mode_master:
             for segment_index in range(len(info_list)):
                 seg_infos = info_list[segment_index]
                 indexes = [i for i in range(offset, offset + seg_infos["size"])]
-                new_segment = Segment.Segment(seg_infos["name"], self.listener, leds, indexes, seg_infos["orientation"], self.infos)
+                new_segment = Segment.Segment(
+                    seg_infos["name"],
+                    self.listener,
+                    leds,
+                    indexes,
+                    seg_infos["orientation"],
+                    self.infos,
+                    seg_id=seg_infos.get("id", ""),
+                    tags=tuple(seg_infos.get("tags", ())),
+                )
                 offset += seg_infos["size"]
                 self.segments_list.append(new_segment)
                 self.segments_names_to_index[seg_infos["name"]] = seg_infos["order"]
@@ -403,7 +427,7 @@ class Mode_master:
 
     def _find_segment_by_name(self, segment_name: str) -> Optional[Segment.Segment]:
         for segment in self.segments_list:
-            if segment.name == segment_name:
+            if segment.name == segment_name or getattr(segment, "id", "") == segment_name:
                 return segment
         return None
 

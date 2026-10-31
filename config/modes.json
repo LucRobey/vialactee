@@ -1,69 +1,103 @@
 {
+  "vocabulary": {
+    "lead":   { "single": true, "values": ["beat", "level", "spectrum", "transient"] },
+    "axis":   { "single": true, "values": ["vertical", "horizontal"], "optional": true },
+    "form":   { "single": true, "values": ["field", "bar", "wave", "head", "sparkle", "flash"] },
+    "origin": { "single": true, "values": ["center", "bottom", "sweep", "global", "scatter"] },
+    "color":  { "single": true, "values": ["own-hue", "palette"] },
+    "layer":  { "single": true, "values": ["bed", "pulse", "meter", "accent"] }
+  },
   "standard_modes": [
     {
       "name": "Rainbow",
       "module": "Rainbow_mode",
-      "class": "Rainbow_mode"
+      "class": "Rainbow_mode",
+      "dna": { "energy": 0.35, "punch": 0.10, "rhythm": 0.20, "complexity": 0.30 },
+      "tags": ["lead:spectrum", "form:field", "origin:global", "color:own-hue", "layer:bed"]
     },
     {
       "name": "Bary Rainbow",
       "module": "Bary_rainbow_mode",
-      "class": "Bary_rainbow_mode"
+      "class": "Bary_rainbow_mode",
+      "dna": { "energy": 0.40, "punch": 0.15, "rhythm": 0.30, "complexity": 0.35 },
+      "tags": ["lead:spectrum", "form:field", "origin:center", "color:own-hue", "layer:bed"]
     },
     {
       "name": "Middle Bar",
       "module": "Middle_bar_mode",
-      "class": "Middle_bar_mode"
+      "class": "Middle_bar_mode",
+      "dna": { "energy": 0.55, "punch": 0.60, "rhythm": 0.50, "complexity": 0.30 },
+      "tags": ["lead:beat", "axis:horizontal", "form:bar", "origin:center", "color:palette", "layer:pulse"]
     },
     {
       "name": "Shining Stars",
       "module": "Shining_stars_mode",
-      "class": "Shining_stars_mode"
+      "class": "Shining_stars_mode",
+      "dna": { "energy": 0.30, "punch": 0.20, "rhythm": 0.25, "complexity": 0.40 },
+      "tags": ["lead:transient", "form:sparkle", "origin:scatter", "color:palette", "layer:accent"]
     },
     {
       "name": "Proportion Rainbow",
       "module": "Proportion_rainbow_mode",
-      "class": "Proportion_rainbow_mode"
+      "class": "Proportion_rainbow_mode",
+      "dna": { "energy": 0.45, "punch": 0.25, "rhythm": 0.35, "complexity": 0.40 },
+      "tags": ["lead:spectrum", "form:field", "origin:global", "color:own-hue", "layer:bed"]
     },
     {
       "name": "Opposite Sides",
       "module": "Opposite_sides_mode",
-      "class": "Opposite_sides_mode"
+      "class": "Opposite_sides_mode",
+      "dna": { "energy": 0.65, "punch": 0.55, "rhythm": 0.65, "complexity": 0.45 },
+      "tags": ["lead:spectrum", "axis:horizontal", "form:bar", "origin:center", "color:palette", "layer:meter"]
     },
     {
       "name": "Hyper Strobe",
       "module": "Hyper_strobe_mode",
-      "class": "Hyper_strobe_mode"
+      "class": "Hyper_strobe_mode",
+      "dna": { "energy": 0.95, "punch": 0.95, "rhythm": 0.85, "complexity": 0.40 },
+      "tags": ["lead:transient", "form:flash", "origin:global", "color:palette", "layer:accent"]
     },
     {
       "name": "Chromatic Chaser",
       "module": "Chromatic_chaser_mode",
-      "class": "Chromatic_chaser_mode"
+      "class": "Chromatic_chaser_mode",
+      "dna": { "energy": 0.70, "punch": 0.60, "rhythm": 0.80, "complexity": 0.50 },
+      "tags": ["lead:beat", "form:head", "origin:sweep", "color:palette", "layer:pulse"]
     },
     {
       "name": "Metronome",
       "module": "Metronome_mode",
-      "class": "Metronome_mode"
+      "class": "Metronome_mode",
+      "dna": { "energy": 0.65, "punch": 0.85, "rhythm": 0.95, "complexity": 0.30 },
+      "tags": ["lead:beat", "form:flash", "origin:global", "color:palette", "layer:pulse"]
     },
     {
       "name": "Coloured Middle Wave",
       "module": "Coloured_middle_wave_mode",
-      "class": "Coloured_middle_wave_mode"
+      "class": "Coloured_middle_wave_mode",
+      "dna": { "energy": 0.60, "punch": 0.55, "rhythm": 0.60, "complexity": 0.50 },
+      "tags": ["lead:spectrum", "axis:horizontal", "form:wave", "origin:center", "color:palette", "layer:meter"]
     },
     {
       "name": "Impact Shockwave",
       "module": "Impact_shockwave_mode",
-      "class": "Impact_shockwave_mode"
+      "class": "Impact_shockwave_mode",
+      "dna": { "energy": 0.90, "punch": 0.95, "rhythm": 0.85, "complexity": 0.60 },
+      "tags": ["lead:beat", "form:wave", "origin:center", "color:palette", "layer:accent"]
     },
     {
       "name": "Power Bar",
       "module": "Power_bar_mode",
-      "class": "Power_bar_mode"
+      "class": "Power_bar_mode",
+      "dna": { "energy": 0.70, "punch": 0.75, "rhythm": 0.60, "complexity": 0.35 },
+      "tags": ["lead:level", "axis:vertical", "form:bar", "origin:bottom", "color:palette", "layer:meter"]
     },
     {
       "name": "Extending Waves",
       "module": "Extending_waves_mode",
-      "class": "Extending_waves_mode"
+      "class": "Extending_waves_mode",
+      "dna": { "energy": 0.60, "punch": 0.50, "rhythm": 0.60, "complexity": 0.50 },
+      "tags": ["lead:level", "axis:horizontal", "form:wave", "origin:center", "color:palette", "layer:meter"]
     }
   ]
 }

@@ -12,6 +12,7 @@ import numpy as np
 from transitions import api
 from transitions.api import (
     InstallationSnapshot,
+    ModeProfile,
     MusicSnapshot,
     OrderAck,
     PaletteRequest,
@@ -25,11 +26,13 @@ from transitions.api import (
 
 class TestDataShapes(unittest.TestCase):
     def test_all_shapes_are_frozen(self):
-        for cls in (MusicSnapshot, SegmentDescriptor, InstallationSnapshot, SegmentOrder,
+        for cls in (MusicSnapshot, ModeProfile, SegmentDescriptor, InstallationSnapshot, SegmentOrder,
                     PaletteRequest, TransitionOrders, OrderAck, TransitionStatus):
             self.assertTrue(dataclasses.is_dataclass(cls), cls)
-            inst = cls() if cls not in (SegmentDescriptor, SegmentOrder, PaletteRequest) else None
-            if cls is SegmentDescriptor:
+            inst = cls() if cls not in (ModeProfile, SegmentDescriptor, SegmentOrder, PaletteRequest) else None
+            if cls is ModeProfile:
+                inst = cls(name="Rainbow")
+            elif cls is SegmentDescriptor:
                 inst = cls(name="Segment v1")
             elif cls is SegmentOrder:
                 inst = cls(segment="s", target_mode="m", technique="t", duration=1.0)
@@ -38,6 +41,53 @@ class TestDataShapes(unittest.TestCase):
             first_field = dataclasses.fields(cls)[0].name
             with self.assertRaises(dataclasses.FrozenInstanceError):
                 setattr(inst, first_field, getattr(inst, first_field))
+
+    def test_mode_profile_contract(self):
+        prof = ModeProfile(name="Rainbow", dna=(0.8, 0.4, 0.5, 0.2), tags=("lead:spectrum", "axis:both"))
+        self.assertEqual(prof.name, "Rainbow")
+        self.assertEqual(prof.dna, (0.8, 0.4, 0.5, 0.2))
+        self.assertEqual(prof.tags, ("lead:spectrum", "axis:both"))
+
+        prof_default = ModeProfile(name="Power Bar")
+        self.assertEqual(prof_default.dna, (0.5, 0.5, 0.5, 0.5))
+        self.assertEqual(prof_default.tags, ())
+
+    def test_segment_descriptor_extension_and_backward_compatibility(self):
+        # Legacy positional single arg
+        d1 = SegmentDescriptor("Segment v1")
+        self.assertEqual(d1.name, "Segment v1")
+        self.assertEqual(d1.orientation, "vertical")
+        self.assertEqual(d1.available_modes, ())
+        self.assertEqual(d1.active_mode, "")
+        self.assertFalse(d1.is_blocked)
+        self.assertEqual(d1.id, "")
+        self.assertEqual(d1.tags, ())
+
+        # Legacy positional 4 args (as in transitions/fakes.py)
+        d4 = SegmentDescriptor("Segment v1", "vertical", ("Rainbow", "Power Bar"), "Rainbow")
+        self.assertEqual(d4.name, "Segment v1")
+        self.assertEqual(d4.orientation, "vertical")
+        self.assertEqual(d4.available_modes, ("Rainbow", "Power Bar"))
+        self.assertEqual(d4.active_mode, "Rainbow")
+        self.assertFalse(d4.is_blocked)
+        self.assertEqual(d4.id, "")
+        self.assertEqual(d4.tags, ())
+
+        # Extended keyword initialization with id and tags
+        dex = SegmentDescriptor(name="Segment v1", id="v1", tags=("tier:full", "orientation:vertical"))
+        self.assertEqual(dex.id, "v1")
+        self.assertEqual(dex.tags, ("tier:full", "orientation:vertical"))
+
+    def test_installation_snapshot_modes_extension(self):
+        snap_empty = InstallationSnapshot()
+        self.assertEqual(snap_empty.segments, ())
+        self.assertEqual(snap_empty.modes, ())
+        self.assertIsNone(snap_empty.room_bounds)
+
+        prof = ModeProfile(name="Rainbow")
+        snap_modes = InstallationSnapshot(segments=(), modes=(prof,), room_bounds=(430, 246))
+        self.assertEqual(snap_modes.modes, (prof,))
+        self.assertEqual(snap_modes.room_bounds, (430, 246))
 
     def test_music_snapshot_constructible_with_no_arguments(self):
         m = MusicSnapshot()
@@ -69,12 +119,44 @@ class TestFrontDoor(unittest.TestCase):
 
     def test_front_door_exposes_every_door(self):
         expected = {
-            "set_installation", "update", "acknowledge",
+            "set_installation", "set_installation_snapshot", "update", "acknowledge",
             "request_next", "request_drop", "set_locked", "set_auto_interval",
-            "blend", "get_status",
+            "blend", "get_status", "configure", "allocate_initial",
         }
         public = {n for n, _ in inspect.getmembers(TransitionService, inspect.isfunction) if not n.startswith("_")}
         self.assertEqual(expected, public)
+
+    def test_configure_door_interface(self):
+        policy = {"settings": {"maxDifferentModes": 3}}
+        svc = TransitionService()
+        svc.configure(policy)
+        self.assertEqual(svc._policy, policy)
+        self.assertEqual(svc.policy, policy)
+
+        # Module-level configure
+        api.configure(policy)
+        self.assertEqual(api.get_default_service()._policy, policy)
+
+    def test_allocate_initial_door_interface(self):
+        segs = (
+            SegmentDescriptor(name="Segment v1", id="v1", active_mode="Rainbow"),
+            SegmentDescriptor(name="Segment v2", id="v2", active_mode="Power Bar", is_blocked=True),
+            SegmentDescriptor(name="Segment v3", id="", available_modes=("Metronome",)),
+        )
+        snap = InstallationSnapshot(segments=segs)
+        svc = TransitionService()
+        svc.set_installation(snap)
+        alloc = svc.allocate_initial()
+        self.assertEqual(alloc["Segment v1"], "Rainbow")
+        self.assertEqual(alloc["Segment v2"], "Power Bar")
+        self.assertEqual(alloc["Segment v3"], "Metronome")
+
+        # Module-level allocate_initial
+        api.get_default_service().set_installation(snap)
+        alloc_mod = api.allocate_initial()
+        self.assertIn("Segment v1", alloc_mod)
+        self.assertEqual(alloc_mod["Segment v2"], "Power Bar")
+        self.assertIn("Segment v3", alloc_mod)
 
     def test_update_signature(self):
         params = list(inspect.signature(TransitionService.update).parameters)
