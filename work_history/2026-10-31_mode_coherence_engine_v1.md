@@ -5,7 +5,7 @@
 > **Agent / Model:** Antigravity  
 > **Primary Goal:** Deliver the Mode Coherence Engine v1 for transitions, then clean up the test suite after it.  
 > **Status:** COMPLETED  
-> **Commits:** `40a9809` (engine), cleanup commits listed in section 2 (pushed: no)  
+> **Commits:** `40a9809` (engine), `ba95931` `71f113c` `7c90fae` (cleanup) (pushed: yes)  
 > **Skills Used:** `vialactee-project`, `vialactee-mode-creator`  
 > **Skill Friction:** none
 
