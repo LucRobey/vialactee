@@ -1,5 +1,5 @@
 """
-tests/transitions/test_manager_and_dna.py - Unit & Governance Tests for LocalTransitionManager and Mode Delegation.
+tests/transitions/test_manager.py - Unit & Governance Tests for LocalTransitionManager and Mode Delegation.
 
 Tests:
 1. transitions/manager.py:
