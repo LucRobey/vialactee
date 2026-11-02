@@ -199,10 +199,40 @@ class TestExtendingWavesSpectrumStream(_ModeTestCase):
         peak_sum = int(np.sum(mode.rgb_list))
         self.assertGreater(peak_sum, 0)
 
+        # Sustained silence (> 22 frames) clears active waves and decays strip toward black
         self.engine._is_silent = True
-        mode.run()
+        for _ in range(30):
+            mode.run()
         self.assertFalse(bool(np.any(mode.wave_active)))
         self.assertLess(int(np.sum(mode.rgb_list)), peak_sum)
+
+    def test_brief_silence_pocket_between_beats_does_not_freeze_or_black_out(self):
+        mode = self.mode(n=41)
+        for i in range(15):
+            self.listener.asserved_fft_band[i % 8] = 0.85
+            mode.run()
+
+        # Simulate a 15-frame rhythmic pocket right after a big beat where ctx.is_silent flickers True
+        self.engine._is_silent = True
+        for _ in range(15):
+            prev_scroll = mode.scroll_pos
+            mode.run()
+            self.assertGreater(mode.scroll_pos, prev_scroll, "scroll_pos froze during brief inter-beat pocket")
+            self.assertGreater(int(np.max(mode.rgb_list)), 120, "strip blacked out during brief inter-beat pocket")
+
+    def test_saturated_bands_on_big_beat_do_not_reset_history_to_black(self):
+        mode = self.mode(n=41)
+        for i in range(20):
+            self.listener.asserved_fft_band[:] = 0.25
+            self.listener.asserved_fft_band[i % 8] = 0.88
+            mode.run()
+
+        # Simulate a loud big beat where all 8 bands of asserved_fft_band clip at 1.0 for 10 frames
+        self.listener.asserved_fft_band[:] = 1.0
+        for _ in range(10):
+            mode.run()
+            self.assertGreater(int(np.max(mode.rgb_list)), 150, "strip reset to black when bands saturated at 1.0")
+            self.assertGreater(float(np.max(mode._center_rgb)), 100.0)
 
 
 if __name__ == "__main__":

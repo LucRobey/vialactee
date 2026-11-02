@@ -62,7 +62,7 @@ class Extending_waves_mode(Mode.Mode):
         self._current_hue: float = 0.0
         self._crest_env: float = 0.0
         self._spec_activity: float = 0.0
-        self._static_spec_frames: int = 0
+        self._silent_frames: int = 0
         self._initialized: bool = False
         self.dominant_band: int = 0
         self._band_hold_time: float = 0.0
@@ -130,10 +130,14 @@ class Extending_waves_mode(Mode.Mode):
         exit_prog = float(self._exit_progress)
 
         if is_silent and exit_prog <= 0.0:
-            self.hist_rgb *= 0.75
-            self.wave_active.fill(False)
-            self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
-            return
+            self._silent_frames += 1
+            if self._silent_frames > 22:
+                self.hist_rgb *= 0.85
+                self.wave_active.fill(False)
+                self.fade_to_black_segment_vectorized(0.20, 0, self.nb_of_leds - 1)
+                return
+        else:
+            self._silent_frames = 0
 
         dt = self.dt
         fps_ratio = self.fps_ratio
@@ -180,6 +184,14 @@ class Extending_waves_mode(Mode.Mode):
         else:
             self.fft_bands.fill(0.35)
 
+        prop = getattr(self.listener, "band_proportion", None)
+        if prop is not None and len(prop) >= self.nb_bands and float(np.sum(prop[:self.nb_bands])) > 1e-6:
+            # Blend unclipped band_proportion into fft_bands so big beats that clip asserved_fft_band at 1.0
+            # preserve true inter-band wavelength contrast and continuous frame-to-frame motion.
+            for b in range(self.nb_bands):
+                p_scaled = min(1.25, float(prop[b]) * float(self.nb_bands) * 0.55)
+                self.fft_bands[b] = 0.72 * float(self.fft_bands[b]) + 0.28 * p_scaled
+
         raw_flux = getattr(self.listener, "band_flux", None)
         if raw_flux is not None and len(raw_flux) >= self.nb_bands:
             self.flux_bands[:] = raw_flux[:self.nb_bands]
@@ -198,20 +210,10 @@ class Extending_waves_mode(Mode.Mode):
         np.clip(self._band_rise, 0.0, 1.0, out=self._band_rise)
         self._prev_bands[:] = self.fft_bands
 
-        if max_abs_delta < 1e-6:
-            self._static_spec_frames += 1
-        else:
-            self._static_spec_frames = 0
-
-        if self._static_spec_frames >= 5:
-            # Spectrum is completely static/muted: snap EMA to bands so deviations settle to zero cleanly
-            self._band_ema[:] = self.fft_bands
-            self._band_dev.fill(0.0)
-        else:
-            np.subtract(self.fft_bands, self._band_ema, out=self._band_dev)
-            np.clip(self._band_dev, 0.0, 1.0, out=self._band_dev)
-            ema_alpha = self.alpha(2.2)
-            self._band_ema += ema_alpha * (self.fft_bands - self._band_ema)
+        np.subtract(self.fft_bands, self._band_ema, out=self._band_dev)
+        np.clip(self._band_dev, 0.0, 1.0, out=self._band_dev)
+        ema_alpha = self.alpha(2.2)
+        self._band_ema += ema_alpha * (self.fft_bands - self._band_ema)
 
         # Normalize onset flux (Secondary: transient)
         max_f = float(np.max(self.flux_bands))
@@ -230,12 +232,15 @@ class Extending_waves_mode(Mode.Mode):
 
         max_dev = float(np.max(self._band_dev))
         max_rise = float(np.max(self._band_rise))
-        inst_spec_act = min(1.0, 2.8 * max_dev + 4.2 * max_rise + 0.35 * unlocked_alive)
-        if self._static_spec_frames >= 5 and unlocked_alive <= 0.0:
-            self._spec_activity = 0.0
-            self._crest_env = 0.0
-        else:
-            self._spec_activity = max(inst_spec_act, self._spec_activity * (1.0 - self.alpha(5.0)))
+        spec_moving = 1.0 if max_abs_delta > 1e-6 else 0.0
+        inst_spec_act = min(
+            1.0,
+            2.8 * max_dev
+            + 4.2 * max_rise
+            + 0.45 * float(np.max(self._rel_bands)) * spec_moving
+            + 0.35 * unlocked_alive,
+        )
+        self._spec_activity = max(inst_spec_act, self._spec_activity * (1.0 - self.alpha(2.8)))
 
         # Drum / Kick peak detection on rising bass transient (with cooldown so it creates a crisp Red peak, not a permanent red fill)
         low_flux = max(float(self._norm_flux[0]), 0.70 * float(self._norm_flux[1]) if nb > 1 else 0.0)
@@ -243,10 +248,10 @@ class Extending_waves_mode(Mode.Mode):
             0.85 * float(self._band_rise[0])
             + 0.25 * float(self._band_dev[0])
             + 0.95 * low_flux * self._spec_activity
-            + (0.35 if (is_real or drop_hit) and float(self._band_rise[0]) > 0.01 else 0.0)
+            + (0.35 if (is_real or drop_hit) and self._spec_activity > 0.05 else 0.0)
         )
 
-        if self._drum_cooldown <= 0.0 and bass_attack > 0.30 and self._static_spec_frames < 5:
+        if self._drum_cooldown <= 0.0 and bass_attack > 0.30 and self._spec_activity > 0.05:
             self._drum_hold_frames = 4
             self._drum_cooldown = max(0.24, 0.42 * (60.0 / bpm))
             self._band_fatigue[0] *= 0.25
@@ -347,8 +352,8 @@ class Extending_waves_mode(Mode.Mode):
         # Spatial wave undulation so extending waves show clear rhythmic crests and valleys
         wave_carrier = 0.5 + 0.5 * math.sin(self.scroll_pos * 1.25)
         mean_band = float(np.mean(self.fft_bands))
-        base_floor = 0.12 * mean_band
-        dynamic_wave = self._spec_activity * (0.10 + 0.28 * (wave_carrier * wave_carrier)) + 0.68 * self._crest_env
+        base_floor = 0.18 * mean_band + 0.12 * self._spec_activity
+        dynamic_wave = self._spec_activity * (0.14 + 0.26 * (wave_carrier * wave_carrier)) + 0.65 * self._crest_env
         center_val = max(0.0, min(1.0, base_floor + dynamic_wave)) * self.transition_scale
 
         hi = self.highlight_color
@@ -361,8 +366,8 @@ class Extending_waves_mode(Mode.Mode):
             tinted_c = (1.0 - white_mix) * col_c + white_mix * 255.0
             self._center_rgb[c] = tinted_c * center_val * center_exit_atten
 
-        # 5. Advance Zero-Diffusion Subpixel History Ring Buffer
-        if not self._initialized or (self._static_spec_frames == 5 and unlocked_alive <= 0.0 and exit_prog <= 0.0):
+        # 5. Advance Zero-Diffusion Subpixel History Ring Buffer (never reset mid-song!)
+        if not self._initialized:
             self.hist_rgb[:] = self._center_rgb
             self._prev_center_rgb[:] = self._center_rgb
             self._initialized = True

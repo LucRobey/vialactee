@@ -63,7 +63,9 @@
 
 ## 5. Pitfalls & Lessons Learned
 
-* **Static Spectrum Detection Window:** Snapping `_band_ema` and zeroing `_spec_activity` after only 2 static frames (`0.033s`) can prematurely suppress activity in unit tests or brief sustained frames before `_band_hold_time` expires. Requiring `>= 5` consecutive static frames (`~0.083s`) cleanly distinguishes a muted `spectrum` channel from multi-frame sustained inputs.
+* **Big-Beat Saturation Reset & Inter-Beat Silence Pocket Lag:**
+  1. On loud beats (e.g. `Palladium.mp3`, `Another One Bites The Dust`), all 8 bands of `asserved_fft_band` can clip at `[1.0, ..., 1.0]` for 5–8 frames. Any `max_abs_delta < 1e-6` static-spectrum detector that resets `self.hist_rgb[:] = self._center_rgb` or zeroes `_spec_activity` will falsely trigger on saturated big beats and wipe the entire strip to black. Removing the mid-song `hist_rgb` reset and blending unclipped `band_proportion` (`0.28 * p_scaled`) into `self.fft_bands` preserves inter-band contrast and continuous frame-to-frame motion even when `asserved_fft_band` saturates at `1.0`.
+  2. Immediately after a big beat, `AudioIngestion.total_power_gm` jumps to `1.01 * smoothed_total_power`, which can push `asserved_total_power < 0.05` (`ctx.is_silent = True`) for 5–20 frames in the rhythmic pocket between beats. Early-returning and decaying `hist_rgb *= 0.75` on Frame 1 of `is_silent` froze `scroll_pos` (visual lag) and erased travelling waves. Holding normal outward scrolling across brief pockets (`self._silent_frames <= 22`) and only fading to black on sustained silence (`> 22` frames) reduced `scroll_stopped` and `strip_blackouts` to `0` across all 2400 evaluation frames on `Palladium.mp3`, `01-Plastic-People.mp3`, and `Another One Bites The Dust`.
 * **Cooperative Exit Center Whitening:** When whitening `_center_rgb` during cooperative exit (`_exit_progress > 0.0`), whitening the hue first and then scaling by `center_val * center_exit_atten` preserves the outer-to-inner white stacking invariant tested by `test_extending_waves_bespoke_white_wave_stacking_on_exit`.
 
 ---
