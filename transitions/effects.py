@@ -238,8 +238,10 @@ def apply_iris_transition(
 
 def apply_zipper_merge(rgb_old: np.ndarray, rgb_new: np.ndarray, progress: float) -> None:
     """
-    Divides the strip into 6 interlocking comb zones; even zones sweep forward
-    while odd zones sweep backward, locking together like a zipper.
+    3-Act Mechanical Interlock:
+    - Act I (0.00..0.28): Slider spark rips down the strip, splitting old mode into pitch-black tooth sockets.
+    - Act II (0.28..0.80): Bold full-brightness teeth of incoming mode slide from opposite ends to interlock.
+    - Act III (0.80..1.00): Teeth slam shut at the zone seams with a crisp metallic lock flash.
     """
     progress = max(0.0, min(1.0, float(progress)))
     if progress <= 0.0:
@@ -252,13 +254,38 @@ def apply_zipper_merge(rgb_old: np.ndarray, rgb_new: np.ndarray, progress: float
     if n == 0:
         return
     u = _get_u(n)
-    scaled = u * 6.0
-    zone = np.floor(scaled).astype(np.int32)
+    teeth = float(max(2, int(ACTIVE_PARAMS.get("teeth_count", 4))))
+    scaled = u * teeth
+    zone = np.minimum(np.floor(scaled).astype(np.int32), int(teeth) - 1)
     local_u = scaled - zone
-    field = np.where((zone % 2) == 0, local_u, 1.0 - local_u)
-    win = max(0.08, float(ACTIVE_PARAMS.get("edge_width", 0.22)))
-    t = np.clip((progress * (1.0 + win) - field) / win, 0.0, 1.0)
-    _blend_with_crest(rgb_old, rgb_new, t, crest_gain=0.20)
+    is_even = (zone % 2) == 0
+
+    if progress < 0.28:
+        p1 = progress / 0.28
+        unzipped_odd = (~is_even) & (u <= p1)
+        rgb_old[unzipped_odd] = (rgb_old[unzipped_odd] * 0.04).astype(np.int32)
+        slider_glow = np.clip(1.0 - np.abs(u - p1) / 0.09, 0.0, 1.0) ** 2
+        if np.any(slider_glow > 0.0):
+            g = slider_glow[:, np.newaxis]
+            rgb_old[:] = np.clip(rgb_old * (1.0 - g * 0.5) + g * np.array([255, 235, 160]), 0, 255).astype(np.int32)
+    elif progress < 0.80:
+        p2 = (progress - 0.28) / 0.52
+        tooth_pos = np.where(is_even, local_u, 1.0 - local_u)
+        edge_w = max(0.06, float(ACTIVE_PARAMS.get("edge_width", 0.14)) * 0.6)
+        # Pitch-black socket ahead of each sliding tooth
+        rgb_old[:] = (rgb_old * 0.04).astype(np.int32)
+        mask_in = tooth_pos <= p2
+        np.copyto(rgb_old, rgb_new, where=mask_in[:, np.newaxis])
+        stud = np.clip(1.0 - np.abs(tooth_pos - p2) / edge_w, 0.0, 1.0) ** 2
+        if np.any(stud > 0.0):
+            s = stud[:, np.newaxis]
+            rgb_old[:] = np.clip(rgb_old + s * np.array([255, 240, 190]), 0, 255).astype(np.int32)
+    else:
+        p3 = (progress - 0.80) / 0.20
+        np.copyto(rgb_old, rgb_new)
+        seam_dist = np.minimum(local_u, 1.0 - local_u)
+        seam_flash = (np.clip(1.0 - seam_dist / 0.14, 0.0, 1.0) * ((1.0 - p3) ** 2) * 210.0)[:, np.newaxis]
+        np.clip(rgb_old + seam_flash, 0, 255, out=rgb_old, casting="unsafe")
 
 
 # =============================================================================
@@ -267,8 +294,10 @@ def apply_zipper_merge(rgb_old: np.ndarray, rgb_new: np.ndarray, progress: float
 
 def apply_collider(rgb_old: np.ndarray, rgb_new: np.ndarray, progress: float) -> None:
     """
-    Two energy particles launch from opposite strip ends (u=0, u=1), accelerate toward
-    focal_u (default 0.5), collide at progress=0.45, and unleash an expanding shockwave.
+    3-Act Hadron Particle Accelerator:
+    - Act I (0.00..0.42): Vacuum drain + Cyan (u=0) and Magenta-Gold (u=1) packets accelerate toward focal_u.
+    - Act II (0.42..0.56): Collision criticality — trembling white-violet plasma singularity in total darkness.
+    - Act III (0.56..1.00): Dual shockwave detonation erupts outward to both strip ends at full power.
     """
     progress = max(0.0, min(1.0, float(progress)))
     if progress <= 0.0:
@@ -285,25 +314,37 @@ def apply_collider(rgb_old: np.ndarray, rgb_new: np.ndarray, progress: float) ->
     span = max(focal, 1.0 - focal, 0.1)
     dist_center = np.clip(np.abs(u - focal) / span, 0.0, 1.0)
 
-    if progress < 0.45:
-        p1 = (progress / 0.45) ** 1.8
-        head_dist = 1.0 - p1
-        wake_mask = dist_center > head_dist
-        rgb_old[wake_mask] = (rgb_old[wake_mask] * 0.22).astype(np.int32)
-
-        d_head = np.abs(dist_center - head_dist)
-        glow = np.clip(1.0 - d_head / 0.14, 0.0, 1.0) ** 2
-        if np.any(glow > 0.0):
-            g = glow[:, np.newaxis]
-            surge = rgb_old * (1.0 - g * 0.5) + rgb_new * (g * 0.8) + (220.0 * g)
-            np.clip(surge, 0, 255, out=rgb_old, casting="unsafe")
+    if progress < 0.42:
+        p1 = progress / 0.42
+        vac = max(0.04, (1.0 - p1 * 1.35) ** 2) if p1 < 0.72 else 0.04
+        np.multiply(rgb_old, vac, out=rgb_old, casting="unsafe")
+        head_dist = 1.0 - (p1 ** 1.85)
+        d_head = dist_center - head_dist
+        # Contrail behind each particle + bright head
+        trail = np.where((d_head >= 0.0) & (d_head < 0.28), (1.0 - d_head / 0.28) ** 2, 0.0)
+        head = np.clip(1.0 - np.abs(d_head) / 0.11, 0.0, 1.0) ** 2
+        tint = np.where((u <= focal)[:, np.newaxis], np.array([0, 235, 255]), np.array([255, 70, 220]))
+        surge = rgb_old + trail[:, np.newaxis] * tint * 0.75 + head[:, np.newaxis] * np.array([255, 255, 255])
+        np.clip(surge, 0, 255, out=rgb_old, casting="unsafe")
+    elif progress < 0.56:
+        p2 = (progress - 0.42) / 0.14
+        rgb_old.fill(0)
+        core_r = 0.08 + 0.07 * math.sin(p2 * math.pi)
+        core_glow = np.clip(1.0 - dist_center / max(0.04, core_r), 0.0, 1.0) ** 1.5
+        if np.any(core_glow > 0.0):
+            c = core_glow[:, np.newaxis]
+            pulse = 0.75 + 0.25 * math.cos(p2 * 18.0)
+            rgb_old[:] = np.clip(c * pulse * np.array([235, 210, 255]) + (c ** 3) * 120.0, 0, 255).astype(np.int32)
     else:
-        p2 = ((progress - 0.45) / 0.55) ** 0.75
-        win = 0.20
-        t = np.clip((p2 * (1.0 + win) - dist_center) / win, 0.0, 1.0)
-        w = (t * t * (3.0 - 2.0 * t))[:, np.newaxis]
-        rim = (4.0 * t * (1.0 - t) * (1.0 - p2 * 0.7))[:, np.newaxis]
-        out = rgb_old * (1.0 - w) * 0.22 + rgb_new * w + (180.0 * rim)
+        p3 = (progress - 0.56) / 0.44
+        blast_r = (p3 ** 0.78) * 1.16
+        rgb_old.fill(0)
+        mask_swallowed = dist_center <= blast_r
+        np.copyto(rgb_old, rgb_new, where=mask_swallowed[:, np.newaxis])
+        fade_out = max(0.0, 1.0 - (p3 ** 1.5))
+        rim = (np.clip(1.0 - np.abs(dist_center - blast_r) / 0.16, 0.0, 1.0) ** 1.6) * fade_out
+        aftershock = (np.clip(1.0 - np.abs(dist_center - blast_r * 0.62) / 0.09, 0.0, 1.0) ** 2) * fade_out * 0.65
+        out = rgb_old + rim[:, np.newaxis] * np.array([230, 250, 255]) + aftershock[:, np.newaxis] * np.array([255, 90, 230])
         np.clip(out, 0, 255, out=rgb_old, casting="unsafe")
 
 
