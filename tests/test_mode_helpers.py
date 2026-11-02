@@ -381,33 +381,40 @@ class TestPart1ModeBugFixes(_ModeTestCase):
 
         mode = self.make(Chromatic_chaser_mode, n=40)
         mode.rgb_list.fill(0)
-        mode.position = 5.0
-        mode.speed = 6.0
-        mode.direction = 1
-        mode.run()
-        head_idx = int(np.clip(mode.position, 0, 39))
-        self.assertGreater(head_idx, 8)
-        # Every LED in the swept span [5, head_idx] must be lit with no dark holes
-        for idx in range(5, head_idx + 1):
-            self.assertTrue(np.any(mode.rgb_list[idx] > 0), f"Unlit gap at LED {idx}")
+        self.engine._beat_trust = 0.90
+        self.engine._salience = 0.85
+        self.engine._energy = 0.20
 
-        # Toggling bounce_enabled=False while direction==-1 near index 0 must advance forward, not wrap backward
-        mode.rgb_list.fill(0)
-        mode.position = 2.0
-        mode.direction = -1
-        mode.bounce_enabled = False
-        mode.speed = 4.0
+        # Step 1: start near outer edges (beat_phase = 0.10)
+        self.listener.beat_phase = 0.10
         mode.run()
-        self.assertEqual(mode.direction, 1)
-        self.assertTrue(np.all(mode.rgb_list[20:38] == 0))
+        start_l = int(np.clip(round(mode.position), 0, mode.mid_left))
 
-        # Multi-lap speed (>= nb_of_leds) when bounce_enabled=False must light the full strip without dark holes
-        mode.rgb_list.fill(0)
-        mode.position = 10.0
-        mode.bounce_enabled = False
-        mode.speed = 45.0
+        # Step 2: fast phase jump to 0.70 must paint a continuous swept span on both wings with no dark holes
+        self.listener.beat_phase = 0.70
         mode.run()
-        self.assertTrue(np.all(np.sum(mode.rgb_list, axis=1) > 0))
+        head_l = int(np.clip(round(mode.position), 0, mode.mid_left))
+        head_r = int(np.clip(round(mode.right_position), mode.mid_right, 39))
+        self.assertGreater(head_l, start_l + 5)
+        for idx in range(start_l, head_l + 1):
+            self.assertTrue(np.any(mode.rgb_list[idx] > 0), f"Unlit gap on left runner at LED {idx}")
+        for idx in range(head_r, 39 - start_l + 1):
+            self.assertTrue(np.any(mode.rgb_list[idx] > 0), f"Unlit gap on right runner at LED {idx}")
+
+        # Step 3: collision at center (beat_phase -> 0.96) lights center collision burst, scaled by ctx.energy
+        mode.rgb_list.fill(0)
+        self.engine._energy = 0.95
+        self.listener.beat_phase = 0.96
+        mode.run()
+        self.assertTrue(np.any(mode.rgb_list[mode.mid_left] > 0))
+        self.assertTrue(np.any(mode.rgb_list[mode.mid_right] > 0))
+
+        # Step 4: bounce_enabled=False sweeps outward from center toward edges
+        mode.rgb_list.fill(0)
+        mode.bounce_enabled = False
+        self.listener.beat_phase = 0.50
+        mode.run()
+        self.assertEqual(mode.direction, -1)
 
     def test_shining_stars_randomizes_subsegments_independently(self):
         from modes.Shining_stars_mode import Shining_stars_mode

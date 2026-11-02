@@ -1,9 +1,9 @@
 """
 Chromatic Chaser Mode
-Concentrated laser head sweeping across the strip leaving an exponential decay trail.
-The head surges and brightens on every beat via self.beat_pulse() (rhythm-locked pump, or acoustic
-energy breathing when the flywheel is lost), a spark halo ahead of the head grows with ctx.energy,
-while bpm/tension/mood_pace scale the macro period, mood_trail the trail and mood_accent the warmth.
+Twin kinetic laser runners sweeping symmetrically from the strip ends to collide at the center on every beat.
+Beat phase (0 -> 1) drives runner position from the outer edges to the center collision point and beat_pulse()
+modulates runner/collision brightness (LEAD="beat"), while ctx.energy scales the leading spark halo and
+center collision burst size (SECONDARY=("level",)). Stays alive when unlocked via continuous phase fallback.
 Zero runtime heap allocations.
 """
 from typing import List, Dict, Any
@@ -12,9 +12,9 @@ import modes.Mode as Mode
 
 
 class Chromatic_chaser_mode(Mode.Mode):
-    """Kinetic laser runner sweeping across the strip with exponential decay trail.
+    """Twin laser runners sweeping from the strip ends to collide at the center on every beat.
 
-    Lead: beat (head surge and brightness on the beat). Secondary: level (spark halo size). Macro: period via mood_pace; tension shortens it.
+    Lead: beat (beat_phase 0->1 moves twin runners from ends to center collision; beat_pulse sets brightness). Secondary: level (spark halo and collision burst size). Macro: trail via mood_trail, pace via mood_pace, warmth via mood_accent.
     """
     LEAD = "beat"
     SECONDARY = ("level",)
@@ -55,91 +55,127 @@ class Chromatic_chaser_mode(Mode.Mode):
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
-        self.position: float = self.segment_phase_offset * max(0, self.nb_of_leds - 1)
         self.speed: float = float(infos.get("chaser_speed", infos.get("speed", 2.0)))
-        self.direction: int = 1
         self.fade_ratio: float = float(infos.get("chaser_fade_ratio", infos.get("fadeRatio", 0.05)))
         self.bounce_enabled: bool = bool(infos.get("chaser_bounce_enabled", infos.get("bounceEnabled", True)))
+        self.direction: int = 1
 
-        # Pre-allocated scratch color vector (ZERO runtime heap allocation)
+        n = max(1, self.nb_of_leds)
+        self.mid_left: int = (n - 1) // 2
+        self.mid_right: int = n // 2
+        self.position: float = 0.0
+        self.right_position: float = float(n - 1)
+        self._prev_cyc: float = 0.0
+        self._prev_raw_phase: float = -1.0
+        self._free_phase: float = self.segment_phase_offset
+        self._initialized: bool = False
+
+        # Pre-allocated scratch color vectors (ZERO runtime heap allocation)
         self.head_color: np.ndarray = np.zeros(3, dtype=np.float64)
         self.spark_color: np.ndarray = np.zeros(3, dtype=np.float64)
 
     def run(self) -> None:
-        if self.nb_of_leds <= 0:
+        n = self.nb_of_leds
+        if n <= 0:
             return
 
         ctx = getattr(self.listener, "context", None)
-        effective_fade = float(np.clip(self.fade_ratio / max(0.5, self.mood_trail), 0.005, 0.60))
+        effective_fade = float(np.clip((self.fade_ratio * 2.2) / max(0.5, self.mood_trail), 0.02, 0.65))
         if ctx is not None and ctx.is_silent:
-            self.fade_to_black_segment_vectorized(max(0.25, effective_fade), 0, self.nb_of_leds - 1)
+            self.fade_to_black_segment_vectorized(max(0.25, effective_fade), 0, n - 1)
             return
 
-        fps_ratio = self.fps_ratio
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
         tension = float(ctx.tension if ctx is not None else 0.0)
         v_center = float(ctx.vertical_center if ctx is not None else 0.5)
         energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
         pulse = self.beat_pulse()
+        lock = self.rhythm_lock
         mood = self.mood_colors
 
-        # 1. Head velocity surges with beat_pulse() (lead); bpm (gated by rhythm_lock), tension and mood_pace are macro
-        bpm_factor = 1.0 + self.rhythm_lock * ((bpm / 120.0) - 1.0)
-        beat_surge = 0.9 + 0.5 * pulse
-        effective_speed = self.speed * bpm_factor * beat_surge * (1.0 + 0.55 * tension) * self.mood_pace * fps_ratio
-        if not self.bounce_enabled:
-            self.direction = 1
-        prev_idx = int(np.clip(self.position, 0, self.nb_of_leds - 1))
-        step = effective_speed * self.direction
-        self.position += step
-        wrapped = False
-        full_lap = abs(step) >= float(max(1, self.nb_of_leds - 1)) and not self.bounce_enabled
+        # 1. Lead (beat): beat_phase 0 -> 1 drives twin runners from outer edges to center collision.
+        #    If beat_phase is held static while unlocked (e.g. unit test with beat_trust == 0), advance _free_phase.
+        raw_phase = float(getattr(self.listener, "beat_phase", 0.0)) % 1.0
+        phase_stalled = abs(raw_phase - self._prev_raw_phase) < 1e-9
+        self._prev_raw_phase = raw_phase
 
-        if self.bounce_enabled:
-            if self.position >= self.nb_of_leds - 1:
-                self.position = float(self.nb_of_leds - 1)
-                self.direction = -1
-            elif self.position <= 0:
-                self.position = 0.0
-                self.direction = 1
+        speed_mult = max(0.1, float(self.speed) / 2.0)
+        if phase_stalled and lock < 0.50:
+            self._free_phase = (
+                self._free_phase + self.dt * (bpm / 60.0) * speed_mult * self.mood_pace * (0.40 + 0.80 * energy)
+            ) % 1.0
+            cyc = self._free_phase
         else:
-            if self.position >= self.nb_of_leds:
-                self.position %= float(self.nb_of_leds)
-                wrapped = True
-            elif self.position < 0:
-                self.position %= float(self.nb_of_leds)
-                wrapped = True
+            cyc = (raw_phase * speed_mult) % 1.0
 
-        # 2. Derive color from vertical_center, mood_colors, and mood_accent
+        wrapped = self._initialized and ((cyc < self._prev_cyc and (self._prev_cyc - cyc) > 0.30) or speed_mult >= 2.0)
+        self._prev_cyc = cyc
+
+        # bounce_enabled=True: ends -> center collision; False: center -> ends
+        self.direction = 1 if self.bounce_enabled else -1
+        travel = cyc if self.bounce_enabled else (1.0 - cyc)
+
+        prev_l = int(np.clip(round(self.position), 0, self.mid_left))
+        prev_r = int(np.clip(round(self.right_position), self.mid_right, n - 1))
+
+        self.position = travel * float(self.mid_left)
+        self.right_position = float(n - 1) - travel * float((n - 1) - self.mid_right)
+        idx_l = int(np.clip(round(self.position), 0, self.mid_left))
+        idx_r = int(np.clip(round(self.right_position), self.mid_right, n - 1))
+
+        if not self._initialized:
+            prev_l, prev_r = idx_l, idx_r
+            self._initialized = True
+
+        # 2. Color from mood_colors, spectral vertical_center, and mood_accent; brightness led by beat_pulse()
         m0, m2 = mood[0], mood[2]
         hi = self.highlight_color
-        warmth = min(1.0, max(0.0, (tension - 0.35) * 0.5) + self.mood_accent)
+        warmth = min(1.0, max(0.0, (tension - 0.30) * 0.45) + self.mood_accent)
+        t_scale = self.transition_scale
+        head_gain = (0.35 + 0.65 * pulse) * t_scale
         for c in range(3):
             base_c = (1.0 - v_center) * float(m0[c]) + v_center * float(m2[c])
-            self.head_color[c] = ((1.0 - warmth) * base_c + warmth * float(hi[c])) * (0.30 + 0.70 * pulse)
+            self.head_color[c] = ((1.0 - warmth) * base_c + warmth * float(hi[c])) * head_gain
 
-        # 3. Fade the tail first (scaled by mood_trail), then paint the continuous swept span
-        head_idx = int(np.clip(self.position, 0, self.nb_of_leds - 1))
-        self.fade_to_black_segment_vectorized(effective_fade, 0, self.nb_of_leds - 1)
-        if full_lap:
-            self.smooth_segment_vectorized(1.0, 0, self.nb_of_leds - 1, self.head_color)
-        elif wrapped and not self.bounce_enabled:
-            if step >= 0.0:
-                self.smooth_segment_vectorized(1.0, prev_idx, self.nb_of_leds - 1, self.head_color)
-                self.smooth_segment_vectorized(1.0, 0, head_idx, self.head_color)
+        # 3. Fade trail, then paint continuous swept spans for both runners (no dark holes on fast steps)
+        self.fade_to_black_segment_vectorized(effective_fade, 0, n - 1)
+
+        if wrapped:
+            if self.bounce_enabled:
+                self.smooth_segment_vectorized(1.0, min(prev_l, self.mid_left), self.mid_left, self.head_color)
+                self.smooth_segment_vectorized(1.0, self.mid_right, max(prev_r, self.mid_right), self.head_color)
+                self.smooth_segment_vectorized(1.0, 0, idx_l, self.head_color)
+                self.smooth_segment_vectorized(1.0, idx_r, n - 1, self.head_color)
             else:
-                self.smooth_segment_vectorized(1.0, 0, prev_idx, self.head_color)
-                self.smooth_segment_vectorized(1.0, head_idx, self.nb_of_leds - 1, self.head_color)
+                self.smooth_segment_vectorized(1.0, 0, max(0, prev_l), self.head_color)
+                self.smooth_segment_vectorized(1.0, min(n - 1, prev_r), n - 1, self.head_color)
+                self.smooth_segment_vectorized(1.0, idx_l, self.mid_left, self.head_color)
+                self.smooth_segment_vectorized(1.0, self.mid_right, idx_r, self.head_color)
         else:
-            span_start = min(prev_idx, head_idx)
-            span_end = max(prev_idx, head_idx)
-            self.smooth_segment_vectorized(1.0, span_start, span_end, self.head_color)
+            self.smooth_segment_vectorized(1.0, min(prev_l, idx_l), max(prev_l, idx_l), self.head_color)
+            self.smooth_segment_vectorized(1.0, min(prev_r, idx_r), max(prev_r, idx_r), self.head_color)
 
-            # 4. Secondary (level): spark halo ahead of the head, longer with louder audio
-            halo = int(round(3.0 * energy))
-            if halo > 0:
-                ahead = int(np.clip(head_idx + self.direction * halo, 0, self.nb_of_leds - 1))
-                hi_c = self.highlight_color
-                for c in range(3):
-                    self.spark_color[c] = 0.5 * (self.head_color[c] + float(hi_c[c]) * (0.30 + 0.70 * pulse))
-                self.smooth_segment_vectorized(0.6, min(head_idx, ahead), max(head_idx, ahead), self.spark_color)
+        # 4. Secondary (level): spark halo ahead of each runner and center collision burst scaled by ctx.energy
+        halo = int(round((0.5 + 3.5 * energy) * max(1.0, float(n) / 40.0)))
+        if halo > 0:
+            spark_gain = (0.30 + 0.70 * min(1.0, energy)) * t_scale
+            for c in range(3):
+                self.spark_color[c] = (0.35 * self.head_color[c] + 0.65 * float(hi[c]) * spark_gain)
+
+            if self.bounce_enabled:
+                lead_l = min(self.mid_left, idx_l + halo)
+                lead_r = max(self.mid_right, idx_r - halo)
+                self.smooth_segment_vectorized(0.75, idx_l, lead_l, self.spark_color)
+                self.smooth_segment_vectorized(0.75, lead_r, idx_r, self.spark_color)
+            else:
+                lead_l = max(0, idx_l - halo)
+                lead_r = min(n - 1, idx_r + halo)
+                self.smooth_segment_vectorized(0.75, lead_l, idx_l, self.spark_color)
+                self.smooth_segment_vectorized(0.75, idx_r, lead_r, self.spark_color)
+
+            # Center collision spark burst when runners meet on the beat
+            if wrapped or travel >= 0.82:
+                burst = max(1, halo + 1)
+                c_start = max(0, self.mid_left - burst)
+                c_end = min(n - 1, self.mid_right + burst)
+                self.smooth_segment_vectorized(0.85, c_start, c_end, self.spark_color)
