@@ -224,6 +224,13 @@ class TestOppositeSidesMode(unittest.TestCase):
         # On the trigger frame, exactly 1 single-LED pinpoint pops immediately and the rest are queued
         self.assertEqual(int(np.sum(mode._spark > 0.1)), 1)
         self.assertGreater(mode._crackle_queue, 0)
+        # Verify 1-LED dark contrast collar around the active pinpoint outside the core
+        spark_idx = int(np.argmax(mode._spark))
+        if spark_idx > 0 and not (mode.mid_start <= spark_idx - 1 <= mode.mid_end):
+            self.assertLess(mode._collar[spark_idx - 1], 1.0)
+        if spark_idx + 1 < 50 and not (mode.mid_start <= spark_idx + 1 <= mode.mid_end):
+            self.assertLess(mode._collar[spark_idx + 1], 1.0)
+        self.assertTrue(np.all(mode._collar[mode.mid_start : mode.mid_end + 1] == 1.0))
 
 
 if __name__ == "__main__":

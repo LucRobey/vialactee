@@ -13,6 +13,7 @@ from music.Listener import Listener
 from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 from mood.api import create_mood_service
 from modes.Mode import Mode
+from utils.choreography import DRIVERS, MUTE_CHANNELS
 from utils.driver_mute import DriverMuteProxy
 from tools.listener_config import PRODUCTION_VISUAL_FFT_BANDS, build_listener_infos
 from tools.choreography_matrix import (
@@ -238,14 +239,92 @@ def run_mode_on_audio(
     return compute_response_metrics(recorded)
 
 
+def _run_modes_batch_on_audio(
+    mode_classes: Sequence[Any],
+    mono: np.ndarray,
+    *,
+    start_s: float = DEFAULT_START_S,
+    duration_s: float = DEFAULT_DURATION_S,
+    warmup_frames: int = DEFAULT_WARMUP_FRAMES,
+    nb_bands: int = PRODUCTION_VISUAL_FFT_BANDS,
+    num_leds: int = MATRIX_CONFIG["num_leds"],
+) -> Dict[Tuple[Any, Tuple[str, ...]], Tuple[float, float]]:
+    """Step Listener and Mood once over `mono` while evaluating all mode × mute conditions in lockstep."""
+    conditions: Tuple[Tuple[str, ...], ...] = ((),) + tuple((d,) for d in DRIVERS) + (tuple(MUTE_CHANNELS),)
+    pos0, eval_frames = _resolve_window(len(mono), start_s, duration_s)
+
+    with OfflineClock() as clock:
+        listener = make_listener(nb_bands=nb_bands)
+        mood = create_mood_service(auto_scene=True)
+        Mode.bind_mood_colors(mood.colors())
+        Mode.bind_mood_modifiers(mood.modifiers())
+        try:
+            runners: List[Tuple[Any, Tuple[str, ...], DriverMuteProxy, Any, np.ndarray, np.ndarray]] = []
+            for cls in mode_classes:
+                for cond in conditions:
+                    random.seed(42)
+                    np.random.seed(42)
+                    proxy = DriverMuteProxy(listener)
+                    rgb = np.zeros((num_leds, 3), dtype=np.int32)
+                    mode = cls(
+                        cls.__name__,
+                        "probe_segment",
+                        proxy,
+                        None,
+                        list(range(num_leds)),
+                        rgb,
+                        {},
+                    )
+                    rec = np.zeros((eval_frames, num_leds, 3), dtype=np.int32)
+                    runners.append((cls, cond, proxy, mode, rgb, rec))
+
+            total_frames = warmup_frames + eval_frames
+            for i in range(total_frames):
+                if i == warmup_frames:
+                    for _, cond, proxy, _, _, _ in runners:
+                        for ch in cond:
+                            proxy.set_muted(ch, True)
+                center_sample = pos0 + (i - warmup_frames) * HOP
+                step_listener(listener, mono, center_sample, clock)
+                ctx = getattr(listener, "context", None)
+                raw_scene = getattr(ctx, "scene", None) if ctx is not None else None
+                scene_str = (
+                    str(raw_scene.value if hasattr(raw_scene, "value") else raw_scene)
+                    if raw_scene is not None
+                    else None
+                )
+                mood.update(1.0 / 60.0, scene_str)
+                live_mods = mood.modifiers()
+                for _, _, proxy, mode, rgb, rec in runners:
+                    proxy.observe()
+                    proxy.sync_macro_modifiers(Mode, live_mods)
+                    mode.render(buffer=rgb)
+                    if i >= warmup_frames:
+                        rec[i - warmup_frames] = rgb
+        finally:
+            Mode.reset_mood_colors()
+            Mode.reset_mood_modifiers()
+
+    return {
+        (cls, cond): compute_response_metrics(rec)
+        for cls, cond, _, _, _, rec in runners
+    }
+
+
 def measure_mode_on_audio(mode_cls: Any, mono: np.ndarray, **kw: Any) -> Dict[str, Any]:
     """Evaluate a single mode across all choreography mute conditions on `mono`."""
-    return measure_with_runner(mode_cls, lambda cls, muted: run_mode_on_audio(cls, mono, muted, **kw))
+    batch = _run_modes_batch_on_audio((mode_cls,), mono, **kw)
+    return measure_with_runner(mode_cls, lambda cls, muted: batch[(cls, tuple(muted))])
 
 
 def measure_all_modes_on_audio(mono: np.ndarray, **kw: Any) -> List[Dict[str, Any]]:
     """Evaluate all registered modes across all choreography mute conditions on `mono`."""
-    return [measure_mode_on_audio(cls, mono, **kw) for cls in load_registered_mode_classes()]
+    classes = load_registered_mode_classes()
+    batch = _run_modes_batch_on_audio(classes, mono, **kw)
+    return [
+        measure_with_runner(cls, lambda c, muted: batch[(c, tuple(muted))])
+        for cls in classes
+    ]
 
 
 def format_telemetry_summary(track_label: str, summary: Dict[str, float]) -> str:

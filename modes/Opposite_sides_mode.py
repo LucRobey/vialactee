@@ -28,7 +28,8 @@ class Opposite_sides_mode(Mode.Mode):
     _PEAK_DECAY_RATE: float = 0.15
     _FLUX_COOLDOWN_S: float = 0.12
     _SPARK_PEAK_CAP: float = 1.00
-    _SPARK_DEPOP_FLOOR: float = 0.18
+    _SPARK_DEPOP_FLOOR: float = 0.35
+    _SPARK_CONTRAST_COLLAR: float = 0.55
 
     def get_settings_schema(self) -> List[Dict[str, Any]]:
         return [
@@ -99,6 +100,8 @@ class Opposite_sides_mode(Mode.Mode):
         self._spark: np.ndarray = np.zeros(n, dtype=np.float64)
         self._spark_clamped: np.ndarray = np.zeros(n, dtype=np.float64)
         self._spark_2d: np.ndarray = self._spark_clamped[:, None]
+        self._collar: np.ndarray = np.ones(n, dtype=np.float64)
+        self._collar_2d: np.ndarray = self._collar[:, None]
         self._tmp: np.ndarray = np.zeros((n, 3), dtype=np.float64)
 
         self.bass_color: np.ndarray = np.zeros(3, dtype=np.float64)
@@ -258,9 +261,10 @@ class Opposite_sides_mode(Mode.Mode):
             np.multiply(self._cov_r_2d, self.high_color, out=self._tgt_r)
 
         # 10. Secondary (transient): firework crackle of 1-LED pinpoint sparks outside the core.
-        # Fast decay + crisp depop floor so each pinpoint pops bright white and snaps off quickly,
-        # while a burst queues staggered pops across subsequent frames ("pop de pop pop depop").
-        self._spark *= math.exp(-dt * 20.0 / max(0.5, self.mood_trail))
+        # Fast decay + crisp depop floor so each pinpoint holds at 100% white and snaps off cleanly,
+        # punching a 1-LED dark contrast collar in its immediate wing neighbors ("pop de pop pop depop").
+        self._spark *= math.exp(-dt * 24.0 / max(0.5, self.mood_trail))
+        self._spark[self._spark < self._SPARK_DEPOP_FLOOR] = 0.0
         self._flux_cooldown = max(0.0, self._flux_cooldown - dt)
         base_sparks = max(0, int(self.spark_count))
         if base_sparks == 0:
@@ -325,7 +329,17 @@ class Opposite_sides_mode(Mode.Mode):
 
         self._spark[self.mid_start : self.mid_end + 1] = 0.0
         np.subtract(self._spark, self._SPARK_DEPOP_FLOOR, out=self._spark_clamped)
+        np.multiply(self._spark_clamped, 3.0, out=self._spark_clamped)
         np.clip(self._spark_clamped, 0.0, self._SPARK_PEAK_CAP, out=self._spark_clamped)
+
+        # Punch a 1-LED dark contrast collar around active pinpoints (never touching the fixed core)
+        self._collar.fill(1.0)
+        if self.nb_of_leds > 1:
+            np.minimum(self._collar[:-1], 1.0 - self._SPARK_CONTRAST_COLLAR * self._spark_clamped[1:], out=self._collar[:-1])
+            np.minimum(self._collar[1:], 1.0 - self._SPARK_CONTRAST_COLLAR * self._spark_clamped[:-1], out=self._collar[1:])
+        self._collar[self.mid_start : self.mid_end + 1] = 1.0
+        np.multiply(self._tgt, self._collar_2d, out=self._tgt)
+
         np.subtract(self.spark_color, self._tgt, out=self._tmp)
         np.multiply(self._tmp, self._spark_2d, out=self._tmp)
         np.add(self._tgt, self._tmp, out=self._tgt)
