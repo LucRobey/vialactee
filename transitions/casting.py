@@ -25,6 +25,9 @@ from transitions.policy import CompiledGrouping, CompiledPolicy, evaluate_rule
 
 logger = logging.getLogger("transitions.casting")
 
+WHOLE_KEY = "*"      # pseudo-zone key recording the wholeInstallation choice in memory / telemetry
+ZONES_KEY = "zones"  # value recorded under WHOLE_KEY when zones were cut as usual
+
 
 @dataclass(frozen=True)
 class _FreeGroup:
@@ -89,6 +92,14 @@ def _pick_zone_groupings(
     chosen_by_zone: Dict[str, str] = {}
     all_groups: List[Tuple[str, ...]] = []
     all_allowed: List[Tuple[str, ...]] = []
+
+    whole = policy.whole
+    if whole is not None:
+        # Whole-installation option competes against "cut each zone as usual" (fixed weight 1).
+        w_whole = memory.grouping_weight(WHOLE_KEY, whole.id, whole.weight, repeat_penalty)
+        if rng.random() * (w_whole + 1.0) < w_whole:
+            return {WHOLE_KEY: whole.id}, list(whole.groups), list(whole.allowed_modes_per_group)
+        chosen_by_zone[WHOLE_KEY] = ZONES_KEY
 
     for zone_name, zone in policy.zones.items():
         groupings: Sequence[CompiledGrouping] = zone.groupings

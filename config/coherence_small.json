@@ -6,6 +6,7 @@
     "memoryDepth": 8,
     "repeatPenalty": 3.0
   },
+  "wholeInstallation": { "id": "chandelier-unison", "weight": 0.3 },
   "zones": {
     "strips": {
       "segments": ["s1", "s2", "s3"],

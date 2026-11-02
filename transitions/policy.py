@@ -12,6 +12,7 @@ from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple
 import warnings
 
 from transitions.api import ModeProfile, PolicyError, SegmentDescriptor
+from transitions.probe import run_feasibility_probe  # noqa: F401  (re-exported; compile_policy runs it)
 
 logger = logging.getLogger("transitions.policy")
 
@@ -194,6 +195,7 @@ class CompiledPolicy:
     segment_name_to_id: Dict[str, str]
     segment_tags: Dict[str, FrozenSet[str]]
     raw: Dict[str, Any] = field(default_factory=dict)
+    whole: Optional[CompiledGrouping] = None  # optional cross-zone 'whole installation' grouping
     zone_names = property(lambda self: tuple(self.zones.keys()))
 
 
@@ -229,40 +231,6 @@ def _validate_settings(raw: Any) -> PolicySettings:
     if not _is_valid_num(pen) or float(pen) < 0.0:
         raise PolicyError(f"Setting 'repeatPenalty' must be >= 0, got {pen!r}")
     return PolicySettings(int(md), float(temp), int(depth), float(pen))
-
-
-def run_feasibility_probe(compiled: CompiledPolicy, casts_per_grouping: int = 200, seed: int = 42) -> bool:
-    """Run load-time Monte Carlo feasibility probe across all groupings."""
-    max_diff, forbid_rules, zones_list = compiled.settings.max_different_modes, [r for r in compiled.rules if r.is_forbid], list(compiled.zones.values())
-    for z_idx, zone in enumerate(zones_list):
-        for grouping in zone.groupings:
-            rng = random.Random(seed)
-            all_groups = [
-                (grp_segs, allowed) for o_idx, o_zone in enumerate(zones_list)
-                for grp_segs, allowed in zip((grouping if o_idx == z_idx else o_zone.groupings[0]).groups, (grouping if o_idx == z_idx else o_zone.groupings[0]).allowed_modes_per_group)
-            ]
-            feasible = False
-            for _ in range(casts_per_grouping):
-                cast, used, order, failed = {}, set(), list(range(len(all_groups))), False
-                rng.shuffle(order)
-                for step, idx in enumerate(order):
-                    grp_segs, allowed = all_groups[idx]
-                    rem_groups, rem_budget = len(order) - step, max_diff - len(used)
-                    cands = [m for m in allowed if (m in used or rem_budget > 0) and not any(evaluate_rule(r, {**cast, **{s: m for s in grp_segs}}) for r in forbid_rules)]
-                    if not cands:
-                        failed = True
-                        break
-                    reusable, new_m = [m for m in cands if m in used], [m for m in cands if m not in used]
-                    chosen = rng.choice(reusable) if (rem_groups > rem_budget and reusable and (not new_m or rng.random() < (rem_groups - rem_budget) / rem_groups)) else rng.choice(cands)
-                    for s in grp_segs:
-                        cast[s] = chosen
-                    used.add(chosen)
-                if not failed and len(used) <= max_diff and not any(evaluate_rule(r, cast) for r in forbid_rules):
-                    feasible = True
-                    break
-            if not feasible:
-                raise PolicyError(f"Grouping '{grouping.id}' in zone '{zone.name}' failed {casts_per_grouping}-cast feasibility probe")
-    return True
 
 
 def compile_policy(
@@ -487,9 +455,27 @@ def compile_policy(
             comp_groupings.append(CompiledGrouping(gid, gw, groups_tuple, tuple(allowed_per_group)))
         compiled_zones[zname] = CompiledZone(zname, zone_segs_by_name[zname], tuple(comp_groupings))
 
+    compiled_whole: Optional[CompiledGrouping] = None
+    whole_raw = policy_raw.get("wholeInstallation")
+    if whole_raw is not None:
+        if not isinstance(whole_raw, dict) or set(whole_raw) - {"id", "weight", "enabled"}:
+            raise PolicyError("'wholeInstallation' must be an object with keys 'id', 'weight' (and optional 'enabled')")
+        wid, ww = whole_raw.get("id"), whole_raw.get("weight")
+        if not isinstance(wid, str) or not wid.strip() or wid in seen_grouping_ids:
+            raise PolicyError(f"Invalid or duplicate wholeInstallation id '{wid}'")
+        if not _is_valid_num(ww) or float(ww) <= 0.0:
+            raise PolicyError(f"wholeInstallation weight must be > 0, got {ww!r}")
+        if whole_raw.get("enabled", True) is not False:
+            all_segs = tuple(seg_ids_list)
+            surviving = tuple(m for m in mode_names_tuple if all(m in seg_avail_modes[s] for s in all_segs if s in seg_avail_modes)
+                              and not any(evaluate_rule(r, {s: m for s in all_segs}) for r in forbid_rules))
+            if not surviving:
+                raise PolicyError(f"Static satisfiability failure: wholeInstallation '{wid}' has 0 legal modes")
+            compiled_whole = CompiledGrouping(wid, float(ww), (all_segs,), (surviving,))
+
     compiled = CompiledPolicy(
         version, settings, compiled_zones, tuple(compiled_rules), mode_names_tuple, mode_dna_map,
-        mode_tag_map, tuple(seg_ids_list), seg_id_to_name, seg_name_to_id, seg_tag_map, policy_raw,
+        mode_tag_map, tuple(seg_ids_list), seg_id_to_name, seg_name_to_id, seg_tag_map, policy_raw, compiled_whole,
     )
     run_feasibility_probe(compiled, casts_per_grouping=200)
     return compiled

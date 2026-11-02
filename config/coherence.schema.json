@@ -20,6 +20,17 @@
         "repeatPenalty": { "type": "number", "minimum": 0.0 }
       }
     },
+    "wholeInstallation": {
+      "description": "Optional cross-zone option: with probability weight/(weight+1) (decayed by recency) the whole installation plays ONE group, ignoring the zones' groupings.",
+      "type": "object",
+      "required": ["id", "weight"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "weight": { "type": "number", "exclusiveMinimum": 0.0 },
+        "enabled": { "type": "boolean" }
+      }
+    },
     "zones": {
       "type": "object",
       "minProperties": 1,

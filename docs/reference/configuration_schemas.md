@@ -259,6 +259,7 @@ Mode allocation at startup (`allocate_initial`) and on every transition (`cast_t
 
 * **`settings`:** `maxDifferentModes` (global active mode budget, default `3` on full, `2` on small), `temperature` (`1.0`), `memoryDepth` (`8`), and `repeatPenalty` (`3.0`).
 * **`zones`:** Disjoint segment zones, each with weighted `groupings` (`[{"id": "...", "weight": 1.0, "groups": [[...]]}]`) that partition the zone's segments into unison groups.
+* **`wholeInstallation`** (optional): `{"id": "...", "weight": 0.3, "enabled": true}`. A cross-zone option: with probability `weight / (weight + 1)` (divided down by recency, tracked under the pseudo-zone key `*`) the whole installation is ONE group that plays ONE mode, ignoring every zone grouping; otherwise zones are cut as usual. `id` must differ from all grouping ids; forbid rules and `maxDifferentModes` apply as usual.
 * **`rules`:** Declarative constraints and preferences (`[{"id": "...", "when": [{"at"?: "...", "mode"|"tag": "...", "match"?: "any" | "all"}], "effect": "forbid" | "weight": number}]`).
 
 Live per-mode parameter tweaks (Mode Settings page, `set_mode_setting`) are persisted in `config/app_config.json` via `AppConfigStore` under the optional `mode_settings` key, created on the first edit:
