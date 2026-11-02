@@ -60,16 +60,15 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`mood
 
 > This part describes the implementation inside the sealed room and its boundary glue. Sections marked **[GAP]** are not wired or not implemented yet.
 
-Source files (first eleven inside the room, remaining outside):
+Source files (first ten inside the room, remaining outside):
 [`transitions/api.py`](../../transitions/api.py) (doors & DTOs) ·
 [`transitions/policy.py`](../../transitions/policy.py) (coherence policy compiler, static satisfiability & 200-cast feasibility probe) ·
 [`transitions/casting.py`](../../transitions/casting.py) (joint transition caster & Gibbs refinement) ·
 [`transitions/memory.py`](../../transitions/memory.py) (ring buffer & exponential variety decay) ·
 [`transitions/manager.py`](../../transitions/manager.py) (decision & parameter rolling) ·
 [`transitions/director.py`](../../transitions/director.py) (clock + trigger) ·
-[`transitions/engine.py`](../../transitions/engine.py) (2D spatial blending & dispatcher) ·
-[`transitions/effects.py`](../../transitions/effects.py) (1D strip-intrinsic & organic shaders) ·
-[`transitions/spectacles.py`](../../transitions/spectacles.py) (3-Act theatrical showstopper shaders) ·
+[`transitions/engine.py`](../../transitions/engine.py) (dispatcher & PNG fallback) ·
+[`transitions/catalog/`](../../transitions/catalog/) (self-contained `1 transition = 1 file` shader & contract modules) ·
 [`transitions/families.py`](../../transitions/families.py) (multi-family contracts & generative parameters) ·
 [`transitions/stagger.py`](../../transitions/stagger.py) (tag-first staggered cohort configs) ·
 [`transitions/service.py`](../../transitions/service.py) (front door) ·
@@ -165,8 +164,8 @@ Deterministic baseline classifier (`select_transition_technique`), evaluated top
 
 When scheduling automatic transitions (`roll_auto_transition_technique`), `LocalTransitionManager` draws with anti-repeat memory from context-weighted showcase pools (`_HIGH_IMPACT_POOL`, `_RHYTHMIC_SHOWCASE_POOL`, `_STAGGERABLE_SHOWCASE_POOL`, `_ATMOSPHERIC_POOL`).
 
-Engine types available in `transitions/engine.py`, `transitions/effects.py`, and `transitions/spectacles.py`:
-- **3-Act Theatrical Showstoppers (`transitions/spectacles.py` & `transitions/engine.py`):** `explosion` (2.4 s, inward implosion rings $\to$ blackout $\to$ radial shockwave), `supernova` (3.4 s, Doppler violet event horizon $\to$ strobing core singularity $\to$ dual-wave cyan + gold plasma detonation), `spiral` (3.2 s, multi-arm logarithmic vortex spin-up $\to$ eye of the storm $\to$ spiral shockwave unwind), `shatter_ice` (3.2 s, flash-freeze crystal $\to$ fault-line cracks $\to$ gravity shard collapse), `tesla_arc` (2.8 s, brownout flicker $\to$ jumping high-voltage lightning arcs $\to$ vertical plasma surge), `liquid_geyser` (3.4 s, top-to-bottom meniscus drain $\to$ boiling floor pool $\to$ pressurized geyser eruption), `pendulum_sweep` (3.2 s, stage dim $\to$ fiery eraser swing $\to$ prismatic painter return swing), `fuse_detonate` (3.0 s, dark silhouette $\to$ burning gunpowder fuse $\to$ backfire detonation).
+Engine types available in `transitions/catalog/` (dispatched by `transitions/engine.py`):
+- **3-Act Theatrical Showstoppers (`transitions/catalog/`):** `explosion` (2.4 s, inward implosion rings $\to$ blackout $\to$ radial shockwave), `supernova` (3.4 s, Doppler violet event horizon $\to$ strobing core singularity $\to$ dual-wave cyan + gold plasma detonation), `spiral` (3.2 s, multi-arm logarithmic vortex spin-up $\to$ eye of the storm $\to$ spiral shockwave unwind), `shatter_ice` (3.2 s, flash-freeze crystal $\to$ fault-line cracks $\to$ gravity shard collapse), `tesla_arc` (2.8 s, yellow spark drain $\to$ downward yellow-gold lightning strikes charging floor capacitor $\to$ vertical plasma surge), `liquid_geyser` (3.4 s, top-to-bottom meniscus drain $\to$ hydraulic splash bounce $\to$ rising tide fill), `pendulum_sweep` (3.2 s, stage dim $\to$ fiery eraser swing $\to$ prismatic painter return swing), `fuse_detonate` (3.0 s, dark silhouette $\to$ burning gunpowder fuse $\to$ backfire detonation).
 - **Classic & Spatial 2D (with Dark-Trench Wipes):** `fade_in_out` (`fade_to_black`, `smooth_cosine_crossfade`, `cosine_fade`), `global_change`, `vertical_wipe` (2.0 s), `wipe_left_to_right` (2.2 s), `wipe_right_to_left` (2.2 s), `box_wipe` (2.2 s), `gravity_drop` (2.8 s), `weird_glitch` (2.2 s), plus PNG-mask fallback.
 - **Photonic & Organic Dissolves:** `ember_dissolve` (2.2 s, per-LED spatial noise threshold + blackbody gold/amber spark edge), `luma_melt` (2.0 s, luminance-keyed takeover where bright pixels break through first), `breath_dip` (2.4 s, parabolic breath valley with suspense blackout).
 - **1D Strip-Intrinsic Sweeps:** `silk_wipe`, `silk_wipe_reverse` (1.8 s, 1D smoothstep wipe along index $u \in [0, 1]$ with specular leading crest), `iris_open`, `iris_close` (1.8 s, symmetric center-out / edges-in aperture along each strip), `zipper_merge` (2.8 s, 3-Act mechanical unzip to black sockets $\to$ interlocking teeth slide $\to$ seam lock flash).

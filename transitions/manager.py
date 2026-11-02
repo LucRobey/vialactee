@@ -12,8 +12,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from transitions.api import ModeProfile, MusicSnapshot, SegmentDescriptor, SegmentOrder
 from transitions.casting import CastResult, cast_transition
+from transitions.catalog import TECHNIQUE_CONFIGS, set_transition_params
 from transitions.director import Transition_Director
-from transitions.effects import set_transition_params
 from transitions.families import (
     get_allowed_stagger_patterns,
     is_mode_cooperative,
@@ -31,45 +31,7 @@ from transitions.stagger import (
 
 MIN_SHOWSTOPPER_DURATION: float = 1.5
 
-TRANSITION_TECHNIQUES: Dict[str, Dict[str, Any]] = {
-    k: {"type": t, "duration": d}
-    for k, (t, d) in {
-        "smooth_cosine_crossfade": ("fade_in_out", 2.0),
-        "fade_in_out": ("fade_in_out", 2.0),
-        "fade_to_black": ("fade_to_black", 2.0),
-        "cosine_fade": ("cosine_fade", 2.0),
-        "directional_wipe": ("vertical_wipe", 2.0),
-        "vertical_wipe": ("vertical_wipe", 2.0),
-        "wipe_left_to_right": ("wipe_left_to_right", 2.2),
-        "wipe_right_to_left": ("wipe_right_to_left", 2.2),
-        "transient_blip": ("explosion", 2.4),
-        "explosion": ("explosion", 2.4),
-        "supernova": ("supernova", 3.4),
-        "shatter_ice": ("shatter_ice", 3.2),
-        "tesla_arc": ("tesla_arc", 2.8),
-        "fuse_detonate": ("fuse_detonate", 3.0),
-        "liquid_geyser": ("liquid_geyser", 3.4),
-        "pendulum_sweep": ("pendulum_sweep", 3.2),
-        "box_wipe": ("box_wipe", 2.2),
-        "spiral": ("spiral", 3.2),
-        "gravity_drop": ("gravity_drop", 2.8),
-        "weird_glitch": ("weird_glitch", 2.2),
-        "global_change": ("global_change", 2.0),
-        "ember_dissolve": ("ember_dissolve", 2.2),
-        "luma_melt": ("luma_melt", 2.0),
-        "breath_dip": ("breath_dip", 2.4),
-        "silk_wipe": ("silk_wipe", 1.8),
-        "silk_wipe_reverse": ("silk_wipe_reverse", 1.8),
-        "iris_open": ("iris_open", 1.8),
-        "iris_close": ("iris_close", 1.8),
-        "zipper_merge": ("zipper_merge", 2.8),
-        "collider": ("collider", 3.0),
-        "prism_sweep": ("prism_sweep", 2.0),
-        "flash_cut": ("flash_cut", 0.8),
-        "staccato_shutter": ("staccato_shutter", 1.2),
-        "transformer_cut": ("transformer_cut", 1.4),
-    }.items()
-}
+TRANSITION_TECHNIQUES: Dict[str, Dict[str, Any]] = dict(TECHNIQUE_CONFIGS)
 
 _HIGH_IMPACT_POOL: Tuple[str, ...] = (
     "explosion", "supernova", "spiral", "tesla_arc", "shatter_ice", "liquid_geyser", "pendulum_sweep", "collider",

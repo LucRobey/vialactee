@@ -21,7 +21,7 @@ from transitions.api import (
     TransitionOrders,
     create_transition_service,
 )
-from transitions.effects import set_transition_params
+from transitions.catalog import ALL_SPECS, CATALOG, set_transition_params
 import transitions.engine as TE
 from transitions.families import (
     DEFAULT_PARAMS,
@@ -74,8 +74,14 @@ class TestTransitionFamilies(unittest.TestCase):
             if tech == "AUTO":
                 continue
             self.assertIn(tech, TRANSITION_FAMILIES, f"{tech} missing from TRANSITION_FAMILIES")
+            self.assertIn(tech, CATALOG, f"{tech} missing from transitions.catalog.CATALOG")
             fams = get_families(tech)
             self.assertGreater(len(fams), 0)
+            spec = CATALOG[tech]
+            self.assertEqual(spec.families, fams)
+            self.assertGreater(spec.duration, 0.0)
+            self.assertTrue(callable(spec.handler))
+        self.assertGreaterEqual(len(ALL_SPECS), 24)
 
     def test_showstopper_transitions_meet_minimum_perceptual_duration(self):
         """Showstopper transitions (ROOM_EPI_2D and ROOM_SWEEP_2D) in TRANSITION_TECHNIQUES must last >= MIN_SHOWSTOPPER_DURATION."""

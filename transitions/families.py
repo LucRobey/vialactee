@@ -2,75 +2,21 @@
 transitions/families.py - Abstract Multi-Family Contracts & Generative Parameter Rollers.
 
 Each TransitionFamily is an abstract trait/contract. A transition can belong to
-as many families as it needs, and its family memberships automatically define:
-  1. Which generative parameters are rolled on each trigger (epicenter, focal_u, seed, chops...).
-  2. Which chandelier stagger choreographies (StaggerPattern) are physically valid.
-  3. Whether full-strip mode exit/enter handshakes (MODE_COOPERATIVE) are active.
+as many families as it needs, and its family memberships are declared directly on
+its `TransitionSpec` inside `transitions/catalog/<name>.py`.
 """
 
-from enum import Enum
 import random
 from typing import Any, Dict, FrozenSet, Tuple
 
+from transitions.catalog import CATALOG, TransitionFamily
 from transitions.stagger import StaggerPattern
-
-
-class TransitionFamily(str, Enum):
-    """Abstract transition contract traits. A transition may belong to multiple families."""
-    ROOM_EPI_2D = "ROOM_EPI_2D"
-    ROOM_SWEEP_2D = "ROOM_SWEEP_2D"
-    STRIP_SWEEP_1D = "STRIP_SWEEP_1D"
-    STRIP_FOCAL_1D = "STRIP_FOCAL_1D"
-    STAGGERABLE = "STAGGERABLE"
-    STOCHASTIC_ORGANIC = "STOCHASTIC_ORGANIC"
-    RHYTHMIC_CHOP = "RHYTHMIC_CHOP"
-    MODE_COOPERATIVE = "MODE_COOPERATIVE"
-
 
 F = TransitionFamily
 
-# Multi-family registry: each transition declares all abstract contracts it satisfies
+# Derived directly from the self-contained transition catalog (single source of truth)
 TRANSITION_FAMILIES: Dict[str, FrozenSet[TransitionFamily]] = {
-    # 2D Room-Space Epicenter Transitions (always SIMULTANEOUS across segments)
-    "explosion": frozenset({F.ROOM_EPI_2D, F.RHYTHMIC_CHOP}),
-    "transient_blip": frozenset({F.ROOM_EPI_2D, F.RHYTHMIC_CHOP}),
-    "supernova": frozenset({F.ROOM_EPI_2D, F.RHYTHMIC_CHOP}),
-    "spiral": frozenset({F.ROOM_EPI_2D}),
-    "tesla_arc": frozenset({F.ROOM_EPI_2D, F.STOCHASTIC_ORGANIC, F.RHYTHMIC_CHOP}),
-    "box_wipe": frozenset({F.ROOM_EPI_2D, F.ROOM_SWEEP_2D}),
-    "weird_glitch": frozenset({F.ROOM_EPI_2D, F.STOCHASTIC_ORGANIC, F.RHYTHMIC_CHOP}),
-    # 2D Room-Space Plane / Gravity / Material Sweeps
-    "shatter_ice": frozenset({F.ROOM_SWEEP_2D, F.STOCHASTIC_ORGANIC}),
-    "liquid_geyser": frozenset({F.ROOM_SWEEP_2D}),
-    "pendulum_sweep": frozenset({F.ROOM_EPI_2D, F.ROOM_SWEEP_2D}),
-    "vertical_wipe": frozenset({F.ROOM_SWEEP_2D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "directional_wipe": frozenset({F.ROOM_SWEEP_2D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "wipe_left_to_right": frozenset({F.ROOM_SWEEP_2D, F.MODE_COOPERATIVE}),
-    "wipe_right_to_left": frozenset({F.ROOM_SWEEP_2D, F.MODE_COOPERATIVE}),
-    "gravity_drop": frozenset({F.ROOM_SWEEP_2D}),
-    # 1D Strip-Intrinsic Directional Sweeps
-    "silk_wipe": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "silk_wipe_reverse": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "prism_sweep": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "zipper_merge": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE}),
-    # 1D Strip-Intrinsic Focal / Aperture / Fuse Effects
-    "iris_open": frozenset({F.STRIP_FOCAL_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "iris_close": frozenset({F.STRIP_FOCAL_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "collider": frozenset({F.STRIP_FOCAL_1D, F.STAGGERABLE}),
-    "fuse_detonate": frozenset({F.STRIP_SWEEP_1D, F.STRIP_FOCAL_1D, F.STAGGERABLE, F.STOCHASTIC_ORGANIC}),
-    # Photonic & Organic Dissolves
-    "ember_dissolve": frozenset({F.STOCHASTIC_ORGANIC, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "luma_melt": frozenset({F.STOCHASTIC_ORGANIC, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "breath_dip": frozenset({F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "fade_in_out": frozenset({F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "fade_to_black": frozenset({F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "smooth_cosine_crossfade": frozenset({F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "cosine_fade": frozenset({F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "global_change": frozenset({F.STOCHASTIC_ORGANIC, F.RHYTHMIC_CHOP, F.STAGGERABLE}),
-    # Rhythmic & DJ Cuts (non-cooperative hard cuts between full-power modes)
-    "flash_cut": frozenset({F.RHYTHMIC_CHOP, F.STAGGERABLE}),
-    "staccato_shutter": frozenset({F.RHYTHMIC_CHOP, F.STAGGERABLE}),
-    "transformer_cut": frozenset({F.RHYTHMIC_CHOP, F.STAGGERABLE}),
+    name: spec.families for name, spec in CATALOG.items()
 }
 
 # Deterministic default parameters (centered on the chandelier's central core)
