@@ -25,7 +25,7 @@ This catalog provides the canonical visual description, orientation support, lea
 | 10 | **Coloured Middle Wave** | [`Coloured_middle_wave_mode`](../../modes/Coloured_middle_wave_mode.py) | Horizontal | `spectrum` | `beat` | Strip divided symmetrically into frequency bands. Center represents bass (red/orange), edges treble (blue/purple). Sections pulse outward with band volumes. |
 | 11 | **Impact Shockwave** | [`Impact_shockwave_mode`](../../modes/Impact_shockwave_mode.py) | Horizontal / Both | `beat` | `level` | Center-outward expanding ripple waves whose speed scales to BPM. Spawns kinetic shockwaves on beat phase wraps and drop hits; suppresses flashes on ghost beats. |
 | 12 | **Power Bar** | [`Power_bar_mode`](../../modes/Power_bar_mode.py) | Vertical | `level` | `beat` | Classic audio VU peak meter. Solid colored column rises vertically with instantaneous power. Persistent peak-hold white dot floats at maximum crest and descends under gravity. |
-| 13 | **Extending Waves** | [`Extending_waves_mode`](../../modes/Extending_waves_mode.py) | Horizontal | `level` | `beat` | Continuous center-outward color fountain: dynamic `ctx.energy` swells integrate into a level accumulator to spawn outward wavefronts and control flow speed, wavefront amplitude, and the center-outward level bed, while `self.beat_pulse()` tints wave colors and shimmers the crests. |
+| 13 | **Extending Waves** | [`Extending_waves_mode`](../../modes/Extending_waves_mode.py) | Horizontal | `spectrum` | `transient` | Continuous center-outward scrolling wavelength wave stream: colors match the dominant playing frequency band (`0.00` Red for bass/drums -> `0.82` Violet for treble) balanced by rolling-mean deviation, onset flux boosting, and anti-stagnation fatigue so drum hits regularly inject vivid Red peaks that extend outward at a steady pace. |
 
 ---
 
@@ -82,5 +82,5 @@ All remaining modes (`Bary_rainbow_mode`, `Middle_bar_mode`, `Proportion_rainbow
 | **Coloured Middle Wave** | `(0.60, 0.55, 0.60, 0.50)` | `lead:spectrum`, `axis:horizontal`, `form:wave`, `origin:center`, `color:palette`, `layer:meter` |
 | **Impact Shockwave** | `(0.90, 0.95, 0.85, 0.60)` | `lead:beat`, `form:wave`, `origin:center`, `color:palette`, `layer:accent` |
 | **Power Bar** | `(0.70, 0.75, 0.60, 0.35)` | `lead:level`, `axis:vertical`, `form:bar`, `origin:bottom`, `color:palette`, `layer:meter` |
-| **Extending Waves** | `(0.60, 0.50, 0.60, 0.50)` | `lead:level`, `axis:horizontal`, `form:wave`, `origin:center`, `color:palette`, `layer:meter` |
+| **Extending Waves** | `(0.60, 0.50, 0.60, 0.50)` | `lead:spectrum`, `axis:horizontal`, `form:wave`, `origin:center`, `color:own-hue`, `layer:meter` |
 

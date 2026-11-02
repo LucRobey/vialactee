@@ -1,23 +1,26 @@
 """
 Extending Waves Mode
-Subpixel center-outward wave propagation whose wave spawning (via a continuous level accumulator),
-flow speed, wave amplitude, and center bed glow are driven by ctx.energy (LEAD="level").
-Decoupled from discrete beat ticks: self.beat_pulse() only tints the wave color and crest shimmer
-(SECONDARY=("beat",)). Waves always propagate outward from the center with no scene branching.
-Harmonized with the mood sector's mood_colors and mood_modifiers with zero runtime heap allocations.
+Continuous center-outward scrolling wavelength wave stream ("musical timeline") with zero numerical diffusion.
+Colors match the dominant playing wavelength (Band 0 bass/drums = Red -> Mids = Green/Cyan -> Treble = Blue/Violet),
+rebalanced via per-band rolling-mean deviation, onset flux boosting, and anti-stagnation fatigue so colors evolve
+constantly while drum hits regularly inject vivid Red peaks that extend outward at a steady, regular pace.
+Adheres strictly to docs/contracts/mode_contract.md with zero runtime heap allocations.
 """
 from typing import List, Dict, Any
+import math
 import numpy as np
 import modes.Mode as Mode
+import utils.rgb_hsv as RGB_HSV
+import utils.colors as colors
 
 
 class Extending_waves_mode(Mode.Mode):
-    """Center-outward traveling color waves spawned and propelled by audio energy.
+    """Center-outward scrolling wavelength waves driven by balanced FFT band deviations and onset peaks.
 
-    Lead: level (level accumulator spawns waves; energy sets flow speed, wave amplitude, and bed reach). Secondary: beat (tints wave color and crest shimmer). Macro: color drift, mood_pace, mood_trail.
+    Lead: spectrum (dominant wavelength color and spectral wave crests). Secondary: transient (drum/onset flux peaks). Macro: mood_pace, mood_trail, mood_accent.
     """
-    LEAD = "level"
-    SECONDARY = ("beat",)
+    LEAD = "spectrum"
+    SECONDARY = ("transient",)
     MAX_WAVES: int = 8
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
@@ -25,8 +28,14 @@ class Extending_waves_mode(Mode.Mode):
 
         self.middle_idx: int = self.nb_of_leds // 2
         self.half_len: int = self.middle_idx + 1
+        self.nb_bands: int = max(2, int(getattr(listener, "nb_of_fft_band", 8)) if listener is not None else 8)
+        self.hist_len: int = max(256, self.half_len + 32)
 
-        # Pre-allocated scratch wave arrays (ZERO runtime heap allocation)
+        # Precomputed 256-entry vivid rainbow LUT from Red (0.00, bass/drums) to Violet (0.82, treble)
+        lut_hues = np.linspace(colors.red_hue, 0.82, 256, dtype=np.float64)
+        self.rainbow_lut: np.ndarray = RGB_HSV.fromHSV_toRGB_vectorized(lut_hues, 1.0, 1.0).astype(np.float32)
+
+        # Pre-allocated scratch wave arrays for peak crests and cooperative exit stacking (ZERO heap allocation)
         self.wave_positions: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float32)
         self.wave_velocities: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float32)
         self.wave_amps: np.ndarray = np.zeros(self.MAX_WAVES, dtype=np.float32)
@@ -35,24 +44,55 @@ class Extending_waves_mode(Mode.Mode):
         self.wave_slot: int = 0
         self.wave_count: int = 0
         self.time_since_wave: float = 0.0
-        self.level_accum: float = 1.0
-        self._ema_energy: float = 0.35
-        self._prev_energy: float = -1.0
-        self.wave_width: float = 2.2
+        self.wave_width: float = 2.0
         self._stack_frontier: float = float(self.half_len)
-        self.breath_phase: float = 6.2831853 * self.segment_phase_offset
 
-        # Coordinate and color buffers
+        # Balanced spectral wavelength tracking state (deviation + onset flux + anti-stagnation fatigue)
+        self.fft_bands: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self.flux_bands: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._band_ema: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._prev_bands: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._band_dev: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._band_rise: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._rel_bands: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._norm_flux: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._band_scores: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._band_fatigue: np.ndarray = np.zeros(self.nb_bands, dtype=np.float32)
+        self._flux_scale: float = 2.0
+        self._current_hue: float = 0.0
+        self._crest_env: float = 0.0
+        self._spec_activity: float = 0.0
+        self._static_spec_frames: int = 0
+        self._initialized: bool = False
+        self.dominant_band: int = 0
+        self._band_hold_time: float = 0.0
+        self._drum_cooldown: float = 0.0
+        self._drum_hold_frames: int = 0
+
+        # Zero-diffusion subpixel history ring buffer & coordinate scratch arrays
+        self.scroll_pos: float = float(self.half_len + 4)
+        self.hist_rgb: np.ndarray = np.zeros((self.hist_len, 3), dtype=np.float32)
+        self._center_rgb: np.ndarray = np.zeros(3, dtype=np.float32)
+        self._prev_center_rgb: np.ndarray = np.zeros(3, dtype=np.float32)
+
         self.half_coords: np.ndarray = np.arange(self.half_len, dtype=np.float32)
+        self.half_pos: np.ndarray = (self.half_coords / max(1.0, float(self.half_len))).astype(np.float32)
+        self._src_pos: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
+        self._src_floor: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
+        self._src_frac_2d: np.ndarray = np.zeros((self.half_len, 1), dtype=np.float32)
+        self._src_frac: np.ndarray = self._src_frac_2d[:, 0]
+        self._idx0: np.ndarray = np.zeros(self.half_len, dtype=np.intp)
+        self._idx1: np.ndarray = np.zeros(self.half_len, dtype=np.intp)
+        self._sample0: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
+        self._sample1: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
+        self._radial_env_2d: np.ndarray = np.zeros((self.half_len, 1), dtype=np.float32)
+        self._radial_env: np.ndarray = self._radial_env_2d[:, 0]
+
         self.half_dists: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
         self.wave_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
         self.wave_scratch_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
         self.half_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
-        self.center_falloff: np.ndarray = np.exp(- (self.half_coords ** 2) / 8.0).astype(np.float32)
-        self.glow_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
-        self.half_pos: np.ndarray = (self.half_coords / max(1.0, float(self.half_len))).astype(np.float32)
         self.bed_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
-        self.tinted_col: np.ndarray = np.zeros(3, dtype=np.float32)
 
     @property
     def transition_scale(self) -> float:
@@ -66,43 +106,54 @@ class Extending_waves_mode(Mode.Mode):
         super().on_transition_reset()
         self._stack_frontier = float(self.half_len)
 
+    def _ensure_band_capacity(self, nb: int) -> None:
+        if nb > 1 and nb != self.nb_bands:
+            self.nb_bands = nb
+            self.fft_bands = np.zeros(nb, dtype=np.float32)
+            self.flux_bands = np.zeros(nb, dtype=np.float32)
+            self._band_ema = np.zeros(nb, dtype=np.float32)
+            self._prev_bands = np.zeros(nb, dtype=np.float32)
+            self._band_dev = np.zeros(nb, dtype=np.float32)
+            self._band_rise = np.zeros(nb, dtype=np.float32)
+            self._rel_bands = np.zeros(nb, dtype=np.float32)
+            self._norm_flux = np.zeros(nb, dtype=np.float32)
+            self._band_scores = np.zeros(nb, dtype=np.float32)
+            self._band_fatigue = np.zeros(nb, dtype=np.float32)
+            self._initialized = False
+
     def run(self) -> None:
         if self.nb_of_leds <= 0:
             return
 
         ctx = getattr(self.listener, "context", None)
+        is_silent = bool(ctx.is_silent if ctx is not None else False)
+        exit_prog = float(self._exit_progress)
+
+        if is_silent and exit_prog <= 0.0:
+            self.hist_rgb *= 0.75
+            self.wave_active.fill(False)
+            self.fade_to_black_segment_vectorized(0.25, 0, self.nb_of_leds - 1)
+            return
+
         dt = self.dt
         fps_ratio = self.fps_ratio
         bpm = max(60.0, min(200.0, float(getattr(self.listener, "bpm", 120.0))))
-        mood = self.mood_colors
-
         tension = float(ctx.tension if ctx is not None else 0.0)
-        is_silent = bool(ctx.is_silent if ctx is not None else False)
-        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
-        if (not is_silent) and energy <= 0.0:
-            energy = float(getattr(self.listener, "asserved_total_power", 0.0))
+        is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
+        drop_hit = self.drop_hit
         lock = self.rhythm_lock
-        pulse = self.beat_pulse()
-
-        if self._prev_energy < 0.0:
-            self._prev_energy = energy
-            self._ema_energy = energy
-
-        d_energy = abs(energy - self._prev_energy)
-        swell = max(0.0, energy - self._ema_energy)
-        self._prev_energy = energy
-        self._ema_energy += self.alpha(3.0) * (energy - self._ema_energy)
+        unlocked_alive = max(0.0, 1.0 - (lock / 0.15)) if lock < 0.15 else 0.0
 
         self.time_since_wave += dt
 
-        # 1. Subpixel Wave Propagation Speed (Lead: level sets flow speed; nudged smoothly by mood_pace)
+        # 1. Steady, Regular Outward Extension Speed (gently linked to BPM and mood_pace, independent of volume)
         frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
-        lvl = min(1.0, 1.45 * energy)
-        flow_gain = 0.45 + 1.15 * lvl
-        base_speed = (float(self.half_len) / frames_per_beat) * fps_ratio * flow_gain * (1.0 + 0.5 * tension) * self.mood_pace
-        damping = (0.045 / max(0.5, self.mood_trail)) * fps_ratio
+        base_speed = max(
+            0.28 * fps_ratio,
+            (float(self.half_len) / (2.2 * frames_per_beat)) * fps_ratio * self.mood_pace,
+        )
+        damping = (0.040 / max(0.5, self.mood_trail)) * fps_ratio
 
-        exit_prog = float(self._exit_progress)
         if exit_prog <= 0.0:
             self._stack_frontier = float(self.half_len)
 
@@ -112,7 +163,6 @@ class Extending_waves_mode(Mode.Mode):
                 self.wave_amps[w] *= max(0.0, 1.0 - damping)
 
                 if exit_prog > 0.0 and self.wave_velocities[w] > 0 and self.wave_positions[w] >= (self._stack_frontier - 1.2):
-                    # Outgoing white wave hits the stack frontier and deposits inward instead of vanishing
                     self._stack_frontier = max(-0.15 * float(self.half_len), self._stack_frontier - self.wave_width * 1.35)
                     self.wave_active[w] = False
                 elif self.wave_velocities[w] > 0 and self.wave_positions[w] >= (self.half_len + 2.0):
@@ -122,74 +172,285 @@ class Extending_waves_mode(Mode.Mode):
                 elif self.wave_amps[w] < 0.015:
                     self.wave_active[w] = False
 
-        # 2. Wave Injection from Level Accumulator (decoupled from beat ticks)
-        unlocked_drive = max(0.0, 1.0 - (lock / 0.35)) * energy * dt * 1.6 if lock < 0.35 else 0.0
-        if not is_silent and energy > 0.04:
-            self.level_accum += (9.5 * swell + 6.0 * d_energy) * (0.65 + 0.70 * lvl) * self.mood_pace + unlocked_drive
+        # 2. Read Spectrum (LEAD) and Onset Flux (SECONDARY)
+        bands = getattr(self.listener, "asserved_fft_band", None)
+        if bands is not None and len(bands) > 1:
+            self._ensure_band_capacity(len(bands))
+            self.fft_bands[:] = bands[:self.nb_bands]
         else:
-            self.level_accum = 0.0
+            self.fft_bands.fill(0.35)
 
-        min_wave_interval = 0.35 * (60.0 / bpm) / max(0.5, 0.75 + 0.50 * lvl)
+        raw_flux = getattr(self.listener, "band_flux", None)
+        if raw_flux is not None and len(raw_flux) >= self.nb_bands:
+            self.flux_bands[:] = raw_flux[:self.nb_bands]
+        else:
+            self.flux_bands.fill(0.0)
+
+        nb = self.nb_bands
+        if not self._initialized:
+            self._band_ema[:] = self.fft_bands
+            self._prev_bands[:] = self.fft_bands
+            self._band_fatigue.fill(0.0)
+
+        # Frame-to-frame spectral change & positive attack
+        np.subtract(self.fft_bands, self._prev_bands, out=self._band_rise)
+        max_abs_delta = float(np.max(np.abs(self._band_rise)))
+        np.clip(self._band_rise, 0.0, 1.0, out=self._band_rise)
+        self._prev_bands[:] = self.fft_bands
+
+        if max_abs_delta < 1e-6:
+            self._static_spec_frames += 1
+        else:
+            self._static_spec_frames = 0
+
+        if self._static_spec_frames >= 5:
+            # Spectrum is completely static/muted: snap EMA to bands so deviations settle to zero cleanly
+            self._band_ema[:] = self.fft_bands
+            self._band_dev.fill(0.0)
+        else:
+            np.subtract(self.fft_bands, self._band_ema, out=self._band_dev)
+            np.clip(self._band_dev, 0.0, 1.0, out=self._band_dev)
+            ema_alpha = self.alpha(2.2)
+            self._band_ema += ema_alpha * (self.fft_bands - self._band_ema)
+
+        # Normalize onset flux (Secondary: transient)
+        max_f = float(np.max(self.flux_bands))
+        self._flux_scale = max(0.6, self._flux_scale * (1.0 - self.alpha(1.8)), max_f)
+        np.divide(self.flux_bands, self._flux_scale, out=self._norm_flux)
+        np.clip(self._norm_flux, 0.0, 1.0, out=self._norm_flux)
+
+        # Mean-rebalanced relative band share
+        np.add(self._band_ema, 0.12, out=self._band_scores)
+        np.divide(self.fft_bands, self._band_scores, out=self._rel_bands)
+        self._rel_bands -= float(np.min(self._rel_bands))
+
+        # 3. Balanced Dominant Wavelength Scoring (Deviations + Onset Flux + Anti-Stagnation Fatigue)
+        self._band_hold_time += dt
+        self._drum_cooldown = max(0.0, self._drum_cooldown - dt)
+
+        max_dev = float(np.max(self._band_dev))
+        max_rise = float(np.max(self._band_rise))
+        inst_spec_act = min(1.0, 2.8 * max_dev + 4.2 * max_rise + 0.35 * unlocked_alive)
+        if self._static_spec_frames >= 5 and unlocked_alive <= 0.0:
+            self._spec_activity = 0.0
+            self._crest_env = 0.0
+        else:
+            self._spec_activity = max(inst_spec_act, self._spec_activity * (1.0 - self.alpha(5.0)))
+
+        # Drum / Kick peak detection on rising bass transient (with cooldown so it creates a crisp Red peak, not a permanent red fill)
+        low_flux = max(float(self._norm_flux[0]), 0.70 * float(self._norm_flux[1]) if nb > 1 else 0.0)
+        bass_attack = (
+            0.85 * float(self._band_rise[0])
+            + 0.25 * float(self._band_dev[0])
+            + 0.95 * low_flux * self._spec_activity
+            + (0.35 if (is_real or drop_hit) and float(self._band_rise[0]) > 0.01 else 0.0)
+        )
+
+        if self._drum_cooldown <= 0.0 and bass_attack > 0.30 and self._static_spec_frames < 5:
+            self._drum_hold_frames = 4
+            self._drum_cooldown = max(0.24, 0.42 * (60.0 / bpm))
+            self._band_fatigue[0] *= 0.25
+
+        is_drum_peak = self._drum_hold_frames > 0
+        if self._drum_hold_frames > 0:
+            self._drum_hold_frames -= 1
+            if self._drum_hold_frames == 0:
+                # Immediately fatigue Band 0 after the drum crest so the melody/other bands take over between beats
+                self._band_fatigue[0] = min(2.2, float(self._band_fatigue[0]) + 1.10)
+
+        for b in range(nb):
+            dev_b = float(self._band_dev[b])
+            rise_b = float(self._band_rise[b])
+            rel_b = float(self._rel_bands[b])
+            flx_b = float(self._norm_flux[b]) * (0.15 + 0.85 * self._spec_activity)
+            # Mildly boost b >= 1 to counterbalance natural 1/f bass dominance in raw audio
+            band_eq = 0.80 if b == 0 else (1.02 + 0.03 * min(6, b))
+            raw_s = band_eq * (2.4 * dev_b + 3.0 * rise_b + 0.60 * rel_b + 0.85 * flx_b)
+
+            if b == 0 and is_drum_peak:
+                raw_s = (raw_s + 0.45) * 2.20
+                eff_fatigue = 0.0
+            else:
+                eff_fatigue = float(self._band_fatigue[b])
+
+            self._band_scores[b] = raw_s / (1.0 + 2.8 * eff_fatigue)
+
+        cand_band = int(np.argmax(self._band_scores))
+        if not self._initialized or is_drum_peak:
+            b_star = 0 if is_drum_peak else cand_band
+            if b_star != self.dominant_band:
+                self._band_hold_time = 0.0
+        else:
+            cur_b = min(nb - 1, max(0, self.dominant_band))
+            cur_score = float(self._band_scores[cur_b])
+            cand_score = float(self._band_scores[cand_band])
+            # Hold current wavelength for ~0.11s (6-7 frames = 3-4 LEDs) unless a strong new attack jumps ahead
+            if cand_band != cur_b and (
+                self._band_hold_time >= 0.11
+                or cand_score > (cur_score * 2.15 + 0.08)
+            ):
+                b_star = cand_band
+                self._band_hold_time = 0.0
+            else:
+                b_star = cur_b
+        self.dominant_band = b_star
+
+        # Update anti-stagnation fatigue so sustained bands yield to other active wavelengths
+        self._band_fatigue *= (1.0 - self.alpha(2.0))
+        if self._spec_activity > 0.02:
+            self._band_fatigue[b_star] = min(2.2, float(self._band_fatigue[b_star]) + dt * 4.5)
+            if b_star > 0:
+                self._band_fatigue[b_star - 1] = min(2.2, float(self._band_fatigue[b_star - 1]) + dt * 0.65)
+            if b_star + 1 < nb:
+                self._band_fatigue[b_star + 1] = min(2.2, float(self._band_fatigue[b_star + 1]) + dt * 0.65)
+
+        # Winner-take-most local hue interpolation (0.00 Red for drums/bass -> 0.82 Violet for treble)
+        s_c = float(self._band_scores[b_star])
+        s_l = float(self._band_scores[b_star - 1]) if b_star > 0 else 0.0
+        s_r = float(self._band_scores[b_star + 1]) if (b_star + 1) < nb else 0.0
+        local_offset = 0.35 * (s_r - s_l) / (s_c + s_l + s_r + 1e-6)
+        w_pos = max(0.0, min(1.0, (float(b_star) + local_offset) / max(1.0, float(nb - 1))))
+        target_hue = 0.0 if is_drum_peak else (0.82 * w_pos)
+
+        if not self._initialized:
+            self._current_hue = target_hue
+        elif self._spec_activity > 0.01:
+            hue_diff = abs(target_hue - self._current_hue)
+            # Snap fast on drum peaks or cross-band jumps so Red drums never smear through Green
+            hue_rate = 55.0 if is_drum_peak or hue_diff > 0.18 else 20.0
+            self._current_hue += self.alpha(hue_rate) * (target_hue - self._current_hue)
+
+        # 4. Synthesize Center Wavelength Color & Wave Crest Intensity
+        lut_idx = int(max(0.0, min(255.0, (self._current_hue / 0.82) * 255.0)))
+        base_col = self.rainbow_lut[lut_idx]
+
+        # Wave crest envelope: sharp peaks on drum hits, spectral attacks, and onset flux, with deeper wave valleys
+        trans_kick = max(
+            float(self._norm_flux[b_star]),
+            low_flux if is_drum_peak else 0.0,
+            0.85 if (is_real or drop_hit) else 0.0,
+        )
+        # Gate secondary transient by spectral activity so spectrum remains the clear lead driver
+        sec_punch = trans_kick * (0.10 + 0.90 * self._spec_activity)
+        spec_crest = min(0.62, 0.85 * max_dev + 1.45 * max_rise)
+        crest_target = min(
+            1.0,
+            spec_crest + 0.52 * sec_punch + (0.45 if is_drum_peak else 0.0),
+        )
+        if is_drum_peak:
+            self._crest_env = max(self._crest_env, crest_target)
+        elif crest_target >= self._crest_env:
+            self._crest_env += self.alpha(55.0) * (crest_target - self._crest_env)
+        else:
+            self._crest_env += self.alpha(8.5) * (crest_target - self._crest_env)
+
+        # Spatial wave undulation so extending waves show clear rhythmic crests and valleys
+        wave_carrier = 0.5 + 0.5 * math.sin(self.scroll_pos * 1.25)
+        mean_band = float(np.mean(self.fft_bands))
+        base_floor = 0.12 * mean_band
+        dynamic_wave = self._spec_activity * (0.10 + 0.28 * (wave_carrier * wave_carrier)) + 0.68 * self._crest_env
+        center_val = max(0.0, min(1.0, base_floor + dynamic_wave)) * self.transition_scale
+
+        hi = self.highlight_color
+        accent_mix = min(0.18, 0.45 * self.mood_accent)
+        inv_acc = 1.0 - accent_mix
+        white_mix = min(1.0, exit_prog * 1.65)
+        center_exit_atten = max(0.25, 1.0 - 0.65 * exit_prog) if exit_prog > 0.0 else 1.0
+        for c in range(3):
+            col_c = inv_acc * float(base_col[c]) + accent_mix * float(hi[c])
+            tinted_c = (1.0 - white_mix) * col_c + white_mix * 255.0
+            self._center_rgb[c] = tinted_c * center_val * center_exit_atten
+
+        # 5. Advance Zero-Diffusion Subpixel History Ring Buffer
+        if not self._initialized or (self._static_spec_frames == 5 and unlocked_alive <= 0.0 and exit_prog <= 0.0):
+            self.hist_rgb[:] = self._center_rgb
+            self._prev_center_rgb[:] = self._center_rgb
+            self._initialized = True
+        else:
+            prev_slot = int(math.floor(self.scroll_pos))
+            self.scroll_pos += base_speed
+            curr_slot = int(math.floor(self.scroll_pos))
+            steps = curr_slot - prev_slot
+            if steps <= 0:
+                self.hist_rgb[curr_slot % self.hist_len] = self._center_rgb
+            elif steps == 1:
+                self.hist_rgb[curr_slot % self.hist_len] = self._center_rgb
+            else:
+                steps_clamped = min(steps, self.hist_len)
+                for s in range(1, steps_clamped + 1):
+                    frac_s = float(s) / float(steps_clamped)
+                    slot_idx = (prev_slot + s) % self.hist_len
+                    for c in range(3):
+                        self.hist_rgb[slot_idx, c] = (
+                            (1.0 - frac_s) * float(self._prev_center_rgb[c]) + frac_s * float(self._center_rgb[c])
+                        )
+            self._prev_center_rgb[:] = self._center_rgb
+
+        # 6. Discrete Wave Crest Injection (reinforces drum/spectral peaks & drives cooperative exit white stack)
+        min_wave_interval = 0.28 * (60.0 / bpm)
         seed_wave = self._enter_progress < 0.25 and not bool(np.any(self.wave_active))
         exit_wave = exit_prog > 0.0 and exit_prog < 0.88 and self.time_since_wave >= (0.22 * (60.0 / bpm))
+        peak_trigger = (is_drum_peak or self._crest_env > 0.32 or is_real or drop_hit) and self.time_since_wave >= min_wave_interval
         should_trigger = (
-            (not is_silent)
-            and (energy > 0.04 or exit_prog > 0.0)
-            and ((self.level_accum >= 1.0 and self.time_since_wave >= min_wave_interval) or seed_wave or exit_wave)
+            (not is_silent or exit_prog > 0.0)
+            and (peak_trigger or seed_wave or exit_wave)
             and exit_prog < 0.90
         )
 
         if should_trigger:
             self.time_since_wave = 0.0
-            self.level_accum = 0.0
             slot = self.wave_slot
             self.wave_slot = (self.wave_slot + 1) % self.MAX_WAVES
             self.wave_active[slot] = True
             self.wave_count += 1
             self.wave_positions[slot] = 0.0
             self.wave_velocities[slot] = 1.0
-            self.wave_amps[slot] = max(exit_prog, 0.50 + 0.50 * min(1.0, lvl))
-            base_c = mood[self.wave_count % 3]
-            hi = self.highlight_color
-            # Secondary (beat): pulse tints the spawned wave toward highlight_color;
-            # on cooperative exit, spawned waves bleach into pure white (255, 255, 255)
-            tint = min(1.0, self.mood_accent + 0.28 * pulse)
-            inv_tint = 1.0 - tint
-            white_mix = min(1.0, exit_prog * 1.65)
+            self.wave_amps[slot] = max(exit_prog, min(1.0, 0.35 + 0.65 * self._crest_env))
             for c in range(3):
-                col_c = inv_tint * float(base_c[c]) + tint * float(hi[c])
-                self.wave_colors[slot, c] = (1.0 - white_mix) * col_c + white_mix * 255.0
+                self.wave_colors[slot, c] = (1.0 - white_mix) * float(base_col[c]) + white_mix * 255.0
 
-        # 3. Synthesize Half-Strip Energy & Colors (level sets bed and wave brightness; beat tints & shimmers crests)
-        self.half_rgb.fill(0.0)
-        if not is_silent:
-            np.subtract(1.15 * lvl, self.half_pos, out=self.bed_profile)
-            np.clip(self.bed_profile, 0.0, 1.0, out=self.bed_profile)
-            np.multiply(self.bed_profile, 1.00 * self.transition_scale, out=self.bed_profile)
-            m1 = mood[1]
-            for c in range(3):
-                np.multiply(self.bed_profile, float(m1[c]), out=self.half_rgb[:, c])
+        # 7. Sample Subpixel History Buffer Across the Half-Strip (Zero Allocation)
+        np.subtract(self.scroll_pos, self.half_coords, out=self._src_pos)
+        np.mod(self._src_pos, float(self.hist_len), out=self._src_pos)
+        np.floor(self._src_pos, out=self._src_floor)
+        np.subtract(self._src_pos, self._src_floor, out=self._src_frac)
+        np.copyto(self._idx0, self._src_floor, casting="unsafe")
+        np.add(self._idx0, 1, out=self._idx1)
+        np.mod(self._idx1, self.hist_len, out=self._idx1)
 
-        crest_gain = 0.68 * (0.40 + 0.60 * lvl) * (0.86 + 0.14 * pulse)
-        two_w_sq = 2.0 * ((self.wave_width * (1.0 - 0.20 * tension)) ** 2)
+        np.take(self.hist_rgb, self._idx0, axis=0, out=self._sample0)
+        np.take(self.hist_rgb, self._idx1, axis=0, out=self._sample1)
+
+        np.subtract(self._sample1, self._sample0, out=self.half_rgb)
+        np.multiply(self.half_rgb, self._src_frac_2d, out=self.half_rgb)
+        np.add(self.half_rgb, self._sample0, out=self.half_rgb)
+
+        # Gentle radial trail attenuation toward outer tips (modulated by mood_trail)
+        trail_falloff = 0.28 / max(0.5, self.mood_trail)
+        np.multiply(self.half_pos, -trail_falloff, out=self._radial_env)
+        np.add(self._radial_env, 1.0, out=self._radial_env)
+        np.clip(self._radial_env, 0.45, 1.0, out=self._radial_env)
+        np.multiply(self.half_rgb, self._radial_env_2d, out=self.half_rgb)
+
+        # Add travelling peak wave crests
+        two_w_sq = 2.0 * ((self.wave_width * (1.0 - 0.15 * tension)) ** 2)
         inv_two_w_sq = float(-1.0 / two_w_sq) if two_w_sq > 0 else -1.0
-        hi = self.highlight_color
-        beat_tint = 0.22 * pulse
+        crest_boost = (0.32 * self._spec_activity) if exit_prog <= 0.0 else 0.75
 
-        for w in range(self.MAX_WAVES):
-            if self.wave_active[w]:
-                np.subtract(self.half_coords, self.wave_positions[w], out=self.half_dists)
-                np.square(self.half_dists, out=self.half_dists)
-                np.multiply(self.half_dists, inv_two_w_sq, out=self.wave_profile)
-                np.exp(self.wave_profile, out=self.wave_profile)
-                np.multiply(self.wave_profile, self.wave_amps[w] * crest_gain, out=self.wave_profile)
-                col = self.wave_colors[w]
-                white_w = min(1.0, exit_prog * 1.40)
-                for c in range(3):
-                    tc = (1.0 - beat_tint) * float(col[c]) + beat_tint * float(hi[c])
-                    tc = (1.0 - white_w) * tc + white_w * 255.0
-                    np.multiply(self.wave_profile, tc, out=self.wave_scratch_rgb[:, c])
-                np.add(self.half_rgb, self.wave_scratch_rgb, out=self.half_rgb)
+        if crest_boost > 0.001:
+            for w in range(self.MAX_WAVES):
+                if self.wave_active[w]:
+                    np.subtract(self.half_coords, self.wave_positions[w], out=self.half_dists)
+                    np.square(self.half_dists, out=self.half_dists)
+                    np.multiply(self.half_dists, inv_two_w_sq, out=self.wave_profile)
+                    np.exp(self.wave_profile, out=self.wave_profile)
+                    np.multiply(self.wave_profile, self.wave_amps[w] * crest_boost, out=self.wave_profile)
+                    col = self.wave_colors[w]
+                    white_w = min(1.0, exit_prog * 1.40)
+                    for c in range(3):
+                        tc = (1.0 - white_w) * float(col[c]) + white_w * 255.0
+                        np.multiply(self.wave_profile, tc, out=self.wave_scratch_rgb[:, c])
+                    np.add(self.half_rgb, self.wave_scratch_rgb, out=self.half_rgb)
 
         # Bespoke cooperative exit: white waves stack and accumulate from outer edges inward
         if exit_prog > 0.0:
@@ -202,25 +463,17 @@ class Extending_waves_mode(Mode.Mode):
             for c in range(3):
                 np.maximum(self.half_rgb[:, c], self.bed_profile, out=self.half_rgb[:, c])
 
-        # Gentle acoustic center breathing when flywheel is lost so stalled phase never freezes the strip
-        if (not is_silent) and (lock < 0.5) and not bool(np.any(self.wave_active)):
-            self.breath_phase = (self.breath_phase + dt * 2.4 * self.mood_pace) % 6.2831853
-            breath_amp = (1.0 - 2.0 * lock) * energy * (0.15 + 0.20 * (0.5 + 0.5 * float(np.sin(self.breath_phase))))
-            m0 = mood[0]
-            for c in range(3):
-                np.multiply(self.center_falloff, breath_amp * float(m0[c]), out=self.glow_rgb[:, c])
-            np.add(self.half_rgb, self.glow_rgb, out=self.half_rgb)
-
         np.clip(self.half_rgb, 0.0, 255.0, out=self.half_rgb)
 
-        # 4. Symmetrical Mirroring to Full Segment
+        # 8. Symmetrical Mirroring to Full Segment
         if self.middle_idx > 0:
             left_view = self.half_rgb[1:self.middle_idx + 1][::-1]
-            self.smooth_segment_vectorized(0.75, 0, self.middle_idx - 1, left_view)
+            self.smooth_segment_vectorized(0.80, 0, self.middle_idx - 1, left_view)
 
-        self.smooth_segment_vectorized(0.75, self.middle_idx, self.middle_idx, self.half_rgb[0])
+        self.smooth_segment_vectorized(0.80, self.middle_idx, self.middle_idx, self.half_rgb[0])
 
         right_len = self.nb_of_leds - (self.middle_idx + 1)
         if right_len > 0:
             right_view = self.half_rgb[1:right_len + 1]
-            self.smooth_segment_vectorized(0.75, self.middle_idx + 1, self.nb_of_leds - 1, right_view)
+            self.smooth_segment_vectorized(0.80, self.middle_idx + 1, self.nb_of_leds - 1, right_view)
+

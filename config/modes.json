@@ -97,7 +97,7 @@
       "module": "Extending_waves_mode",
       "class": "Extending_waves_mode",
       "dna": { "energy": 0.60, "punch": 0.50, "rhythm": 0.60, "complexity": 0.50 },
-      "tags": ["lead:level", "axis:horizontal", "form:wave", "origin:center", "color:palette", "layer:meter"]
+      "tags": ["lead:spectrum", "axis:horizontal", "form:wave", "origin:center", "color:own-hue", "layer:meter"]
     }
   ]
 }
