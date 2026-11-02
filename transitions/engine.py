@@ -43,192 +43,157 @@ def apply_dual_fade(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress
     np.add(rgb_list_old, rgb_list_new * w, out=rgb_list_old, casting='unsafe')
 
 def apply_colorful_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progress: float) -> None:
-    """ A 'not smooth', blocky, colorful rave flash to mask the mode transition. """
-    progress = max(0.0, min(1.0, progress))
-    if progress == 0.0: return
-    if progress == 1.0:
+    """3-Act Prism Rave Takeover (`global_change`): neon block strobe -> polyrhythmic cascade -> smooth bloom."""
+    progress = max(0.0, min(1.0, float(progress)))
+    if progress <= 0.0: return
+    if progress >= 1.0:
         np.copyto(rgb_list_old, rgb_list_new)
         return
-        
-    num_leds = len(rgb_list_old)
-    
-    # Non-smooth: Update only in large chunky tiers (e.g., 6 distinct flash frames)
-    tier = int(progress * 8)
-    
-    # 6 intensely saturated colors
-    colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 0, 255], [0, 255, 255], [255, 255, 0]]
-    block_size = max(1, num_leds // max(1, tier + 2))
-    blocks = np.arange(num_leds) // block_size
-    mask_glitch = (blocks % 2 == tier % 2)
-
-    if tier % 2 == 0:
-        color = np.array(colors[tier % len(colors)])
-        np.copyto(rgb_list_old, color, where=mask_glitch[:, np.newaxis])
-        np.copyto(rgb_list_old, rgb_list_new, where=(~mask_glitch)[:, np.newaxis])
+    n = len(rgb_list_old)
+    if n == 0: return
+    u = np.arange(n, dtype=np.float64) / max(1.0, float(n - 1))
+    palette = np.array(
+        [[255, 20, 180], [0, 245, 255], [255, 215, 0], [160, 40, 255], [40, 255, 140], [255, 90, 20]],
+        dtype=np.float64,
+    )
+    if progress < 0.32:
+        p1 = progress / 0.32
+        step = int(p1 * 6.0)
+        blocks = np.floor(u * (4.0 + step)).astype(np.int32)
+        active = (blocks % 2) == (step % 2)
+        prism = palette[(blocks + step) % len(palette)]
+        rgb_list_old[~active] = (rgb_list_old[~active] * (0.25 * (1.0 - p1))).astype(np.int32)
+        rgb_list_old[active] = np.clip(rgb_list_old[active] * 0.35 + prism[active] * 0.85, 0, 255).astype(np.int32)
+    elif progress < 0.72:
+        p2 = (progress - 0.32) / 0.40
+        step = int(p2 * 10.0)
+        blocks = np.floor((u + step * 0.13) * (6.0 + step * 0.8)).astype(np.int32)
+        mode_sel = (blocks + step) % 3
+        c_idx = (blocks * 2 + step) % len(palette)
+        rgb_list_old.fill(0)
+        np.copyto(rgb_list_old, rgb_list_new, where=(mode_sel == 0)[:, np.newaxis])
+        mask_prism = mode_sel == 1
+        if np.any(mask_prism):
+            rgb_list_old[mask_prism] = np.clip(
+                rgb_list_new[mask_prism] * 0.35 + palette[c_idx[mask_prism]] * 0.90, 0, 255
+            ).astype(np.int32)
     else:
-        np.copyto(rgb_list_old, rgb_list_new, where=mask_glitch[:, np.newaxis])
-        np.copyto(rgb_list_old, np.array([0, 0, 0]), where=(~mask_glitch)[:, np.newaxis])
+        p3 = (progress - 0.72) / 0.28
+        smooth = p3 * p3 * (3.0 - 2.0 * p3)
+        c_idx = (np.floor(u * 8.0).astype(np.int32) + int(p3 * 6.0)) % len(palette)
+        shimmer = (1.0 - smooth) * 0.55 * (0.5 + 0.5 * np.cos((u * 12.0 - p3 * 8.0) * math.pi))[:, np.newaxis]
+        np.clip(rgb_list_new + palette[c_idx] * shimmer, 0, 255, out=rgb_list_old, casting="unsafe")
 
 
 def apply_gravity_drop(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
-    """Discrete numerical integrator for multiple bouncing balls; primary ball defines the wipe boundary."""
-    progress = max(0.0, min(1.0, progress))
+    """Architectural Marble-Run Cascade: left-to-right horizontal travel + vertical gravity drops down pillars."""
+    progress = max(0.0, min(1.0, float(progress)))
     if progress <= 0.0: return
+    if progress >= 1.0:
+        np.copyto(rgb_list_old, rgb_list_new)
+        return
+    nx = np.clip(coords[:, 0] / max(1.0, float(ROOM_MAX_X)), 0.0, 1.0)
+    ny = np.clip(coords[:, 1] / max(1.0, float(ROOM_MAX_Y)), 0.0, 1.0)
+    cascade_t = 0.56 * nx + 0.32 * (ny ** 0.78)
+    lead_p = progress * 0.98
+    ahead_d = cascade_t - lead_p
+    trench = (ahead_d > 0.0) & (ahead_d < 0.18)
+    if np.any(trench):
+        t_fade = (ahead_d[trench] / 0.18) ** 1.5
+        rgb_list_old[trench] = (rgb_list_old[trench] * (0.08 + 0.92 * t_fade[:, np.newaxis])).astype(np.int32)
+    np.copyto(rgb_list_old, rgb_list_new, where=(cascade_t <= lead_p)[:, np.newaxis])
+    tail_fade = 1.0 if progress < 0.84 else max(0.0, (1.0 - progress) / 0.16) ** 1.4
+    if tail_fade <= 1e-3: return
+    marbles = (
+        (0.00, np.array([255.0, 215.0, 60.0])),
+        (0.07, np.array([0.0, 235.0, 255.0])),
+        (0.14, np.array([255.0, 60.0, 200.0])),
+        (0.21, np.array([180.0, 255.0, 120.0])),
+    )
+    pillar_xs = (205.0 / 430.0, 292.0 / 430.0, 383.0 / 430.0, 1.0)
+    glow = np.zeros((len(rgb_list_old), 3), dtype=np.float64)
+    for delay, color in marbles:
+        mp = progress - delay
+        if mp <= 0.0: continue
+        roll_nx = (mp - 0.32 * (ny ** 0.78)) / 0.56
+        h_orb = np.clip(1.0 - np.abs(nx - roll_nx) / 0.09, 0.0, 1.0) ** 1.8
+        glow += h_orb[:, np.newaxis] * color
+        for px in pillar_xs:
+            t_pillar = mp - 0.56 * px
+            if 0.0 < t_pillar < 0.42:
+                drop_ny = min(1.05, 0.05 + 1.85 * ((t_pillar / 0.34) ** 1.65))
+                on_pillar = np.clip(1.0 - np.abs(nx - px) / 0.04, 0.0, 1.0)
+                v_orb = on_pillar * (np.clip(1.0 - np.abs(ny - drop_ny) / 0.16, 0.0, 1.0) ** 1.6)
+                glow += v_orb[:, np.newaxis] * (color * 0.7 + np.array([255.0, 255.0, 255.0]) * 0.5)
+    np.clip(rgb_list_old + glow * tail_fade, 0, 255, out=rgb_list_old, casting="unsafe")
+
+
+def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
+    """
+    3-Act Cyberpunk Sector Corruption & Matrix Reboot:
+    - Act I (0.00..0.32): Quantized sector freeze, RGB channel tear & scanline blackouts.
+    - Act II (0.32..0.72): High-contrast pitch-black void with teleporting neon cyber-blocks.
+    - Act III (0.72..1.00): Progressive digital scanline resync locking smoothly into `rgb_list_new`.
+    """
+    progress = max(0.0, min(1.0, float(progress)))
+    if progress <= 0.0:
+        return
     if progress >= 1.0:
         np.copyto(rgb_list_old, rgb_list_new)
         return
 
-    H = float(ROOM_MAX_Y)
-    g, e, dt = TRANSITION_DEFAULTS["g"], TRANSITION_DEFAULTS["e"], TRANSITION_DEFAULTS["dt"]
-    base_colors = [[255, 0, 50], [0, 200, 255], [150, 0, 255], [255, 200, 0], [50, 255, 50], [255, 100, 0]]
-    balls = []
-    for i, c in enumerate(base_colors):
-        if i == 0:
-            balls.append({"color": np.array(c, dtype=np.int32), "delay": 0.0, "v0": 50.0, "size_mult": 1.0})
-        else:
-            balls.append({
-                "color": np.array(c, dtype=np.int32),
-                "delay": 0.04 * i,
-                "v0": abs(np.sin(i * 4.56)) * 100.0,
-                "size_mult": 0.3 + abs(np.cos(i * 7.89)) * 1.2,
-            })
-    
-    ball_results = []
-    
-    # Process physics for every ball independently
-    for b in balls:
-        y = 0.0
-        v = float(b["v0"])
-        max_y_reached = 0.0
-        first_hit_time = 1.0
-        
-        current_t = b["delay"]
-        # Simulate forward through time up to our current progress
-        while current_t < progress:
-            v += g * dt
-            y += v * dt
-            
-            if y >= H:
-                if first_hit_time == 1.0:
-                    first_hit_time = current_t
-                y = H
-                v = -v * e
-                
-            max_y_reached = max(max_y_reached, y)
-            current_t += dt
-            
-        # Interpolate excess integration frames
-        excess = current_t - progress
-        if excess > 0 and progress > b["delay"]:
-            y -= v * excess
-            
-        ball_results.append({
-            "y": min(H, max(0.0, y)),
-            "max_y_reached": max_y_reached,
-            "first_hit_time": first_hit_time,
-            "color": b["color"],
-            "size_mult": b["size_mult"],
-            "is_active": progress > b["delay"]
-        })
-        
-    main_ball = ball_results[0]
-    
-    # Sweep incoming mode directly behind the path mapped by max extent of the PRIMARY ball
-    mask_new = coords[:, 1] <= main_ball["max_y_reached"]
-    np.copyto(rgb_list_old, rgb_list_new, where=mask_new[:, np.newaxis])
-    
-    # If primary ball hit the floor, apply the incoming mode permanently everywhere
-    if main_ball["first_hit_time"] <= progress:
-        np.copyto(rgb_list_old, rgb_list_new)
-        
-    # Begin fading out smoothly exactly from the moment of the primary ball's first impact
-    if progress <= main_ball["first_hit_time"]:
-        fade = 1.0
-    else:
-        fade_duration = 1.0 - main_ball["first_hit_time"]
-        if fade_duration > 0.001:
-            fade = max(0.0, 1.0 - ((progress - main_ball["first_hit_time"]) / fade_duration))
-        else:
-            fade = 0.0
-            
-    # Render all bouncing balls using the painter's algorithm
-    # Draw lower/older balls first, so the Primary Ball (idx 0) stays fully crisp on top!
-    for res in reversed(ball_results):
-        if not res["is_active"]:
-            continue
-            
-        dist = np.abs(coords[:, 1] - res["y"])
-        # Radius mapped against the unique pseudo-random size multiplier of the ball
-        radius = max(3.0 * res["size_mult"], 10.0 * res["size_mult"] * fade)  
-        mask_ball_1d = dist < radius
-        
-        if np.any(mask_ball_1d):
-            base_color = rgb_list_old[mask_ball_1d]
-            blended = (base_color * (1.0 - fade) + res["color"] * fade).astype(np.int32)
-            rgb_list_old[mask_ball_1d] = blended
-            
-def apply_weird_glitch(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
-    """ Digital sector corruption transition that spreads like a virus. """
-    progress = max(0.0, min(1.0, progress))
-    if progress <= 0.0: return
-    if progress >= 1.0:
-        np.copyto(rgb_list_old, rgb_list_new)
-        return
-        
-    # Create quantized geometric 'blocks' for a chunky digital sector feel
-    block_size_x, block_size_y = 60, 40
-    bx = coords[:, 0] // block_size_x
-    by = coords[:, 1] // block_size_y
-    
-    # Pseudo-random hash per block, permuted by active seed
+    nx = np.clip(coords[:, 0] / max(1.0, float(ROOM_MAX_X)), 0.0, 1.0)
+    ny = np.clip(coords[:, 1] / max(1.0, float(ROOM_MAX_Y)), 0.0, 1.0)
     seed = float(ACTIVE_PARAMS.get("seed", 0.0))
-    block_hash = np.mod(((bx * 373 + by * 113) % 100) / 100.0 + seed, 1.0)
-    
-    # Outbreak mechanic: calculate distance from the active 2D room epicenter
-    cx = ROOM_MAX_X * float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
-    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
-    dist_scale = max(1.0, max(ROOM_MAX_X, ROOM_MAX_Y) * 1.5)
-    dist_norm = np.sqrt((bx * block_size_x - cx)**2 + (by * block_size_y - cy)**2) / dist_scale
-    dist_norm = np.clip(dist_norm, 0.0, 1.0)
-    
-    # Infection threshold combines outbreak wave + block randomness (0.0 to ~0.75 max)
-    infection_threshold = dist_norm * 0.5 + block_hash * 0.25
-    
-    # Duration each infected block spends glitching before resolving to the new mode
-    glitch_duration = 0.25
-    local_prog = (progress - infection_threshold) / glitch_duration
-    
-    # Mask categorizations
-    mask_resolved = local_prog >= 1.0
-    mask_glitching = (local_prog >= 0.0) & (local_prog < 1.0)
-    
-    # 1. Apply resolved blocks aggressively
-    np.copyto(rgb_list_old, rgb_list_new, where=mask_resolved[:, np.newaxis])
-    
-    # 2. Process actively glitching blocks
-    if np.any(mask_glitching):
-        flicker_noise = np.sin(progress * 500.0 + coords[:, 0][mask_glitching] * 19.0 + coords[:, 1][mask_glitching] * 23.0)
-        glitch_colors = rgb_list_old[mask_glitching].copy()
-        
-        mask_white = flicker_noise > 0.8
-        mask_black = flicker_noise < -0.8
-        mask_peek = (flicker_noise > 0.4) & (flicker_noise <= 0.8)
-        mask_color = (flicker_noise > -0.8) & (flicker_noise <= -0.4)
-        
-        glitch_colors[mask_white] = [255, 255, 255]
-        glitch_colors[mask_black] = [0, 0, 0]
-        
-        new_colors_subset = rgb_list_new[mask_glitching]
-        glitch_colors[mask_peek] = new_colors_subset[mask_peek]
-        
-        color_mod = (coords[:, 0][mask_glitching] + coords[:, 1][mask_glitching]) % 3
-        synth_colors = np.zeros_like(glitch_colors)
-        synth_colors[color_mod == 0] = [0, 255, 255] # Cyan
-        synth_colors[color_mod == 1] = [255, 0, 255] # Magenta
-        synth_colors[color_mod == 2] = [255, 255, 0] # Yellow
-        
-        glitch_colors[mask_color] = synth_colors[mask_color]
-        rgb_list_old[mask_glitching] = glitch_colors
+
+    # Quantized architectural blocks & sample-and-hold digital frame steps
+    bx = np.floor(nx * 7.0)
+    by = np.floor(ny * 5.0)
+    step = math.floor(progress * 22.0)
+    b_hash = np.mod(np.sin(bx * 127.1 + by * 311.7 + step * 19.3 + seed) * 43758.5453, 1.0)
+    static_h = np.mod(np.sin(bx * 73.1 + by * 157.3 + seed) * 19731.3, 1.0)
+
+    if progress < 0.32:
+        p1 = progress / 0.32
+        infected = static_h < (0.25 + 0.75 * p1)
+        dropout = infected & (b_hash < 0.42)
+        tear_c = infected & (b_hash >= 0.42) & (b_hash < 0.72)
+        tear_m = infected & (b_hash >= 0.72)
+        rgb_list_old[dropout] = 0
+        if np.any(tear_c):
+            # Cyan chromatic channel tear (zero Red, boost Green/Blue)
+            rgb_list_old[tear_c, 0] = 0
+            rgb_list_old[tear_c, 1] = np.clip(rgb_list_old[tear_c, 1] + 150, 0, 255)
+            rgb_list_old[tear_c, 2] = 255
+        if np.any(tear_m):
+            # Magenta chromatic channel tear (boost Red/Blue, zero Green)
+            rgb_list_old[tear_m, 0] = 255
+            rgb_list_old[tear_m, 1] = 0
+            rgb_list_old[tear_m, 2] = np.clip(rgb_list_old[tear_m, 2] + 150, 0, 255)
+    elif progress < 0.72:
+        p2 = (progress - 0.32) / 0.40
+        rgb_list_old.fill(0)
+        # High-contrast cyber blocks jumping across pitch-black negative space
+        m_new = (b_hash >= 0.28) & (b_hash < (0.55 + 0.25 * p2))
+        m_cyan = (b_hash >= 0.80) & (b_hash < 0.87)
+        m_mag = (b_hash >= 0.87) & (b_hash < 0.94)
+        m_yel = b_hash >= 0.94
+        np.copyto(rgb_list_old, rgb_list_new, where=m_new[:, np.newaxis])
+        rgb_list_old[m_cyan] = [0, 250, 255]
+        rgb_list_old[m_mag] = [255, 0, 210]
+        rgb_list_old[m_yel] = [255, 235, 0]
+    else:
+        p3 = (progress - 0.72) / 0.28
+        scan_lock = 0.65 * ny + 0.35 * static_h
+        locked = scan_lock <= (p3 * 1.15)
+        rgb_list_old.fill(0)
+        np.copyto(rgb_list_old, rgb_list_new, where=locked[:, np.newaxis])
+        if np.any(~locked):
+            rgb_list_old[~locked] = (rgb_list_new[~locked] * p3).astype(np.int32)
+        sync_bar = np.clip(1.0 - np.abs(ny - p3) / 0.14, 0.0, 1.0) * ((1.0 - p3) ** 1.4)
+        out = rgb_list_old + sync_bar[:, np.newaxis] * np.array([0.0, 240.0, 255.0])
+        np.clip(out, 0, 255, out=rgb_list_old, casting="unsafe")
+
 
 def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float) -> None:
     """Concentric inward-collapsing rings to a brief blackout, then a radial shockwave explosion."""
@@ -238,8 +203,10 @@ def apply_explosion(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: 
         np.copyto(rgb_list_old, rgb_list_new)
         return
 
-    cx = ROOM_MAX_X * float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
-    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
+    raw_ex = float(ACTIVE_PARAMS.get("epicenter_x", 0.60))
+    ex = 0.60 if abs(raw_ex - 0.5) < 1e-3 else raw_ex
+    cx = ROOM_MAX_X * ex
+    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.50))
     dx = coords[:, 0] - cx
     dy = coords[:, 1] - cy
     dist = np.sqrt(dx**2 + dy**2)
@@ -359,19 +326,23 @@ def apply_vertical_wipe(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coor
 
 
 def apply_box_wipe(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, beam_thickness: float = 0.04) -> None:
-    """ Sweeps outwards from the active 2D room epicenter in a rectangular frame. """
+    """Sweeps outwards from the active 2D room epicenter in a wide, high-contrast rectangular frame."""
     progress = max(0.0, min(1.0, float(progress)))
     if progress <= 0.0: return
     if progress >= 1.0:
         np.copyto(rgb_list_old, rgb_list_new)
         return
 
-    cx = ROOM_MAX_X * float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
-    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
+    raw_ex = float(ACTIVE_PARAMS.get("epicenter_x", 0.60))
+    ex = 0.60 if abs(raw_ex - 0.5) < 1e-3 else raw_ex
+    cx = ROOM_MAX_X * ex
+    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.50))
     span_x = max(cx, ROOM_MAX_X - cx, 1.0)
     span_y = max(cy, ROOM_MAX_Y - cy, 1.0)
     dist = np.maximum(np.abs(coords[:, 0] - cx) / span_x, np.abs(coords[:, 1] - cy) / span_y)
-    _apply_field_wipe(rgb_list_old, rgb_list_new, dist, progress, beam_thickness)
+    # Widen beam substantially so perpendicular intersections illuminate a bold segment
+    wide_beam = max(0.30, float(beam_thickness) * 2.2)
+    _apply_field_wipe(rgb_list_old, rgb_list_new, dist, progress, wide_beam)
 
 
 def apply_spiral_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, coords: np.ndarray, progress: float, beam_thickness: float = 0.04) -> None:
@@ -382,8 +353,10 @@ def apply_spiral_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, 
         np.copyto(rgb_list_old, rgb_list_new)
         return
 
-    cx = ROOM_MAX_X * float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
-    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
+    raw_ex = float(ACTIVE_PARAMS.get("epicenter_x", 0.60))
+    ex = 0.60 if abs(raw_ex - 0.5) < 1e-3 else raw_ex
+    cx = ROOM_MAX_X * ex
+    cy = ROOM_MAX_Y * float(ACTIVE_PARAMS.get("epicenter_y", 0.50))
     dx = coords[:, 0] - cx
     dy = coords[:, 1] - cy
     max_r = max(120.0, float(math.hypot(max(cx, ROOM_MAX_X - cx), max(cy, ROOM_MAX_Y - cy))))

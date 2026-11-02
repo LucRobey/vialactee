@@ -37,8 +37,8 @@ TRANSITION_FAMILIES: Dict[str, FrozenSet[TransitionFamily]] = {
     "supernova": frozenset({F.ROOM_EPI_2D, F.RHYTHMIC_CHOP}),
     "spiral": frozenset({F.ROOM_EPI_2D}),
     "tesla_arc": frozenset({F.ROOM_EPI_2D, F.STOCHASTIC_ORGANIC, F.RHYTHMIC_CHOP}),
-    "box_wipe": frozenset({F.ROOM_EPI_2D, F.MODE_COOPERATIVE}),
-    "weird_glitch": frozenset({F.ROOM_EPI_2D, F.STOCHASTIC_ORGANIC}),
+    "box_wipe": frozenset({F.ROOM_EPI_2D, F.ROOM_SWEEP_2D}),
+    "weird_glitch": frozenset({F.ROOM_EPI_2D, F.STOCHASTIC_ORGANIC, F.RHYTHMIC_CHOP}),
     # 2D Room-Space Plane / Gravity / Material Sweeps
     "shatter_ice": frozenset({F.ROOM_SWEEP_2D, F.STOCHASTIC_ORGANIC}),
     "liquid_geyser": frozenset({F.ROOM_SWEEP_2D}),
@@ -47,7 +47,7 @@ TRANSITION_FAMILIES: Dict[str, FrozenSet[TransitionFamily]] = {
     "directional_wipe": frozenset({F.ROOM_SWEEP_2D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "wipe_left_to_right": frozenset({F.ROOM_SWEEP_2D, F.MODE_COOPERATIVE}),
     "wipe_right_to_left": frozenset({F.ROOM_SWEEP_2D, F.MODE_COOPERATIVE}),
-    "gravity_drop": frozenset({F.ROOM_SWEEP_2D, F.MODE_COOPERATIVE}),
+    "gravity_drop": frozenset({F.ROOM_SWEEP_2D}),
     # 1D Strip-Intrinsic Directional Sweeps
     "silk_wipe": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "silk_wipe_reverse": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
@@ -66,17 +66,17 @@ TRANSITION_FAMILIES: Dict[str, FrozenSet[TransitionFamily]] = {
     "fade_to_black": frozenset({F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "smooth_cosine_crossfade": frozenset({F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "cosine_fade": frozenset({F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "global_change": frozenset({F.STOCHASTIC_ORGANIC, F.STAGGERABLE, F.MODE_COOPERATIVE}),
+    "global_change": frozenset({F.STOCHASTIC_ORGANIC, F.RHYTHMIC_CHOP, F.STAGGERABLE}),
     # Rhythmic & DJ Cuts (non-cooperative hard cuts between full-power modes)
     "flash_cut": frozenset({F.RHYTHMIC_CHOP, F.STAGGERABLE}),
     "staccato_shutter": frozenset({F.RHYTHMIC_CHOP, F.STAGGERABLE}),
     "transformer_cut": frozenset({F.RHYTHMIC_CHOP, F.STAGGERABLE}),
 }
 
-# Deterministic default parameters (used when engine functions are called directly in unit tests)
+# Deterministic default parameters (centered on the chandelier's central core)
 DEFAULT_PARAMS: Dict[str, Any] = {
-    "epicenter_x": 0.5,
-    "epicenter_y": 0.5,
+    "epicenter_x": 0.60,
+    "epicenter_y": 0.50,
     "spiral_sign": 1.0,
     "spiral_arms": 2,
     "beam_thickness": 0.15,
@@ -91,13 +91,13 @@ DEFAULT_PARAMS: Dict[str, Any] = {
     "mode_handshake": False,
 }
 
-# Architectural 2D anchor regions inside the physical chandelier body (normalized [0..1] coordinates)
+# Central 2D anchor points tightly clustered in the heart of the chandelier body
 _ARCHITECTURAL_EPICENTERS: Tuple[Tuple[float, float], ...] = (
-    (0.55, 0.50),  # Inner Bay Center (between v1 and v2)
-    (0.64, 0.48),  # Chandelier Heart (h11 / v2 core)
-    (0.68, 0.52),  # Central Pillar v2 Midpoint
-    (0.73, 0.46),  # Main Bay Center (between v2 and v3)
-    (0.60, 0.56),  # Lower-Mid Core (h10 / v2)
+    (0.58, 0.48),  # Central-Left Heart (h11 / v1-v2 center)
+    (0.60, 0.50),  # Chandelier Geometric Center
+    (0.62, 0.49),  # Chandelier Heart (h11 / v2 core)
+    (0.64, 0.51),  # Central Pillar v2 Core
+    (0.59, 0.52),  # Lower-Mid Core (h10 / v1-v2 center)
 )
 
 
@@ -167,8 +167,8 @@ def roll_transition_params(technique: str) -> Dict[str, Any]:
 
     if F.ROOM_EPI_2D in fams:
         ax, ay = random.choice(_ARCHITECTURAL_EPICENTERS)
-        params["epicenter_x"] = round(max(0.46, min(0.78, ax + random.uniform(-0.04, 0.04))), 3)
-        params["epicenter_y"] = round(max(0.38, min(0.64, ay + random.uniform(-0.04, 0.04))), 3)
+        params["epicenter_x"] = round(max(0.55, min(0.66, ax + random.uniform(-0.02, 0.02))), 3)
+        params["epicenter_y"] = round(max(0.45, min(0.55, ay + random.uniform(-0.02, 0.02))), 3)
         params["spiral_sign"] = random.choice((-1.0, 1.0))
         params["spiral_arms"] = random.choice((2, 3))
 

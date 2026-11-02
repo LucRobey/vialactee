@@ -427,7 +427,7 @@ def apply_staccato_shutter(rgb_old: np.ndarray, rgb_new: np.ndarray, progress: f
 def apply_transformer_cut(rgb_old: np.ndarray, rgb_new: np.ndarray, progress: float) -> None:
     """
     DJ crossfader 'transformer' stutter: gates rapidly between old and new modes
-    across rhythmic subdivisions with increasing duty cycle for the incoming mode.
+    across rhythmic subdivisions with increasing duty cycle and a smooth final lock-in.
     """
     progress = max(0.0, min(1.0, float(progress)))
     if progress <= 0.0:
@@ -440,11 +440,13 @@ def apply_transformer_cut(rgb_old: np.ndarray, rgb_new: np.ndarray, progress: fl
     g = progress * gates
     gate_idx = int(g)
     phase = g - gate_idx
-    duty_new = 0.15 + 0.75 * progress
-    show_new = phase < duty_new
-    edge_punch = 1.0 + 0.20 * math.exp(-abs(phase - duty_new) * 12.0)
+    duty_new = min(1.0, 0.15 + 0.85 * (progress ** 0.85))
 
-    if show_new:
-        np.clip(rgb_new * edge_punch, 0, 255, out=rgb_old, casting="unsafe")
-    else:
-        np.clip(rgb_old * edge_punch, 0, 255, out=rgb_old, casting="unsafe")
+    # Smooth window around the gate edge + smooth tail settle over the final 28%
+    tail = max(0.0, min(1.0, (progress - 0.72) / 0.28))
+    smooth_tail = tail * tail * (3.0 - 2.0 * tail)
+    gate_mix = 1.0 if phase < duty_new else smooth_tail
+    edge_punch = 1.0 + 0.22 * math.exp(-abs(phase - duty_new) * 10.0) * (1.0 - smooth_tail)
+
+    blended = (rgb_old * (1.0 - gate_mix) + rgb_new * gate_mix) * edge_punch
+    np.clip(blended, 0, 255, out=rgb_old, casting="unsafe")

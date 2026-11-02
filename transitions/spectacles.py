@@ -62,8 +62,9 @@ def apply_supernova(
     if n == 0:
         return
     nx, ny = _norm_coords(n, coords, room_max_x, room_max_y)
-    cx = float(ACTIVE_PARAMS.get("epicenter_x", 0.5))
-    cy = float(ACTIVE_PARAMS.get("epicenter_y", 0.5))
+    raw_cx = float(ACTIVE_PARAMS.get("epicenter_x", 0.60))
+    cx = 0.60 if abs(raw_cx - 0.5) < 1e-3 else raw_cx
+    cy = float(ACTIVE_PARAMS.get("epicenter_y", 0.50))
     dx = nx - cx
     dy = ny - cy
     max_span = max(0.35, float(math.hypot(max(cx, 1.0 - cx), max(cy, 1.0 - cy))))
@@ -171,23 +172,27 @@ def apply_shatter_ice(
             rgb_old[rim_mask] = np.clip(np.array([240, 252, 255]) * spark, 0, 255).astype(np.int32)
     else:
         p3 = (progress - 0.55) / 0.45
-        delay = shard_h * 0.22
-        fall_t = np.clip((p3 - delay) / np.maximum(0.1, 1.0 - delay), 0.0, 1.0)
-        fall_offset = (fall_t ** 2) * (1.15 + 0.45 * shard_h)
-        virtual_y = ny - fall_offset
+        # Continuous per-shard fall & smoothstep reveal so the ending is silky smooth
+        delay = shard_h * 0.24 + (1.0 - ny) * 0.12
+        fall_t = np.clip((p3 - delay) / np.maximum(0.15, 0.92 - delay), 0.0, 1.0)
+        reveal_w = (fall_t * fall_t * (3.0 - 2.0 * fall_t))[:, np.newaxis]
 
-        cleared = (virtual_y < 0.0) | (fall_t >= 0.92)
-        rgb_old.fill(0)
-        np.copyto(rgb_old, rgb_new, where=cleared[:, np.newaxis])
+        # Ice shards slide downward and melt smoothly into incoming mode
+        tail_settle = max(0.0, min(1.0, (p3 - 0.75) / 0.25))
+        shard_body = (edge_dist >= 0.05).astype(np.float64)[:, np.newaxis]
+        ice_weight = ((1.0 - fall_t) ** 1.5)[:, np.newaxis] * shard_body * (1.0 - tail_settle)
 
-        falling = (~cleared) & (edge_dist >= 0.06)
-        if np.any(falling):
-            fade_shard = ((1.0 - fall_t[falling]) ** 1.2)[:, np.newaxis]
-            rgb_old[falling] = (ice_rgb[falling] * fade_shard).astype(np.int32)
+        # Falling crystalline glint wave traveling top-to-bottom
+        glint_y = (p3 ** 1.25) * 1.25
+        glint_band = np.clip(1.0 - np.abs(ny - glint_y) / 0.16, 0.0, 1.0) ** 2
+        glint_spark = glint_band * (1.0 - p3) * (0.6 + 0.4 * shard_h) * spark
 
-        glint = (np.abs(fall_t - 0.25) < 0.18) & (~cleared)
-        if np.any(glint):
-            rgb_old[glint] = np.clip(rgb_old[glint] + np.array([120, 210, 255]), 0, 255)
+        out = (
+            rgb_new * reveal_w
+            + ice_rgb * ice_weight * (1.0 - 0.65 * reveal_w)
+            + glint_spark[:, np.newaxis] * np.array([150.0, 230.0, 255.0])
+        )
+        np.clip(out, 0, 255, out=rgb_old, casting="unsafe")
 
 
 def apply_tesla_arc(
@@ -199,9 +204,9 @@ def apply_tesla_arc(
     room_max_y: float = 246.0,
 ) -> None:
     """
-    3-Act High-Voltage Short-Circuit & Tesla Arc Ignition:
-    - Act I (0.00..0.28): Power grid brownout flicker to 10% warm amber filament glow.
-    - Act II (0.28..0.65): Electric blue-white lightning arcs jump across chandelier sectors.
+    3-Act High-Voltage Yellow Lightning Charge & Bottom-to-Top Surge:
+    - Act I (0.00..0.28): Short-circuit drain with crackling electric yellow spark nodes.
+    - Act II (0.28..0.65): Downward yellow-white lightning bolts charge the bottom capacitor pool.
     - Act III (0.65..1.00): Bottom-to-top vertical plasma surge snaps incoming mode on.
     """
     progress = max(0.0, min(1.0, float(progress)))
@@ -217,24 +222,48 @@ def apply_tesla_arc(
     nx, ny = _norm_coords(n, coords, room_max_x, room_max_y)
     seed = float(ACTIVE_PARAMS.get("seed", 0.0))
     spark = float(ACTIVE_PARAMS.get("spark_intensity", 1.0))
+    h = _get_hash(n)
 
     if progress < 0.28:
         p1 = progress / 0.28
-        flicker = 0.18 if math.sin(p1 * 32.0) < 0.15 else (1.0 - 0.75 * p1)
-        amber = np.array([255.0, 140.0, 45.0]) * (0.12 * p1)
-        out = rgb_old * flicker + amber
+        # Drain upper chandelier while crackling electric yellow sparks snap & fall toward base
+        drain_line = p1 * 0.75
+        dim = np.where(ny < drain_line, 0.08 * (1.0 - p1), 1.0 - 0.72 * p1)[:, np.newaxis]
+        spark_wave = np.sin(nx * 29.0 + ny * 19.0 - p1 * 38.0 + seed) + 0.5 * np.cos(h * 31.0 + p1 * 24.0)
+        yellow_sparks = np.clip((spark_wave - 0.65) / 0.75, 0.0, 1.0)[:, np.newaxis] * spark
+        base_charge = np.clip((ny - (0.92 - 0.14 * p1)) / 0.16, 0.0, 1.0)[:, np.newaxis] * p1
+        out = (
+            rgb_old * dim
+            + yellow_sparks * np.array([255.0, 230.0, 35.0])
+            + base_charge * np.array([255.0, 210.0, 25.0])
+        )
         np.clip(out, 0, 255, out=rgb_old, casting="unsafe")
     elif progress < 0.65:
         p2 = (progress - 0.28) / 0.37
         rgb_old.fill(0)
-        chops = float(max(3, int(ACTIVE_PARAMS.get("chop_count", 4))))
-        step = math.floor(p2 * chops * 2.0)
-        bolt_field = np.sin(nx * 17.0 - ny * 11.0 + step * 2.3 + seed) + 0.5 * np.cos(ny * 23.0 + p2 * 40.0)
-        bolt_core = np.clip((bolt_field - 0.55) / 0.90, 0.0, 1.0)
-        if np.any(bolt_core > 0.0):
-            b = (bolt_core[:, np.newaxis] * spark)
-            arc_color = b * np.array([135.0, 215.0, 255.0]) + (b ** 3) * np.array([255.0, 255.0, 255.0])
-            np.clip(arc_color, 0, 255, out=rgb_old, casting="unsafe")
+        # Rhythmic downward yellow-gold lightning strikes feeding a rising floor capacitor charge
+        strikes = float(max(3, int(ACTIVE_PARAMS.get("chop_count", 4))))
+        s_pos = p2 * strikes
+        s_idx = math.floor(s_pos)
+        s_frac = s_pos - s_idx
+
+        # Each strike races top-to-bottom (bolt_y: 0 -> 1) along active chandelier columns
+        bolt_y = min(1.05, s_frac * 1.45)
+        jag_x = 0.48 + 0.44 * (0.5 + 0.5 * math.sin(s_idx * 2.7 + seed)) + 0.08 * np.sin(ny * 18.0 + s_idx * 4.0)
+        dist_x = np.abs(nx - jag_x)
+        branch = np.clip(1.0 - dist_x / 0.24, 0.0, 1.0) * np.clip(1.0 - np.abs(ny - bolt_y) / 0.42, 0.0, 1.0)
+        cross_arc = np.clip(np.cos(nx * 18.0 + ny * 14.0 - p2 * 36.0 + seed) - 0.52, 0.0, 0.48) / 0.48
+        bolt = np.clip(branch * 1.15 + cross_arc * 0.65 * (1.0 - 0.4 * s_frac), 0.0, 1.0)[:, np.newaxis] * spark
+
+        # Rising high-voltage yellow-white capacitor pool at the floor (ny >= 0.72..0.95)
+        cap_top = 0.96 - 0.24 * p2
+        cap_glow = np.clip((ny - cap_top) / 0.20, 0.0, 1.0)[:, np.newaxis] * (0.65 + 0.35 * math.sin(p2 * 30.0))
+
+        arc_rgb = (
+            (bolt + cap_glow) * np.array([255.0, 220.0, 30.0])
+            + ((bolt ** 2.5) + (cap_glow ** 2.0)) * np.array([255.0, 255.0, 195.0])
+        )
+        np.clip(arc_rgb, 0, 255, out=rgb_old, casting="unsafe")
     else:
         p3 = (progress - 0.65) / 0.35
         surge_y = 1.05 - (p3 ** 0.80) * 1.20
@@ -315,10 +344,10 @@ def apply_liquid_geyser(
     room_max_y: float = 246.0,
 ) -> None:
     """
-    3-Act Fluid Drain & Pressurized Geyser Eruption:
-    - Act I (0.00..0.42): Glowing meniscus drains old mode top-to-bottom into darkness.
-    - Act II (0.42..0.58): Molten amber-magenta pool boils at the bottom of the pillars.
-    - Act III (0.58..1.00): High-pressure geyser blasts bottom-to-top with foaming white-cyan crest.
+    3-Act Hydraulic Gravity Drain, Elastic Splash & Rising Tide:
+    - Act I (0.00..0.44): Sloshing cyan-white meniscus drains old mode top-to-bottom into darkness.
+    - Act II (0.44..0.56): Drained liquid slams into the lower tiers, splashing upward & transmuting to new mode.
+    - Act III (0.56..1.00): Continuous rising tide floods back up the pillars & horizontal tiers to the canopy.
     """
     progress = max(0.0, min(1.0, float(progress)))
     if progress <= 0.0:
@@ -330,36 +359,39 @@ def apply_liquid_geyser(
     n = len(rgb_old)
     if n == 0:
         return
-    _, ny = _norm_coords(n, coords, room_max_x, room_max_y)
-    h = _get_hash(n)
+    nx, ny = _norm_coords(n, coords, room_max_x, room_max_y)
 
-    if progress < 0.42:
-        p1 = progress / 0.42
-        meniscus_y = 0.84 * (p1 ** 1.25)
-        rgb_old[ny < meniscus_y] = 0
-        rim = np.clip(1.0 - np.abs(ny - meniscus_y) / 0.09, 0.0, 1.0) ** 2
+    if progress < 0.44:
+        p1 = progress / 0.44
+        slosh = 0.035 * np.sin(nx * 14.0 + p1 * 12.0)
+        level_y = 0.78 * (p1 ** 1.15) + slosh
+        rgb_old[ny < level_y] = 0
+        rim = np.clip(1.0 - np.abs(ny - level_y) / 0.12, 0.0, 1.0) ** 1.6
         if np.any(rim > 0.0):
-            rgb_old[:] = np.clip(rgb_old + rim[:, np.newaxis] * np.array([120, 230, 255]), 0, 255).astype(np.int32)
-    elif progress < 0.58:
-        p2 = (progress - 0.42) / 0.16
+            rgb_old[:] = np.clip(rgb_old + rim[:, np.newaxis] * np.array([120, 235, 255]), 0, 255).astype(np.int32)
+    elif progress < 0.56:
+        p2 = (progress - 0.44) / 0.12
+        # Heavy hydraulic bounce at the lower tiers (ny ~ 0.78 -> 0.62 -> 0.74)
+        bounce_y = 0.78 - 0.14 * math.sin(p2 * math.pi) + 0.04 * np.cos(nx * 18.0 - p2 * 10.0)
+        mix_new = p2 * p2 * (3.0 - 2.0 * p2)
+        base_pool = rgb_old * (1.0 - mix_new) + rgb_new * mix_new
         rgb_old.fill(0)
-        pool_mask = ny >= 0.78
-        if np.any(pool_mask):
-            boil = 0.5 + 0.5 * np.sin(h[pool_mask] * 25.0 + p2 * 18.0)
-            b = boil[:, np.newaxis]
-            rgb_old[pool_mask] = np.clip(b * np.array([255, 150, 40]) + (1.0 - b) * np.array([255, 50, 170]), 0, 255).astype(np.int32)
-        droplets = (ny >= 0.52) & (ny < 0.78) & (np.abs(h - p2) < 0.12)
-        if np.any(droplets):
-            rgb_old[droplets] = [255, 200, 110]
+        submerged = ny >= bounce_y
+        if np.any(submerged):
+            rgb_old[submerged] = np.clip(base_pool[submerged], 0, 255).astype(np.int32)
+        splash = np.clip(1.0 - np.abs(ny - bounce_y) / 0.16, 0.0, 1.0) ** 1.4
+        rgb_old[:] = np.clip(rgb_old + splash[:, np.newaxis] * np.array([180, 245, 255]), 0, 255).astype(np.int32)
     else:
-        p3 = (progress - 0.58) / 0.42
-        jet_y = 1.02 - (p3 ** 0.76) * 1.18
+        p3 = (progress - 0.56) / 0.44
+        # Continuous rising tide directly from the compressed lower water level (0.76 -> -0.14)
+        wave = 0.035 * np.sin(nx * 16.0 - p3 * 14.0) * (1.0 - p3)
+        tide_y = 0.76 - (p3 ** 0.82) * 0.90 + wave
         rgb_old.fill(0)
-        mask_filled = ny >= jet_y
+        mask_filled = ny >= tide_y
         np.copyto(rgb_old, rgb_new, where=mask_filled[:, np.newaxis])
-        fade = max(0.0, 1.0 - (p3 ** 1.5))
-        foam = (np.clip(1.0 - np.abs(ny - jet_y) / 0.16, 0.0, 1.0) ** 1.4) * fade
-        out = rgb_old + foam[:, np.newaxis] * np.array([220, 250, 255])
+        fade = max(0.0, 1.0 - (p3 ** 1.45))
+        foam = (np.clip(1.0 - np.abs(ny - tide_y) / 0.16, 0.0, 1.0) ** 1.4) * fade
+        out = rgb_old + foam[:, np.newaxis] * np.array([200, 248, 255])
         np.clip(out, 0, 255, out=rgb_old, casting="unsafe")
 
 

@@ -287,10 +287,13 @@ class TestTransitionEngine(unittest.TestCase):
             "spiral",
             "zipper_merge",
             "collider",
+            "gravity_drop",
+            "weird_glitch",
+            "global_change",
         )
         for tech in showstoppers:
             for coords_arg in (self.coords, None):
-                if tech == "spiral" and coords_arg is None:
+                if tech in ("spiral", "gravity_drop", "weird_glitch") and coords_arg is None:
                     continue
                 with self.subTest(technique=tech, has_coords=coords_arg is not None):
                     b0 = self.old_rgb.copy()
@@ -311,6 +314,19 @@ class TestTransitionEngine(unittest.TestCase):
                     # Acts I, II, and III must produce distinct visual frames
                     self.assertFalse(np.array_equal(acts[0], acts[1]), f"{tech} Act I == Act II")
                     self.assertFalse(np.array_equal(acts[1], acts[2]), f"{tech} Act II == Act III")
+
+    def test_tesla_arc_yellow_charging_and_smooth_tails(self):
+        """Verify Tesla Arc Act II uses high-voltage yellow (R&G >> B) and transformer_cut/shatter_ice settle smoothly."""
+        buf_tesla = np.zeros_like(self.old_rgb)
+        TE.apply_transition(buf_tesla, self.new_rgb, 0.45, "tesla_arc", coords=self.coords)
+        # In Act II yellow charging, Red + Green channels dominate over Blue
+        self.assertGreater(float(np.mean(buf_tesla[:, 0] + buf_tesla[:, 1])), float(np.mean(buf_tesla[:, 2])) * 1.5)
+
+        for tech in ("transformer_cut", "shatter_ice"):
+            near_end = self.old_rgb.copy()
+            TE.apply_transition(near_end, self.new_rgb, 0.96, tech, coords=self.coords)
+            diff = float(np.mean(np.abs(near_end.astype(np.float64) - self.new_rgb.astype(np.float64))))
+            self.assertLess(diff, 25.0, f"{tech} tail at progress=0.96 is too far from new_rgb ({diff})")
 
 
 if __name__ == '__main__':
