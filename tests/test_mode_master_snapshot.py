@@ -15,10 +15,10 @@ class TestModeMasterSnapshot(unittest.TestCase):
         self.mock_listener = MagicMock()
         self.mock_listener.luminosite = 0.8
         self.mock_listener.sensi = 0.5
-        self.mock_listener.smoothed_fft_band_values = np.zeros(8)
-        self.mock_listener.asserved_fft_band = np.zeros(8)
-        self.mock_listener._delayed_asserved_fft_band = np.zeros(8)
-        self.mock_listener.nb_of_fft_band = 8
+        self.mock_listener.smoothed_fft_band_values = np.zeros(16)
+        self.mock_listener.asserved_fft_band = np.zeros(16)
+        self.mock_listener._delayed_asserved_fft_band = np.zeros(16)
+        self.mock_listener.nb_of_fft_band = 16
         self.mock_listener.asserved_total_power = 0.0
 
         # Two numpy arrays matching segs_1 (785) and segs_2 (519) LED strip sizes

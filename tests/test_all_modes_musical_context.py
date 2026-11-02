@@ -393,14 +393,18 @@ class TestAllModesMusicalContext(unittest.TestCase):
         waves._enter_progress = 1.0
         self.engine._is_silent = False
         self.engine._current_scene = MusicalScene.GROOVE
+        self.engine._energy = 0.05
         self.engine._is_real_beat = False
-        self.listener.asserved_fft_band = np.full(16, 0.15, dtype=np.float64)
+        self.listener.asserved_fft_band = np.full(16, 0.05, dtype=np.float64)
         self.listener.band_flux = np.zeros(16, dtype=np.float64)
         waves.run()
         scroll_before = waves.scroll_pos
+        quiet_sum = int(np.sum(waves.rgb_list))
+        self.assertFalse(bool(np.any(waves.wave_active)))
 
-        # Drive a 16-band spectral + transient surge (LEAD="spectrum", SECONDARY=("transient",))
-        self.engine._is_real_beat = True
+        # Drive a 16-band spectral + transient surge purely via LEAD="spectrum" and SECONDARY=("transient",)
+        # (keeping is_real_beat=False so wave spawning is not bypassed by the beat flag)
+        self.engine._energy = 0.95
         self.listener.asserved_fft_band = np.linspace(0.95, 0.20, 16, dtype=np.float64)
         self.listener.band_flux = np.array([28.0, 20.0] + [0.0] * 14, dtype=np.float64)
         waves.time_since_wave = 1.0
@@ -411,7 +415,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
         last_slot = (waves.wave_slot - 1) % waves.MAX_WAVES
         self.assertGreater(waves.wave_velocities[last_slot], 0)
         self.assertGreater(waves.scroll_pos, scroll_before)
-        self.assertTrue(np.any(waves.rgb_list > 0))
+        self.assertGreater(int(np.sum(waves.rgb_list)), quiet_sum)
 
     def test_bar_modes_and_physics_behavioral_requirements(self):
         """Verify Middle_bar pure-white bass caps and Power_bar continuous scaling."""

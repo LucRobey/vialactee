@@ -60,8 +60,8 @@ class _DummyListener:
         self.is_beat = True
         self.is_real_beat = True
         self.asserved_total_power = 0.85
-        self.band_flux = [10.0] * 8
-        self.nb_of_fft_band = 8
+        self.band_flux = [10.0] * 16
+        self.nb_of_fft_band = 16
         self.context = _DummyContext()
 
 

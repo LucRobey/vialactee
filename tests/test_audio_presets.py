@@ -118,7 +118,7 @@ def test_resolve_mic_preset():
 
 def test_audio_analyzer_odf_floor_and_speaker_window_math():
     class DummyIngestion:
-        nb_of_fft_band = 8
+        nb_of_fft_band = 16
         nb_of_chroma = 12
 
     # 1. Test fakeDelay = 0.0: ODF buffer size floored at 300, speaker window checks newest frames

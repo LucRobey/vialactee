@@ -16,10 +16,10 @@ class TestSegment(unittest.TestCase):
         self.mock_listener = MagicMock()
         self.mock_listener.luminosite = 1.0
         self.mock_listener.asserved_total_power = 0.5
-        self.mock_listener.smoothed_fft_band_values = np.zeros(8)
-        self.mock_listener.asserved_fft_band = np.zeros(8)
-        self.mock_listener._delayed_asserved_fft_band = np.zeros(8)
-        self.mock_listener.nb_of_fft_band = 8
+        self.mock_listener.smoothed_fft_band_values = np.zeros(16)
+        self.mock_listener.asserved_fft_band = np.zeros(16)
+        self.mock_listener._delayed_asserved_fft_band = np.zeros(16)
+        self.mock_listener.nb_of_fft_band = 16
 
         self.num_leds = 20
         self.indexes = list(range(self.num_leds))
@@ -275,9 +275,9 @@ class TestSegmentStartupCaching(unittest.TestCase):
 
     def _make_segment(self, name):
         listener = MagicMock()
-        listener.nb_of_fft_band = 8
-        listener.asserved_fft_band = np.zeros(8)
-        listener.smoothed_fft_band_values = np.zeros(8)
+        listener.nb_of_fft_band = 16
+        listener.asserved_fft_band = np.zeros(16)
+        listener.smoothed_fft_band_values = np.zeros(16)
         return Segment(name, listener, np.zeros((100, 3), dtype=np.int32), list(range(10)), "vertical", {})
 
     def test_startup_json_files_are_read_once_for_many_segments(self):
@@ -315,9 +315,9 @@ class TestSegmentStartupCaching(unittest.TestCase):
 class TestSegmentTransitionReset(unittest.TestCase):
     def setUp(self):
         listener = MagicMock()
-        listener.nb_of_fft_band = 8
-        listener.asserved_fft_band = np.zeros(8)
-        listener.smoothed_fft_band_values = np.zeros(8)
+        listener.nb_of_fft_band = 16
+        listener.asserved_fft_band = np.zeros(16)
+        listener.smoothed_fft_band_values = np.zeros(16)
         self.segment = Segment("Segment v4", listener, np.zeros((100, 3), dtype=np.int32),
                                list(range(20)), "vertical", {})
         self.segment.execute_mode_swap("Rainbow")

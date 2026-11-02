@@ -86,13 +86,16 @@ class TestListener(unittest.TestCase):
     def test_spectral_delay_queue_synchronization(self):
         """
         Verify that values pushed into the ring buffer via Listener.update()
-        emerge on public properties only after lookahead_seconds.
+        emerge on public properties only after lookahead_seconds, including
+        multi-entry draining (best-power selection + sticky novelty OR-ing)
+        and next-frame sticky flag reset.
         """
         import unittest.mock
 
         t0 = 1000.0
         dt = 1.0 / 60.0
-        synthetic_bands = np.arange(1, 17, dtype=np.float64) * 11.0
+        frame1_bands = np.arange(1, 17, dtype=np.float64) * 3.0
+        frame2_bands = np.arange(1, 17, dtype=np.float64) * 11.0
 
         # Disable random fake FFT synthesis so ingestion uses our deterministic 16-band input
         self.listener.ingestion.useMicrophone = True
@@ -100,20 +103,37 @@ class TestListener(unittest.TestCase):
         nov = self.listener.analyzer.novelty_detector
         with unittest.mock.patch.object(self.listener.analyzer, "update_structural_novelty"), \
              unittest.mock.patch.object(self.listener.analyzer, "detect_band_peaks"):
-            # 1. Push synthetic 16-band frame and structural novelty flags at t = t0
-            self.listener.ingestion.fft_band_values[:] = synthetic_bands
+            # 1a. Push Frame 1 at t = t0 (lower power, carries is_song_change = True)
+            self.listener.ingestion.fft_band_values[:] = frame1_bands
             nov.is_song_change = True
-            nov.is_verse_chorus_change = True
-            nov.asserved_novelty = 0.88
-            nov.combined_novelty = 0.95
+            nov.is_verse_chorus_change = False
+            nov.asserved_novelty = 0.40
+            nov.combined_novelty = 0.45
+            self.listener.analyzer._live_rhythm_salience = 0.55
+            self.listener.analyzer.confidence_score = 0.60
 
             with unittest.mock.patch("music.Listener.time.time", return_value=t0):
                 self.listener.update(fixed_dt=dt)
 
-            # Immediately at t0, the 5.0s lookahead has not expired yet
+            # 1b. Push Frame 2 at t = t0 + 0.02s (higher power, carries is_verse_chorus_change = True)
+            self.listener.ingestion.fft_band_values[:] = frame2_bands
+            nov.is_song_change = False
+            nov.is_verse_chorus_change = True
+            nov.asserved_novelty = 0.88
+            nov.combined_novelty = 0.95
+            self.listener.analyzer._live_rhythm_salience = 0.77
+            self.listener.analyzer.confidence_score = 0.84
+
+            with unittest.mock.patch("music.Listener.time.time", return_value=t0 + 0.02):
+                self.listener.update(fixed_dt=dt)
+
+            # Immediately after t0 + 0.02s, the 5.0s lookahead has not expired yet
             np.testing.assert_array_equal(self.listener.fft_band_values, np.zeros(16))
+            np.testing.assert_array_equal(self.listener.band_flux, np.zeros(16))
             self.assertFalse(self.listener.is_song_change)
             self.assertFalse(self.listener.is_verse_chorus_change)
+            self.assertAlmostEqual(self.listener.rhythm_salience, 0.0)
+            self.assertAlmostEqual(self.listener.beat_trust, 0.0)
 
             # 2. Scenario A: Before lookahead expires (t = t0 + 2.0s < t0 + 5.0s)
             self.listener.ingestion.fft_band_values.fill(0.0)
@@ -121,26 +141,46 @@ class TestListener(unittest.TestCase):
             nov.is_verse_chorus_change = False
             nov.asserved_novelty = 0.0
             nov.combined_novelty = 0.0
+            self.listener.analyzer._live_rhythm_salience = 0.0
+            self.listener.analyzer.confidence_score = 0.0
 
             with unittest.mock.patch("music.Listener.time.time", return_value=t0 + 2.0):
                 self.listener.update(fixed_dt=dt)
 
-            self.assertEqual(self.listener._ring_count, 2)
+            self.assertEqual(self.listener._ring_count, 3)
             np.testing.assert_array_equal(self.listener.fft_band_values, np.zeros(16))
+            np.testing.assert_array_equal(self.listener.band_flux, np.zeros(16))
             self.assertFalse(self.listener.is_song_change)
             self.assertFalse(self.listener.is_verse_chorus_change)
             self.assertAlmostEqual(self.listener.asserved_novelty, 0.0)
             self.assertAlmostEqual(self.listener.combined_novelty, 0.0)
+            self.assertAlmostEqual(self.listener.rhythm_salience, 0.0)
+            self.assertAlmostEqual(self.listener.beat_trust, 0.0)
 
-            # 3. Scenario B: After lookahead expires (t = t0 + 5.1s >= t0 + 5.0s)
+            # 3. Scenario B: After lookahead expires (t = t0 + 5.1s >= t0 + 5.02s)
+            # Both Frame 1 (t0) and Frame 2 (t0 + 0.02s) flush in a single update():
+            # Frame 2 wins best_idx (higher smoothed_total_power), while sticky flags OR across both.
             with unittest.mock.patch("music.Listener.time.time", return_value=t0 + 5.1):
                 self.listener.update(fixed_dt=dt)
 
-            np.testing.assert_array_equal(self.listener.fft_band_values, synthetic_bands)
+            np.testing.assert_array_equal(self.listener.fft_band_values, frame2_bands)
+            np.testing.assert_allclose(self.listener.band_flux, frame2_bands - frame1_bands)
+            self.assertTrue(np.any(self.listener.asserved_fft_band > 0.0))
             self.assertTrue(self.listener.is_song_change)
             self.assertTrue(self.listener.is_verse_chorus_change)
             self.assertAlmostEqual(self.listener.asserved_novelty, 0.88)
             self.assertAlmostEqual(self.listener.combined_novelty, 0.95)
+            self.assertAlmostEqual(self.listener.rhythm_salience, 0.77)
+            self.assertAlmostEqual(self.listener.beat_trust, 0.84)
+
+            # 4. Scenario C: Next update (t = t0 + 5.2s, no newly expired entry)
+            # Sticky boolean flags reset to False while delayed 16-band spectrum holds.
+            with unittest.mock.patch("music.Listener.time.time", return_value=t0 + 5.2):
+                self.listener.update(fixed_dt=dt)
+
+            np.testing.assert_array_equal(self.listener.fft_band_values, frame2_bands)
+            self.assertFalse(self.listener.is_song_change)
+            self.assertFalse(self.listener.is_verse_chorus_change)
 
     def test_listener_rhythm_salience_and_reset(self):
         """Verify delayed rhythm_salience, unbuffered live_rhythm_salience, and reset."""

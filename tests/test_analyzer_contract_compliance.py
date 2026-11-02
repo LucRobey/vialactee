@@ -109,7 +109,13 @@ class TestSharedAnalyzerContract(unittest.TestCase):
                 for prop in ("silence_frames", "song_changes_times", "structural_changes_times",
                              "standalone_phase", "standalone_bpm", "live_beat_trust"):
                     self.assertTrue(hasattr(an, prop), prop)
+                self.assertEqual(an.silence_frames, 0)
+                self.assertIsInstance(an.song_changes_times, list)
+                self.assertIsInstance(an.structural_changes_times, list)
                 self.assertFalse(hasattr(an, "band_peak"))
+                telem = an.capture_frame_telemetry()
+                for key in ("bpm", "beat_phase", "confidence", "status"):
+                    self.assertIn(key, telem)
                 meta = an.get_model_metadata()
                 self.assertEqual(meta["model_class"], name)
                 self.assertIn("config", meta)
@@ -260,17 +266,21 @@ class TestListenerContractWiring(unittest.TestCase):
                 ing = listener.ingestion
                 ing.fft_band_values[:] = 0.0
                 listener._update_ring_buffers(0.0)
+                ing.fft_band_values[7] = 60.0   # upper-mid region
                 ing.fft_band_values[15] = 100.0  # hi-hat/air region of the 16-band spectrum
                 listener._update_ring_buffers(DT)
                 w = (listener._ring_write - 1) % listener._ring_capacity
                 flux = listener._ring_band_flux[w]
                 self.assertEqual(len(flux), 16)
+                self.assertAlmostEqual(float(flux[7]), 60.0)
                 self.assertAlmostEqual(float(flux[15]), 100.0)
-                self.assertAlmostEqual(float(np.sum(flux[:15])), 0.0)
+                self.assertAlmostEqual(float(np.sum(flux[:7]) + np.sum(flux[8:15])), 0.0)
                 # falling edge is half-wave rectified to zero
+                ing.fft_band_values[7] = 5.0
                 ing.fft_band_values[15] = 10.0
                 listener._update_ring_buffers(2 * DT)
                 w = (listener._ring_write - 1) % listener._ring_capacity
+                self.assertAlmostEqual(float(listener._ring_band_flux[w][7]), 0.0)
                 self.assertAlmostEqual(float(listener._ring_band_flux[w][15]), 0.0)
 
     def test_listener_bpm_is_metrical_rate(self):

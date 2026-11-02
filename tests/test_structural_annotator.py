@@ -225,9 +225,11 @@ class TestStructuralAnnotatorAppHeadless(unittest.TestCase):
         cls._sd_patcher = unittest.mock.patch("tools.structural_annotator.sd.OutputStream")
         cls._sd_patcher.start()
 
-        # Load Genesis audio once for the entire test class
+        # Load Genesis audio once for the entire test class and freeze buffer against in-place mutation
         cls._real_resolve_audio_file = resolve_audio_file
         cls._genesis_audio = resolve_audio_file("Genesis", _REPO_ROOT)
+        if cls._genesis_audio is not None:
+            cls._genesis_audio[0].flags.writeable = False
 
         def _cached_resolve(track_name: str, repo_root: str):
             if cls._genesis_audio is not None:
@@ -265,6 +267,8 @@ class TestStructuralAnnotatorAppHeadless(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.app = self.__class__.app
         self.app.track_index = self.__class__._initial_track_index
+        if self.__class__._genesis_streamer.stream is None and not self.__class__._genesis_streamer._fallback_mode:
+            self.__class__._genesis_streamer._init_stream()
         self.app.streamer = self.__class__._genesis_streamer
         self.app.envelope = self.__class__._genesis_envelope
         self.app.downbeats = self.__class__._genesis_downbeats
@@ -391,6 +395,8 @@ class TestStructuralAnnotatorAppHeadless(unittest.TestCase):
         self.assertNotEqual(first_track, second_track)
         self.app.change_track(-1)
         self.assertEqual(self.app.current_track_name(), first_track)
+        self.__class__._genesis_streamer = self.app.streamer
+        self.__class__._genesis_envelope = self.app.envelope
 
 
 if __name__ == "__main__":
