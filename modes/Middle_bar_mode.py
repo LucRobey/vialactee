@@ -80,16 +80,17 @@ class Middle_bar_mode(Mode.Mode):
 
         self.smooth_segment_vectorized(0.7, start_idx, end_idx, self.bar_color)
 
-        # 3b. Secondary (spectrum): bass energy lights the two outer cap LEDs of the bar
+        # 3b. Secondary (spectrum): bass energy lights the two outer cap LEDs of the bar in pure white
         bands = getattr(self.listener, "asserved_fft_band", None)
         bass = 0.0
         if bands is not None and len(bands) >= 2:
             bass = float(np.clip(0.5 * (float(bands[0]) + float(bands[1])), 0.0, 1.0))
         if bass > 0.01 and not is_silent:
+            w_rgb = self.white
             for c in range(3):
-                self.cap_color[c] = (1.0 - bass) * self.bar_color[c] + bass * float(hi[c])
-            self.smooth_segment_vectorized(0.7, start_idx, min(end_idx, start_idx + 1), self.cap_color)
-            self.smooth_segment_vectorized(0.7, max(start_idx, end_idx - 1), end_idx, self.cap_color)
+                self.cap_color[c] = (1.0 - bass) * self.bar_color[c] + bass * float(w_rgb[c])
+            self.smooth_segment_vectorized(0.85, start_idx, min(end_idx, start_idx + 1), self.cap_color)
+            self.smooth_segment_vectorized(0.85, max(start_idx, end_idx - 1), end_idx, self.cap_color)
         fade_out = float(np.clip(0.5 / max(0.5, self.mood_trail), 0.1, 0.9))
         if start_idx > 0:
             self.fade_to_black_segment_vectorized(fade_out, 0, start_idx - 1)

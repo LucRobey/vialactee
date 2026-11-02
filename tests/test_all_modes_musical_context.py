@@ -401,14 +401,16 @@ class TestAllModesMusicalContext(unittest.TestCase):
         self.assertGreater(waves.wave_velocities[last_slot], 0)
 
     def test_bar_modes_and_physics_behavioral_requirements(self):
-        """Verify Middle_bar and Power_bar continuous scaling."""
+        """Verify Middle_bar pure-white bass caps and Power_bar continuous scaling."""
         mb = self._instantiate_mode(Middle_bar_mode, num_leds=40)
         self.engine._is_silent = False
         self.engine._energy = 0.8
         self.engine._vertical_center = 0.7
+        self.listener.asserved_fft_band = np.array([1.0, 1.0, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1])
         for _ in range(10):
             mb.run()
         self.assertGreater(mb.size, 5.0)
+        np.testing.assert_allclose(mb.cap_color, [255.0, 255.0, 255.0], atol=1e-6)
 
         pb = self._instantiate_mode(Power_bar_mode, num_leds=40)
         self.engine._energy = 0.85
