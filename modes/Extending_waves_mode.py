@@ -152,7 +152,7 @@ class Extending_waves_mode(Mode.Mode):
 
         # 1. Steady, Regular Outward Extension Speed (gently linked to BPM and mood_pace, independent of volume)
         frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
-        base_speed = max(
+        base_speed = 0.80 * max(
             0.28 * fps_ratio,
             (float(self.half_len) / (2.2 * frames_per_beat)) * fps_ratio * self.mood_pace,
         )
