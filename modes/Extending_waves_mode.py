@@ -1,9 +1,9 @@
 """
 Extending Waves Mode
-Subpixel wave propagation whose flow speed, spawn amplitude and brightness scale with ctx.energy
-(level lead), while self.beat_pulse() adds a subtle crest shimmer (beat secondary).
-Wave injection on every rhythmic tempo tick (flywheel listener.is_beat, real beat, or phase wrap).
-Waves always propagate outward from the center with no scene branching.
+Subpixel center-outward wave propagation whose wave spawning (via a continuous level accumulator),
+flow speed, wave amplitude, and center bed glow are driven by ctx.energy (LEAD="level").
+Decoupled from discrete beat ticks: self.beat_pulse() only tints the wave color and crest shimmer
+(SECONDARY=("beat",)). Waves always propagate outward from the center with no scene branching.
 Harmonized with the mood sector's mood_colors and mood_modifiers with zero runtime heap allocations.
 """
 from typing import List, Dict, Any
@@ -12,9 +12,9 @@ import modes.Mode as Mode
 
 
 class Extending_waves_mode(Mode.Mode):
-    """Center-outward traveling color waves whose flow speed scales with audio energy.
+    """Center-outward traveling color waves spawned and propelled by audio energy.
 
-    Lead: level (flow speed = energy). Secondary: beat (tints stream hue/brightness). Macro: color drift, mood_pace.
+    Lead: level (level accumulator spawns waves; energy sets flow speed, wave amplitude, and bed reach). Secondary: beat (tints wave color and crest shimmer). Macro: color drift, mood_pace, mood_trail.
     """
     LEAD = "level"
     SECONDARY = ("beat",)
@@ -34,8 +34,10 @@ class Extending_waves_mode(Mode.Mode):
         self.wave_active: np.ndarray = np.zeros(self.MAX_WAVES, dtype=bool)
         self.wave_slot: int = 0
         self.wave_count: int = 0
-        self.time_since_wave: float = 1.0
-        self.prev_phase: float = 0.0
+        self.time_since_wave: float = 0.0
+        self.level_accum: float = 1.0
+        self._ema_energy: float = 0.35
+        self._prev_energy: float = -1.0
         self.wave_width: float = 2.2
         self.breath_phase: float = 6.2831853 * self.segment_phase_offset
 
@@ -49,6 +51,7 @@ class Extending_waves_mode(Mode.Mode):
         self.glow_rgb: np.ndarray = np.zeros((self.half_len, 3), dtype=np.float32)
         self.half_pos: np.ndarray = (self.half_coords / max(1.0, float(self.half_len))).astype(np.float32)
         self.bed_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
+        self.tinted_col: np.ndarray = np.zeros(3, dtype=np.float32)
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -61,37 +64,36 @@ class Extending_waves_mode(Mode.Mode):
         mood = self.mood_colors
 
         tension = float(ctx.tension if ctx is not None else 0.0)
-        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
         is_silent = bool(ctx.is_silent if ctx is not None else False)
+        energy = float(ctx.energy if ctx is not None else getattr(self.listener, "asserved_total_power", 0.0))
+        if (not is_silent) and energy <= 0.0:
+            energy = float(getattr(self.listener, "asserved_total_power", 0.0))
         lock = self.rhythm_lock
-        phase = float(getattr(self.listener, "beat_phase", 0.0))
-        phase_wrapped = (phase < self.prev_phase) and (self.prev_phase > 0.5) and (not is_silent)
-        self.prev_phase = phase
+        pulse = self.beat_pulse()
 
-        is_real = bool(ctx.is_real_beat if ctx is not None else getattr(self.listener, "is_real_beat", False))
-        band_flux = getattr(self.listener, "band_flux", None)
-        bass_flux_peak = False
-        if (not is_silent) and (lock < 0.25) and band_flux is not None and len(band_flux) >= 2:
-            bass_flux_peak = float(band_flux[0] + band_flux[1]) > 0.35
+        if self._prev_energy < 0.0:
+            self._prev_energy = energy
+            self._ema_energy = energy
 
-        # Flywheel tempo tick: fires once per beat period even when no acoustic transient backs it.
-        is_tick = bool(getattr(self.listener, "is_beat", False)) or is_real or phase_wrapped or bass_flux_peak
+        d_energy = abs(energy - self._prev_energy)
+        swell = max(0.0, energy - self._ema_energy)
+        self._prev_energy = energy
+        self._ema_energy += self.alpha(3.0) * (energy - self._ema_energy)
 
         self.time_since_wave += dt
 
-        # 1. Subpixel Wave Propagation Speed (nudged smoothly by mood_pace)
+        # 1. Subpixel Wave Propagation Speed (Lead: level sets flow speed; nudged smoothly by mood_pace)
         frames_per_beat = max(1.0, (60.0 / bpm) * 60.0)
-        lvl = min(1.0, 1.45 * energy)  # real-audio energy rarely exceeds ~0.7: normalize to the full 0..1 range
-        flow_gain = 0.45 + 1.10 * lvl  # Lead (level): louder audio -> faster outward flow
-        base_speed = (float(self.half_len) / frames_per_beat) * fps_ratio * flow_gain * (1.0 + 0.6 * tension) * self.mood_pace
-        damping = (0.035 / max(0.5, self.mood_trail)) * fps_ratio
+        lvl = min(1.0, 1.45 * energy)
+        flow_gain = 0.45 + 1.15 * lvl
+        base_speed = (float(self.half_len) / frames_per_beat) * fps_ratio * flow_gain * (1.0 + 0.5 * tension) * self.mood_pace
+        damping = (0.045 / max(0.5, self.mood_trail)) * fps_ratio
 
         for w in range(self.MAX_WAVES):
             if self.wave_active[w]:
                 self.wave_positions[w] += self.wave_velocities[w] * base_speed
                 self.wave_amps[w] *= max(0.0, 1.0 - damping)
 
-                # Boundary checking
                 if self.wave_velocities[w] > 0 and self.wave_positions[w] >= (self.half_len + 2.0):
                     self.wave_active[w] = False
                 elif self.wave_velocities[w] < 0 and self.wave_positions[w] <= -2.0:
@@ -99,39 +101,42 @@ class Extending_waves_mode(Mode.Mode):
                 elif self.wave_amps[w] < 0.015:
                     self.wave_active[w] = False
 
-        # 2. Wave Injection: one outward wave per rhythmic tempo tick (no scene reversal)
-        min_wave_interval = 0.35 * (60.0 / bpm)
+        # 2. Wave Injection from Level Accumulator (decoupled from beat ticks)
+        unlocked_drive = max(0.0, 1.0 - (lock / 0.35)) * energy * dt * 1.6 if lock < 0.35 else 0.0
+        if not is_silent and energy > 0.04:
+            self.level_accum += (9.5 * swell + 6.0 * d_energy) * (0.65 + 0.70 * lvl) * self.mood_pace + unlocked_drive
+        else:
+            self.level_accum = 0.0
+
+        min_wave_interval = 0.35 * (60.0 / bpm) / max(0.5, 0.75 + 0.50 * lvl)
         seed_wave = self._enter_progress < 0.25 and not bool(np.any(self.wave_active))
         should_trigger = (
             (not is_silent)
-            and ((is_tick and self.time_since_wave >= min_wave_interval) or seed_wave)
+            and energy > 0.04
+            and ((self.level_accum >= 1.0 and self.time_since_wave >= min_wave_interval) or seed_wave)
             and self._exit_progress <= 0.40
         )
 
         if should_trigger:
             self.time_since_wave = 0.0
+            self.level_accum = 0.0
             slot = self.wave_slot
             self.wave_slot = (self.wave_slot + 1) % self.MAX_WAVES
             self.wave_active[slot] = True
             self.wave_count += 1
             self.wave_positions[slot] = 0.0
             self.wave_velocities[slot] = 1.0
-            self.wave_amps[slot] = 0.55 + 0.45 * min(1.0, energy)  # Lead (level): louder audio -> brighter wavefront
-            beat_tag = str(getattr(self.listener, "beat_tag", "Bass/Kick"))
-            tag_offset = 1 if beat_tag == "Snare/Mid" else (2 if beat_tag == "Hi-hat/Cymbal" else 0)
-            base_c = mood[(self.wave_count + tag_offset) % 3]
-            accent = self.mood_accent
-            if accent > 0.001:
-                hi = self.highlight_color
-                inv_acc = 1.0 - accent
-                for c in range(3):
-                    self.wave_colors[slot, c] = inv_acc * float(base_c[c]) + accent * float(hi[c])
-            else:
-                self.wave_colors[slot] = base_c
+            self.wave_amps[slot] = 0.50 + 0.50 * min(1.0, lvl)
+            base_c = mood[self.wave_count % 3]
+            hi = self.highlight_color
+            # Secondary (beat): pulse tints the spawned wave toward highlight_color
+            tint = min(1.0, self.mood_accent + 0.28 * pulse)
+            inv_tint = 1.0 - tint
+            for c in range(3):
+                self.wave_colors[slot, c] = inv_tint * float(base_c[c]) + tint * float(hi[c])
 
-        # 3. Synthesize Half-Strip Energy & Colors (level sets live brightness; beat_pulse() adds crest shimmer)
+        # 3. Synthesize Half-Strip Energy & Colors (level sets bed and wave brightness; beat tints & shimmers crests)
         self.half_rgb.fill(0.0)
-        # Level bed: a dim center-outward glow whose reach follows ctx.energy (the outward "fountain" level)
         if not is_silent:
             np.subtract(1.15 * lvl, self.half_pos, out=self.bed_profile)
             np.clip(self.bed_profile, 0.0, 1.0, out=self.bed_profile)
@@ -139,9 +144,12 @@ class Extending_waves_mode(Mode.Mode):
             m1 = mood[1]
             for c in range(3):
                 np.multiply(self.bed_profile, float(m1[c]), out=self.half_rgb[:, c])
-        crest_gain = 0.60 * (0.45 + 0.55 * lvl) * (0.94 + 0.06 * self.beat_pulse())
+
+        crest_gain = 0.68 * (0.40 + 0.60 * lvl) * (0.86 + 0.14 * pulse)
         two_w_sq = 2.0 * ((self.wave_width * (1.0 - 0.20 * tension)) ** 2)
         inv_two_w_sq = float(-1.0 / two_w_sq) if two_w_sq > 0 else -1.0
+        hi = self.highlight_color
+        beat_tint = 0.22 * pulse
 
         for w in range(self.MAX_WAVES):
             if self.wave_active[w]:
@@ -152,7 +160,8 @@ class Extending_waves_mode(Mode.Mode):
                 np.multiply(self.wave_profile, self.wave_amps[w] * crest_gain, out=self.wave_profile)
                 col = self.wave_colors[w]
                 for c in range(3):
-                    np.multiply(self.wave_profile, float(col[c]), out=self.wave_scratch_rgb[:, c])
+                    tc = (1.0 - beat_tint) * float(col[c]) + beat_tint * float(hi[c])
+                    np.multiply(self.wave_profile, tc, out=self.wave_scratch_rgb[:, c])
                 np.add(self.half_rgb, self.wave_scratch_rgb, out=self.half_rgb)
 
         # Gentle acoustic center breathing when flywheel is lost so stalled phase never freezes the strip

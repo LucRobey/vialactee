@@ -1,6 +1,6 @@
 """
-Behavioural tests for Extending_waves_mode: one wave per rhythmic tempo tick (flywheel `is_beat`),
-whether or not the tick is backed by a real acoustic transient, and preservation of the loved traits.
+Behavioural tests for Extending_waves_mode: waves spawned from the continuous level accumulator
+(decoupled from discrete beat ticks), outward-only propagation across all scenes, and beat secondary tinting.
 """
 import unittest
 
@@ -11,107 +11,102 @@ from modes.Extending_waves_mode import Extending_waves_mode
 from tests.test_mode_helpers import _ModeTestCase
 
 
-class TestExtendingWavesTempoTicks(_ModeTestCase):
+class TestExtendingWavesLevelAccumulator(_ModeTestCase):
     def setUp(self):
         super().setUp()
         self.engine._current_scene = MusicalScene.GROOVE
         self.engine._energy = 0.6
+        self.engine._beat_trust = 0.85
+        self.engine._salience = 0.80
         self.engine._is_real_beat = False
 
     def mode(self, n=41):
         rgb = np.zeros((n, 3), dtype=np.int32)
         return Extending_waves_mode("Extending Waves", "seg", self.listener, None, list(range(n)), rgb, {})
 
-    def _tick(self, mode, real=False):
-        self.listener.is_beat = True
-        self.engine._is_real_beat = real
+    def _swell(self, mode, low_e=0.20, high_e=0.80):
+        self.engine._energy = low_e
+        mode.run()
+        self.engine._energy = high_e
         mode.time_since_wave = 1.0
         mode.run()
-        self.listener.is_beat = False
-        self.engine._is_real_beat = False
 
-    def test_unverified_tempo_tick_spawns_an_outward_wave(self):
+    def test_level_swell_spawns_an_outward_wave(self):
         mode = self.mode()
-        self._tick(mode, real=False)  # flywheel tick, no acoustic transient
-        self.assertEqual(mode.wave_count, 1)
+        self._swell(mode, low_e=0.25, high_e=0.85)
+        self.assertGreaterEqual(mode.wave_count, 1)
         self.assertGreater(mode.wave_velocities[0], 0)
-        self.assertGreater(mode.wave_amps[0], 0.8)
+        self.assertGreater(mode.wave_amps[0], 0.7)
 
-    def test_real_beat_still_spawns_a_wave(self):
+    def test_beat_ticks_alone_do_not_spawn_waves_when_level_is_flat(self):
         mode = self.mode()
-        self.listener.is_beat = False
-        self.engine._is_real_beat = True
-        mode.time_since_wave = 1.0
+        mode.level_accum = 0.0
+        self.engine._energy = 0.50
+        # Prime previous energy so d_energy == 0 and swell == 0
         mode.run()
-        self.assertEqual(mode.wave_count, 1)
-
-    def test_no_tick_no_wave(self):
-        mode = self.mode()
-        for _ in range(120):
-            mode.run()
-        self.assertEqual(mode.wave_count, 0)
-
-    def test_one_wave_per_tick_over_a_bar(self):
-        mode = self.mode()
-        bpm = self.listener.bpm
-        frames_per_beat = int(round(60.0 * 60.0 / bpm))
-        ticks = 8
-        for beat in range(ticks):
+        initial_count = mode.wave_count
+        for _ in range(60):
             self.listener.is_beat = True
+            self.engine._is_real_beat = True
+            mode.time_since_wave = 1.0
             mode.run()
-            self.listener.is_beat = False
-            for _ in range(frames_per_beat - 1):
-                mode.run()
-        self.assertEqual(mode.wave_count, ticks)
+        self.assertEqual(mode.wave_count, initial_count)
 
-    def test_tick_during_buildup_propagates_outward_without_reversal(self):
+    def test_sustained_level_modulation_spawns_multiple_waves(self):
+        mode = self.mode()
+        for i in range(180):
+            self.engine._energy = 0.50 + 0.35 * float(np.sin(i * 0.22))
+            mode.run()
+        self.assertGreaterEqual(mode.wave_count, 4)
+
+    def test_swell_during_buildup_propagates_outward_without_reversal(self):
         mode = self.mode()
         self.engine._current_scene = MusicalScene.BUILDUP
-        self._tick(mode)
+        self._swell(mode)
         self.assertGreater(mode.wave_velocities[0], 0)
 
-    def test_jittery_double_tick_is_debounced(self):
+    def test_jittery_double_swell_is_debounced(self):
         mode = self.mode()
-        self.listener.is_beat = True
         mode.time_since_wave = 1.0
+        mode.level_accum = 1.5
         mode.run()
-        mode.run()  # second tick a frame later: inside the 0.35-beat minimum interval
-        self.assertEqual(mode.wave_count, 1)
+        first_count = mode.wave_count
+        mode.level_accum = 1.5
+        mode.run()  # next frame: inside min_wave_interval
+        self.assertEqual(mode.wave_count, first_count)
 
     def test_output_is_centre_symmetric(self):
         mode = self.mode(n=41)
-        self._tick(mode)
+        self._swell(mode)
         for _ in range(25):
             mode.run()
         np.testing.assert_array_equal(mode.rgb_list, mode.rgb_list[::-1])
 
-    def test_drop_without_a_tick_spawns_nothing(self):
-        """No drop-impact flood: during the 1.5 s drop, waves only come from tempo ticks."""
+    def test_drop_with_flat_level_does_not_flood_waves(self):
         mode = self.mode()
+        mode.level_accum = 0.0
+        self.engine._energy = 0.60
+        mode.run()
+        base_count = mode.wave_count
         self.engine._current_scene = MusicalScene.DROP_IMPACT
         self.engine._is_drop_impact = True
         self.engine._drop_progress = 1.0
         for _ in range(90):
             mode.run()
-        self.assertEqual(mode.wave_count, 0)
+        self.assertEqual(mode.wave_count, base_count)
 
-    def test_drop_with_a_tick_spawns_one_ordinary_wave(self):
-        mode = self.mode()
-        self.engine._current_scene = MusicalScene.DROP_IMPACT
-        self.engine._is_drop_impact = True
-        self.engine._drop_progress = 1.0
-        self._tick(mode)
-        self.assertEqual(mode.wave_count, 1)
-        self.assertEqual(float(mode.wave_velocities[0]), 1.0)
-        self.assertLessEqual(float(mode.wave_amps[0]), 0.9 + 1e-6)
+    def test_beat_pulse_tints_spawned_wave_toward_highlight(self):
+        mode_low_beat = self.mode()
+        self.listener.beat_phase = 0.95  # beat_pulse ~ 0
+        mode_low_beat.time_since_wave = 1.0
+        mode_low_beat.run()
 
-    def test_drop_wave_uses_the_normal_palette_not_the_drop_colour(self):
-        mode = self.mode()
-        self.engine._current_scene = MusicalScene.DROP_IMPACT
-        self.engine._is_drop_impact = True
-        self._tick(mode)
-        mood = mode.mood_colors
-        np.testing.assert_array_equal(mode.wave_colors[0], mood[mode.wave_count % 3])
+        mode_high_beat = self.mode()
+        self.listener.beat_phase = 0.0   # beat_pulse == 1.0
+        mode_high_beat.time_since_wave = 1.0
+        mode_high_beat.run()
+
+        self.assertFalse(np.allclose(mode_low_beat.wave_colors[0], mode_high_beat.wave_colors[0]))
 
 
 if __name__ == "__main__":
