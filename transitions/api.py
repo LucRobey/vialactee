@@ -155,6 +155,12 @@ class TransitionStatus:
 
 AVAILABLE_TRANSITIONS: Tuple[str, ...] = (
     "AUTO",
+    "supernova",
+    "shatter_ice",
+    "tesla_arc",
+    "fuse_detonate",
+    "liquid_geyser",
+    "pendulum_sweep",
     "silk_wipe",
     "silk_wipe_reverse",
     "iris_open",

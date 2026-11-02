@@ -34,10 +34,15 @@ TRANSITION_FAMILIES: Dict[str, FrozenSet[TransitionFamily]] = {
     # 2D Room-Space Epicenter Transitions (always SIMULTANEOUS across segments)
     "explosion": frozenset({F.ROOM_EPI_2D, F.RHYTHMIC_CHOP}),
     "transient_blip": frozenset({F.ROOM_EPI_2D, F.RHYTHMIC_CHOP}),
-    "spiral": frozenset({F.ROOM_EPI_2D, F.MODE_COOPERATIVE}),
+    "supernova": frozenset({F.ROOM_EPI_2D, F.RHYTHMIC_CHOP}),
+    "spiral": frozenset({F.ROOM_EPI_2D}),
+    "tesla_arc": frozenset({F.ROOM_EPI_2D, F.STOCHASTIC_ORGANIC, F.RHYTHMIC_CHOP}),
     "box_wipe": frozenset({F.ROOM_EPI_2D, F.MODE_COOPERATIVE}),
     "weird_glitch": frozenset({F.ROOM_EPI_2D, F.STOCHASTIC_ORGANIC}),
-    # 2D Room-Space Plane / Gravity Sweeps
+    # 2D Room-Space Plane / Gravity / Material Sweeps
+    "shatter_ice": frozenset({F.ROOM_SWEEP_2D, F.STOCHASTIC_ORGANIC}),
+    "liquid_geyser": frozenset({F.ROOM_SWEEP_2D}),
+    "pendulum_sweep": frozenset({F.ROOM_EPI_2D, F.ROOM_SWEEP_2D}),
     "vertical_wipe": frozenset({F.ROOM_SWEEP_2D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "directional_wipe": frozenset({F.ROOM_SWEEP_2D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "wipe_left_to_right": frozenset({F.ROOM_SWEEP_2D, F.MODE_COOPERATIVE}),
@@ -47,11 +52,12 @@ TRANSITION_FAMILIES: Dict[str, FrozenSet[TransitionFamily]] = {
     "silk_wipe": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "silk_wipe_reverse": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "prism_sweep": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "zipper_merge": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    # 1D Strip-Intrinsic Focal / Aperture Effects
+    "zipper_merge": frozenset({F.STRIP_SWEEP_1D, F.STAGGERABLE}),
+    # 1D Strip-Intrinsic Focal / Aperture / Fuse Effects
     "iris_open": frozenset({F.STRIP_FOCAL_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "iris_close": frozenset({F.STRIP_FOCAL_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
-    "collider": frozenset({F.STRIP_FOCAL_1D, F.STAGGERABLE, F.MODE_COOPERATIVE}),
+    "collider": frozenset({F.STRIP_FOCAL_1D, F.STAGGERABLE}),
+    "fuse_detonate": frozenset({F.STRIP_SWEEP_1D, F.STRIP_FOCAL_1D, F.STAGGERABLE, F.STOCHASTIC_ORGANIC}),
     # Photonic & Organic Dissolves
     "ember_dissolve": frozenset({F.STOCHASTIC_ORGANIC, F.STAGGERABLE, F.MODE_COOPERATIVE}),
     "luma_melt": frozenset({F.STOCHASTIC_ORGANIC, F.STAGGERABLE, F.MODE_COOPERATIVE}),
@@ -72,8 +78,11 @@ DEFAULT_PARAMS: Dict[str, Any] = {
     "epicenter_x": 0.5,
     "epicenter_y": 0.5,
     "spiral_sign": 1.0,
+    "spiral_arms": 2,
     "beam_thickness": 0.15,
+    "trench_width": 0.14,
     "edge_width": 0.14,
+    "teeth_count": 4,
     "focal_u": 0.5,
     "seed": 0.0,
     "spark_intensity": 1.0,
@@ -161,12 +170,15 @@ def roll_transition_params(technique: str) -> Dict[str, Any]:
         params["epicenter_x"] = round(max(0.46, min(0.78, ax + random.uniform(-0.04, 0.04))), 3)
         params["epicenter_y"] = round(max(0.38, min(0.64, ay + random.uniform(-0.04, 0.04))), 3)
         params["spiral_sign"] = random.choice((-1.0, 1.0))
+        params["spiral_arms"] = random.choice((2, 3))
 
     if F.ROOM_SWEEP_2D in fams:
-        params["beam_thickness"] = round(random.uniform(0.08, 0.22), 3)
+        params["beam_thickness"] = round(random.uniform(0.10, 0.24), 3)
+        params["trench_width"] = round(random.uniform(0.12, 0.22), 3)
 
     if F.STRIP_SWEEP_1D in fams:
         params["edge_width"] = round(random.uniform(0.10, 0.22), 3)
+        params["teeth_count"] = random.choice((3, 4, 5))
         params["reverse"] = technique == "silk_wipe_reverse"
 
     if F.STRIP_FOCAL_1D in fams:
