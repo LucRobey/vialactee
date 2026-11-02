@@ -235,12 +235,12 @@ class Extending_waves_mode(Mode.Mode):
         spec_moving = 1.0 if max_abs_delta > 1e-6 else 0.0
         inst_spec_act = min(
             1.0,
-            2.8 * max_dev
-            + 4.2 * max_rise
-            + 0.45 * float(np.max(self._rel_bands)) * spec_moving
+            0.80 * spec_moving
+            + 2.2 * max_dev
+            + 3.5 * max_rise
             + 0.35 * unlocked_alive,
         )
-        self._spec_activity = max(inst_spec_act, self._spec_activity * (1.0 - self.alpha(2.8)))
+        self._spec_activity = max(inst_spec_act, self._spec_activity * (1.0 - self.alpha(3.5)))
 
         # Drum / Kick peak detection on rising bass transient (with cooldown so it creates a crisp Red peak, not a permanent red fill)
         low_flux = max(float(self._norm_flux[0]), 0.70 * float(self._norm_flux[1]) if nb > 1 else 0.0)
@@ -329,19 +329,10 @@ class Extending_waves_mode(Mode.Mode):
         lut_idx = int(max(0.0, min(255.0, (self._current_hue / 0.82) * 255.0)))
         base_col = self.rainbow_lut[lut_idx]
 
-        # Wave crest envelope: sharp peaks on drum hits, spectral attacks, and onset flux, with deeper wave valleys
-        trans_kick = max(
-            float(self._norm_flux[b_star]),
-            low_flux if is_drum_peak else 0.0,
-            0.85 if (is_real or drop_hit) else 0.0,
-        )
-        # Gate secondary transient by spectral activity so spectrum remains the clear lead driver
+        trans_kick = max(float(self._norm_flux[b_star]), low_flux if is_drum_peak else 0.0, 0.85 if (is_real or drop_hit) else 0.0)
         sec_punch = trans_kick * (0.10 + 0.90 * self._spec_activity)
         spec_crest = min(0.62, 0.85 * max_dev + 1.45 * max_rise)
-        crest_target = min(
-            1.0,
-            spec_crest + 0.52 * sec_punch + (0.45 if is_drum_peak else 0.0),
-        )
+        crest_target = min(1.0, spec_crest + 0.52 * sec_punch + (0.45 if is_drum_peak else 0.0))
         if is_drum_peak:
             self._crest_env = max(self._crest_env, crest_target)
         elif crest_target >= self._crest_env:
@@ -349,12 +340,27 @@ class Extending_waves_mode(Mode.Mode):
         else:
             self._crest_env += self.alpha(8.5) * (crest_target - self._crest_env)
 
-        # Spatial wave undulation so extending waves show clear rhythmic crests and valleys
+        # Intensity powered by sound power; when beat is locked, beat_phase shapes wave crest (1.0) vs valley (0.5)
+        beat_phase = float(getattr(self.listener, "beat_phase", 0.0)) % 1.0
+        phase_wave = 0.5 + 0.5 * math.cos(2.0 * math.pi * (beat_phase + 0.03))
+        phase_crest = phase_wave * math.sqrt(phase_wave)
+
+        lock_weight = min(1.0, lock / 0.45) * self._spec_activity
+
         wave_carrier = 0.5 + 0.5 * math.sin(self.scroll_pos * 1.25)
+        rhythm_env = 0.22 + 0.78 * phase_crest
+        free_env = 0.36 + 0.48 * (wave_carrier * wave_carrier)
+        wave_env = (1.0 - lock_weight) * free_env + lock_weight * rhythm_env
+
         mean_band = float(np.mean(self.fft_bands))
-        base_floor = 0.18 * mean_band + 0.12 * self._spec_activity
-        dynamic_wave = self._spec_activity * (0.14 + 0.26 * (wave_carrier * wave_carrier)) + 0.65 * self._crest_env
-        center_val = max(0.0, min(1.0, base_floor + dynamic_wave)) * self.transition_scale
+        max_band = float(np.max(self.fft_bands))
+        raw_power = float(ctx.energy if ctx is not None else mean_band)
+        raw_power = max(0.0, min(1.0, raw_power))
+        live_power = min(1.0, 0.22 + 0.43 * max_band + 0.35 * raw_power)
+        sound_drive = (1.0 - self._spec_activity) * (0.22 * mean_band) + self._spec_activity * live_power
+
+        phase_gate = (1.0 - lock_weight) + lock_weight * phase_crest
+        center_val = max(0.0, min(1.0, sound_drive * wave_env + 0.22 * self._crest_env * phase_gate)) * self.transition_scale
 
         hi = self.highlight_color
         accent_mix = min(0.18, 0.45 * self.mood_accent)
@@ -376,9 +382,7 @@ class Extending_waves_mode(Mode.Mode):
             self.scroll_pos += base_speed
             curr_slot = int(math.floor(self.scroll_pos))
             steps = curr_slot - prev_slot
-            if steps <= 0:
-                self.hist_rgb[curr_slot % self.hist_len] = self._center_rgb
-            elif steps == 1:
+            if steps <= 1:
                 self.hist_rgb[curr_slot % self.hist_len] = self._center_rgb
             else:
                 steps_clamped = min(steps, self.hist_len)
@@ -386,9 +390,7 @@ class Extending_waves_mode(Mode.Mode):
                     frac_s = float(s) / float(steps_clamped)
                     slot_idx = (prev_slot + s) % self.hist_len
                     for c in range(3):
-                        self.hist_rgb[slot_idx, c] = (
-                            (1.0 - frac_s) * float(self._prev_center_rgb[c]) + frac_s * float(self._center_rgb[c])
-                        )
+                        self.hist_rgb[slot_idx, c] = (1.0 - frac_s) * float(self._prev_center_rgb[c]) + frac_s * float(self._center_rgb[c])
             self._prev_center_rgb[:] = self._center_rgb
 
         # 6. Discrete Wave Crest Injection (reinforces drum/spectral peaks & drives cooperative exit white stack)
@@ -396,11 +398,7 @@ class Extending_waves_mode(Mode.Mode):
         seed_wave = self._enter_progress < 0.25 and not bool(np.any(self.wave_active))
         exit_wave = exit_prog > 0.0 and exit_prog < 0.88 and self.time_since_wave >= (0.22 * (60.0 / bpm))
         peak_trigger = (is_drum_peak or self._crest_env > 0.32 or is_real or drop_hit) and self.time_since_wave >= min_wave_interval
-        should_trigger = (
-            (not is_silent or exit_prog > 0.0)
-            and (peak_trigger or seed_wave or exit_wave)
-            and exit_prog < 0.90
-        )
+        should_trigger = (not is_silent or exit_prog > 0.0) and (peak_trigger or seed_wave or exit_wave) and exit_prog < 0.90
 
         if should_trigger:
             self.time_since_wave = 0.0
@@ -430,17 +428,15 @@ class Extending_waves_mode(Mode.Mode):
         np.multiply(self.half_rgb, self._src_frac_2d, out=self.half_rgb)
         np.add(self.half_rgb, self._sample0, out=self.half_rgb)
 
-        # Gentle radial trail attenuation toward outer tips (modulated by mood_trail)
         trail_falloff = 0.28 / max(0.5, self.mood_trail)
         np.multiply(self.half_pos, -trail_falloff, out=self._radial_env)
         np.add(self._radial_env, 1.0, out=self._radial_env)
         np.clip(self._radial_env, 0.45, 1.0, out=self._radial_env)
         np.multiply(self.half_rgb, self._radial_env_2d, out=self.half_rgb)
 
-        # Add travelling peak wave crests
         two_w_sq = 2.0 * ((self.wave_width * (1.0 - 0.15 * tension)) ** 2)
         inv_two_w_sq = float(-1.0 / two_w_sq) if two_w_sq > 0 else -1.0
-        crest_boost = (0.32 * self._spec_activity) if exit_prog <= 0.0 else 0.75
+        crest_boost = (0.22 * self._spec_activity * (1.0 - 0.80 * lock_weight)) if exit_prog <= 0.0 else 0.75
 
         if crest_boost > 0.001:
             for w in range(self.MAX_WAVES):

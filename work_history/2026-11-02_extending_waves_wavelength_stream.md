@@ -29,6 +29,7 @@
   * Precomputed a 256-entry vivid rainbow LUT (`self.rainbow_lut`, hues `0.00` Red $\to$ `0.82` Violet) and pre-allocated a zero-diffusion subpixel circular history buffer (`self.hist_rgb`) plus vectorized interpolation scratch buffers (`_src_pos`, `_src_floor`, `_src_frac_2d`, `_idx0`, `_idx1`, `_sample0`, `_sample1`, `_radial_env_2d`) for zero runtime heap allocations (AXIOM-02).
   * Implemented balanced dominant wavelength scoring across all FFT bands (`_band_dev` rolling EMA deviation, `_band_rise` positive attack, `_rel_bands` mean-rebalanced band share, `_norm_flux` normalized onset flux, `band_eq` 1/f high-band equalization, `_band_fatigue` anti-stagnation habituation, and `_band_hold_time` hysteresis).
   * Added rising-edge drum peak detection (`_drum_hold_frames = 4`, `_drum_cooldown`, post-drum Band 0 fatigue boost) so drum hits inject crisp Red (`hue = 0.00`) crests and immediately hand off to melodic bands.
+  * Added sound-power intensity scaling (`sound_drive` from `max_band` and `ctx.energy`) and locked `beat_phase` modulation (`phase_crest = phase_wave ** 1.5`, `rhythm_env = 0.22 + 0.78 * phase_crest`, weighted by `lock_weight = min(1.0, lock / 0.45) * self._spec_activity`), producing `~4.2–4.5x` peak-to-valley intensity contrast between `beat_phase ~ 1.0/0.0` (very intense center light) and `beat_phase ~ 0.5` (visible low valley) when the beat is locked.
   * Preserved discrete travelling wave crests (`MAX_WAVES = 8`) and bespoke cooperative exit white-wave stacking (`self._stack_frontier`).
 
 ### Catalog, Configuration & Tests

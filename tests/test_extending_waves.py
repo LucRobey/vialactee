@@ -234,6 +234,48 @@ class TestExtendingWavesSpectrumStream(_ModeTestCase):
             self.assertGreater(int(np.max(mode.rgb_list)), 150, "strip reset to black when bands saturated at 1.0")
             self.assertGreater(float(np.max(mode._center_rgb)), 100.0)
 
+    def test_locked_beat_phase_and_sound_power_modulate_center_intensity(self):
+        mode = self.mode(n=41)
+        self.engine._is_locked = True
+        self.engine._beat_trust = 0.90
+        self.engine._salience = 0.85
+        self.engine._energy = 0.85
+        self.engine._power = 0.85
+        self.listener.asserved_total_power = 0.85
+        self.listener.asserved_fft_band[:] = 0.30
+        self.listener.asserved_fft_band[2] = 0.85
+
+        # 1. At beat_phase = 0.50 (mid-beat valley): intensity is low, but not too low (visible rhythm)
+        self.listener.beat_phase = 0.50
+        mode.run()
+        self.listener.asserved_fft_band[2] = 0.88
+        mode.run()
+        mid_phase_intensity = float(np.max(mode._center_rgb))
+        self.assertGreater(mid_phase_intensity, 25.0)
+        self.assertLess(mid_phase_intensity, 95.0)
+
+        # 2. Close to phase 1 (beat_phase = 0.98): very intense light coming out from the middle
+        self.listener.beat_phase = 0.98
+        self.listener.asserved_fft_band[2] = 0.90
+        mode.run()
+        peak_phase_intensity = float(np.max(mode._center_rgb))
+        self.assertGreater(peak_phase_intensity, 180.0)
+        self.assertGreater(peak_phase_intensity, 2.8 * mid_phase_intensity)
+
+        # 3. Lower sound power produces lower peak intensity than high sound power
+        mode_soft = self.mode(n=41)
+        self.engine._energy = 0.12
+        self.engine._power = 0.12
+        self.listener.asserved_total_power = 0.12
+        self.listener.asserved_fft_band[:] = 0.08
+        self.listener.asserved_fft_band[2] = 0.20
+        self.listener.beat_phase = 0.98
+        mode_soft.run()
+        self.listener.asserved_fft_band[2] = 0.22
+        mode_soft.run()
+        soft_peak_intensity = float(np.max(mode_soft._center_rgb))
+        self.assertLess(soft_peak_intensity, peak_phase_intensity * 0.70)
+
 
 if __name__ == "__main__":
     unittest.main()
