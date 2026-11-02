@@ -12,6 +12,10 @@ from transitions.effects import (
     apply_iris_transition, apply_luma_melt, apply_prism_sweep, apply_silk_wipe,
     apply_staccato_shutter, apply_transformer_cut, apply_zipper_merge, set_transition_params,
 )
+from transitions.spectacles import (
+    apply_fuse_detonate, apply_liquid_geyser, apply_pendulum_sweep,
+    apply_shatter_ice, apply_supernova, apply_tesla_arc,
+)
 
 ROOM_MAX_X = 430
 ROOM_MAX_Y = 246
@@ -416,19 +420,19 @@ def apply_spiral_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, 
 
 
 _STRIP_HANDLERS = {
-    "ember_dissolve": apply_ember_dissolve,
-    "luma_melt": apply_luma_melt,
-    "breath_dip": apply_breath_dip,
+    "ember_dissolve": apply_ember_dissolve, "luma_melt": apply_luma_melt, "breath_dip": apply_breath_dip,
     "silk_wipe": lambda o, n, p: apply_silk_wipe(o, n, p, reverse=False),
     "silk_wipe_reverse": lambda o, n, p: apply_silk_wipe(o, n, p, reverse=True),
     "iris_open": lambda o, n, p: apply_iris_transition(o, n, p, close_in=False),
     "iris_close": lambda o, n, p: apply_iris_transition(o, n, p, close_in=True),
-    "zipper_merge": apply_zipper_merge,
-    "collider": apply_collider,
-    "prism_sweep": apply_prism_sweep,
-    "flash_cut": apply_flash_cut,
-    "staccato_shutter": apply_staccato_shutter,
-    "transformer_cut": apply_transformer_cut,
+    "zipper_merge": apply_zipper_merge, "collider": apply_collider, "fuse_detonate": apply_fuse_detonate,
+    "prism_sweep": apply_prism_sweep, "flash_cut": apply_flash_cut,
+    "staccato_shutter": apply_staccato_shutter, "transformer_cut": apply_transformer_cut,
+}
+
+_SPECTACLE_HANDLERS = {
+    "supernova": apply_supernova, "shatter_ice": apply_shatter_ice, "tesla_arc": apply_tesla_arc,
+    "liquid_geyser": apply_liquid_geyser, "pendulum_sweep": apply_pendulum_sweep,
 }
 
 
@@ -440,6 +444,8 @@ def apply_transition(rgb_list_old: np.ndarray, rgb_list_new: np.ndarray, progres
         apply_dual_fade(rgb_list_old, rgb_list_new, progress)
     elif transition_name in _STRIP_HANDLERS:
         _STRIP_HANDLERS[transition_name](rgb_list_old, rgb_list_new, progress)
+    elif transition_name in _SPECTACLE_HANDLERS:
+        _SPECTACLE_HANDLERS[transition_name](rgb_list_old, rgb_list_new, coords, progress, ROOM_MAX_X, ROOM_MAX_Y)
     elif transition_name == "global_change":
         apply_colorful_glitch(rgb_list_old, rgb_list_new, progress)
     elif coords is None:
