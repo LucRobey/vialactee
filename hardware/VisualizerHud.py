@@ -23,7 +23,7 @@ class VisualizerHud:
         # Transition Tester state
         self.transitions = list(AVAILABLE_TRANSITIONS)
         self.selected_idx: int = 0
-        self.selected_duration: float = 1.2
+        self.selected_duration: float = 3.0
         self._last_request_ts: float = 0.0
 
         # Clickable rects populated on draw

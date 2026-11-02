@@ -93,7 +93,11 @@ class TestTransitionFamilies(unittest.TestCase):
         self.assertGreaterEqual(checked, 8)
 
     def test_2d_room_transitions_are_never_staggerable(self):
-        room_locked = ("explosion", "spiral", "box_wipe", "weird_glitch", "gravity_drop", "wipe_left_to_right")
+        room_locked = (
+            "explosion", "supernova", "spiral", "tesla_arc", "shatter_ice",
+            "liquid_geyser", "pendulum_sweep", "box_wipe", "weird_glitch",
+            "gravity_drop", "wipe_left_to_right",
+        )
         for tech in room_locked:
             self.assertFalse(is_staggerable(tech), f"{tech} should not be staggerable")
             self.assertEqual(get_allowed_stagger_patterns(tech), (StaggerPattern.SIMULTANEOUS,))
@@ -111,10 +115,22 @@ class TestTransitionFamilies(unittest.TestCase):
         self.assertTrue(all(o.start_offset == 0.0 for o in orders.orders))
 
     def test_1d_and_organic_transitions_are_staggerable(self):
-        staggerable_techs = ("silk_wipe", "iris_open", "ember_dissolve", "luma_melt", "prism_sweep", "fade_in_out")
+        staggerable_techs = (
+            "silk_wipe", "iris_open", "ember_dissolve", "luma_melt",
+            "prism_sweep", "fade_in_out", "zipper_merge", "collider", "fuse_detonate",
+        )
         for tech in staggerable_techs:
             self.assertTrue(is_staggerable(tech), f"{tech} should be staggerable")
             self.assertGreater(len(get_allowed_stagger_patterns(tech)), 1)
+
+    def test_three_act_showstoppers_disable_cooperative_dimming(self):
+        """3-Act blackout/kinetic showstoppers must keep mode_handshake=False for 100% contrast."""
+        non_coop = (
+            "explosion", "supernova", "spiral", "tesla_arc", "shatter_ice",
+            "liquid_geyser", "pendulum_sweep", "zipper_merge", "collider", "fuse_detonate",
+        )
+        for tech in non_coop:
+            self.assertFalse(is_mode_cooperative(tech), f"{tech} should have MODE_COOPERATIVE disabled")
 
     def test_roll_transition_params_generates_varied_parameters(self):
         self.assertIn(TransitionFamily.ROOM_EPI_2D, get_families("explosion"))

@@ -167,7 +167,7 @@ class DefaultTransitionService(TransitionService):
         if technique in (None, "", "AUTO"):
             if duration is None:
                 return None
-            cfg = dict(self._manager.select_transition_technique())
+            cfg = dict(self._manager.roll_auto_transition_technique(staggered=False))
             cfg["duration"] = max(0.1, float(duration))
             return cfg
         if technique in TRANSITION_TECHNIQUES:

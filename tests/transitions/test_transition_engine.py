@@ -189,6 +189,12 @@ class TestTransitionEngine(unittest.TestCase):
             "gravity_drop",
             "weird_glitch",
             "explosion",
+            "supernova",
+            "shatter_ice",
+            "tesla_arc",
+            "fuse_detonate",
+            "liquid_geyser",
+            "pendulum_sweep",
             "ember_dissolve",
             "luma_melt",
             "breath_dip",
@@ -268,6 +274,43 @@ class TestTransitionEngine(unittest.TestCase):
         old = self.old_rgb.copy()
         TE.apply_transition(old, self.new_rgb, progress=1.5, transition_name="explosion", coords=self.coords)
         np.testing.assert_array_equal(old, self.new_rgb)
+
+    def test_three_act_showstoppers_across_all_acts(self):
+        """Every 3-Act showstopper must preserve old at 0.0, mutate across Acts I/II/III, and reach new at 1.0."""
+        showstoppers = (
+            "supernova",
+            "shatter_ice",
+            "tesla_arc",
+            "fuse_detonate",
+            "liquid_geyser",
+            "pendulum_sweep",
+            "spiral",
+            "zipper_merge",
+            "collider",
+        )
+        for tech in showstoppers:
+            for coords_arg in (self.coords, None):
+                if tech == "spiral" and coords_arg is None:
+                    continue
+                with self.subTest(technique=tech, has_coords=coords_arg is not None):
+                    b0 = self.old_rgb.copy()
+                    TE.apply_transition(b0, self.new_rgb, 0.0, tech, coords=coords_arg)
+                    np.testing.assert_array_equal(b0, self.old_rgb)
+
+                    b1 = self.old_rgb.copy()
+                    TE.apply_transition(b1, self.new_rgb, 1.0, tech, coords=coords_arg)
+                    np.testing.assert_array_equal(b1, self.new_rgb)
+
+                    acts = []
+                    for p in (0.20, 0.48, 0.78):
+                        buf = self.old_rgb.copy()
+                        TE.apply_transition(buf, self.new_rgb, p, tech, coords=coords_arg)
+                        self.assertEqual(buf.shape, (self.num_leds, 3))
+                        self.assertTrue(np.all(buf >= 0) and np.all(buf <= 255))
+                        acts.append(buf)
+                    # Acts I, II, and III must produce distinct visual frames
+                    self.assertFalse(np.array_equal(acts[0], acts[1]), f"{tech} Act I == Act II")
+                    self.assertFalse(np.array_equal(acts[1], acts[2]), f"{tech} Act II == Act III")
 
 
 if __name__ == '__main__':

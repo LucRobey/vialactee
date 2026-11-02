@@ -38,32 +38,51 @@ TRANSITION_TECHNIQUES: Dict[str, Dict[str, Any]] = {
         "fade_in_out": ("fade_in_out", 2.0),
         "fade_to_black": ("fade_to_black", 2.0),
         "cosine_fade": ("cosine_fade", 2.0),
-        "directional_wipe": ("vertical_wipe", 1.5),
-        "vertical_wipe": ("vertical_wipe", 1.5),
-        "wipe_left_to_right": ("wipe_left_to_right", 1.6),
-        "wipe_right_to_left": ("wipe_right_to_left", 1.6),
-        "transient_blip": ("explosion", 1.8),
-        "explosion": ("explosion", 1.8),
-        "box_wipe": ("box_wipe", 2.0),
-        "spiral": ("spiral", 2.5),
-        "gravity_drop": ("gravity_drop", 2.5),
-        "weird_glitch": ("weird_glitch", 1.6),
-        "global_change": ("global_change", 1.8),
-        "ember_dissolve": ("ember_dissolve", 1.8),
-        "luma_melt": ("luma_melt", 1.6),
-        "breath_dip": ("breath_dip", 2.0),
-        "silk_wipe": ("silk_wipe", 1.2),
-        "silk_wipe_reverse": ("silk_wipe_reverse", 1.2),
-        "iris_open": ("iris_open", 1.2),
-        "iris_close": ("iris_close", 1.2),
-        "zipper_merge": ("zipper_merge", 1.2),
-        "collider": ("collider", 1.2),
-        "prism_sweep": ("prism_sweep", 1.4),
-        "flash_cut": ("flash_cut", 0.5),
-        "staccato_shutter": ("staccato_shutter", 0.8),
-        "transformer_cut": ("transformer_cut", 1.0),
+        "directional_wipe": ("vertical_wipe", 2.0),
+        "vertical_wipe": ("vertical_wipe", 2.0),
+        "wipe_left_to_right": ("wipe_left_to_right", 2.2),
+        "wipe_right_to_left": ("wipe_right_to_left", 2.2),
+        "transient_blip": ("explosion", 2.4),
+        "explosion": ("explosion", 2.4),
+        "supernova": ("supernova", 3.4),
+        "shatter_ice": ("shatter_ice", 3.2),
+        "tesla_arc": ("tesla_arc", 2.8),
+        "fuse_detonate": ("fuse_detonate", 3.0),
+        "liquid_geyser": ("liquid_geyser", 3.4),
+        "pendulum_sweep": ("pendulum_sweep", 3.2),
+        "box_wipe": ("box_wipe", 2.2),
+        "spiral": ("spiral", 3.2),
+        "gravity_drop": ("gravity_drop", 2.8),
+        "weird_glitch": ("weird_glitch", 2.2),
+        "global_change": ("global_change", 2.0),
+        "ember_dissolve": ("ember_dissolve", 2.2),
+        "luma_melt": ("luma_melt", 2.0),
+        "breath_dip": ("breath_dip", 2.4),
+        "silk_wipe": ("silk_wipe", 1.8),
+        "silk_wipe_reverse": ("silk_wipe_reverse", 1.8),
+        "iris_open": ("iris_open", 1.8),
+        "iris_close": ("iris_close", 1.8),
+        "zipper_merge": ("zipper_merge", 2.8),
+        "collider": ("collider", 3.0),
+        "prism_sweep": ("prism_sweep", 2.0),
+        "flash_cut": ("flash_cut", 0.8),
+        "staccato_shutter": ("staccato_shutter", 1.2),
+        "transformer_cut": ("transformer_cut", 1.4),
     }.items()
 }
+
+_HIGH_IMPACT_POOL: Tuple[str, ...] = (
+    "explosion", "supernova", "spiral", "tesla_arc", "shatter_ice", "liquid_geyser", "pendulum_sweep", "collider",
+)
+_RHYTHMIC_SHOWCASE_POOL: Tuple[str, ...] = (
+    "spiral", "zipper_merge", "collider", "fuse_detonate", "liquid_geyser", "pendulum_sweep", "vertical_wipe",
+)
+_STAGGERABLE_SHOWCASE_POOL: Tuple[str, ...] = (
+    "collider", "zipper_merge", "fuse_detonate", "vertical_wipe", "prism_sweep", "silk_wipe", "iris_open", "ember_dissolve",
+)
+_ATMOSPHERIC_POOL: Tuple[str, ...] = (
+    "spiral", "pendulum_sweep", "liquid_geyser", "breath_dip", "ember_dissolve", "prism_sweep", "luma_melt",
+)
 
 
 def _safe_float(val: Any, default: float = 0.0) -> float:
@@ -99,6 +118,7 @@ class LocalTransitionManager:
         self._downbeat_timeout: float = 1.20
         self._dwell_timer: float = 0.0
         self._orders: List[SegmentOrder] = []
+        self._last_auto_technique: str = ""
         if segments:
             self.set_installation(segments, modes)
 
@@ -250,6 +270,32 @@ class LocalTransitionManager:
                 return dict(TRANSITION_TECHNIQUES["directional_wipe"])
         return dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
 
+    def roll_auto_transition_technique(self, context: Optional[Any] = None, staggered: bool = False) -> Dict[str, Any]:
+        """Rolls a varied 3-Act showcase transition from context-appropriate pools with anti-repeat memory."""
+        ctx = context if context is not None else self.music
+        energy = _safe_float(getattr(ctx, "energy", 0.5), 0.5) if ctx is not None else 0.5
+        salience = _safe_float(getattr(ctx, "salience", 0.5), 0.5) if ctx is not None else 0.5
+        is_drop = bool(getattr(ctx, "is_drop_impact", False)) if ctx is not None else False
+        is_rhythmic = bool(getattr(ctx, "is_rhythmic", False)) if ctx is not None else False
+        raw_scene = getattr(ctx, "scene", "") if ctx is not None else ""
+        scene = str(getattr(raw_scene, "value", getattr(raw_scene, "name", raw_scene)) or "").upper()
+
+        if is_drop or energy >= 0.82:
+            pool = _HIGH_IMPACT_POOL
+        elif staggered:
+            if scene == "CHILL" and energy <= 0.25 and salience <= 0.25:
+                return dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
+            pool = _STAGGERABLE_SHOWCASE_POOL
+        elif is_rhythmic or salience >= 0.50:
+            pool = _RHYTHMIC_SHOWCASE_POOL
+        else:
+            pool = _ATMOSPHERIC_POOL
+
+        candidates = [t for t in pool if t != self._last_auto_technique] or list(pool)
+        chosen = random.choice(candidates)
+        self._last_auto_technique = chosen
+        return dict(TRANSITION_TECHNIQUES[chosen])
+
     def generate_staggered_configs(
         self,
         allocation: Dict[str, str],
@@ -306,15 +352,19 @@ class LocalTransitionManager:
         is_partial = bool(cast_res is not None and cast_res.is_partial_reroll)
         if staggered:
             base_cfg = transition_config if (isinstance(transition_config, dict) and "type" in transition_config) else None
-            if base_cfg is None and is_partial:
-                base_cfg = dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
+            if base_cfg is None:
+                base_cfg = (
+                    dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
+                    if is_partial
+                    else self.roll_auto_transition_technique(staggered=True)
+                )
             target_cfg = self.generate_staggered_configs(target_alloc, base_config=base_cfg, pattern=stagger_pattern)
         elif transition_config is not None:
             target_cfg = transition_config
         elif is_partial:
             target_cfg = dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
         else:
-            target_cfg = self.select_transition_technique()
+            target_cfg = self.roll_auto_transition_technique(staggered=False)
 
         if not quantize_downbeat:
             self._pending_transition = None

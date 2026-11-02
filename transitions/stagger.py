@@ -359,7 +359,7 @@ def generate_staggered_configs(
                 "type": tech,
                 "duration": base_duration,
                 "start_offset": round(rank * step_delay, 3),
-                "direction": None if is_vert else ("DOWN" if reverse_wave else "UP"),
+                "direction": "UP" if is_vert else ("DOWN" if reverse_wave else "UP"),
             }
         return configs
 
@@ -379,10 +379,10 @@ def generate_staggered_configs(
         if (pillar_wipe and base_technique in ("fade_in_out", "vertical_wipe"))
         else base_technique
     )
-    vert_dur = min(base_duration, 1.2) if is_complementary else base_duration
+    vert_dur = min(base_duration, 1.2) if (is_complementary and base_technique == "fade_in_out") else base_duration
     ring_tech = (
-        ("fade_in_out" if base_technique in ("vertical_wipe", "explosion") else base_technique)
-        if is_complementary
+        "fade_in_out"
+        if (is_complementary and base_technique == "fade_in_out")
         else base_technique
     )
     vert_dir = (

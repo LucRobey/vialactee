@@ -60,7 +60,7 @@ Sibling of [`music_analyzer_contract.md`](music_analyzer_contract.md) and [`mood
 
 > This part describes the implementation inside the sealed room and its boundary glue. Sections marked **[GAP]** are not wired or not implemented yet.
 
-Source files (first ten inside the room, remaining outside):
+Source files (first eleven inside the room, remaining outside):
 [`transitions/api.py`](../../transitions/api.py) (doors & DTOs) ·
 [`transitions/policy.py`](../../transitions/policy.py) (coherence policy compiler, static satisfiability & 200-cast feasibility probe) ·
 [`transitions/casting.py`](../../transitions/casting.py) (joint transition caster & Gibbs refinement) ·
@@ -69,6 +69,7 @@ Source files (first ten inside the room, remaining outside):
 [`transitions/director.py`](../../transitions/director.py) (clock + trigger) ·
 [`transitions/engine.py`](../../transitions/engine.py) (2D spatial blending & dispatcher) ·
 [`transitions/effects.py`](../../transitions/effects.py) (1D strip-intrinsic & organic shaders) ·
+[`transitions/spectacles.py`](../../transitions/spectacles.py) (3-Act theatrical showstopper shaders) ·
 [`transitions/families.py`](../../transitions/families.py) (multi-family contracts & generative parameters) ·
 [`transitions/stagger.py`](../../transitions/stagger.py) (tag-first staggered cohort configs) ·
 [`transitions/service.py`](../../transitions/service.py) (front door) ·
@@ -154,20 +155,23 @@ Every transition (and startup `allocate_initial`) executes a 6-step joint cast o
 
 ### 3.3 Which transition technique (one for the whole installation by default)
 
-Evaluated top to bottom, first match wins:
+Deterministic baseline classifier (`select_transition_technique`), evaluated top to bottom:
 
 | Condition | Technique | Engine `type` | Duration |
 | :--- | :--- | :--- | :-: |
-| `is_drop_impact` or `energy ≥ 0.85` | `transient_blip` | `explosion` | 1.8 s (`MIN_SHOWSTOPPER_DURATION >= 1.5 s`) |
-| `is_rhythmic` (GROOVE/DROP_IMPACT) or `salience ≥ 0.50` | `directional_wipe` | `vertical_wipe` | 1.5 s |
+| `is_drop_impact` or `energy ≥ 0.85` | `transient_blip` | `explosion` | 2.4 s (`MIN_SHOWSTOPPER_DURATION >= 1.5 s`) |
+| `is_rhythmic` (GROOVE/DROP_IMPACT) or `salience ≥ 0.50` | `directional_wipe` | `vertical_wipe` | 2.0 s |
 | otherwise | `smooth_cosine_crossfade` | `fade_in_out` | 2.0 s |
 
-Engine types available in `transitions/engine.py` and `transitions/effects.py`:
-- **Classic & Spatial 2D:** `fade_in_out` (`fade_to_black`, `smooth_cosine_crossfade`, `cosine_fade`), `global_change`, `vertical_wipe`, `wipe_left_to_right`, `wipe_right_to_left`, `box_wipe`, `spiral`, `gravity_drop`, `weird_glitch`, `explosion`, plus PNG-mask fallback.
-- **Photonic & Organic Dissolves:** `ember_dissolve` (per-LED spatial noise threshold + blackbody gold/amber spark edge), `luma_melt` (luminance-keyed takeover where bright pixels breakthrough first), `breath_dip` (parabolic breath valley with 20% floor glow).
-- **1D Strip-Intrinsic Sweeps:** `silk_wipe`, `silk_wipe_reverse` (1D smoothstep wipe along index $u \in [0, 1]$ with specular leading crest), `iris_open`, `iris_close` (symmetric center-out / edges-in aperture along each strip), `zipper_merge` (even/odd LED interleave sliding from opposite ends).
-- **Kinetic & Physics:** `collider` (twin cyan/magenta energy packets accelerating from opposite ends and detonating at strip focal point $u$), `prism_sweep` (chromatic RGB phase-split wave), `flash_cut` (instant mode swap at $p=0.12$ masked by an exponential photographic flash).
-- **Rhythmic & DJ Cuts:** `staccato_shutter` (accelerating rhythmic square-wave gate between old and new modes), `transformer_cut` (turntablist chop stutter cut).
+When scheduling automatic transitions (`roll_auto_transition_technique`), `LocalTransitionManager` draws with anti-repeat memory from context-weighted showcase pools (`_HIGH_IMPACT_POOL`, `_RHYTHMIC_SHOWCASE_POOL`, `_STAGGERABLE_SHOWCASE_POOL`, `_ATMOSPHERIC_POOL`).
+
+Engine types available in `transitions/engine.py`, `transitions/effects.py`, and `transitions/spectacles.py`:
+- **3-Act Theatrical Showstoppers (`transitions/spectacles.py` & `transitions/engine.py`):** `explosion` (2.4 s, inward implosion rings $\to$ blackout $\to$ radial shockwave), `supernova` (3.4 s, Doppler violet event horizon $\to$ strobing core singularity $\to$ dual-wave cyan + gold plasma detonation), `spiral` (3.2 s, multi-arm logarithmic vortex spin-up $\to$ eye of the storm $\to$ spiral shockwave unwind), `shatter_ice` (3.2 s, flash-freeze crystal $\to$ fault-line cracks $\to$ gravity shard collapse), `tesla_arc` (2.8 s, brownout flicker $\to$ jumping high-voltage lightning arcs $\to$ vertical plasma surge), `liquid_geyser` (3.4 s, top-to-bottom meniscus drain $\to$ boiling floor pool $\to$ pressurized geyser eruption), `pendulum_sweep` (3.2 s, stage dim $\to$ fiery eraser swing $\to$ prismatic painter return swing), `fuse_detonate` (3.0 s, dark silhouette $\to$ burning gunpowder fuse $\to$ backfire detonation).
+- **Classic & Spatial 2D (with Dark-Trench Wipes):** `fade_in_out` (`fade_to_black`, `smooth_cosine_crossfade`, `cosine_fade`), `global_change`, `vertical_wipe` (2.0 s), `wipe_left_to_right` (2.2 s), `wipe_right_to_left` (2.2 s), `box_wipe` (2.2 s), `gravity_drop` (2.8 s), `weird_glitch` (2.2 s), plus PNG-mask fallback.
+- **Photonic & Organic Dissolves:** `ember_dissolve` (2.2 s, per-LED spatial noise threshold + blackbody gold/amber spark edge), `luma_melt` (2.0 s, luminance-keyed takeover where bright pixels break through first), `breath_dip` (2.4 s, parabolic breath valley with suspense blackout).
+- **1D Strip-Intrinsic Sweeps:** `silk_wipe`, `silk_wipe_reverse` (1.8 s, 1D smoothstep wipe along index $u \in [0, 1]$ with specular leading crest), `iris_open`, `iris_close` (1.8 s, symmetric center-out / edges-in aperture along each strip), `zipper_merge` (2.8 s, 3-Act mechanical unzip to black sockets $\to$ interlocking teeth slide $\to$ seam lock flash).
+- **Kinetic & Physics:** `collider` (3.0 s, 3-Act vacuum drain + twin cyan/magenta energy packets accelerating from opposite ends $\to$ trembling white-violet core criticality $\to$ dual shockwave eruption), `prism_sweep` (2.0 s, chromatic RGB phase-split wave), `flash_cut` (0.8 s, instant mode swap masked by an exponential photographic flash).
+- **Rhythmic & DJ Cuts:** `staccato_shutter` (1.2 s, accelerating rhythmic square-wave gate between old and new modes), `transformer_cut` (1.4 s, turntablist chop stutter cut).
 
 All selectable names are exported in `transitions.api.AVAILABLE_TRANSITIONS`.
 
@@ -177,14 +181,14 @@ Each transition in `TRANSITION_FAMILIES` belongs to a `frozenset` of one or more
 
 | Family (`TransitionFamily`) | Contract Meaning & Rolled Parameters | Member Transitions |
 | :--- | :--- | :--- |
-| `ROOM_EPI_2D` | 2D room-space radial/angular transition around an architectural epicenter inside the chandelier core (`epicenter_x ∈ [0.46, 0.78]`, `epicenter_y ∈ [0.38, 0.64]`, `spiral_sign ∈ {-1, +1}`). Always `SIMULTANEOUS` across segments. | `explosion`, `transient_blip`, `spiral`, `box_wipe`, `weird_glitch` |
-| `ROOM_SWEEP_2D` | 2D room-space plane or gravity sweep (`beam_thickness ∈ [0.08, 0.22]`). Non-staggerable except `vertical_wipe` / `directional_wipe`. | `vertical_wipe`, `directional_wipe`, `wipe_left_to_right`, `wipe_right_to_left`, `gravity_drop` |
-| `STRIP_SWEEP_1D` | 1D strip-intrinsic directional wipe (`edge_width ∈ [0.10, 0.22]`, `reverse`). | `silk_wipe`, `silk_wipe_reverse`, `prism_sweep`, `zipper_merge` |
-| `STRIP_FOCAL_1D` | 1D strip-intrinsic focal/aperture transition around a dynamic strip coordinate (`focal_u ∈ [0.28, 0.72]`). | `iris_open`, `iris_close`, `collider` |
+| `ROOM_EPI_2D` | 2D room-space radial/angular transition around an architectural epicenter inside the chandelier core (`epicenter_x ∈ [0.46, 0.78]`, `epicenter_y ∈ [0.38, 0.64]`, `spiral_sign ∈ {-1, +1}`, `spiral_arms ∈ {2, 3}`). Always `SIMULTANEOUS` across segments. | `explosion`, `transient_blip`, `supernova`, `spiral`, `tesla_arc`, `pendulum_sweep`, `box_wipe`, `weird_glitch` |
+| `ROOM_SWEEP_2D` | 2D room-space plane, pendulum, fluid, or gravity sweep (`beam_thickness ∈ [0.10, 0.24]`, `trench_width ∈ [0.12, 0.22]`). Non-staggerable except `vertical_wipe` / `directional_wipe`. | `shatter_ice`, `liquid_geyser`, `pendulum_sweep`, `vertical_wipe`, `directional_wipe`, `wipe_left_to_right`, `wipe_right_to_left`, `gravity_drop` |
+| `STRIP_SWEEP_1D` | 1D strip-intrinsic directional wipe or mechanical interlock (`edge_width ∈ [0.10, 0.22]`, `teeth_count ∈ {3, 4, 5}`, `reverse`). | `silk_wipe`, `silk_wipe_reverse`, `prism_sweep`, `zipper_merge`, `fuse_detonate` |
+| `STRIP_FOCAL_1D` | 1D strip-intrinsic focal/aperture/collider transition around a dynamic strip coordinate (`focal_u ∈ [0.28, 0.72]`). | `iris_open`, `iris_close`, `collider`, `fuse_detonate` |
 | `STAGGERABLE` | Eligible for per-segment stagger offsets (`CASCADE_DOWN/UP`, `CENTER_OUT`, `ALTITUDE_CASCADE_DOWN/UP`, `BAY_WAVE_LR/RL`, `COHORT_COMPLEMENTARY`). | All 1D strip, organic, and rhythmic cut transitions + `vertical_wipe` |
-| `STOCHASTIC_ORGANIC` | Per-LED spatial hash permutation (`seed ∈ [0, 99.9]`, `spark_intensity ∈ [0.85, 1.25]`). | `ember_dissolve`, `luma_melt`, `weird_glitch`, `global_change` |
-| `RHYTHMIC_CHOP` | Beat/sub-beat stutter & flash parameters (`chop_count ∈ {3, 4, 5}`, `flash_decay ∈ [4.5, 7.5]`). | `flash_cut`, `staccato_shutter`, `transformer_cut`, `explosion` |
-| `MODE_COOPERATIVE` | Activates `SegmentOrder.mode_handshake = True` so outgoing/incoming modes physically wind down and bloom in via `on_transition_exit` / `on_transition_enter`. | All organic, 1D sweep/focal, and 2D wipe transitions (disabled on hard rhythmic cuts `flash_cut`, `staccato_shutter`, `transformer_cut`, `explosion`, `weird_glitch`) |
+| `STOCHASTIC_ORGANIC` | Per-LED or 2D cell spatial hash permutation (`seed ∈ [0, 99.9]`, `spark_intensity ∈ [0.85, 1.25]`). | `shatter_ice`, `tesla_arc`, `fuse_detonate`, `ember_dissolve`, `luma_melt`, `weird_glitch`, `global_change` |
+| `RHYTHMIC_CHOP` | Beat/sub-beat stutter, arc jump, & flash parameters (`chop_count ∈ {3, 4, 5}`, `flash_decay ∈ [4.5, 7.5]`). | `flash_cut`, `staccato_shutter`, `transformer_cut`, `explosion`, `supernova`, `tesla_arc` |
+| `MODE_COOPERATIVE` | Activates `SegmentOrder.mode_handshake = True` so outgoing/incoming modes physically wind down and bloom in via `on_transition_exit` / `on_transition_enter`. | Organic dissolves, soft 1D wipes (`silk_wipe`, `prism_sweep`, `iris_*`), and 2D wipes (`vertical_wipe`, `wipe_*`, `box_wipe`, `gravity_drop`); disabled on 3-Act blackouts/showstoppers (`explosion`, `supernova`, `spiral`, `shatter_ice`, `tesla_arc`, `liquid_geyser`, `pendulum_sweep`, `collider`, `zipper_merge`, `fuse_detonate`) and hard cuts |
 
 ---
 
@@ -228,7 +232,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | :--- | :--- |
 | Mode matchmaking & Coherence Casting | Done, tested. Driven by `config/modes.json` (`dna` + `tags`), `config/segments_*.json` (`tags`), and `config/coherence_*.json` (`zones`, `rules`, `settings`) via `transitions/policy.py`, `transitions/casting.py`, and `transitions/memory.py`. |
 | Zone groupings & Stagger tags | Done, tested. Zone groupings partition segments declaratively; `transitions/stagger.py` resolves tiers (`tier:*`) and halves (`half:*`) from segment tags with legacy suffix fallback. |
-| Technique selection, Families & Effects | Done. 23 transition effects mapped across 8 `TransitionFamily` contracts (`transitions/families.py`) with dynamic generative parameter rolling (`roll_transition_params`) and the `Fake_leds.py` / `VisualizerHud.py` Transition Tester UI + left-side `SEGMENT MODES` table. |
+| Technique selection, Families & Effects | Done. 29 transition effects mapped across 8 `TransitionFamily` contracts (`transitions/families.py`) with dynamic generative parameter rolling (`roll_transition_params`) and the `Fake_leds.py` / `VisualizerHud.py` Transition Tester UI + left-side `SEGMENT MODES` table. |
 | Beat quantization | Done (`beat_phase < 0.05` gated by `beat_trust >= 0.20`, or `is_beat`, or 1.2 s timeout). |
 | Music-driven triggers | Done (`song_change`, `structural_change`, `pre_drop_buildup`, `drop_impact`). |
 | Lookahead / pre-drop scheduling | Done (`live_is_song_change`, `live_is_verse_chorus_change` countdowns and `pre_drop_buildup` duration scaling $D = \text{lookahead} / 0.80$). |
