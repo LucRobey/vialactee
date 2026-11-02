@@ -103,4 +103,4 @@
 
 ## 6. Open Items & Next Steps
 
-* [ ] Proceed with the planned Law 7 mode redesign batches (`Middle_bar_mode`, `Chromatic_chaser_mode`, `Extending_waves_mode`, `Rainbow_mode`, `Proportion_rainbow_mode`) and promote each batch into `CONFORMING_MODES_PHASE_4A`.
+* [x] Proceed with the planned Law 7 mode redesign batches (`Middle_bar_mode`, `Chromatic_chaser_mode`, `Extending_waves_mode`, `Rainbow_mode`, `Proportion_rainbow_mode`) and promote each batch into `CONFORMING_MODES_PHASE_4A` (formally completed in `2edcb22` / `a7b4c62`; see [`2026-10-30_modes_choreography_and_test_consolidation.md`](2026-10-30_modes_choreography_and_test_consolidation.md)).

@@ -1,4 +1,4 @@
-﻿# Developer Tools & Offline Studios Guide
+# Developer Tools & Offline Studios Guide
 
 > **Location:** `docs/manuals/developer_tools.md` (Tier 2 Operational Manual)  
 > **Source Directory:** [`tools/`](../../tools/), [`hardware/Fake_leds.py`](../../hardware/Fake_leds.py), [`research/benchmarks/`](../../research/benchmarks/)  
@@ -11,7 +11,7 @@ Core runtime dependencies live in [`requirements.txt`](../../requirements.txt). 
 ```bash
 pip install -r requirements-dev.txt
 ```
-Standard unit and governance tests (`pytest -q`) run in a clean environment without `mir_eval`; [`tests/conftest.py`](../../tests/conftest.py) skips heavy `@pytest.mark.benchmark` modules unless `-m benchmark` is explicitly passed.
+Standard unit and governance tests (`pytest -q`) run in a clean environment without `mir_eval`; [`tests/conftest.py`](../../tests/conftest.py) skips heavy `@pytest.mark.benchmark` modules unless `-m benchmark` is explicitly passed. Always invoke `python` and `pytest` via the project virtual environment interpreter (`.venv\Scripts\python.exe -m pytest -q` on Windows or `.venv/bin/python -m pytest -q` on Linux/macOS) so `numpy`, `scipy`, and `soundfile` resolve from `.venv`.
 
 ---
 

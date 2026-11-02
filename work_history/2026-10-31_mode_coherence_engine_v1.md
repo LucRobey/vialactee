@@ -5,7 +5,7 @@
 > **Agent / Model:** Antigravity  
 > **Primary Goal:** Deliver the Mode Coherence Engine v1 for transitions, then clean up the test suite after it.  
 > **Status:** COMPLETED  
-> **Commits:** `40a9809` (engine), `ba95931` `71f113c` `7c90fae` (cleanup) (pushed: yes)  
+> **Commits:** `40a9809` (engine), `ba95931` `71f113c` `7c90fae` `9b72a57` (cleanup), `87c143d` `494b438` (coherence helper & whole-installation option) (pushed: yes)  
 > **Skills Used:** `vialactee-project`, `vialactee-mode-creator`  
 > **Skill Friction:** none
 
@@ -26,9 +26,11 @@
 * **DELETE** `transitions/mode_dna.py`. DNA vectors, vocabulary and tags moved into `config/modes.json`.
 * **MODIFY** `config/segments_*.json` (vocabulary and geometry tags), `core/TransitionBridge.py`, `core/Mode_master.py`, `core/Segment.py`, `transitions/stagger.py` (tags with legacy suffix fallback), `transitions/sandbox.py`.
 
-### Cleanup
+### Cleanup & Follow-up (`ba95931`, `71f113c`, `87c143d`, `494b438`)
 * **RENAME** `tests/transitions/test_manager_and_dna.py` to `test_manager.py`, with references updated in `docs/contracts/transition_contract.md`.
 * **MODIFY** `tests/conftest.py`: session-wide autouse fixture redirects `AppConfigStore._resolve_app_config_path` to a temp file and fails the session if `config/app_config.json` changes.
+* **NEW** `tools/coherence_helper.html`, `tools/build_coherence_helper.py`, `tests/test_coherence_helper_build.py`: standalone single-file policy editor and `--check` validation script (`87c143d`).
+* **NEW / MODIFY** `transitions/probe.py`, `tests/transitions/test_whole_installation.py`, `transitions/policy.py`, `transitions/casting.py`, `config/coherence_*.json`: added `wholeInstallation` grouping option competing with per-zone cuts (`494b438`).
 
 ---
 
