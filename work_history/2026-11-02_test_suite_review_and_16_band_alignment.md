@@ -5,7 +5,7 @@
 > **Agent / Model:** Antigravity  
 > **Primary Goal:** Execute the 4-priority test-suite cleanup: replace the vacuous spectral delay test in `test_listener.py`, align remaining 8-band mocks/diagnostics to the 16-band Mel spectrum, mock `sounddevice.OutputStream` & cache `Genesis.mp3` in `test_structural_annotator.py`, and deduplicate/clean up stale tests.  
 > **Status:** COMPLETED  
-> **Commits:** `20a0044` (pushed: yes)  
+> **Commits:** `20a0044`, `c0547b5`, `d4b896c` (pushed: yes)  
 > **Skills Used:** `vialactee-project`  
 > **Skill Friction:** none
 
