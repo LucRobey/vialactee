@@ -188,7 +188,7 @@ Each `Segment` is a local state machine that owns its pixel buffers, instantiate
   - Advances `self.transition_elapsed += dt`.
   - **Before `start_offset` (`transition_elapsed < start_offset`):** Keeps showing `self.activ_mode` alone.
   - **Active window (`start_offset <= transition_elapsed < start_offset + duration`):** Computes `prog = (transition_elapsed - start_offset) / duration`, invokes `target_mode.on_transition_enter(prog)` and `activ_mode_obj.on_transition_exit(prog)`, renders the incoming mode into `self.dual_rgb_list` via `target_mode.render(self.dual_rgb_list)`, and calls `blend(self.rgb_list, self.dual_rgb_list, prog, tech, active_coords)` to mix `dual_rgb_list` into `rgb_list` in place.
-  - **Completion (`transition_elapsed >= start_offset + duration` or `has_custom_transition`):** `_complete_transition()` terminates the old mode, promotes `self.activ_mode = self.target_mode_name`, clears transition flags, renders the new active mode into `self.rgb_list`, and flushes.
+  - **Completion (`transition_elapsed >= start_offset + duration`):** `_complete_transition()` terminates the old mode, promotes `self.activ_mode = self.target_mode_name`, clears transition flags, renders the new active mode into `self.rgb_list`, and flushes.
 - **Instant swap helpers:** `execute_mode_swap(mode_name)` validates the mode name before clearing any active transition and restarts the mode even if already active; `force_mode(mode_name)` clears any pending transition first and is a no-op if `mode_name == self.activ_mode`.
 
 ### 4.3 Hardware Flush & Direction (`update_leds()`)

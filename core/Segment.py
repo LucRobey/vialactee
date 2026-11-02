@@ -130,7 +130,6 @@ class Segment:
             # State machine for transitions
             target_mode = self.modes.get(self.target_mode_name)
             activ_mode_obj = self.modes.get(self.activ_mode)
-            has_custom = activ_mode_obj is not None and getattr(activ_mode_obj, "has_custom_transition", False)
             status_state = getattr(status, "state", None)
 
             if dt is not None:
@@ -146,7 +145,7 @@ class Segment:
                     if hasattr(self.leds, "set_segment_mode"):
                         self.leds.set_segment_mode(self.name, self.activ_mode, self.target_mode_name)
                     return
-                elif self.transition_elapsed >= offset + dur or has_custom:
+                elif self.transition_elapsed >= offset + dur:
                     self._complete_transition(activ_mode_obj)
                     return
                 else:
@@ -155,7 +154,7 @@ class Segment:
             else:
                 # dt is None: backwards compatibility mode
                 prog = float(getattr(status, "progress", 0.0))
-                if status_state == "PASSATION" or has_custom or prog >= 1.0:
+                if status_state == "PASSATION" or prog >= 1.0:
                     self._complete_transition(activ_mode_obj)
                     return
 
@@ -171,7 +170,7 @@ class Segment:
             else:
                 self.logger.warning("(S) erreur, on update un mode qui n'a pas été start ")
 
-            if activ_mode_obj is not None and not has_custom:
+            if activ_mode_obj is not None:
                 # --- UPDATE NEW MODE INTO SECONDARY BUFFER ---
                 if target_mode is not None and target_mode.isActiv:
                     if hasattr(target_mode, "render"):
@@ -430,14 +429,6 @@ class Segment:
                 catalogs.append(catalog)
         return catalogs
 
-    def export_mode_settings(self, mode_name: str) -> Dict[str, Any]:
-        normalized_name = self._normalize_mode_name(mode_name)
-        mode = self.modes.get(normalized_name)
-        if mode is None or not hasattr(mode, "export_settings"):
-            return {}
-        exported = mode.export_settings()
-        return exported if isinstance(exported, dict) else {}
-
     def apply_mode_settings(self, mode_name: str, settings: Dict[str, Any]) -> Dict[str, Any]:
         normalized_name = self._normalize_mode_name(mode_name)
         mode = self.modes.get(normalized_name)
@@ -452,15 +443,11 @@ class Segment:
         """
         self.isBlocked = True
 
-    def unBlock(self) -> None:
+    def unblock(self) -> None:
         """
         Unblock the segment, allowing it to accept mode change requests again.
         """
         self.isBlocked = False
-
-    def unblock(self) -> None:
-        """Alias for unBlock (PEP8 naming)."""
-        self.unBlock()
 
 
     #Pass from user friendly name (example : power bar) to the internal name (example : Power_bar_mode)

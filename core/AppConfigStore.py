@@ -34,7 +34,6 @@ class AppConfigStore:
         self._app_config_flush_task: Optional[asyncio.Task] = None
         self._pending_app_config_snapshot: Optional[str] = None
         self._pending_app_config_file_path: Optional[str] = None
-        self._pending_app_config_updates: Dict[str, Any] = {}
         self._app_config_cache: Optional[Dict[str, Any]] = None
         self._app_config_cached_path: Optional[str] = None
 
@@ -94,7 +93,6 @@ class AppConfigStore:
         file_path = self._resolve_app_config_path()
         data = self._get_app_config_cache()
         data[key] = value
-        self._pending_app_config_updates[key] = value
 
         snapshot = json.dumps(data, indent=4) + "\n"
         self._pending_app_config_snapshot = snapshot
@@ -105,7 +103,6 @@ class AppConfigStore:
         except RuntimeError:
             self._atomic_write(file_path, snapshot)
             self._pending_app_config_snapshot = None
-            self._pending_app_config_updates.clear()
             return
 
         if self._app_config_flush_task is not None and not self._app_config_flush_task.done():
@@ -119,7 +116,6 @@ class AppConfigStore:
                     await loop.run_in_executor(None, self._atomic_write, file_path, content)
                     if self._pending_app_config_snapshot == content:
                         self._pending_app_config_snapshot = None
-                        self._pending_app_config_updates.clear()
             except asyncio.CancelledError:
                 pass
 
@@ -130,16 +126,10 @@ class AppConfigStore:
         file_path = self._resolve_app_config_path()
         data = self._get_app_config_cache()
         data[key] = value
-        self._pending_app_config_updates[key] = value
         snapshot = json.dumps(data, indent=4) + "\n"
         success = self._atomic_write(file_path, snapshot)
         if success:
             self._pending_app_config_snapshot = None
-            self._pending_app_config_updates.clear()
-
-    async def persist_app_config_value(self, key: str, value: Any) -> None:
-        """Non-blocking app config persistence (delegates to debounced atomic write)."""
-        self.persist_app_config_debounced(key, value)
 
     def flush_sync(self) -> None:
         """Flushes any pending snapshots synchronously and cancels background tasks."""
@@ -149,4 +139,3 @@ class AppConfigStore:
         if self._pending_app_config_snapshot is not None and self._pending_app_config_file_path is not None:
             self._atomic_write(self._pending_app_config_file_path, self._pending_app_config_snapshot)
             self._pending_app_config_snapshot = None
-            self._pending_app_config_updates.clear()

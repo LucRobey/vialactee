@@ -67,7 +67,6 @@ class Mode:
         self.indexes = indexes
         self.nb_of_leds = len(indexes)
         self.isActiv = False
-        self.has_custom_transition = False
         self._exit_progress: float = 0.0
         self._enter_progress: float = 1.0
 

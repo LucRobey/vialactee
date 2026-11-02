@@ -5,7 +5,7 @@
 > **Agent / Model:** Antigravity  
 > **Primary Goal:** Audit the Dead Code Hunt Report against sealed-room contracts and `research/`, and execute Tier 1 git index & orphaned artifact cleanup.  
 > **Status:** IN PROGRESS  
-> **Commits:** `8130bb5` (pushed: yes)  
+> **Commits:** `8130bb5`, `1e05ad4` (pushed: yes)  
 > **Skills Used:** `vialactee-project`  
 > **Skill Friction:** none
 
@@ -33,6 +33,20 @@
 * **[DELETE]** Stale tracked & orphaned bytecode and cache dumps:
   * Untracked 14 `.pyc` files in `__pycache__/`, `data/__pycache__/`, and `modes/__pycache__/` via `git rm --cached`, and removed the empty `data/` ghost directory and orphaned `.pyc` files in `tests/__pycache__/`.
   * Untracked 14 `assets/musics/mp3_files/librosa/*.npz` cache files via `git rm --cached`.
+
+### Phase 3 (Part A): Obsolete `has_custom_transition`, Core/Config Helpers & Tier 4 Legacy Fallbacks
+* **[MODIFY]** [`modes/Mode.py`](../modes/Mode.py), [`core/Segment.py`](../core/Segment.py) & [`docs/architecture/core_orchestrator.md`](../docs/architecture/core_orchestrator.md):
+  * Removed obsolete `self.has_custom_transition = False` and `has_custom` branch checks in `Segment.update()`, relying solely on `self.transition_mode_handshake` (`TransitionFamily.MODE_COOPERATIVE`).
+  * Removed unused `Segment.export_mode_settings()` and camelCase duplicate `Segment.unBlock()`, updating `Segment.unblock()` to set `self.isBlocked = False` directly.
+* **[MODIFY]** [`core/AppConfigStore.py`](../core/AppConfigStore.py):
+  * Removed unused `async def persist_app_config_value()` and write-only `self._pending_app_config_updates` dictionary.
+* **[MODIFY]** [`config/coherence_loader.py`](../config/coherence_loader.py) & [`config/Configuration_manager.py`](../config/Configuration_manager.py):
+  * Removed unused `MODES_CONFIG_PATH`, `COHERENCE_LEGACY_PATH` (`"coherence.json"`), and `"segments.json"` fallback (plus matching fallback in [`wabb-interface/vite.config.ts`](../wabb-interface/vite.config.ts)).
+* **[MODIFY]** [`connectors/Connector.py`](../connectors/Connector.py):
+  * Removed legacy `web/` static directory fallback in `resolve_web_dir()`.
+* **[MODIFY]** 6 Mode Constructors (`modes/*_mode.py`), [`tests/test_mode_render.py`](../tests/test_mode_render.py) & [`tools/mode_studio.py`](../tools/mode_studio.py):
+  * Removed nested legacy unprefixed `infos.get(...)` fallbacks in `Chromatic_chaser_mode`, `Hyper_strobe_mode`, `Metronome_mode`, `Opposite_sides_mode`, `Rainbow_mode`, and `Shining_stars_mode`, standardizing on the documented prefixed startup keys (`chaser_*`, `strobe_*`, `metronome_*`, `opposite_sides_*`, `rainbow_*`, `stars_*`).
+  * Updated `tests/test_mode_render.py` to pass `stars_*` startup keys and removed stale `{"shot_base_speed": 2.0}` in `tools/mode_studio.py`.
 
 ---
 

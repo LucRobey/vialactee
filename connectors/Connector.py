@@ -30,9 +30,6 @@ class Connector:
         wabb_dist = os.path.join(project_root, "wabb-interface", "dist")
         if os.path.exists(os.path.join(wabb_dist, "index.html")):
             return wabb_dist
-        legacy_web = os.path.join(project_root, "web")
-        if os.path.exists(legacy_web):
-            return legacy_web
         return None
 
     async def start_server(self):

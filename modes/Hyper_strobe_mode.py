@@ -63,9 +63,9 @@ class Hyper_strobe_mode(Mode.Mode):
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
-        self.flux_threshold = float(infos.get("strobe_flux_threshold", infos.get("fluxThreshold", 0.7)))
-        self.decay_ratio = float(infos.get("strobe_decay_ratio", infos.get("decayRatio", 0.3)))
-        self.listen_band = int(infos.get("strobe_listen_band", infos.get("listenBand", 1)))
+        self.flux_threshold = float(infos.get("strobe_flux_threshold", 0.7))
+        self.decay_ratio = float(infos.get("strobe_decay_ratio", 0.3))
+        self.listen_band = int(infos.get("strobe_listen_band", 1))
         self.pulse_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)

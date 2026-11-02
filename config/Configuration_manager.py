@@ -21,15 +21,7 @@ def resolve_segments_file_path(infos=None):
         if os.path.exists(small_path):
             return small_path
 
-    full_path = os.path.join(os.path.dirname(__file__), "segments_full.json")
-    if os.path.exists(full_path):
-        return full_path
-
-    legacy_path = os.path.join(os.path.dirname(__file__), "segments.json")
-    if os.path.exists(legacy_path):
-        return legacy_path
-
-    return full_path
+    return os.path.join(os.path.dirname(__file__), "segments_full.json")
 
 
 class Configurations_manager:

@@ -352,7 +352,7 @@ class ModeManager:
                 leds=None,
                 indexes=self.indexes,
                 rgb_list=self.rgb_buffer,
-                infos={"shot_base_speed": 2.0}
+                infos={}
             )
             self.active_mode_instance.isActiv = True
             return True, f"Loaded {disp_name} ({cls_name})"

@@ -55,9 +55,9 @@ class Chromatic_chaser_mode(Mode.Mode):
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
-        self.speed: float = float(infos.get("chaser_speed", infos.get("speed", 2.0)))
-        self.fade_ratio: float = float(infos.get("chaser_fade_ratio", infos.get("fadeRatio", 0.05)))
-        self.bounce_enabled: bool = bool(infos.get("chaser_bounce_enabled", infos.get("bounceEnabled", True)))
+        self.speed: float = float(infos.get("chaser_speed", 2.0))
+        self.fade_ratio: float = float(infos.get("chaser_fade_ratio", 0.05))
+        self.bounce_enabled: bool = bool(infos.get("chaser_bounce_enabled", True))
         self.direction: int = 1
 
         n = max(1, self.nb_of_leds)

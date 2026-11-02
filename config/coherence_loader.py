@@ -1,20 +1,18 @@
 """
 config/coherence_loader.py - Declarative Coherence Policy & Metadata Loader.
 
-Reads coherence_<profile>.json and modes.json outside the sealed transitions/ room.
+Reads coherence_<profile>.json outside the sealed transitions/ room.
 Resolves paths by hardware profile ('full' vs 'small') like resolve_segments_file_path.
 """
 
 import json
 import os
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union
 
 CONFIG_DIR = os.path.abspath(os.path.dirname(__file__))
 APP_CONFIG_PATH = os.path.join(CONFIG_DIR, "app_config.json")
-MODES_CONFIG_PATH = os.path.join(CONFIG_DIR, "modes.json")
 COHERENCE_FULL_PATH = os.path.join(CONFIG_DIR, "coherence_full.json")
 COHERENCE_SMALL_PATH = os.path.join(CONFIG_DIR, "coherence_small.json")
-COHERENCE_LEGACY_PATH = os.path.join(CONFIG_DIR, "coherence.json")
 COHERENCE_SCHEMA_PATH = os.path.join(CONFIG_DIR, "coherence.schema.json")
 
 
@@ -60,10 +58,6 @@ def resolve_coherence_file_path(infos: Optional[Union[Dict[str, Any], str]] = No
             return COHERENCE_FULL_PATH
         return COHERENCE_SMALL_PATH
 
-    if os.path.exists(COHERENCE_FULL_PATH):
-        return COHERENCE_FULL_PATH
-    if os.path.exists(COHERENCE_LEGACY_PATH):
-        return COHERENCE_LEGACY_PATH
     return COHERENCE_FULL_PATH
 
 

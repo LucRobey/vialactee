@@ -57,9 +57,9 @@ class Metronome_mode(Mode.Mode):
 
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
-        self.brightness_multiplier = float(infos.get("metronome_brightness", infos.get("brightnessMultiplier", 1.0)))
-        self.alternate_sub_beats = bool(infos.get("metronome_alternate_sub_beats", infos.get("alternateSubBeats", True)))
-        self.accent_color = str(infos.get("metronome_accent_color", infos.get("accentColor", "blue")))
+        self.brightness_multiplier = float(infos.get("metronome_brightness", 1.0))
+        self.alternate_sub_beats = bool(infos.get("metronome_alternate_sub_beats", True))
+        self.accent_color = str(infos.get("metronome_accent_color", "blue"))
         self.breath_phase: float = 2.0 * math.pi * self.segment_phase_offset
 
         # Pre-allocated scratch color vectors (ZERO runtime heap allocation)

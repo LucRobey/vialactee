@@ -68,9 +68,9 @@ class Rainbow_mode(Mode.Mode):
         self.minimum_hue: float = colors.red_hue
         self.maximum_hue: float = colors.blue_hue
 
-        self.smooth_ratio: float = float(infos.get("rainbow_smooth_ratio", infos.get("smoothRatio", 0.5)))
-        self.intensity_base: float = float(infos.get("rainbow_intensity_base", infos.get("intensityBase", 0.1)))
-        self.intensity_mult: float = float(infos.get("rainbow_intensity_mult", infos.get("intensityMultiplier", 0.9)))
+        self.smooth_ratio: float = float(infos.get("rainbow_smooth_ratio", 0.5))
+        self.intensity_base: float = float(infos.get("rainbow_intensity_base", 0.1))
+        self.intensity_mult: float = float(infos.get("rainbow_intensity_mult", 0.9))
 
         # Precomputed vectors and 256-entry rainbow LUT (ZERO runtime heap allocation)
         self.led_indices: np.ndarray = np.arange(self.nb_of_leds, dtype=np.float64)

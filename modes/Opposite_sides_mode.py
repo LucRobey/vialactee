@@ -59,9 +59,7 @@ class Opposite_sides_mode(Mode.Mode):
     ):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
-        self.spark_count: int = int(
-            infos.get("opposite_sides_spark_count", infos.get("sparkCount", self.spark_count_default))
-        )
+        self.spark_count: int = int(infos.get("opposite_sides_spark_count", self.spark_count_default))
         self.spark_color: np.ndarray = np.array(self.SPARK_COLOR, dtype=np.float64)
 
         n = self.nb_of_leds

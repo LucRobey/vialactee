@@ -28,11 +28,7 @@ function getSegmentsPath(): string {
     const p = path.resolve(__dirname, '../config/segments_small.json');
     if (fs.existsSync(p)) return p;
   }
-  const full = path.resolve(__dirname, '../config/segments_full.json');
-  if (fs.existsSync(full)) return full;
-  const legacy = path.resolve(__dirname, '../config/segments.json');
-  if (fs.existsSync(legacy)) return legacy;
-  return full;
+  return path.resolve(__dirname, '../config/segments_full.json');
 }
 
 // Custom Vite plugin to serve dynamic topology in dev mode

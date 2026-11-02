@@ -69,9 +69,9 @@ class Shining_stars_mode(Mode.Mode):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
         self.nb_of_fft_band = getattr(listener, "nb_of_fft_band", 16) if listener is not None else 16
-        self.sub_segment_size = int(infos.get("stars_sub_segment_size", infos.get("sub_segment_size", self.sub_segment_size_default)))
-        self.threshold = float(infos.get("stars_threshold", infos.get("threshold", self.threshold_default)))
-        self.fade_ratio = float(infos.get("stars_fade_ratio", infos.get("fade_ratio", self.fade_ratio_default)))
+        self.sub_segment_size = int(infos.get("stars_sub_segment_size", self.sub_segment_size_default))
+        self.threshold = float(infos.get("stars_threshold", self.threshold_default))
+        self.fade_ratio = float(infos.get("stars_fade_ratio", self.fade_ratio_default))
 
         colors_list = []
         for band_index in range(self.nb_of_fft_band):

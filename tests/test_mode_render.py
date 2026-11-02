@@ -143,7 +143,7 @@ def test_shining_stars_mode_boundary_conditions():
 
     # Very small strip (nb_of_leds < sub_segment_size)
     rgb_small = np.zeros((3, 3), dtype=np.int32)
-    mode_small = Shining_stars_mode("Shining Stars", "small", mock_listener, None, [0, 1, 2], rgb_small, {"sub_segment_size": 40, "fade_ratio": 0.15})
+    mode_small = Shining_stars_mode("Shining Stars", "small", mock_listener, None, [0, 1, 2], rgb_small, {"stars_sub_segment_size": 40, "stars_fade_ratio": 0.15})
     assert mode_small.sub_segment_size == 40
     assert mode_small.fade_ratio == 0.15
     mode_small.run()
