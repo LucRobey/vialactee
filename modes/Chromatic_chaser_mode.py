@@ -108,7 +108,7 @@ class Chromatic_chaser_mode(Mode.Mode):
         else:
             cyc = (raw_phase * speed_mult) % 1.0
 
-        wrapped = self._initialized and ((cyc < self._prev_cyc and (self._prev_cyc - cyc) > 0.30) or speed_mult >= 2.0)
+        wrapped = self._initialized and (cyc < self._prev_cyc and (self._prev_cyc - cyc) > 0.15)
         self._prev_cyc = cyc
 
         # bounce_enabled=True: ends -> center collision; False: center -> ends

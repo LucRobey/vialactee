@@ -25,6 +25,9 @@ Context: `partialRerollProb` (partial re-roll / micro-transitions) and `wildcard
 
 ## 📝 Random Notes / Future Session Reminders
 
+- **Live Visual Sign-Off & Phase E Validation:**
+  - Visually review the 6 reworked modes (`Chromatic_chaser_mode`, `Bary_rainbow_mode`, `Shining_stars_mode`, `Extending_waves_mode`, `Middle_bar_mode`, `Opposite_sides_mode` firework crackle) and the `Extending_waves_mode` white-wave exit stack in `python -m tools.mode_studio` / Simulator.
+  - Run a 30+ minute live music session across both `full` and `small` profiles and fine-tune `coherence_full.json` / `coherence_small.json` weights from live cadence.
 - **Look at the agent conversation about the new mode.**
 - *(Drop any raw thoughts, half-baked ideas, or reminders for future sessions here)*
 

@@ -238,7 +238,17 @@ class TestModeCooperativeHandshake(unittest.TestCase):
 
         # Mid-exit (progress = 0.45): outer tips stack bright white while center is not yet fully saturated
         ew.on_transition_exit(0.45)
-        for _ in range(4):
+        # Place an outgoing wave just inside the stack frontier to verify wave arrival steps the frontier inward
+        ew.wave_active[0] = True
+        ew.wave_velocities[0] = 1.0
+        ew.wave_amps[0] = 1.0
+        ew._stack_frontier = float(ew.half_len - 1)
+        ew.wave_positions[0] = ew._stack_frontier - 0.5
+        prev_frontier = ew._stack_frontier
+        ew.update()
+        self.assertFalse(ew.wave_active[0])
+        self.assertLess(ew._stack_frontier, prev_frontier)
+        for _ in range(3):
             ew.update()
         outer_mid = float(np.mean(self.seg.rgb_list[0]))
         center_mid = float(np.mean(self.seg.rgb_list[self.seg.nb_of_leds // 2]))

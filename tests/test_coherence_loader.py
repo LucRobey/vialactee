@@ -176,6 +176,28 @@ class TestCoherenceLoader(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate_coherence_dict(bad)
 
+    def test_coherence_helper_html_default_settings_match_schema_and_configs(self):
+        """tools/coherence_helper.html DEFAULT_SETTINGS must include all schema and config settings keys."""
+        import re
+
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        html_path = os.path.join(repo_root, "tools", "coherence_helper.html")
+        with open(html_path, "r", encoding="utf-8") as fh:
+            html_src = fh.read()
+        m = re.search(r"const\s+DEFAULT_SETTINGS\s*=\s*\{([^}]+)\}", html_src)
+        self.assertIsNotNone(m, "Could not locate DEFAULT_SETTINGS in tools/coherence_helper.html")
+        html_keys = set(re.findall(r"([A-Za-z_][A-Za-z0-9_]*)\s*:", m.group(1)))
+
+        with open(COHERENCE_SCHEMA_PATH, "r", encoding="utf-8") as fh:
+            schema = json.load(fh)
+        schema_keys = set(schema["properties"]["settings"]["properties"].keys())
+        self.assertEqual(html_keys, schema_keys)
+
+        for cfg_path in (COHERENCE_FULL_PATH, COHERENCE_SMALL_PATH):
+            with open(cfg_path, "r", encoding="utf-8") as fh:
+                cfg = json.load(fh)
+            self.assertTrue(set(cfg["settings"].keys()).issubset(html_keys))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -365,6 +365,24 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
         self.assertTrue(self.ltm.last_cast_result.is_partial_reroll)
         self.assertEqual(len(self.ltm.last_cast_result.retargeted_groups), 1)
 
+    def test_drop_and_song_change_force_full_reroll_even_when_partial_prob_is_one(self):
+        """request_drop and drop_impact must re-roll all non-blocked segments even if partialRerollProb == 1.0."""
+        from transitions.api import create_transition_service
+        from transitions.policy import DEFAULT_POLICY
+
+        inst = make_fake_installation()
+        svc = create_transition_service({"auto_transition_time": 20.0})
+        svc.set_installation(inst)
+        policy = dict(DEFAULT_POLICY, settings=dict(DEFAULT_POLICY["settings"], partialRerollProb=1.0))
+        svc.configure(policy)
+        svc.allocate_initial()
+
+        svc.request_drop()
+        orders = svc.update(0.033, MusicSnapshot(beat_phase=0.0, is_beat=True, energy=0.9))
+        self.assertIsNotNone(orders)
+        self.assertEqual(orders.reason, "request_drop")
+        self.assertEqual(len(orders.orders), 11)
+
 
 if __name__ == "__main__":
     unittest.main()

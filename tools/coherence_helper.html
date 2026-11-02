@@ -112,7 +112,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const isNum = (v) => typeof v === "number" && Number.isFinite(v);
 const isInt = (v) => Number.isInteger(v);
 const numOrRaw = (v) => { const n = Number(v); return v.trim() !== "" && Number.isFinite(n) ? n : v; };
-const DEFAULT_SETTINGS = { maxDifferentModes: 3, temperature: 1.0, memoryDepth: 8, repeatPenalty: 3.0 };
+const DEFAULT_SETTINGS = { maxDifferentModes: 3, temperature: 1.0, memoryDepth: 8, repeatPenalty: 3.0, partialRerollProb: 0.0, wildcardProb: 0.0 };
 const GROUP_COLORS = ["#7aa2ff", "#f0abfc", "#4ade80", "#fbbf24", "#f87171", "#22d3ee", "#fb923c", "#a3e635"];
 const modeColor = (name) => { let h = 7; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 65% 55%)`; };
 
@@ -151,6 +151,8 @@ function validate(p) {
   if (!isNum(st.temperature) || st.temperature < 0.05 || st.temperature > 5) err(`'temperature' must be in [0.05, 5.0] (got ${st.temperature})`);
   if (!isInt(st.memoryDepth) || st.memoryDepth < 0) err(`'memoryDepth' must be an integer >= 0 (got ${st.memoryDepth})`);
   if (!isNum(st.repeatPenalty) || st.repeatPenalty < 0) err(`'repeatPenalty' must be >= 0 (got ${st.repeatPenalty})`);
+  if (!isNum(st.partialRerollProb) || st.partialRerollProb < 0 || st.partialRerollProb > 1) err(`'partialRerollProb' must be in [0.0, 1.0] (got ${st.partialRerollProb})`);
+  if (!isNum(st.wildcardProb) || st.wildcardProb < 0 || st.wildcardProb > 1) err(`'wildcardProb' must be in [0.0, 1.0] (got ${st.wildcardProb})`);
   if (p.version !== undefined && (!isInt(p.version) || p.version < 1)) err("'version' must be an integer >= 1");
 
   const segs = prof().segments;
@@ -308,9 +310,10 @@ const pickWeighted = (items, w) => { const tot = w.reduce((a, b) => a + b, 0); l
 function sampleOnce(rules) {
   const modes = DATA.modes.map((m) => m.name), st = { ...DEFAULT_SETTINGS, ...(policy.settings || {}) };
   const T = isNum(st.temperature) && st.temperature > 0 ? st.temperature : 1;
+  const isWildcard = isNum(st.wildcardProb) && st.wildcardProb > 0 && Math.random() < st.wildcardProb;
   const evalAssign = (assign) => {
     let w = 1; const fired = [];
-    for (const r of rules) if (r.placements.every((pl) => placementHolds(pl, assign))) { fired.push(r.id); if (r.forbid) return null; w *= r.weight; }
+    for (const r of rules) if (r.placements.every((pl) => placementHolds(pl, assign))) { fired.push(r.id); if (r.forbid) return null; if (!isWildcard) w *= r.weight; }
     return { w, fired };
   };
   const ids = prof().segments.map((s) => s.id);
@@ -409,7 +412,9 @@ function renderSide() {
     el("span", { title: "Max distinct modes playing at once across the installation" }, "Max different modes"), numField(st, "maxDifferentModes", { step: "1", min: "1", fallback: DEFAULT_SETTINGS.maxDifferentModes }),
     el("span", { title: "Softmax temperature in [0.05, 5]; higher = more random" }, "Temperature"), numField(st, "temperature", { step: "0.05", min: "0.05", fallback: 1 }),
     el("span", { title: "How many past transitions are remembered" }, "Memory depth"), numField(st, "memoryDepth", { step: "1", min: "0", fallback: 8 }),
-    el("span", { title: "Penalty for recently used modes" }, "Repeat penalty"), numField(st, "repeatPenalty", { step: "0.1", min: "0", fallback: 3 })));
+    el("span", { title: "Penalty for recently used modes" }, "Repeat penalty"), numField(st, "repeatPenalty", { step: "0.1", min: "0", fallback: 3 }),
+    el("span", { title: "Probability in [0, 1] of retargeting only 1-2 groups per transition" }, "Partial re-roll prob"), numField(st, "partialRerollProb", { step: "0.05", min: "0", fallback: 0 }),
+    el("span", { title: "Probability in [0, 1] of ignoring soft rules (hard forbid rules always apply)" }, "Wildcard prob"), numField(st, "wildcardProb", { step: "0.02", min: "0", fallback: 0 })));
   box.append(s);
 
   const w = policy.wholeInstallation;

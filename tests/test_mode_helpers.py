@@ -292,32 +292,21 @@ class TestModesJsonRegistryAndTags(unittest.TestCase):
     def test_all_13_modes_present_with_valid_dna_and_tags(self):
         self.assertEqual(len(self.modes), 13)
         expected_axes = {
-            "Power Bar": "axis:vertical",
-            "Middle Bar": "axis:horizontal",
-            "Opposite Sides": "axis:horizontal",
-            "Coloured Middle Wave": "axis:horizontal",
-            "Extending Waves": "axis:horizontal",
-            "Rainbow": None,
-            "Bary Rainbow": None,
-            "Shining Stars": None,
-            "Proportion Rainbow": None,
-            "Hyper Strobe": None,
-            "Chromatic Chaser": None,
-            "Metronome": None,
-            "Impact Shockwave": None,
+            "Power Bar": "axis:vertical", "Middle Bar": "axis:horizontal",
+            "Opposite Sides": "axis:horizontal", "Coloured Middle Wave": "axis:horizontal",
+            "Extending Waves": "axis:horizontal", "Rainbow": None, "Bary Rainbow": None,
+            "Shining Stars": None, "Proportion Rainbow": None, "Hyper Strobe": None,
+            "Chromatic Chaser": None, "Metronome": None, "Impact Shockwave": None,
         }
-
         for name, expected_axis in expected_axes.items():
             self.assertIn(name, self.modes_by_name)
             entry = self.modes_by_name[name]
-
             dna = entry.get("dna", {})
             for metric in ("energy", "punch", "rhythm", "complexity"):
                 self.assertIn(metric, dna)
                 val = dna[metric]
                 self.assertIsInstance(val, (int, float))
                 self.assertTrue(0.0 <= val <= 1.0)
-
             tags = entry.get("tags", [])
             by_ns = {}
             for tag in tags:
@@ -326,14 +315,12 @@ class TestModesJsonRegistryAndTags(unittest.TestCase):
                 self.assertIn(ns, self.vocab)
                 self.assertIn(val, self.vocab[ns]["values"])
                 by_ns.setdefault(ns, []).append(val)
-
             for ns, spec in self.vocab.items():
                 count = len(by_ns.get(ns, []))
                 if spec.get("optional"):
                     self.assertIn(count, (0, 1), f"{name} namespace {ns} count={count}")
                 else:
                     self.assertEqual(count, 1, f"{name} missing required single namespace {ns}")
-
             if expected_axis is None:
                 self.assertNotIn("axis", by_ns, f"{name} should omit optional axis tag")
             else:
@@ -415,6 +402,19 @@ class TestPart1ModeBugFixes(_ModeTestCase):
         self.listener.beat_phase = 0.50
         mode.run()
         self.assertEqual(mode.direction, -1)
+
+        # Step 5: high Travel Speed (speed=6.0 -> speed_mult=3.0) must not stick wrapped=True mid-cycle
+        mode.bounce_enabled = True
+        mode.speed = 6.0
+        self.engine._energy = 0.0
+        self.listener.beat_phase = 0.05
+        mode.run()
+        mode.rgb_list.fill(0)
+        self.listener.beat_phase = 0.10
+        mode.run()
+        # Runners are at cyc = 0.30 (~LED 5 and ~LED 34); center LEDs (19, 20) must remain unlit
+        self.assertTrue(np.all(mode.rgb_list[mode.mid_left] == 0))
+        self.assertTrue(np.all(mode.rgb_list[mode.mid_right] == 0))
 
     def test_shining_stars_randomizes_subsegments_independently(self):
         from modes.Shining_stars_mode import Shining_stars_mode

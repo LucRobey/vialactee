@@ -365,6 +365,48 @@ class TestJointTransitionCaster(unittest.TestCase):
             for r in forbid_rules:
                 self.assertFalse(evaluate_rule(r, res.full_cast_by_id))
 
+    def test_partial_reroll_respects_split_zone_unison_and_never_pins_mixed_group(self):
+        """When pillars are split (v1,v2=Power Bar, v3,v4=Shining Stars), partial re-roll never pins pillars-all without orders."""
+        raw = dict(DEFAULT_POLICY)
+        raw["settings"] = dict(DEFAULT_POLICY["settings"], partialRerollProb=1.0, maxDifferentModes=3)
+        raw["wholeInstallation"] = {"id": "chandelier-unison", "weight": 5.0}
+        mode_by_id = {
+            "v1": "Power Bar", "v2": "Power Bar",
+            "v3": "Shining Stars", "v4": "Shining Stars",
+        }
+        segs = [
+            SegmentDescriptor(
+                name=s.name,
+                id=s.id,
+                orientation=s.orientation,
+                available_modes=s.available_modes,
+                active_mode=mode_by_id.get(s.id, "Rainbow"),
+                is_blocked=False,
+                tags=s.tags,
+            )
+            for s in self.inst.segments
+        ]
+        compiled = compile_policy(raw, segs, self.inst.modes)
+        mem = TransitionMemory(depth=8)
+        rng = random.Random(2026)
+
+        for _ in range(40):
+            res = cast_transition(compiled, self.target_dna, segs, mem, rng=rng, max_reroll_groups=1)
+            self.assertTrue(res.is_partial_reroll)
+            retargeted_sids = {sid for grp in res.retargeted_groups for sid in grp}
+            # Every segment not in retargeted_sids must retain its exact true active_mode in full_cast_by_id
+            for s in segs:
+                if s.id not in retargeted_sids:
+                    self.assertEqual(res.full_cast_by_id[s.id], s.active_mode)
+            # And every group in res.groups must be in true unison after applying orders_by_segment_name
+            actual_after = {
+                s.id: res.orders_by_segment_name.get(s.name, s.active_mode)
+                for s in segs
+            }
+            for grp in res.groups:
+                self.assertEqual(len({actual_after[sid] for sid in grp}), 1)
+            self.assertLessEqual(len(set(actual_after.values())), 3)
+
     def test_wildcard_ignores_soft_rules_while_strictly_enforcing_forbid_rules(self):
         """Wildcard casts ignore soft rule weights while never relaxing hard forbid rules."""
         small_inst = make_fake_small_installation()

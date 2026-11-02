@@ -224,6 +224,7 @@ class LocalTransitionManager:
         target_dna: Optional[Dict[str, float]] = None,
         max_reroll_groups: Optional[int] = None,
         wildcard: Optional[bool] = None,
+        allow_partial: bool = True,
     ) -> Dict[str, str]:
         """Delegates installation mode allocation to the Mode Coherence casting engine."""
         if not self.segments:
@@ -232,7 +233,7 @@ class LocalTransitionManager:
         cp = self.compiled_policy
         res = cast_transition(
             cp, target, self.segments, self.memory,
-            max_reroll_groups=max_reroll_groups, wildcard=wildcard,
+            max_reroll_groups=max_reroll_groups, wildcard=wildcard, allow_partial=allow_partial,
         )
         self.last_cast_result = res
         return dict(res.orders_by_segment_name)
@@ -290,20 +291,28 @@ class LocalTransitionManager:
         stagger_pattern: Optional[StaggerPattern] = None,
         max_reroll_groups: Optional[int] = None,
         wildcard: Optional[bool] = None,
+        allow_partial: bool = True,
     ) -> None:
         """Queues or immediately triggers an installation mode transition (supports micro-transitions via max_reroll_groups)."""
         if allocation is not None:
             target_alloc = allocation
             cast_res = None
         else:
-            target_alloc = self.allocate_all_segments(max_reroll_groups=max_reroll_groups, wildcard=wildcard)
+            target_alloc = self.allocate_all_segments(
+                max_reroll_groups=max_reroll_groups, wildcard=wildcard, allow_partial=allow_partial,
+            )
             cast_res = self.last_cast_result
 
+        is_partial = bool(cast_res is not None and cast_res.is_partial_reroll)
         if staggered:
             base_cfg = transition_config if (isinstance(transition_config, dict) and "type" in transition_config) else None
+            if base_cfg is None and is_partial:
+                base_cfg = dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
             target_cfg = self.generate_staggered_configs(target_alloc, base_config=base_cfg, pattern=stagger_pattern)
         elif transition_config is not None:
             target_cfg = transition_config
+        elif is_partial:
+            target_cfg = dict(TRANSITION_TECHNIQUES["smooth_cosine_crossfade"])
         else:
             target_cfg = self.select_transition_technique()
 

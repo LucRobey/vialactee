@@ -23,7 +23,8 @@ from transitions.manager import LocalTransitionManager, TRANSITION_TECHNIQUES
 DROP_TECHNIQUE: Dict[str, Any] = {"type": "explosion", "duration": 0.4}
 
 # Automatic (director-fired) triggers that ripple across the installation per segment.
-# Drop triggers (`drop_impact`, `pre_drop_buildup`) are deliberately NOT staggered: their
+# Full-chandelier musical or manual triggers that must always re-roll every non-blocked segment.
+FULL_REROLL_REASONS = frozenset(("request_drop", "drop_impact", "pre_drop_buildup", "song_change"))
 # duration is scaled so the climax lands exactly when the drop reaches the speakers, and
 # per-segment start offsets would break that alignment. Manual requests (`request_next`,
 # `request_drop`) stay instant unless the caller asks for `staggered=True`.
@@ -72,13 +73,18 @@ class DefaultTransitionService(TransitionService):
         if self._drop_requested:
             self._drop_requested = False
             self._reason = "request_drop"
-            self._manager.schedule_transition(transition_config=dict(DROP_TECHNIQUE), quantize_downbeat=False)
+            self._manager.schedule_transition(
+                transition_config=dict(DROP_TECHNIQUE),
+                quantize_downbeat=False,
+                allow_partial=False,
+            )
         elif director_fired:
             self._reason = self._director.last_trigger_reason or "timer"
             self._manager.schedule_transition(
                 transition_config=self._director.pending_transition_config,
                 quantize_downbeat=self._director.pending_quantize_downbeat,
                 staggered=self._reason in STAGGERED_AUTO_REASONS,
+                allow_partial=self._reason not in FULL_REROLL_REASONS,
             )
         self._manager.update(dt, music)
         return self._drain()

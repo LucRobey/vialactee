@@ -85,15 +85,18 @@ Execute the **Vialactée – Audit & Plan (2026-11-02)** end-to-end across Phase
   - [`transitions/policy.py`](../transitions/policy.py)
   - [`transitions/casting.py`](../transitions/casting.py)
   - [`transitions/manager.py`](../transitions/manager.py)
+  - [`transitions/service.py`](../transitions/service.py)
   - [`config/coherence.schema.json`](../config/coherence.schema.json)
   - [`config/coherence_loader.py`](../config/coherence_loader.py)
   - [`config/coherence_full.json`](../config/coherence_full.json)
   - [`config/coherence_small.json`](../config/coherence_small.json)
+  - [`tools/coherence_helper.html`](../tools/coherence_helper.html)
 - **Tests & Docs (Phases A, C, D):**
   - [`tests/test_mode_helpers.py`](../tests/test_mode_helpers.py)
   - [`tests/test_extending_waves.py`](../tests/test_extending_waves.py)
   - [`tests/test_all_modes_musical_context.py`](../tests/test_all_modes_musical_context.py)
   - [`tests/test_opposite_sides_mode.py`](../tests/test_opposite_sides_mode.py)
+  - [`tests/test_coherence_loader.py`](../tests/test_coherence_loader.py)
   - [`tests/transitions/test_families_and_handshake.py`](../tests/transitions/test_families_and_handshake.py)
   - [`tests/transitions/test_casting_and_memory.py`](../tests/transitions/test_casting_and_memory.py)
   - [`tests/transitions/test_manager.py`](../tests/transitions/test_manager.py)
@@ -107,11 +110,16 @@ Execute the **Vialactée – Audit & Plan (2026-11-02)** end-to-end across Phase
 
 ## 4. Verification & Test Outcomes
 
+- **Post-Review Hardening Fixes:**
+  - Synced [`tools/coherence_helper.html`](../tools/coherence_helper.html) (`DEFAULT_SETTINGS`, `validate`, `sampleOnce`, and `Settings` sidebar panel) with `partialRerollProb` and `wildcardProb`, and added parity test `test_coherence_helper_html_default_settings_match_schema_and_configs` in [`tests/test_coherence_loader.py`](../tests/test_coherence_loader.py).
+  - Hardened partial re-roll in [`transitions/casting.py`](../transitions/casting.py), [`transitions/manager.py`](../transitions/manager.py), and [`transitions/service.py`](../transitions/service.py) so kept groups are guaranteed to be in unison (`all(active_by_id.get(s, "") == cur_m for s in fg.free_segments)`), `wholeInstallation` is excluded when `want_partial=True`, partial re-rolls default to `smooth_cosine_crossfade`, and full-chandelier triggers (`request_drop`, `drop_impact`, `pre_drop_buildup`, `song_change`) always pass `allow_partial=False`.
+  - Fixed high-speed (`speed >= 2.0`) collision burst wrap guard in [`modes/Chromatic_chaser_mode.py`](../modes/Chromatic_chaser_mode.py) (`wrapped` only triggers on actual phase wrap).
+  - Coupled outgoing white waves in [`modes/Extending_waves_mode.py`](../modes/Extending_waves_mode.py) so arriving crests deposit inward onto `self._stack_frontier` during `on_transition_exit`.
 - **Phase E Headless 60-Second Simulation (`TransitionService` + 13 Modes):**
   - `Boot allocation: 11 segments`
   - `60s sim complete: transitions=9, partial_rerolls=3, forbid_violations=0, mean_mode_ms=0.0570 ms/frame (AXIOM-01 cap <= 0.20 ms)`
 - **Full Test Suite:**
-  - `.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider` -> `552 passed, 5 deselected, 99 subtests passed in 34.99s`
+  - `.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider` -> `555 passed, 5 deselected, 99 subtests passed in 33.29s`
 
 ---
 

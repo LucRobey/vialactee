@@ -89,23 +89,39 @@ def _pick_zone_groupings(
     policy: CompiledPolicy,
     memory: TransitionMemory,
     rng: Any,
+    *,
+    skip_whole: bool = False,
+    active_by_id: Optional[Dict[str, str]] = None,
+    blocked_cast: Optional[Dict[str, str]] = None,
 ) -> Tuple[Dict[str, str], List[Tuple[str, ...]], List[Tuple[str, ...]]]:
     """Step 2: Draw one grouping per zone weighted by catalogue weight and recency."""
     repeat_penalty = policy.settings.repeat_penalty
     chosen_by_zone: Dict[str, str] = {}
     all_groups: List[Tuple[str, ...]] = []
     all_allowed: List[Tuple[str, ...]] = []
+    blocked = blocked_cast or {}
 
     whole = policy.whole
     if whole is not None:
-        # Whole-installation option competes against "cut each zone as usual" (fixed weight 1).
-        w_whole = memory.grouping_weight(WHOLE_KEY, whole.id, whole.weight, repeat_penalty)
-        if rng.random() * (w_whole + 1.0) < w_whole:
-            return {WHOLE_KEY: whole.id}, list(whole.groups), list(whole.allowed_modes_per_group)
+        if not skip_whole:
+            # Whole-installation option competes against "cut each zone as usual" (fixed weight 1).
+            w_whole = memory.grouping_weight(WHOLE_KEY, whole.id, whole.weight, repeat_penalty)
+            if rng.random() * (w_whole + 1.0) < w_whole:
+                return {WHOLE_KEY: whole.id}, list(whole.groups), list(whole.allowed_modes_per_group)
         chosen_by_zone[WHOLE_KEY] = ZONES_KEY
 
     for zone_name, zone in policy.zones.items():
         groupings: Sequence[CompiledGrouping] = zone.groupings
+        if active_by_id is not None and len(groupings) > 1:
+            unison_groupings = [
+                g for g in groupings
+                if all(
+                    len({active_by_id.get(s, "") for s in grp if s not in blocked}) <= 1
+                    for grp in g.groups
+                )
+            ]
+            if unison_groupings:
+                groupings = unison_groupings
         if len(groupings) == 1:
             picked = groupings[0]
         else:
@@ -187,7 +203,14 @@ def cast_transition(
 
     total_attempts = max(1, 1 + max_redraws)
     for attempt in range(total_attempts):
-        chosen_groupings, raw_groups, raw_allowed = _pick_zone_groupings(policy, memory, rand)
+        chosen_groupings, raw_groups, raw_allowed = _pick_zone_groupings(
+            policy,
+            memory,
+            rand,
+            skip_whole=want_partial,
+            active_by_id=active_by_id if want_partial else None,
+            blocked_cast=blocked_cast if want_partial else None,
+        )
 
         # Build free groups (excluding blocked segments)
         all_free_groups: List[_FreeGroup] = []
@@ -197,7 +220,7 @@ def cast_transition(
                 all_free_groups.append(_FreeGroup(idx, free_segs, grp_segs, allowed))
 
         # Optional Partial Re-Roll (D2/D3): pin a subset of free groups to their current active mode
-        # and retarget only 1-2 groups while preserving maxDifferentModes and forbid rules.
+        # and retarget only 1-2 groups while preserving unison, maxDifferentModes, and forbid rules.
         pinned_cast: Dict[str, str] = dict(blocked_cast)
         pinned_only_ids: Set[str] = set()
         free_groups = all_free_groups
@@ -219,6 +242,9 @@ def cast_transition(
                     continue
                 cur_m = active_by_id.get(fg.free_segments[0], "")
                 if not cur_m or cur_m not in fg.allowed_modes:
+                    pin_ok = False
+                    break
+                if any(active_by_id.get(s, "") != cur_m for s in fg.free_segments):
                     pin_ok = False
                     break
                 if cur_m not in cand_modes and len(cand_modes) >= max_modes:

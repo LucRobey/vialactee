@@ -39,6 +39,7 @@ class Extending_waves_mode(Mode.Mode):
         self._ema_energy: float = 0.35
         self._prev_energy: float = -1.0
         self.wave_width: float = 2.2
+        self._stack_frontier: float = float(self.half_len)
         self.breath_phase: float = 6.2831853 * self.segment_phase_offset
 
         # Coordinate and color buffers
@@ -60,6 +61,10 @@ class Extending_waves_mode(Mode.Mode):
             p_in = self._enter_progress
             return float(0.15 + 0.85 * (1.0 - (1.0 - p_in) * (1.0 - p_in)))
         return 1.0
+
+    def on_transition_reset(self) -> None:
+        super().on_transition_reset()
+        self._stack_frontier = float(self.half_len)
 
     def run(self) -> None:
         if self.nb_of_leds <= 0:
@@ -97,12 +102,20 @@ class Extending_waves_mode(Mode.Mode):
         base_speed = (float(self.half_len) / frames_per_beat) * fps_ratio * flow_gain * (1.0 + 0.5 * tension) * self.mood_pace
         damping = (0.045 / max(0.5, self.mood_trail)) * fps_ratio
 
+        exit_prog = float(self._exit_progress)
+        if exit_prog <= 0.0:
+            self._stack_frontier = float(self.half_len)
+
         for w in range(self.MAX_WAVES):
             if self.wave_active[w]:
                 self.wave_positions[w] += self.wave_velocities[w] * base_speed
                 self.wave_amps[w] *= max(0.0, 1.0 - damping)
 
-                if self.wave_velocities[w] > 0 and self.wave_positions[w] >= (self.half_len + 2.0):
+                if exit_prog > 0.0 and self.wave_velocities[w] > 0 and self.wave_positions[w] >= (self._stack_frontier - 1.2):
+                    # Outgoing white wave hits the stack frontier and deposits inward instead of vanishing
+                    self._stack_frontier = max(-0.15 * float(self.half_len), self._stack_frontier - self.wave_width * 1.35)
+                    self.wave_active[w] = False
+                elif self.wave_velocities[w] > 0 and self.wave_positions[w] >= (self.half_len + 2.0):
                     self.wave_active[w] = False
                 elif self.wave_velocities[w] < 0 and self.wave_positions[w] <= -2.0:
                     self.wave_active[w] = False
@@ -117,7 +130,6 @@ class Extending_waves_mode(Mode.Mode):
             self.level_accum = 0.0
 
         min_wave_interval = 0.35 * (60.0 / bpm) / max(0.5, 0.75 + 0.50 * lvl)
-        exit_prog = float(self._exit_progress)
         seed_wave = self._enter_progress < 0.25 and not bool(np.any(self.wave_active))
         exit_wave = exit_prog > 0.0 and exit_prog < 0.88 and self.time_since_wave >= (0.22 * (60.0 / bpm))
         should_trigger = (
@@ -181,7 +193,8 @@ class Extending_waves_mode(Mode.Mode):
 
         # Bespoke cooperative exit: white waves stack and accumulate from outer edges inward
         if exit_prog > 0.0:
-            stack_frontier = 1.0 - 1.18 * exit_prog
+            self._stack_frontier = min(self._stack_frontier, float(self.half_len) * (1.0 - 1.18 * exit_prog))
+            stack_frontier = self._stack_frontier / max(1.0, float(self.half_len))
             np.subtract(self.half_pos, stack_frontier, out=self.bed_profile)
             np.multiply(self.bed_profile, 1.0 / 0.12, out=self.bed_profile)
             np.clip(self.bed_profile, 0.0, 1.0, out=self.bed_profile)
