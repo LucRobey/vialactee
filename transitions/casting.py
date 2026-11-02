@@ -49,6 +49,9 @@ class CastResult:
     redraw_count: int
     fallback_segments: Tuple[str, ...]
     elapsed_ms: float
+    retargeted_groups: Tuple[Tuple[str, ...], ...] = ()
+    wildcard_triggered: bool = False
+    is_partial_reroll: bool = False
 
 
 def compute_mode_fit(
@@ -126,8 +129,11 @@ def cast_transition(
     rng: Optional[Any] = None,
     gibbs_sweeps: int = 3,
     max_redraws: int = 5,
+    max_reroll_groups: Optional[int] = None,
+    wildcard: Optional[bool] = None,
+    allow_partial: bool = True,
 ) -> CastResult:
-    """Run the 6-step Mode Coherence casting algorithm."""
+    """Run the 6-step Mode Coherence casting algorithm (with optional partial re-roll & wildcard)."""
     t0 = time.perf_counter()
     rand = rng if rng is not None else random
 
@@ -138,9 +144,13 @@ def cast_transition(
     inv_temp = 1.0 / temperature
     repeat_penalty = policy.settings.repeat_penalty
     max_modes = policy.settings.max_different_modes
+    partial_prob = getattr(policy.settings, "partial_reroll_prob", 0.0)
+    wildcard_prob = getattr(policy.settings, "wildcard_prob", 0.0)
 
+    is_wildcard = bool(wildcard) if wildcard is not None else (wildcard_prob > 0.0 and rand.random() < wildcard_prob)
     forbid_rules = tuple(r for r in policy.rules if r.is_forbid)
-    soft_rules = tuple(r for r in policy.rules if not r.is_forbid)
+    all_soft_rules = tuple(r for r in policy.rules if not r.is_forbid)
+    soft_rules = () if is_wildcard else all_soft_rules
 
     # Precompute (1/T) * ln(fit(m)) for every mode
     log_fit_scaled: Dict[str, float] = {}
@@ -166,18 +176,65 @@ def cast_transition(
     best_groupings: Dict[str, str] = {}
     best_groups: Tuple[Tuple[str, ...], ...] = ()
     best_fallbacks: Tuple[str, ...] = ()
+    best_retargeted_groups: Tuple[Tuple[str, ...], ...] = ()
+    best_pinned_ids: Set[str] = set()
+    best_is_partial = False
     redraw_count = 0
+
+    want_partial = allow_partial and (
+        (max_reroll_groups is not None) or (partial_prob > 0.0 and rand.random() < partial_prob)
+    )
 
     total_attempts = max(1, 1 + max_redraws)
     for attempt in range(total_attempts):
         chosen_groupings, raw_groups, raw_allowed = _pick_zone_groupings(policy, memory, rand)
 
         # Build free groups (excluding blocked segments)
-        free_groups: List[_FreeGroup] = []
+        all_free_groups: List[_FreeGroup] = []
         for idx, (grp_segs, allowed) in enumerate(zip(raw_groups, raw_allowed)):
             free_segs = tuple(s for s in grp_segs if s not in blocked_cast)
             if free_segs:
-                free_groups.append(_FreeGroup(idx, free_segs, grp_segs, allowed))
+                all_free_groups.append(_FreeGroup(idx, free_segs, grp_segs, allowed))
+
+        # Optional Partial Re-Roll (D2/D3): pin a subset of free groups to their current active mode
+        # and retarget only 1-2 groups while preserving maxDifferentModes and forbid rules.
+        pinned_cast: Dict[str, str] = dict(blocked_cast)
+        pinned_only_ids: Set[str] = set()
+        free_groups = all_free_groups
+        is_partial = False
+        if want_partial and len(all_free_groups) >= 2:
+            k_reroll = (
+                max(1, min(int(max_reroll_groups), len(all_free_groups) - 1))
+                if max_reroll_groups is not None
+                else (1 if len(all_free_groups) == 2 else rand.choice((1, 2)))
+            )
+            shuffled_fg = list(all_free_groups)
+            rand.shuffle(shuffled_fg)
+            retarget_set = {fg.index for fg in shuffled_fg[:k_reroll]}
+            cand_pinned = dict(blocked_cast)
+            cand_modes = set(cand_pinned.values())
+            pin_ok = True
+            for fg in all_free_groups:
+                if fg.index in retarget_set:
+                    continue
+                cur_m = active_by_id.get(fg.free_segments[0], "")
+                if not cur_m or cur_m not in fg.allowed_modes:
+                    pin_ok = False
+                    break
+                if cur_m not in cand_modes and len(cand_modes) >= max_modes:
+                    pin_ok = False
+                    break
+                for s in fg.free_segments:
+                    cand_pinned[s] = cur_m
+                if any(evaluate_rule(r, cand_pinned) for r in forbid_rules):
+                    pin_ok = False
+                    break
+                cand_modes.add(cur_m)
+            if pin_ok:
+                pinned_cast = cand_pinned
+                pinned_only_ids = set(cand_pinned.keys()) - set(blocked_cast.keys())
+                free_groups = [fg for fg in all_free_groups if fg.index in retarget_set]
+                is_partial = True
 
         # Step 4: Initial draw (with inner retries if random group order dead-ends)
         group_modes: Dict[int, str] = {}
@@ -186,7 +243,7 @@ def cast_transition(
         for init_try in range(5):
             group_modes.clear()
             fallback_group_indices.clear()
-            partial_cast = dict(blocked_cast)
+            partial_cast = dict(pinned_cast)
             used_modes = set(partial_cast.values())
             visit_order = list(free_groups)
             rand.shuffle(visit_order)
@@ -195,6 +252,7 @@ def cast_transition(
             for fg in visit_order:
                 legal_cands: List[str] = []
                 log_weights: List[float] = []
+                cur_fg_mode = active_by_id.get(fg.free_segments[0], "") if is_partial else ""
                 for m in fg.allowed_modes:
                     if m not in used_modes and len(used_modes) >= max_modes:
                         continue
@@ -211,6 +269,11 @@ def cast_transition(
                     log_weights.append(lw)
                     for s in fg.free_segments:
                         partial_cast.pop(s, None)
+
+                if is_partial and cur_fg_mode and len(legal_cands) > 1 and cur_fg_mode in legal_cands:
+                    alt_pairs = [(m, lw) for m, lw in zip(legal_cands, log_weights) if m != cur_fg_mode]
+                    legal_cands = [p[0] for p in alt_pairs]
+                    log_weights = [p[1] for p in alt_pairs]
 
                 if not legal_cands:
                     dead_end = True
@@ -230,8 +293,8 @@ def cast_transition(
             if not dead_end:
                 break
 
-        # Build full cast from blocked + drawn + fallback
-        cast: Dict[str, str] = dict(blocked_cast)
+        # Build full cast from blocked/pinned + drawn + fallback
+        cast: Dict[str, str] = dict(pinned_cast)
         active_free_groups = [fg for fg in free_groups if fg.index not in fallback_group_indices]
         for fg in free_groups:
             if fg.index in fallback_group_indices:
@@ -250,13 +313,14 @@ def cast_transition(
                 rand.shuffle(sweep_groups)
                 for fg in sweep_groups:
                     cur_m = group_modes[fg.index]
-                    other_modes: Set[str] = set(blocked_cast.values())
+                    other_modes: Set[str] = set(pinned_cast.values())
                     for other_fg in active_free_groups:
                         if other_fg.index != fg.index:
                             other_modes.add(group_modes[other_fg.index])
 
                     cands: List[str] = []
                     lws: List[float] = []
+                    cur_fg_mode = active_by_id.get(fg.free_segments[0], "") if is_partial else ""
                     for m in fg.allowed_modes:
                         if m != cur_m and m not in other_modes and len(other_modes) >= max_modes:
                             continue
@@ -268,6 +332,11 @@ def cast_transition(
                         rule_lw = sum(r.log_weight for r in soft_rules if evaluate_rule(r, cast))
                         cands.append(m)
                         lws.append(log_fit_scaled[m] + math.log(max(1e-12, var)) + rule_lw)
+
+                    if is_partial and cur_fg_mode and len(cands) > 1 and cur_fg_mode in cands:
+                        alt_pairs = [(m, lw) for m, lw in zip(cands, lws) if m != cur_fg_mode]
+                        cands = [p[0] for p in alt_pairs]
+                        lws = [p[1] for p in alt_pairs]
 
                     if cands:
                         chosen_m = _sample_from_log_weights(cands, lws, rand)
@@ -284,7 +353,7 @@ def cast_transition(
                     class_fgs = [fg for fg in active_free_groups if group_modes.get(fg.index) == class_mode]
                     if not class_fgs:
                         continue
-                    other_modes = set(blocked_cast.values())
+                    other_modes = set(pinned_cast.values())
                     for other_fg in active_free_groups:
                         if group_modes[other_fg.index] != class_mode:
                             other_modes.add(group_modes[other_fg.index])
@@ -321,6 +390,9 @@ def cast_transition(
         best_groupings = chosen_groupings
         best_groups = tuple(raw_groups)
         best_fallbacks = fallbacks
+        best_retargeted_groups = tuple(fg.free_segments for fg in active_free_groups)
+        best_pinned_ids = pinned_only_ids
+        best_is_partial = is_partial
 
         # Step 6: Anti-repeat guard
         if attempt < total_attempts - 1 and memory.is_exact_repeat(best_cast):
@@ -337,7 +409,7 @@ def cast_transition(
     fallback_set = set(best_fallbacks)
     orders_by_name: Dict[str, str] = {}
     for sid, mname in best_cast.items():
-        if sid in blocked_cast or sid in fallback_set:
+        if sid in blocked_cast or sid in fallback_set or sid in best_pinned_ids:
             continue
         seg_name = policy.segment_id_to_name.get(sid, sid)
         orders_by_name[seg_name] = mname
@@ -346,7 +418,7 @@ def cast_transition(
         sid: m for sid, m in best_cast.items() if sid not in blocked_cast and sid not in fallback_set
     }
     violations = sum(1 for r in forbid_rules if evaluate_rule(r, ordered_only_cast))
-    matched_soft = tuple(r.id for r in soft_rules if evaluate_rule(r, best_cast))
+    matched_soft = tuple(r.id for r in all_soft_rules if evaluate_rule(r, best_cast))
     elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
     return CastResult(
@@ -359,4 +431,7 @@ def cast_transition(
         redraw_count=redraw_count,
         fallback_segments=best_fallbacks,
         elapsed_ms=elapsed_ms,
+        retargeted_groups=best_retargeted_groups,
+        wildcard_triggered=is_wildcard,
+        is_partial_reroll=best_is_partial,
     )

@@ -94,6 +94,11 @@ def validate_coherence_dict(policy: Dict[str, Any]) -> None:
     v_rep = settings["repeatPenalty"]
     if isinstance(v_rep, bool) or not isinstance(v_rep, (int, float)) or float(v_rep) < 0.0:
         raise ValueError(f"'repeatPenalty' must be number >= 0, got {v_rep!r}")
+    for opt_prob in ("partialRerollProb", "wildcardProb"):
+        if opt_prob in settings:
+            v_prob = settings[opt_prob]
+            if isinstance(v_prob, bool) or not isinstance(v_prob, (int, float)) or not (0.0 <= float(v_prob) <= 1.0):
+                raise ValueError(f"'{opt_prob}' must be in [0.0, 1.0], got {v_prob!r}")
 
     zones = policy["zones"]
     if not isinstance(zones, dict) or not zones:

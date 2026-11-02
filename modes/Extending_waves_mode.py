@@ -53,6 +53,14 @@ class Extending_waves_mode(Mode.Mode):
         self.bed_profile: np.ndarray = np.zeros(self.half_len, dtype=np.float32)
         self.tinted_col: np.ndarray = np.zeros(3, dtype=np.float32)
 
+    @property
+    def transition_scale(self) -> float:
+        """Keep full brightness on cooperative exit so white waves stack to 255 from edges inward."""
+        if self._enter_progress < 1.0:
+            p_in = self._enter_progress
+            return float(0.15 + 0.85 * (1.0 - (1.0 - p_in) * (1.0 - p_in)))
+        return 1.0
+
     def run(self) -> None:
         if self.nb_of_leds <= 0:
             return
@@ -109,12 +117,14 @@ class Extending_waves_mode(Mode.Mode):
             self.level_accum = 0.0
 
         min_wave_interval = 0.35 * (60.0 / bpm) / max(0.5, 0.75 + 0.50 * lvl)
+        exit_prog = float(self._exit_progress)
         seed_wave = self._enter_progress < 0.25 and not bool(np.any(self.wave_active))
+        exit_wave = exit_prog > 0.0 and exit_prog < 0.88 and self.time_since_wave >= (0.22 * (60.0 / bpm))
         should_trigger = (
             (not is_silent)
-            and energy > 0.04
-            and ((self.level_accum >= 1.0 and self.time_since_wave >= min_wave_interval) or seed_wave)
-            and self._exit_progress <= 0.40
+            and (energy > 0.04 or exit_prog > 0.0)
+            and ((self.level_accum >= 1.0 and self.time_since_wave >= min_wave_interval) or seed_wave or exit_wave)
+            and exit_prog < 0.90
         )
 
         if should_trigger:
@@ -126,14 +136,17 @@ class Extending_waves_mode(Mode.Mode):
             self.wave_count += 1
             self.wave_positions[slot] = 0.0
             self.wave_velocities[slot] = 1.0
-            self.wave_amps[slot] = 0.50 + 0.50 * min(1.0, lvl)
+            self.wave_amps[slot] = max(exit_prog, 0.50 + 0.50 * min(1.0, lvl))
             base_c = mood[self.wave_count % 3]
             hi = self.highlight_color
-            # Secondary (beat): pulse tints the spawned wave toward highlight_color
+            # Secondary (beat): pulse tints the spawned wave toward highlight_color;
+            # on cooperative exit, spawned waves bleach into pure white (255, 255, 255)
             tint = min(1.0, self.mood_accent + 0.28 * pulse)
             inv_tint = 1.0 - tint
+            white_mix = min(1.0, exit_prog * 1.65)
             for c in range(3):
-                self.wave_colors[slot, c] = inv_tint * float(base_c[c]) + tint * float(hi[c])
+                col_c = inv_tint * float(base_c[c]) + tint * float(hi[c])
+                self.wave_colors[slot, c] = (1.0 - white_mix) * col_c + white_mix * 255.0
 
         # 3. Synthesize Half-Strip Energy & Colors (level sets bed and wave brightness; beat tints & shimmers crests)
         self.half_rgb.fill(0.0)
@@ -159,10 +172,22 @@ class Extending_waves_mode(Mode.Mode):
                 np.exp(self.wave_profile, out=self.wave_profile)
                 np.multiply(self.wave_profile, self.wave_amps[w] * crest_gain, out=self.wave_profile)
                 col = self.wave_colors[w]
+                white_w = min(1.0, exit_prog * 1.40)
                 for c in range(3):
                     tc = (1.0 - beat_tint) * float(col[c]) + beat_tint * float(hi[c])
+                    tc = (1.0 - white_w) * tc + white_w * 255.0
                     np.multiply(self.wave_profile, tc, out=self.wave_scratch_rgb[:, c])
                 np.add(self.half_rgb, self.wave_scratch_rgb, out=self.half_rgb)
+
+        # Bespoke cooperative exit: white waves stack and accumulate from outer edges inward
+        if exit_prog > 0.0:
+            stack_frontier = 1.0 - 1.18 * exit_prog
+            np.subtract(self.half_pos, stack_frontier, out=self.bed_profile)
+            np.multiply(self.bed_profile, 1.0 / 0.12, out=self.bed_profile)
+            np.clip(self.bed_profile, 0.0, 1.0, out=self.bed_profile)
+            np.multiply(self.bed_profile, 255.0 * min(1.0, 0.38 + exit_prog * 1.15), out=self.bed_profile)
+            for c in range(3):
+                np.maximum(self.half_rgb[:, c], self.bed_profile, out=self.half_rgb[:, c])
 
         # Gentle acoustic center breathing when flywheel is lost so stalled phase never freezes the strip
         if (not is_silent) and (lock < 0.5) and not bool(np.any(self.wave_active)):

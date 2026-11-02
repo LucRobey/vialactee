@@ -322,6 +322,100 @@ class TestJointTransitionCaster(unittest.TestCase):
         self.assertEqual(res.fallback_segments, ("s2", "s3"))
         self.assertEqual(res.orders_by_segment_name, {})
 
+    def test_partial_reroll_retargets_subset_of_groups_and_preserves_invariants(self):
+        """Partial re-roll pins kept groups to their active modes, emits orders only for retargeted groups, and obeys forbid/budget rules."""
+        raw = dict(DEFAULT_POLICY)
+        raw["settings"] = dict(DEFAULT_POLICY["settings"], partialRerollProb=1.0, maxDifferentModes=3)
+        raw["rules"] = list(DEFAULT_POLICY["rules"]) + [
+            {"id": "forbid-strobe-and-metronome", "when": [{"mode": "Hyper Strobe"}, {"mode": "Metronome"}], "effect": "forbid"}
+        ]
+        # Give all segments valid initial active modes (pillars="Power Bar", horizontals="Rainbow")
+        segs = [
+            SegmentDescriptor(
+                name=s.name,
+                id=s.id,
+                orientation=s.orientation,
+                available_modes=s.available_modes,
+                active_mode=("Power Bar" if s.orientation == "vertical" else "Rainbow"),
+                is_blocked=False,
+                tags=s.tags,
+            )
+            for s in self.inst.segments
+        ]
+        compiled = compile_policy(raw, segs, self.inst.modes)
+        forbid_rules = [r for r in compiled.rules if r.is_forbid]
+        mem = TransitionMemory(depth=8)
+        rng = random.Random(101)
+
+        for _ in range(50):
+            res = cast_transition(compiled, self.target_dna, segs, mem, rng=rng, max_reroll_groups=1)
+            self.assertTrue(res.is_partial_reroll)
+            self.assertEqual(len(res.retargeted_groups), 1)
+            retargeted_sids = set(res.retargeted_groups[0])
+            expected_order_names = {compiled.segment_id_to_name[sid] for sid in retargeted_sids}
+            self.assertEqual(set(res.orders_by_segment_name.keys()), expected_order_names)
+            self.assertLess(len(res.orders_by_segment_name), len(segs))
+            # Kept segments retain their active mode in full_cast_by_id
+            for s in segs:
+                if s.id not in retargeted_sids:
+                    self.assertEqual(res.full_cast_by_id[s.id], s.active_mode)
+            # Global budget and forbid rules hold across full_cast_by_id
+            self.assertLessEqual(len(set(res.full_cast_by_id.values())), 3)
+            self.assertEqual(res.forbid_violations, 0)
+            for r in forbid_rules:
+                self.assertFalse(evaluate_rule(r, res.full_cast_by_id))
+
+    def test_wildcard_ignores_soft_rules_while_strictly_enforcing_forbid_rules(self):
+        """Wildcard casts ignore soft rule weights while never relaxing hard forbid rules."""
+        small_inst = make_fake_small_installation()
+        raw = {
+            "version": 1,
+            "settings": {
+                "maxDifferentModes": 2,
+                "temperature": 1.0,
+                "memoryDepth": 4,
+                "repeatPenalty": 0.0,
+                "wildcardProb": 1.0,
+            },
+            "zones": {
+                "strips": {
+                    "segments": ["s1", "s2", "s3"],
+                    "groupings": [{"id": "unison", "weight": 1.0, "groups": [["s1", "s2", "s3"]]}],
+                }
+            },
+            "rules": [
+                # Heavily penalize Rainbow via a soft rule (0.0001), and hard-forbid Hyper Strobe
+                {"id": "discourage-rainbow", "when": [{"mode": "Rainbow"}], "weight": 0.0001},
+                {"id": "forbid-strobe", "when": [{"mode": "Hyper Strobe"}], "effect": "forbid"},
+            ],
+        }
+        comp_wild = compile_policy(raw, small_inst.segments, small_inst.modes)
+        raw_normal = dict(raw, settings=dict(raw["settings"], wildcardProb=0.0))
+        comp_normal = compile_policy(raw_normal, small_inst.segments, small_inst.modes)
+        mem = TransitionMemory(depth=4)
+
+        rng_normal = random.Random(77)
+        normal_rainbow = 0
+        for _ in range(200):
+            res = cast_transition(comp_normal, self.target_dna, small_inst.segments, mem, rng=rng_normal)
+            self.assertFalse(res.wildcard_triggered)
+            self.assertNotIn("Hyper Strobe", res.full_cast_by_id.values())
+            if res.full_cast_by_id["s1"] == "Rainbow":
+                normal_rainbow += 1
+
+        rng_wild = random.Random(77)
+        wild_rainbow = 0
+        for _ in range(200):
+            res = cast_transition(comp_wild, self.target_dna, small_inst.segments, mem, rng=rng_wild)
+            self.assertTrue(res.wildcard_triggered)
+            self.assertEqual(res.forbid_violations, 0)
+            self.assertNotIn("Hyper Strobe", res.full_cast_by_id.values())
+            if res.full_cast_by_id["s1"] == "Rainbow":
+                wild_rainbow += 1
+
+        self.assertEqual(normal_rainbow, 0)
+        self.assertGreater(wild_rainbow, 5)
+
 
 if __name__ == "__main__":
     unittest.main()

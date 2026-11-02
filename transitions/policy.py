@@ -141,9 +141,13 @@ class PolicySettings:
     temperature: float
     memory_depth: int
     repeat_penalty: float
+    partial_reroll_prob: float = 0.0
+    wildcard_prob: float = 0.0
     maxDifferentModes = property(lambda self: self.max_different_modes)
     memoryDepth = property(lambda self: self.memory_depth)
     repeatPenalty = property(lambda self: self.repeat_penalty)
+    partialRerollProb = property(lambda self: self.partial_reroll_prob)
+    wildcardProb = property(lambda self: self.wildcard_prob)
 
 
 @dataclass(frozen=True)
@@ -217,11 +221,15 @@ def _is_valid_num(val: Any) -> bool:
 def _validate_settings(raw: Any) -> PolicySettings:
     if not isinstance(raw, dict):
         raise PolicyError("Policy 'settings' must be a dict")
-    defaults = {"maxDifferentModes": 3, "temperature": 1.0, "memoryDepth": 8, "repeatPenalty": 3.0}
+    defaults = {
+        "maxDifferentModes": 3, "temperature": 1.0, "memoryDepth": 8,
+        "repeatPenalty": 3.0, "partialRerollProb": 0.0, "wildcardProb": 0.0,
+    }
     if set(raw.keys()) - set(defaults.keys()):
         raise PolicyError(f"Unknown settings keys: {sorted(set(raw.keys()) - set(defaults.keys()))}")
     m = {**defaults, **raw}
     md, temp, depth, pen = m["maxDifferentModes"], m["temperature"], m["memoryDepth"], m["repeatPenalty"]
+    pr, wp = m["partialRerollProb"], m["wildcardProb"]
     if isinstance(md, bool) or not isinstance(md, int) or md < 1:
         raise PolicyError(f"Setting 'maxDifferentModes' must be integer >= 1, got {md!r}")
     if not _is_valid_num(temp) or not (0.05 <= float(temp) <= 5.0):
@@ -230,7 +238,11 @@ def _validate_settings(raw: Any) -> PolicySettings:
         raise PolicyError(f"Setting 'memoryDepth' must be integer >= 0, got {depth!r}")
     if not _is_valid_num(pen) or float(pen) < 0.0:
         raise PolicyError(f"Setting 'repeatPenalty' must be >= 0, got {pen!r}")
-    return PolicySettings(int(md), float(temp), int(depth), float(pen))
+    if not _is_valid_num(pr) or not (0.0 <= float(pr) <= 1.0):
+        raise PolicyError(f"Setting 'partialRerollProb' must be in [0.0, 1.0], got {pr!r}")
+    if not _is_valid_num(wp) or not (0.0 <= float(wp) <= 1.0):
+        raise PolicyError(f"Setting 'wildcardProb' must be in [0.0, 1.0], got {wp!r}")
+    return PolicySettings(int(md), float(temp), int(depth), float(pen), float(pr), float(wp))
 
 
 def compile_policy(

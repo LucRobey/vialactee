@@ -4,7 +4,9 @@
     "maxDifferentModes": 2,
     "temperature": 1.0,
     "memoryDepth": 8,
-    "repeatPenalty": 3.0
+    "repeatPenalty": 3.0,
+    "partialRerollProb": 0.30,
+    "wildcardProb": 0.08
   },
   "wholeInstallation": { "id": "chandelier-unison", "weight": 0.3 },
   "zones": {

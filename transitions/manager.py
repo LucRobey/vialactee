@@ -29,12 +29,26 @@ from transitions.stagger import (
     select_stagger_pattern,
 )
 
+MIN_SHOWSTOPPER_DURATION: float = 1.5
+
 TRANSITION_TECHNIQUES: Dict[str, Dict[str, Any]] = {
     k: {"type": t, "duration": d}
     for k, (t, d) in {
         "smooth_cosine_crossfade": ("fade_in_out", 2.0),
-        "directional_wipe": ("vertical_wipe", 1.2),
-        "transient_blip": ("explosion", 0.4),
+        "fade_in_out": ("fade_in_out", 2.0),
+        "fade_to_black": ("fade_to_black", 2.0),
+        "cosine_fade": ("cosine_fade", 2.0),
+        "directional_wipe": ("vertical_wipe", 1.5),
+        "vertical_wipe": ("vertical_wipe", 1.5),
+        "wipe_left_to_right": ("wipe_left_to_right", 1.6),
+        "wipe_right_to_left": ("wipe_right_to_left", 1.6),
+        "transient_blip": ("explosion", 1.8),
+        "explosion": ("explosion", 1.8),
+        "box_wipe": ("box_wipe", 2.0),
+        "spiral": ("spiral", 2.5),
+        "gravity_drop": ("gravity_drop", 2.5),
+        "weird_glitch": ("weird_glitch", 1.6),
+        "global_change": ("global_change", 1.8),
         "ember_dissolve": ("ember_dissolve", 1.8),
         "luma_melt": ("luma_melt", 1.6),
         "breath_dip": ("breath_dip", 2.0),
@@ -43,7 +57,7 @@ TRANSITION_TECHNIQUES: Dict[str, Dict[str, Any]] = {
         "iris_open": ("iris_open", 1.2),
         "iris_close": ("iris_close", 1.2),
         "zipper_merge": ("zipper_merge", 1.2),
-        "collider": ("collider", 1.0),
+        "collider": ("collider", 1.2),
         "prism_sweep": ("prism_sweep", 1.4),
         "flash_cut": ("flash_cut", 0.5),
         "staccato_shutter": ("staccato_shutter", 0.8),
@@ -138,7 +152,7 @@ class LocalTransitionManager:
         ctx = music if music is not None else self.music
         target_dna = self.evaluate_target_dna(ctx)
         cp = self.compiled_policy
-        res = cast_transition(cp, target_dna, self.segments, self.memory)
+        res = cast_transition(cp, target_dna, self.segments, self.memory, allow_partial=False, wildcard=False)
         self.last_cast_result = res
         self.memory.record(res.full_cast_by_id, res.groupings_by_zone)
 
@@ -208,13 +222,18 @@ class LocalTransitionManager:
     def allocate_all_segments(
         self,
         target_dna: Optional[Dict[str, float]] = None,
+        max_reroll_groups: Optional[int] = None,
+        wildcard: Optional[bool] = None,
     ) -> Dict[str, str]:
         """Delegates installation mode allocation to the Mode Coherence casting engine."""
         if not self.segments:
             return {}
         target = target_dna if isinstance(target_dna, dict) else self.evaluate_target_dna()
         cp = self.compiled_policy
-        res = cast_transition(cp, target, self.segments, self.memory)
+        res = cast_transition(
+            cp, target, self.segments, self.memory,
+            max_reroll_groups=max_reroll_groups, wildcard=wildcard,
+        )
         self.last_cast_result = res
         return dict(res.orders_by_segment_name)
 
@@ -269,13 +288,15 @@ class LocalTransitionManager:
         quantize_downbeat: bool = True,
         staggered: bool = False,
         stagger_pattern: Optional[StaggerPattern] = None,
+        max_reroll_groups: Optional[int] = None,
+        wildcard: Optional[bool] = None,
     ) -> None:
-        """Queues or immediately triggers an installation mode transition."""
+        """Queues or immediately triggers an installation mode transition (supports micro-transitions via max_reroll_groups)."""
         if allocation is not None:
             target_alloc = allocation
             cast_res = None
         else:
-            target_alloc = self.allocate_all_segments()
+            target_alloc = self.allocate_all_segments(max_reroll_groups=max_reroll_groups, wildcard=wildcard)
             cast_res = self.last_cast_result
 
         if staggered:

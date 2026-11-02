@@ -11,6 +11,7 @@ from core.Segment import Segment
 from core.TransitionBridge import apply_orders
 from modes.Power_bar_mode import Power_bar_mode
 from modes.Middle_bar_mode import Middle_bar_mode
+from modes.Extending_waves_mode import Extending_waves_mode
 from transitions.api import (
     AVAILABLE_TRANSITIONS,
     InstallationSnapshot,
@@ -32,6 +33,7 @@ from transitions.families import (
     is_staggerable,
     roll_transition_params,
 )
+from transitions.manager import MIN_SHOWSTOPPER_DURATION, TRANSITION_TECHNIQUES
 from transitions.stagger import StaggerPattern
 
 
@@ -74,6 +76,21 @@ class TestTransitionFamilies(unittest.TestCase):
             self.assertIn(tech, TRANSITION_FAMILIES, f"{tech} missing from TRANSITION_FAMILIES")
             fams = get_families(tech)
             self.assertGreater(len(fams), 0)
+
+    def test_showstopper_transitions_meet_minimum_perceptual_duration(self):
+        """Showstopper transitions (ROOM_EPI_2D and ROOM_SWEEP_2D) in TRANSITION_TECHNIQUES must last >= MIN_SHOWSTOPPER_DURATION."""
+        showstopper_families = {TransitionFamily.ROOM_EPI_2D, TransitionFamily.ROOM_SWEEP_2D}
+        checked = 0
+        for name, cfg in TRANSITION_TECHNIQUES.items():
+            fams = get_families(name) | get_families(cfg["type"])
+            if fams & showstopper_families:
+                checked += 1
+                self.assertGreaterEqual(
+                    float(cfg["duration"]),
+                    MIN_SHOWSTOPPER_DURATION,
+                    f"Showstopper transition '{name}' duration {cfg['duration']}s < {MIN_SHOWSTOPPER_DURATION}s",
+                )
+        self.assertGreaterEqual(checked, 8)
 
     def test_2d_room_transitions_are_never_staggerable(self):
         room_locked = ("explosion", "spiral", "box_wipe", "weird_glitch", "gravity_drop", "wipe_left_to_right")
@@ -209,6 +226,32 @@ class TestModeCooperativeHandshake(unittest.TestCase):
         self.seg.update(status_mid, TE.apply_transition, dt=0.3)
         self.assertAlmostEqual(self.seg.modes["Power Bar"].transition_scale, 1.0)
         self.assertAlmostEqual(self.seg.modes["Middle Bar"].transition_scale, 1.0)
+
+    def test_extending_waves_bespoke_white_wave_stacking_on_exit(self):
+        """Extending_waves_mode stacks pure-white waves from the outer edges inward during cooperative exit."""
+        ew = Extending_waves_mode(
+            "Extending Waves", "Segment v1", self.listener, self.leds, self.indexes, self.seg.rgb_list, {}
+        )
+        ew.start()
+        for _ in range(5):
+            ew.update()
+
+        # Mid-exit (progress = 0.45): outer tips stack bright white while center is not yet fully saturated
+        ew.on_transition_exit(0.45)
+        for _ in range(4):
+            ew.update()
+        outer_mid = float(np.mean(self.seg.rgb_list[0]))
+        center_mid = float(np.mean(self.seg.rgb_list[self.seg.nb_of_leds // 2]))
+        self.assertGreater(outer_mid, 140.0)
+        self.assertGreater(outer_mid, center_mid)
+
+        # Late-exit (progress = 0.92): white wave stack reaches inward across the full strip
+        ew.on_transition_exit(0.92)
+        for _ in range(6):
+            ew.update()
+        self.assertGreater(float(np.mean(self.seg.rgb_list[0])), 210.0)
+        self.assertGreater(float(np.mean(self.seg.rgb_list[-1])), 210.0)
+        self.assertGreater(float(np.mean(self.seg.rgb_list[self.seg.nb_of_leds // 2])), 160.0)
 
 
 if __name__ == "__main__":

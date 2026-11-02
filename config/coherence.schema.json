@@ -17,7 +17,9 @@
         "maxDifferentModes": { "type": "integer", "minimum": 1 },
         "temperature": { "type": "number", "minimum": 0.05, "maximum": 5.0 },
         "memoryDepth": { "type": "integer", "minimum": 0 },
-        "repeatPenalty": { "type": "number", "minimum": 0.0 }
+        "repeatPenalty": { "type": "number", "minimum": 0.0 },
+        "partialRerollProb": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "wildcardProb": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
       }
     },
     "wholeInstallation": {

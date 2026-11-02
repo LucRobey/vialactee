@@ -141,9 +141,9 @@ Timing rules in `LocalTransitionManager.update(dt, music)`:
 ### 3.1 Joint Transition Casting (`transitions/casting.py`)
 Every transition (and startup `allocate_initial`) executes a 6-step joint cast over the compiled `CompiledPolicy`:
 1. **Zone Grouping Lottery:** Each zone draws a grouping (partition of segments into unison groups $G_1, \dots, G_k$) with weights decayed by `TransitionMemory.grouping_weight()`.
-2. **Blocked Segments as Fixed Placements:** Any segment with `is_blocked=True` keeps its `active_mode`, counts toward `maxDifferentModes`, and participates in rule evaluation.
-3. **Initial Feasible Draw (Log-Domain):** Groups are ordered most-constrained-first. Candidate modes are scored in log space using $\log \text{musicFit}(m, \text{targetDNA}) + \log \text{ruleMultiplier} + \log \text{varietyFactor}$. When distinct modes reach `maxDifferentModes`, remaining groups must reuse an already-picked mode unless no allowed mode exists in the active set.
-4. **Gibbs Refinement (`N_SWEEPS = 3`):** Each sweep resamples single groups and performs a **joint mode-class move** across all non-blocked groups sharing a mode so multi-group recipes remain reachable even when `maxDifferentModes` is full.
+2. **Blocked & Pinned Segments as Fixed Placements:** Any segment with `is_blocked=True` keeps its `active_mode`, counts toward `maxDifferentModes`, and participates in rule evaluation. When a **partial re-roll** is triggered (via `settings.partialRerollProb` or `max_reroll_groups`), all but 1–2 free groups are also pinned to their current `active_mode` and omitted from `orders_by_segment_name` so the installation evolves gradually.
+3. **Initial Feasible Draw (Log-Domain) & Wildcard:** Groups are ordered randomly with retries. Candidate modes are scored in log space using $\log \text{musicFit}(m, \text{targetDNA}) + \log \text{ruleMultiplier} + \log \text{varietyFactor}$. With probability `settings.wildcardProb` (or `wildcard=True`), soft rules (`rule.weight`) are ignored for that cast so unexpected combinations can surface while **hard `forbid` rules remain strictly enforced**.
+4. **Gibbs Refinement (`N_SWEEPS = 3`):** Each sweep resamples single groups and performs a **joint mode-class move** across all non-blocked/non-pinned groups sharing a mode so multi-group recipes remain reachable even when `maxDifferentModes` is full.
 5. **Anti-Repeat Guard (`MAX_REDRAWS = 5`):** Redraws if the resulting assignment is identical to the immediately preceding transition.
 
 ### 3.2 Declarative Policy Compilation (`transitions/policy.py`)
@@ -158,8 +158,8 @@ Evaluated top to bottom, first match wins:
 
 | Condition | Technique | Engine `type` | Duration |
 | :--- | :--- | :--- | :-: |
-| `is_drop_impact` or `energy ≥ 0.85` | `transient_blip` | `explosion` | 0.4 s |
-| `is_rhythmic` (GROOVE/DROP_IMPACT) or `salience ≥ 0.50` | `directional_wipe` | `vertical_wipe` | 1.2 s |
+| `is_drop_impact` or `energy ≥ 0.85` | `transient_blip` | `explosion` | 1.8 s (`MIN_SHOWSTOPPER_DURATION >= 1.5 s`) |
+| `is_rhythmic` (GROOVE/DROP_IMPACT) or `salience ≥ 0.50` | `directional_wipe` | `vertical_wipe` | 1.5 s |
 | otherwise | `smooth_cosine_crossfade` | `fade_in_out` | 2.0 s |
 
 Engine types available in `transitions/engine.py` and `transitions/effects.py`:
@@ -216,7 +216,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 
 ### Invariants
 - One transition at a time installation-wide. The Director holds a single `state` and `transition_progress` spanning the maximum `(start_offset + duration)` of the emitted orders.
-- Every non-blocked segment is retargeted on each transition. If all segments are blocked, no transition starts.
+- Every non-blocked segment is retargeted on a full transition; on a partial re-roll (`partialRerollProb > 0` or `max_reroll_groups` set), only the 1–2 retargeted groups receive orders while kept groups act as fixed constraints. If all segments are blocked, no transition starts.
 - The Director clock advances by `dt` in `Director.update(dt, music)`.
 - Hot path: `transitions/manager.py` `update` must satisfy AXIOM-01 (≤ 0.01 ms) and AXIOM-02 (zero allocation). It is covered by `tests/transitions/test_manager.py`.
 

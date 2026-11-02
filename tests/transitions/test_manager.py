@@ -341,6 +341,30 @@ class TestRobustnessAndEdgeCases(unittest.TestCase):
         self.assertEqual(len(orders), 2)
         self.assertEqual({o.target_mode for o in orders}, {"Impact Shockwave"})
 
+    def test_micro_transition_schedule_emits_orders_only_for_retargeted_groups(self):
+        """schedule_transition(max_reroll_groups=1) emits SegmentOrders only for the 1 retargeted group."""
+        inst = make_fake_installation()
+        segs = [
+            SegmentDescriptor(
+                name=s.name,
+                id=s.id,
+                orientation=s.orientation,
+                available_modes=s.available_modes,
+                active_mode=("Power Bar" if s.orientation == "vertical" else "Rainbow"),
+                is_blocked=False,
+                tags=s.tags,
+            )
+            for s in inst.segments
+        ]
+        self.ltm.set_installation(segs, inst.modes)
+        self.ltm.schedule_transition(quantize_downbeat=False, max_reroll_groups=1)
+        orders = self.ltm.pop_orders()
+        self.assertGreater(len(orders), 0)
+        self.assertLess(len(orders), len(segs))
+        self.assertIsNotNone(self.ltm.last_cast_result)
+        self.assertTrue(self.ltm.last_cast_result.is_partial_reroll)
+        self.assertEqual(len(self.ltm.last_cast_result.retargeted_groups), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
