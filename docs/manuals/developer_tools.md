@@ -1,4 +1,4 @@
-# Developer Tools & Offline Studios Guide
+﻿# Developer Tools & Offline Studios Guide
 
 > **Location:** `docs/manuals/developer_tools.md` (Tier 2 Operational Manual)  
 > **Source Directory:** [`tools/`](../../tools/), [`hardware/Fake_leds.py`](../../hardware/Fake_leds.py), [`research/benchmarks/`](../../research/benchmarks/)  
@@ -201,3 +201,12 @@ Modes not yet in `CONFORMING_MODES_PHASE_4A` are pre-redesign modes tracked diag
 1. Increment `SYNTHETIC_CLIP_VERSION` in `tools/choreography_matrix.py`.
 2. Run `python -m tools.choreography_matrix` (with `PYTHONHASHSEED=0`), inspect the `13 x 4` tables across all 3 profiles, and verify `CALIBRATED_LEAD_FRACTION_F` and `CALIBRATED_SEC_RETAINED_G` across all modes in `CONFORMING_MODES_PHASE_4A`.
 3. Update `CALIBRATED_FOR` (and `f` / `g` if required) in `tests/governance/test_mode_choreography.py`.
+
+## 9. Coherence Policy Helper (`tools/coherence_helper.html`)
+
+Offline, standalone single-file editor for `config/coherence_<profile>.json` (no server, no build step: open it in Chrome or Edge).
+**Open config folder...** reads `modes.json`, `segments_*.json` and `coherence_*.json` live from disk; **Save** (Ctrl+S) writes back in place. Other browsers get read-only loading plus download.
+
+- Tabs: zones and groupings (colour-coded groups, exact-partition checks, auto-fill by tag), rules (sentence form with multiplier / forbid verdicts), a Monte-Carlo preview of sample transitions with mode and rule statistics, and raw JSON.
+- Undo / redo (Ctrl+Z / Ctrl+Y); validation errors and warnings update as you edit.
+- The page mirrors the structural rules of `transitions/policy.py` only. The authoritative check, including the feasibility probe, is `python -m tools.build_coherence_helper --check <profile> [file]`.

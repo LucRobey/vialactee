@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vialactée · Coherence Policy Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#0e1016; --panel:#171a23; --panel2:#1d212d; --line:#2a2f3e; --txt:#e7e9f0; --dim:#8a91a5; --acc:#7aa2ff; --ok:#4ade80; --warn:#fbbf24; --err:#f87171; --v:#e879f9; --h:#4ade80; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.45 system-ui,"Segoe UI",sans-serif; }
+  button, input, select, textarea { font:inherit; color:var(--txt); background:#0c0e14; border:1px solid var(--line); border-radius:6px; padding:4px 9px; }
+  input:focus, select:focus, textarea:focus, button:focus-visible { outline:2px solid var(--acc); outline-offset:-1px; }
+  button { cursor:pointer; background:var(--panel2); } button:hover:not(:disabled) { border-color:var(--acc); } button:disabled { opacity:.4; cursor:default; }
+  button.primary { background:#2c4a9e; border-color:#3d63cc; } button.ghost { background:none; border-color:transparent; color:var(--dim); } button.ghost:hover { color:var(--txt); }
+  button.danger:hover:not(:disabled) { border-color:var(--err); color:var(--err); }
+  button.sm { padding:0 7px; font-size:12px; line-height:22px; }
+  input[type=number] { width:80px; } input[type=checkbox] { accent-color:var(--acc); }
+  .dim { color:var(--dim); } .small { font-size:12px; } code { background:#0c0e14; padding:1px 5px; border-radius:4px; font-size:12px; }
+
+  header { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:9px 16px; background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; }
+  header h1 { font-size:15px; margin:0 10px 0 0; font-weight:600; }
+  #status { margin-left:auto; font-size:12px; color:var(--dim); } #status.dirty { color:var(--warn); }
+  nav { display:flex; gap:2px; padding:10px 16px 0; border-bottom:1px solid var(--line); }
+  nav button { border:0; border-bottom:2px solid transparent; border-radius:0; background:none; padding:6px 14px; color:var(--dim); }
+  nav button.on { color:var(--txt); border-color:var(--acc); }
+  nav .badge { font-size:11px; background:var(--err); color:#000; border-radius:9px; padding:0 6px; margin-left:5px; }
+  main { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:16px; padding:16px; align-items:start; }
+  @media (max-width:1050px) { main { grid-template-columns:1fr; } }
+  aside { position:sticky; top:104px; max-height:calc(100vh - 120px); overflow:auto; display:flex; flex-direction:column; gap:12px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .panel > h2 { margin:0 0 8px; font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--acc); display:flex; align-items:center; gap:8px; }
+  .panel > h2 .sp { margin-left:auto; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:4px 0; }
+  .grow { flex:1; min-width:120px; }
+  .form { display:grid; grid-template-columns:1fr auto; gap:6px 10px; align-items:center; }
+
+  .chip { display:inline-flex; align-items:center; gap:4px; padding:0 8px; margin:1px 2px; border-radius:11px; font-size:12px; line-height:21px; border:1px solid transparent; background:#232838; white-space:nowrap; }
+  .chip.v { border-color:color-mix(in srgb,var(--v) 45%,transparent); } .chip.h { border-color:color-mix(in srgb,var(--h) 45%,transparent); }
+  .chip.off { opacity:.35; } .chip.miss { border-color:var(--err); color:var(--err); background:#2a1717; }
+  .chip input { margin:0; }
+  .zone { border-left:3px solid var(--acc); }
+  .card { background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:9px 11px; margin:9px 0; }
+  .card.off { opacity:.55; }
+  .groups { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0; }
+  .grp { border:1.5px solid var(--gc); border-radius:8px; padding:5px 7px; min-width:130px; background:color-mix(in srgb,var(--gc) 7%,transparent); }
+  .grp .head { display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
+  .pill { display:inline-flex; gap:3px; align-items:center; background:color-mix(in srgb,var(--gc) 25%,#0c0e14); border-radius:5px; padding:0 3px 0 7px; font-size:12px; }
+  .pill button { border:0; background:none; padding:0 4px; color:var(--dim); } .pill button:hover { color:var(--err); }
+  .grp input.add { width:110px; padding:0 6px; font-size:12px; margin-top:4px; }
+  .share { height:5px; background:#0c0e14; border-radius:3px; overflow:hidden; width:90px; display:inline-block; vertical-align:middle; } .share i { display:block; height:100%; background:var(--acc); }
+  .note { font-size:12px; padding:3px 8px; border-radius:5px; margin:3px 0; }
+  .note.bad { background:#2a1717; color:#fca5a5; } .note.good { color:var(--ok); }
+  .issue { padding:4px 9px; border-radius:5px; margin:4px 0; font-size:13px; border-left:3px solid; }
+  .issue.error { border-color:var(--err); background:#2a1717; } .issue.warning { border-color:var(--warn); background:#2a2514; }
+
+  .sentence { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:5px 0; padding-left:10px; border-left:2px solid var(--line); }
+  .sentence .kw { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+  .verdict { font-weight:600; padding:1px 9px; border-radius:6px; font-size:12px; }
+  .verdict.fav { background:#133a22; color:var(--ok); } .verdict.dis { background:#3a2e12; color:var(--warn); } .verdict.fb { background:#3a1616; color:var(--err); } .verdict.nil { background:#232838; color:var(--dim); }
+
+  .sample { display:flex; flex-wrap:wrap; gap:6px; padding:8px; border:1px solid var(--line); border-radius:8px; margin:7px 0; background:var(--panel2); }
+  .sample .tag { width:100%; font-size:12px; color:var(--dim); }
+  .box { border:1.5px solid var(--mc); border-radius:7px; padding:3px 7px 4px; background:color-mix(in srgb,var(--mc) 12%,transparent); }
+  .box b { display:block; font-size:12px; color:var(--mc); filter:brightness(1.4); font-weight:600; }
+  .bar { height:8px; border-radius:4px; background:var(--mc); min-width:2px; }
+  table { border-collapse:collapse; width:100%; } td, th { padding:3px 8px; text-align:left; border-bottom:1px solid var(--line); font-size:13px; } th { color:var(--dim); font-weight:500; }
+  textarea.raw { width:100%; height:60vh; font:12px/1.4 Consolas,monospace; resize:vertical; }
+  .welcome { text-align:center; padding:70px 20px; max-width:560px; margin:40px auto; border:2px dashed var(--line); border-radius:14px; }
+  .welcome.drag { border-color:var(--acc); background:#121a2e; }
+  .welcome button { margin:6px; padding:8px 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Coherence Policy Editor</h1>
+  <button id="btnOpen" class="primary" title="Pick the repo's config/ folder (modes.json, segments_*.json, coherence_*.json)">Open config folder…</button>
+  <button id="btnRestore" style="display:none"></button>
+  <label class="dim small">Profile <select id="profile" disabled></select></label>
+  <button id="btnUndo" class="ghost" title="Ctrl+Z" disabled>↶ Undo</button>
+  <button id="btnRedo" class="ghost" title="Ctrl+Y" disabled>↷ Redo</button>
+  <button id="btnSave" class="primary" title="Ctrl+S" disabled>Save</button>
+  <button id="btnDl" disabled>Download</button>
+  <button id="btnRevert" disabled title="Discard edits and re-read from disk">Revert</button>
+  <span id="status"></span>
+</header>
+<nav id="tabs"></nav>
+<main>
+  <div id="view"></div>
+  <aside id="side"></aside>
+</main>
+<datalist id="dlMembers"></datalist>
+<datalist id="dlAt"></datalist>
+<input id="folderInput" type="file" webkitdirectory multiple hidden>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v;
+    else if (k === "style") e.style.cssText = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "value" || k === "checked" || k === "disabled" || k === "selected") e[k] = v;
+    else if (v === true) e.setAttribute(k, "");
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) e.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return e;
+};
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const isNum = (v) => typeof v === "number" && Number.isFinite(v);
+const isInt = (v) => Number.isInteger(v);
+const numOrRaw = (v) => { const n = Number(v); return v.trim() !== "" && Number.isFinite(n) ? n : v; };
+const DEFAULT_SETTINGS = { maxDifferentModes: 3, temperature: 1.0, memoryDepth: 8, repeatPenalty: 3.0 };
+const GROUP_COLORS = ["#7aa2ff", "#f0abfc", "#4ade80", "#fbbf24", "#f87171", "#22d3ee", "#fb923c", "#a3e635"];
+const modeColor = (name) => { let h = 7; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 65% 55%)`; };
+
+/* ================= state ================= */
+let DATA = null;          // { modeVocabulary, modes:[{name,tags}], profiles:{p:{segments, policy}} }
+let profile = null, policy = null;
+let dirHandle = null, dirName = "";
+let dirty = false, tab = "layout";
+let undoStack = [], redoStack = [], lastSnap = "", snapTimer = null;
+let samples = [], stats = null;
+
+const prof = () => DATA.profiles[profile];
+const segTags = (s) => new Set([...(s.tags || []), `orientation:${s.orientation}`]);
+const knownTags = () => new Set(Object.entries(DATA.modeVocabulary).flatMap(([ns, v]) => v.values.map((x) => `${ns}:${x}`)));
+const installTags = () => { const all = new Set(); prof().segments.forEach((s) => segTags(s).forEach((t) => all.add(t))); return [...all].sort(); };
+const segById = (id) => prof().segments.find((s) => s.id === id);
+function resolveMember(zoneSegs, m) {
+  if (m === "all") return [...zoneSegs];
+  if (String(m).includes(":")) return zoneSegs.filter((x) => { const s = segById(x); return s && segTags(s).has(m); });
+  return zoneSegs.includes(m) ? [m] : [];
+}
+const segChip = (id, extra = "") => { const s = segById(id); return el("span", { class: `chip ${s ? s.orientation[0] : ""} ${extra}`, title: s ? (s.tags || []).join(" ") : "unknown segment" }, id); };
+
+/* ================= validation (mirrors transitions/policy.py compile_policy) ================= */
+function validate(p) {
+  const issues = [];
+  const err = (m) => issues.push({ level: "error", msg: m });
+  const warn = (m) => issues.push({ level: "warning", msg: m });
+  if (!p || typeof p !== "object" || Array.isArray(p)) { err("Policy must be an object"); return issues; }
+  for (const k of ["settings", "zones", "rules"]) if (!(k in p)) err(`Missing top-level key '${k}'`);
+  const s = p.settings || {};
+  const unknown = Object.keys(s).filter((k) => !(k in DEFAULT_SETTINGS));
+  if (unknown.length) err(`Unknown settings keys: ${unknown.join(", ")}`);
+  const st = { ...DEFAULT_SETTINGS, ...s };
+  if (!isInt(st.maxDifferentModes) || st.maxDifferentModes < 1) err(`'maxDifferentModes' must be an integer >= 1 (got ${st.maxDifferentModes})`);
+  if (!isNum(st.temperature) || st.temperature < 0.05 || st.temperature > 5) err(`'temperature' must be in [0.05, 5.0] (got ${st.temperature})`);
+  if (!isInt(st.memoryDepth) || st.memoryDepth < 0) err(`'memoryDepth' must be an integer >= 0 (got ${st.memoryDepth})`);
+  if (!isNum(st.repeatPenalty) || st.repeatPenalty < 0) err(`'repeatPenalty' must be >= 0 (got ${st.repeatPenalty})`);
+  if (p.version !== undefined && (!isInt(p.version) || p.version < 1)) err("'version' must be an integer >= 1");
+
+  const segs = prof().segments;
+  const segIds = new Set(segs.map((x) => x.id));
+  const tagMap = Object.fromEntries(segs.map((x) => [x.id, segTags(x)]));
+  const zones = p.zones;
+  if (!zones || typeof zones !== "object" || Array.isArray(zones) || !Object.keys(zones).length) { err("'zones' must be a non-empty object"); return issues; }
+
+  const seenZoneSegs = new Set(), seenGid = new Set(), zoneSegs = {};
+  for (const [zn, z] of Object.entries(zones)) {
+    if (!zn.trim() || segIds.has(zn)) { err(`Invalid zone name '${zn}' (empty or equals a segment id)`); continue; }
+    if (!z || !Array.isArray(z.segments) || !z.segments.length || !Array.isArray(z.groupings) || !z.groupings.length) { err(`Zone '${zn}' needs non-empty 'segments' and 'groupings'`); continue; }
+    const zs = [];
+    for (const sid of z.segments) {
+      if (!segIds.has(sid)) err(`Zone '${zn}' references unknown segment '${sid}'`);
+      else if (zs.includes(sid) || seenZoneSegs.has(sid)) err(`Segment '${sid}' is duplicated or appears in two zones (zone '${zn}')`);
+      else { zs.push(sid); seenZoneSegs.add(sid); }
+    }
+    zoneSegs[zn] = zs;
+    let enabledCount = 0;
+    for (const g of z.groupings) {
+      const gid = g && g.id;
+      if (typeof gid !== "string" || !gid.trim() || seenGid.has(gid)) { err(`Invalid or duplicate grouping id '${gid}' in zone '${zn}'`); continue; }
+      seenGid.add(gid);
+      if (!isNum(g.weight) || g.weight <= 0) err(`Grouping '${gid}': weight must be > 0`);
+      if (!Array.isArray(g.groups) || !g.groups.length) { err(`Grouping '${gid}': needs non-empty 'groups'`); continue; }
+      const covered = new Set();
+      let broken = false;
+      for (const grp of g.groups) {
+        if (!Array.isArray(grp) || !grp.length) { err(`Grouping '${gid}': empty group`); broken = true; continue; }
+        const gexp = [];
+        for (const m of grp) {
+          let matched;
+          if (m === "all") matched = zs;
+          else if (typeof m === "string" && m.includes(":")) matched = zs.filter((x) => tagMap[x] && tagMap[x].has(m));
+          else matched = zs.includes(m) ? [m] : [];
+          if (!matched.length) { err(`Grouping '${gid}': member '${m}' resolves to 0 segments in zone '${zn}'`); broken = true; continue; }
+          for (const x of matched) {
+            if (gexp.includes(x) || covered.has(x)) { err(`Grouping '${gid}': segment '${x}' appears more than once`); broken = true; }
+            else gexp.push(x);
+          }
+        }
+        gexp.forEach((x) => covered.add(x));
+      }
+      if (!broken && covered.size !== zs.length) err(`Grouping '${gid}' does not partition zone '${zn}' (missing: ${zs.filter((x) => !covered.has(x)).join(", ")})`);
+      if (g.enabled !== false) enabledCount++;
+    }
+    if (!enabledCount) err(`Zone '${zn}' has no enabled grouping`);
+  }
+  if (p.wholeInstallation !== undefined) {
+    const w = p.wholeInstallation;
+    if (!w || typeof w !== "object" || Array.isArray(w) || Object.keys(w).some((k) => !["id", "weight", "enabled"].includes(k))) err("'wholeInstallation' must be an object with 'id', 'weight' (and optional 'enabled')");
+    else {
+      if (typeof w.id !== "string" || !w.id.trim() || seenGid.has(w.id)) err(`Invalid or duplicate wholeInstallation id '${w.id}'`);
+      if (!isNum(w.weight) || w.weight <= 0) err("wholeInstallation weight must be > 0");
+    }
+  }
+  const missing = [...segIds].filter((x) => !seenZoneSegs.has(x));
+  if (missing.length) err(`Zones do not cover all installation segments; missing: ${missing.join(", ")}`);
+
+  const modeNames = new Set(DATA.modes.map((m) => m.name));
+  const activeTags = new Set(DATA.modes.flatMap((m) => m.tags));
+  const known = knownTags();
+  if (!Array.isArray(p.rules)) { err("'rules' must be a list"); return issues; }
+  const seenRid = new Set();
+  const compiled = [];
+  for (const r of p.rules) {
+    const rid = r && r.id;
+    if (typeof rid !== "string" || !rid.trim() || seenRid.has(rid)) { err(`Invalid or duplicate rule id '${rid}'`); continue; }
+    seenRid.add(rid);
+    const hasEffect = "effect" in r, hasWeight = "weight" in r;
+    if (hasEffect === hasWeight) { err(`Rule '${rid}' must have either 'effect': 'forbid' or 'weight'`); continue; }
+    if (hasEffect && r.effect !== "forbid") err(`Rule '${rid}': effect must be 'forbid'`);
+    if (hasWeight) {
+      if (!isNum(r.weight) || r.weight <= 0) err(`Rule '${rid}': weight must be > 0`);
+      else if (Math.abs(r.weight - 1) < 1e-9) warn(`Rule '${rid}' has weight 1.0, which has no effect`);
+    }
+    if (!Array.isArray(r.when) || !r.when.length) { err(`Rule '${rid}': 'when' must be a non-empty list`); continue; }
+    const placements = [];
+    for (const pl of r.when) {
+      const keys = pl && typeof pl === "object" ? Object.keys(pl) : [];
+      if (!keys.length || keys.some((k) => !["at", "mode", "tag", "match"].includes(k)) || (("mode" in pl) === ("tag" in pl))) { err(`Rule '${rid}': placement needs exactly one of 'mode' / 'tag' (optional 'at', 'match')`); continue; }
+      let matching = null;
+      if ("mode" in pl) {
+        if (!modeNames.has(pl.mode)) err(`Rule '${rid}' references unknown mode '${pl.mode}'`);
+        else matching = new Set([pl.mode]);
+      } else if (!known.has(pl.tag)) err(`Rule '${rid}' references unknown mode tag '${pl.tag}'`);
+      else {
+        if (!activeTags.has(pl.tag)) warn(`Rule '${rid}' references mode tag '${pl.tag}' that no active mode carries`);
+        matching = new Set(DATA.modes.filter((m) => m.tags.includes(pl.tag)).map((m) => m.name));
+      }
+      if (pl.match !== undefined && !["any", "all"].includes(pl.match)) err(`Rule '${rid}': match must be 'any' or 'all'`);
+      let target = [...segIds];
+      const at = pl.at;
+      if (at !== undefined) {
+        if (typeof at !== "string" || !at.trim()) err(`Rule '${rid}': 'at' must be a non-empty string`);
+        else if (zoneSegs[at]) target = zoneSegs[at];
+        else if (segIds.has(at)) target = [at];
+        else if (at.includes(":")) { target = [...segIds].filter((x) => tagMap[x].has(at)); if (!target.length) err(`Rule '${rid}': 'at' '${at}' resolves to 0 segments`); }
+        else err(`Rule '${rid}': 'at' '${at}' is not a segment, zone or tag`);
+      }
+      placements.push({ matching, target, match: pl.match || "any" });
+    }
+    if (hasEffect && r.enabled !== false && placements.length === r.when.length && placements.every((x) => x.matching)) compiled.push({ rid, placements });
+  }
+  // Static satisfiability: a group made of a single mode must not trigger a forbid rule on every candidate.
+  for (const [zn, z] of Object.entries(zones)) {
+    if (!zoneSegs[zn] || !Array.isArray(z.groupings)) continue;
+    for (const g of z.groupings) {
+      if (!Array.isArray(g.groups) || g.enabled === false) continue;
+      for (const grp of g.groups) {
+        if (!Array.isArray(grp)) continue;
+        const gs = grp.flatMap((m) => resolveMember(zoneSegs[zn], m));
+        if (!gs.length) continue;
+        const survivors = [...modeNames].filter((m) => !compiled.some((c) => c.placements.every((pl) => {
+          const hit = (x) => gs.includes(x) && pl.matching.has(m);
+          return pl.match === "all" ? pl.target.length && pl.target.every(hit) : pl.target.some(hit);
+        })));
+        if (!survivors.length) err(`Static satisfiability: group [${gs.join(", ")}] in '${g.id}' has 0 legal modes`);
+      }
+    }
+  }
+  const cap = st.maxDifferentModes;
+  if (isInt(cap)) {
+    const worst = Object.values(zones).reduce((a, z) => a + Math.max(1, ...(z.groupings || []).map((g) => (g.groups || []).length)), 0);
+    if (cap >= worst && worst > 1) warn(`maxDifferentModes (${cap}) is >= the largest possible number of groups (${worst}): the cap never bites`);
+  }
+  return issues;
+}
+
+/* ================= simulation (approximate: ignores memoryDepth / repeatPenalty) ================= */
+function compileRules() {
+  const segs = prof().segments, ids = segs.map((s) => s.id);
+  const zoneSegs = Object.fromEntries(Object.entries(policy.zones || {}).map(([n, z]) => [n, z.segments || []]));
+  const out = [];
+  for (const r of policy.rules || []) {
+    if (r.enabled === false || !Array.isArray(r.when) || !r.when.length) continue;
+    const placements = [];
+    for (const pl of r.when) {
+      let matching = null;
+      if ("mode" in pl) matching = new Set([pl.mode]);
+      else if ("tag" in pl) matching = new Set(DATA.modes.filter((m) => m.tags.includes(pl.tag)).map((m) => m.name));
+      let target = ids;
+      if (pl.at !== undefined) target = zoneSegs[pl.at] || (ids.includes(pl.at) ? [pl.at] : String(pl.at).includes(":") ? ids.filter((x) => segTags(segById(x)).has(pl.at)) : []);
+      if (matching) placements.push({ matching, target, match: pl.match || "any" });
+    }
+    if (placements.length !== r.when.length) continue;
+    out.push({ id: r.id, forbid: "effect" in r, weight: isNum(r.weight) ? r.weight : 1, placements });
+  }
+  return out;
+}
+const placementHolds = (pl, assign) => { const hit = (x) => pl.matching.has(assign[x]); return pl.match === "all" ? pl.target.length > 0 && pl.target.every(hit) : pl.target.some(hit); };
+const pickWeighted = (items, w) => { const tot = w.reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (let i = 0; i < items.length; i++) { r -= w[i]; if (r <= 0) return items[i]; } return items[items.length - 1]; };
+
+function sampleOnce(rules) {
+  const modes = DATA.modes.map((m) => m.name), st = { ...DEFAULT_SETTINGS, ...(policy.settings || {}) };
+  const T = isNum(st.temperature) && st.temperature > 0 ? st.temperature : 1;
+  const evalAssign = (assign) => {
+    let w = 1; const fired = [];
+    for (const r of rules) if (r.placements.every((pl) => placementHolds(pl, assign))) { fired.push(r.id); if (r.forbid) return null; w *= r.weight; }
+    return { w, fired };
+  };
+  const ids = prof().segments.map((s) => s.id);
+  const whole = policy.wholeInstallation;
+  if (whole && whole.enabled !== false && isNum(whole.weight) && whole.weight > 0 && Math.random() < whole.weight / (whole.weight + 1)) {
+    const cands = modes.map((m) => { const a = Object.fromEntries(ids.map((x) => [x, m])); const e = evalAssign(a); return e && { a, ...e }; }).filter(Boolean);
+    if (cands.length) { const c = pickWeighted(cands, cands.map((x) => Math.pow(x.w, 1 / T))); return { whole: true, assign: c.a, zones: [{ zone: "whole", gid: whole.id, groups: [ids] }], fired: c.fired }; }
+  }
+  const zonesOut = [];
+  for (const [zn, z] of Object.entries(policy.zones || {})) {
+    const gs = (z.groupings || []).filter((g) => g.enabled !== false && isNum(g.weight) && g.weight > 0 && Array.isArray(g.groups));
+    if (!gs.length) continue;
+    const g = pickWeighted(gs, gs.map((x) => x.weight));
+    zonesOut.push({ zone: zn, gid: g.id, groups: g.groups.map((grp) => [...new Set((grp || []).flatMap((m) => resolveMember(z.segments || [], m)))]) });
+  }
+  const flat = zonesOut.flatMap((z) => z.groups);
+  const cap = isInt(st.maxDifferentModes) && st.maxDifferentModes >= 1 ? st.maxDifferentModes : 3;
+  const cands = [];
+  for (let t = 0; t < 60; t++) {
+    const pool = [...modes].sort(() => Math.random() - 0.5).slice(0, Math.min(cap, flat.length));
+    const assign = {};
+    for (const grp of flat) { const m = pool[Math.floor(Math.random() * pool.length)]; grp.forEach((x) => (assign[x] = m)); }
+    const e = evalAssign(assign);
+    if (e) cands.push({ assign, ...e });
+  }
+  if (!cands.length) return { infeasible: true, assign: {}, zones: zonesOut, fired: [] };
+  const c = pickWeighted(cands, cands.map((x) => Math.pow(x.w, 1 / T)));
+  return { assign: c.assign, zones: zonesOut, fired: c.fired };
+}
+function roll(n) {
+  const rules = compileRules();
+  samples = Array.from({ length: n }, () => sampleOnce(rules));
+  const N = 400, modeCount = {}, fire = {}; let whole = 0, bad = 0, total = 0;
+  for (let i = 0; i < N; i++) {
+    const s = sampleOnce(rules);
+    if (s.infeasible) { bad++; continue; }
+    if (s.whole) whole++;
+    s.fired.forEach((id) => (fire[id] = (fire[id] || 0) + 1));
+    for (const m of new Set(Object.values(s.assign))) { modeCount[m] = (modeCount[m] || 0) + 1; }
+    total++;
+  }
+  stats = { N, modeCount, fire, whole, bad, total };
+}
+
+/* ================= state mutation / history ================= */
+function snapshot() { return JSON.stringify(policy); }
+function touch(structural = true) {
+  if (!snapTimer) { undoStack.push(lastSnap); if (undoStack.length > 150) undoStack.shift(); redoStack = []; }
+  clearTimeout(snapTimer); snapTimer = setTimeout(() => (snapTimer = null), 600);
+  lastSnap = snapshot();
+  dirty = true; samples = []; stats = null;
+  if (structural) render(); else { renderSide(); renderHeader(); }
+}
+function restore(snap) { policy = JSON.parse(snap); lastSnap = snap; dirty = true; samples = []; stats = null; render(); }
+function undo() { if (!undoStack.length) return; redoStack.push(lastSnap); restore(undoStack.pop()); }
+function redo() { if (!redoStack.length) return; undoStack.push(lastSnap); restore(redoStack.pop()); }
+const uniqueId = (base, taken) => { let i = 1, id = base; while (taken.has(id)) id = `${base}-${++i}`; return id; };
+const allGroupingIds = () => new Set([...Object.values(policy.zones).flatMap((q) => (q.groupings || []).map((x) => x.id)), policy.wholeInstallation?.id]);
+
+/* ================= rendering ================= */
+function numField(obj, key, { step = "0.1", min = "0", fallback = 1 } = {}) {
+  return el("input", { type: "number", step, min, value: obj[key] ?? fallback, oninput: (e) => { obj[key] = numOrRaw(e.target.value); touch(false); }, onchange: () => render() });
+}
+function checkField(obj, label) {
+  return el("label", { class: "dim small" }, el("input", { type: "checkbox", checked: obj.enabled !== false, onchange: (e) => { if (e.target.checked) delete obj.enabled; else obj.enabled = false; touch(); } }), " ", label);
+}
+
+function renderHeader() {
+  const on = !!DATA, errs = on ? validate(policy).filter((i) => i.level === "error").length : 0;
+  $("btnSave").disabled = $("btnDl").disabled = !on;
+  $("btnRevert").disabled = !on || !dirHandle;
+  $("btnUndo").disabled = !undoStack.length; $("btnRedo").disabled = !redoStack.length;
+  $("profile").disabled = !on;
+  const sx = $("status");
+  sx.className = dirty ? "dirty" : "";
+  sx.textContent = !on ? "" : `${dirName ? dirName + "/" : ""}coherence_${profile}.json${dirty ? " · unsaved changes" : " · saved"}${errs ? ` · ${errs} error(s)` : ""}`;
+  const tabs = [["layout", "Zones & groupings"], ["rules", "Rules"], ["preview", "Preview"], ["raw", "JSON"]];
+  const nav = $("tabs"); nav.replaceChildren();
+  if (on) tabs.forEach(([k, label]) => nav.append(el("button", { class: tab === k ? "on" : "", onclick: () => { tab = k; render(); } }, label,
+    k === "layout" && errs ? el("span", { class: "badge" }, errs) : null)));
+}
+
+function renderSide() {
+  const box = $("side"); box.replaceChildren();
+  if (!DATA) return;
+  const issues = validate(policy), errs = issues.filter((i) => i.level === "error");
+  const v = el("div", { class: "panel" }, el("h2", {}, "Validation"));
+  v.append(el("div", { class: errs.length ? "note bad" : "note good" }, !issues.length ? "✔ Structurally valid" : !errs.length ? "✔ Valid, with warnings" : `${errs.length} error(s): the game will refuse to load this file`));
+  [...issues].sort((a, b) => (a.level === b.level ? 0 : a.level === "error" ? -1 : 1)).forEach((i) => v.append(el("div", { class: `issue ${i.level}` }, i.msg)));
+  v.append(el("div", { class: "dim small", style: "margin-top:8px" }, "Mirrors the structural rules of transitions/policy.py, but not its Monte-Carlo feasibility probe. Before committing run:"),
+    el("code", {}, `python -m tools.build_coherence_helper --check ${profile}`));
+  box.append(v);
+
+  const st = (policy.settings = policy.settings || {});
+  const s = el("div", { class: "panel" }, el("h2", {}, "Settings"), el("div", { class: "form" },
+    el("span", { title: "Max distinct modes playing at once across the installation" }, "Max different modes"), numField(st, "maxDifferentModes", { step: "1", min: "1", fallback: DEFAULT_SETTINGS.maxDifferentModes }),
+    el("span", { title: "Softmax temperature in [0.05, 5]; higher = more random" }, "Temperature"), numField(st, "temperature", { step: "0.05", min: "0.05", fallback: 1 }),
+    el("span", { title: "How many past transitions are remembered" }, "Memory depth"), numField(st, "memoryDepth", { step: "1", min: "0", fallback: 8 }),
+    el("span", { title: "Penalty for recently used modes" }, "Repeat penalty"), numField(st, "repeatPenalty", { step: "0.1", min: "0", fallback: 3 })));
+  box.append(s);
+
+  const w = policy.wholeInstallation;
+  const wp = el("div", { class: "panel" }, el("h2", {}, "Whole chandelier"));
+  if (!w) wp.append(el("div", { class: "dim small" }, "Optionally lets the entire installation play one mode, ignoring zones."),
+    el("button", { class: "sm", style: "margin-top:6px", onclick: () => { policy.wholeInstallation = { id: uniqueId("chandelier-unison", allGroupingIds()), weight: 0.3 }; touch(); } }, "+ enable"));
+  else {
+    const pct = isNum(w.weight) && w.weight > 0 ? Math.round((100 * w.weight) / (w.weight + 1)) : "?";
+    wp.append(el("div", { class: "form" }, el("span", {}, "id"), el("input", { value: w.id ?? "", style: "width:140px", oninput: (e) => { w.id = e.target.value; touch(false); } }),
+      el("span", {}, "weight"), numField(w, "weight")),
+      el("div", { class: "dim small" }, `≈ ${pct}% of transitions (before recency)`),
+      el("div", { class: "row" }, checkField(w, "enabled"), el("button", { class: "sm danger", onclick: () => { delete policy.wholeInstallation; touch(); } }, "remove")));
+  }
+  box.append(wp);
+
+  const ip = el("div", { class: "panel" }, el("h2", {}, `Installation · ${prof().segments.length} segments`));
+  prof().segments.forEach((sg) => ip.append(el("div", {}, segChip(sg.id), el("span", { class: "dim small" }, (sg.tags || []).join(" ")))));
+  box.append(ip);
+}
+
+const OFF = "—";
+function renderGrouping(z, zn, g, gi) {
+  const zs = z.segments || [], valid = g.enabled !== false;
+  const enabledSum = (z.groupings || []).filter((x) => x.enabled !== false && isNum(x.weight)).reduce((a, x) => a + x.weight, 0);
+  const share = valid && isNum(g.weight) && enabledSum ? g.weight / enabledSum : 0;
+  const card = el("div", { class: `card ${valid ? "" : "off"}` });
+  card.append(el("div", { class: "row" },
+    el("input", { value: g.id ?? "", style: "width:150px", title: "grouping id", oninput: (e) => { g.id = e.target.value; touch(false); }, onchange: () => render() }),
+    el("span", { class: "dim small" }, "weight"), numField(g, "weight", { step: "0.5" }),
+    el("span", { class: "dim small", title: "chance this grouping is picked for the zone" }, el("span", { class: "share" }, el("i", { style: `width:${Math.round(share * 100)}%` })), ` ${Math.round(share * 100)}%`),
+    checkField(g, "enabled"),
+    el("select", { title: "Rebuild groups automatically", onchange: (e) => { autoGroups(z, g, e.target.value); } },
+      el("option", { value: "" }, "auto-fill…"), el("option", { value: "all" }, "all together"), el("option", { value: "each" }, "each alone"),
+      ...tagKeys(zs).map((k) => el("option", { value: `key:${k}` }, `by ${k}`))),
+    el("button", { class: "sm danger grow-none", style: "margin-left:auto", onclick: () => { z.groupings.splice(gi, 1); touch(); } }, "delete")));
+  const groupsBox = el("div", { class: "groups" });
+  const covered = new Map();
+  (g.groups || []).forEach((grp, i) => {
+    const color = GROUP_COLORS[i % GROUP_COLORS.length];
+    const resolved = [...new Set((grp || []).flatMap((m) => resolveMember(zs, m)))];
+    resolved.forEach((x) => covered.set(x, (covered.get(x) || 0) + 1));
+    const add = (val) => { val = val.trim(); if (!val) return; (g.groups[i] = grp || []).push(val); touch(); };
+    groupsBox.append(el("div", { class: "grp", style: `--gc:${color}` },
+      el("div", { class: "head" },
+        ...(grp || []).map((m, mi) => el("span", { class: "pill", title: `→ ${resolveMember(zs, m).join(" ") || "nothing"}` }, m,
+          el("button", { title: "remove", onclick: () => { grp.splice(mi, 1); touch(); } }, "×"))),
+        el("button", { class: "ghost sm", style: "margin-left:auto", title: "delete group", onclick: () => { g.groups.splice(i, 1); touch(); } }, "🗑")),
+      el("div", {}, resolved.map((x) => segChip(x))),
+      el("input", { class: "add", list: "dlMembers", placeholder: "+ id / all / tag", onkeydown: (e) => { if (e.key === "Enter") add(e.target.value); }, onchange: (e) => add(e.target.value) })));
+  });
+  groupsBox.append(el("button", { class: "sm", style: "align-self:flex-start", onclick: () => { (g.groups = g.groups || []).push([]); touch(); } }, "+ group"));
+  card.append(groupsBox);
+  const missing = zs.filter((x) => !covered.has(x)), dup = [...covered].filter(([, n]) => n > 1).map(([x]) => x);
+  if (missing.length) card.append(el("div", { class: "note bad" }, "Not covered: ", missing.map((x) => segChip(x, "miss"))));
+  if (dup.length) card.append(el("div", { class: "note bad" }, "Appears in several groups: ", dup.map((x) => segChip(x, "miss"))));
+  if (!missing.length && !dup.length && (g.groups || []).length) card.append(el("div", { class: "note good" }, `✔ exact partition into ${g.groups.length} group(s)`));
+  return card;
+}
+const tagKeys = (zs) => [...new Set(zs.flatMap((x) => [...segTags(segById(x) || { orientation: "", tags: [] })].map((t) => t.split(":")[0])))].filter(Boolean);
+function autoGroups(z, g, how) {
+  const zs = z.segments || [];
+  if (how === "all") g.groups = [["all"]];
+  else if (how === "each") g.groups = zs.map((x) => [x]);
+  else if (how.startsWith("key:")) {
+    const k = how.slice(4), vals = [...new Set(zs.flatMap((x) => [...segTags(segById(x))].filter((t) => t.startsWith(k + ":"))))];
+    g.groups = vals.map((t) => [t]);
+  }
+  touch();
+}
+
+function renderLayout(v) {
+  const unzoned = prof().segments.filter((s) => !Object.values(policy.zones).some((z) => (z.segments || []).includes(s.id)));
+  v.append(el("div", { class: "dim small", style: "margin-bottom:8px" }, "A zone is cut independently into groups; each group plays one mode. Each grouping must exactly partition its zone, and one enabled grouping is drawn per zone, weighted."));
+  if (unzoned.length) v.append(el("div", { class: "note bad" }, "Segments in no zone: ", unzoned.map((s) => segChip(s.id, "miss"))));
+  for (const [zn, z] of Object.entries(policy.zones)) {
+    const panel = el("div", { class: "panel zone" });
+    panel.append(el("h2", {}, "Zone",
+      el("input", { value: zn, style: "text-transform:none;letter-spacing:0;width:160px", onchange: (e) => {
+        const nn = e.target.value.trim();
+        if (!nn || nn === zn || policy.zones[nn]) { e.target.value = zn; return; }
+        policy.zones = Object.fromEntries(Object.entries(policy.zones).map(([k, val]) => [k === zn ? nn : k, val]));
+        policy.rules.forEach((r) => (r.when || []).forEach((pl) => { if (pl.at === zn) pl.at = nn; }));
+        touch();
+      } }),
+      el("button", { class: "sm danger sp", onclick: () => { delete policy.zones[zn]; touch(); } }, "delete zone")));
+    const segRow = el("div", { class: "row" }, el("span", { class: "dim small" }, "segments"));
+    for (const s of prof().segments) {
+      const owner = Object.entries(policy.zones).find(([k, val]) => k !== zn && (val.segments || []).includes(s.id));
+      const inZone = (z.segments || []).includes(s.id);
+      segRow.append(el("label", { class: `chip ${s.orientation[0]} ${!inZone ? "off" : ""}`, title: owner ? `in zone '${owner[0]}'` : (s.tags || []).join(" ") },
+        el("input", { type: "checkbox", checked: inZone, disabled: !!owner, onchange: (e) => {
+          z.segments = z.segments || [];
+          if (e.target.checked) z.segments.push(s.id); else z.segments = z.segments.filter((x) => x !== s.id);
+          touch();
+        } }), s.id));
+    }
+    panel.append(segRow);
+    z.groupings = z.groupings || [];
+    z.groupings.forEach((g, gi) => panel.append(renderGrouping(z, zn, g, gi)));
+    panel.append(el("button", { class: "sm", onclick: () => { z.groupings.push({ id: uniqueId(`${zn}-new`, allGroupingIds()), weight: 1, groups: [["all"]] }); touch(); } }, "+ grouping"));
+    v.append(panel);
+  }
+  v.append(el("button", { onclick: () => { policy.zones[uniqueId("zone", new Set(Object.keys(policy.zones)))] = { segments: [], groupings: [] }; touch(); } }, "+ zone"));
+}
+
+function verdict(r) {
+  if ("effect" in r) return el("span", { class: "verdict fb" }, "never allowed");
+  const w = r.weight;
+  if (!isNum(w)) return el("span", { class: "verdict nil" }, "?");
+  if (Math.abs(w - 1) < 1e-9) return el("span", { class: "verdict nil" }, "no effect");
+  return el("span", { class: `verdict ${w > 1 ? "fav" : "dis"}` }, w > 1 ? `${+w.toFixed(2)}× more likely` : `${+(1 / w).toFixed(1)}× less likely`);
+}
+function placementEl(r, pl, pi) {
+  const kind = "tag" in pl ? "tag" : "mode";
+  const opts = kind === "mode" ? DATA.modes.map((m) => m.name) : [...knownTags()];
+  const count = kind === "mode" ? (opts.includes(pl.mode) ? 1 : 0) : DATA.modes.filter((m) => m.tags.includes(pl.tag)).length;
+  const row = el("div", { class: "sentence" }, el("span", { class: "kw" }, pi ? "and" : "when"),
+    el("select", { onchange: (e) => { delete pl.mode; delete pl.tag; if (e.target.value === "mode") pl.mode = DATA.modes[0].name; else pl.tag = [...knownTags()][0]; touch(); } },
+      el("option", { value: "mode", selected: kind === "mode" }, "mode"), el("option", { value: "tag", selected: kind === "tag" }, "mode tag")));
+  const sel = el("select", { onchange: (e) => { pl[kind] = e.target.value; touch(); } });
+  if (!opts.includes(pl[kind])) sel.append(el("option", { value: pl[kind] ?? "", selected: true }, `${pl[kind] ?? ""} (unknown)`));
+  opts.forEach((o) => sel.append(el("option", { value: o, selected: pl[kind] === o }, o)));
+  row.append(sel, el("span", { class: "dim small" }, `(${count} mode${count === 1 ? "" : "s"})`), el("span", { class: "kw" }, "is on"),
+    el("select", { title: "any / all of the segments below", onchange: (e) => { if (e.target.value === "any") delete pl.match; else pl.match = "all"; touch(); } },
+      el("option", { value: "any", selected: pl.match !== "all" }, "any of"), el("option", { value: "all", selected: pl.match === "all" }, "all of")),
+    el("input", { list: "dlAt", placeholder: "the whole installation", value: pl.at ?? "", title: "segment id, zone name or segment tag", onchange: (e) => { if (e.target.value.trim()) pl.at = e.target.value.trim(); else delete pl.at; touch(); } }),
+    el("button", { class: "sm ghost danger", title: "remove placement", onclick: () => { r.when.splice(pi, 1); touch(); } }, "×"));
+  return row;
+}
+function renderRules(v) {
+  v.append(el("div", { class: "dim small", style: "margin-bottom:8px" }, "All placements in a rule must hold together for it to apply. Multipliers above 1 reward the situation, below 1 discourage it; forbid is never broken."));
+  policy.rules = policy.rules || [];
+  policy.rules.forEach((r, ri) => {
+    const isForbid = "effect" in r;
+    const card = el("div", { class: `card ${r.enabled === false ? "off" : ""}` });
+    card.append(el("div", { class: "row" },
+      el("input", { value: r.id ?? "", style: "width:230px", oninput: (e) => { r.id = e.target.value; touch(false); }, onchange: () => render() }),
+      el("select", { onchange: (e) => { if (e.target.value === "forbid") { delete r.weight; r.effect = "forbid"; } else { delete r.effect; r.weight = 1.5; } touch(); } },
+        el("option", { value: "weight", selected: !isForbid }, "multiplier"), el("option", { value: "forbid", selected: isForbid }, "forbid")),
+      isForbid ? null : numField(r, "weight", { step: "0.05" }), verdict(r), checkField(r, "enabled"),
+      el("span", { style: "margin-left:auto;display:flex;gap:4px" },
+        el("button", { class: "sm", title: "move up", disabled: !ri, onclick: () => { [policy.rules[ri - 1], policy.rules[ri]] = [policy.rules[ri], policy.rules[ri - 1]]; touch(); } }, "↑"),
+        el("button", { class: "sm", title: "move down", disabled: ri === policy.rules.length - 1, onclick: () => { [policy.rules[ri + 1], policy.rules[ri]] = [policy.rules[ri], policy.rules[ri + 1]]; touch(); } }, "↓"),
+        el("button", { class: "sm", title: "duplicate", onclick: () => { const c = clone(r); c.id = uniqueId(r.id + "-copy", new Set(policy.rules.map((x) => x.id))); policy.rules.splice(ri + 1, 0, c); touch(); } }, "⧉"),
+        el("button", { class: "sm danger", onclick: () => { policy.rules.splice(ri, 1); touch(); } }, "delete"))));
+    r.when = r.when || [];
+    r.when.forEach((pl, pi) => card.append(placementEl(r, pl, pi)));
+    card.append(el("div", { class: "row" },
+      el("button", { class: "sm", onclick: () => { r.when.push({ mode: DATA.modes[0].name }); touch(); } }, "+ and…"),
+      el("input", { class: "grow", placeholder: "note (optional)", value: r.note ?? "", oninput: (e) => { if (e.target.value) r.note = e.target.value; else delete r.note; touch(false); } })));
+    v.append(card);
+  });
+  const taken = () => new Set(policy.rules.map((r) => r.id));
+  v.append(el("div", { class: "row" },
+    el("button", { onclick: () => { policy.rules.push({ id: uniqueId("new-rule", taken()), when: [{ tag: DATA.modes.find((m) => m.tags.length)?.tags[0] ?? "form:bar" }], weight: 1.5 }); touch(); } }, "+ multiplier rule"),
+    el("button", { onclick: () => { policy.rules.push({ id: uniqueId("new-forbid", taken()), when: [{ mode: DATA.modes[0].name }, { mode: DATA.modes[Math.min(1, DATA.modes.length - 1)].name }], effect: "forbid" }); touch(); } }, "+ forbid rule")));
+}
+
+function renderPreview(v) {
+  v.append(el("div", { class: "panel" }, el("h2", {}, "Preview",
+    el("button", { class: "primary sm sp", onclick: () => { roll(6); render(); } }, "🎲 Roll 6 transitions")),
+    el("div", { class: "dim small" }, "Draws example transitions from this policy: random grouping per zone, random mode per group, filtered by forbid rules, weighted by multipliers. Approximation: ignores memoryDepth / repeatPenalty.")));
+  if (!samples.length) { roll(6); }
+  samples.forEach((s, i) => {
+    const box = el("div", { class: "sample" }, el("div", { class: "tag" }, `#${i + 1}${s.whole ? " · whole chandelier" : ""}${s.infeasible ? " · no legal assignment found!" : ""} · ${[...new Set(Object.values(s.assign))].length} distinct mode(s)${s.fired.length ? " · rules: " + s.fired.join(", ") : ""}`));
+    for (const z of s.zones) {
+      const zb = el("div", { class: "row", style: "width:100%;gap:6px" }, el("span", { class: "dim small", style: "width:90px" }, `${z.zone} · ${z.gid}`));
+      z.groups.forEach((grp) => { const m = s.assign[grp[0]]; zb.append(el("div", { class: "box", style: `--mc:${m ? modeColor(m) : "#666"}` }, el("b", {}, m ?? "?"), grp.map((x) => segChip(x)))); });
+      box.append(zb);
+    }
+    v.append(box);
+  });
+  if (stats) {
+    const p = el("div", { class: "panel" }, el("h2", {}, `Statistics · ${stats.N} rolls`));
+    if (stats.bad) p.append(el("div", { class: "note bad" }, `${stats.bad} rolls found no legal assignment`));
+    p.append(el("div", { class: "dim small" }, `Whole-chandelier share: ${Math.round((100 * stats.whole) / stats.N)}%`));
+    const max = Math.max(1, ...Object.values(stats.modeCount));
+    p.append(el("h2", { style: "margin-top:10px" }, "Mode appearance rate (share of transitions where the mode plays)"));
+    const t = el("table");
+    DATA.modes.map((m) => m.name).sort((a, b) => (stats.modeCount[b] || 0) - (stats.modeCount[a] || 0)).forEach((m) => {
+      const c = stats.modeCount[m] || 0;
+      t.append(el("tr", {}, el("td", {}, m), el("td", { style: "width:55%" }, el("div", { class: "bar", style: `--mc:${modeColor(m)};width:${(100 * c) / max}%` })), el("td", { class: "dim" }, `${Math.round((100 * c) / stats.N)}%`)));
+    });
+    p.append(t);
+    if ((policy.rules || []).length) {
+      p.append(el("h2", { style: "margin-top:10px" }, "How often each rule applies"));
+      const rt = el("table");
+      policy.rules.forEach((r) => rt.append(el("tr", { class: r.enabled === false ? "dim" : "" }, el("td", {}, r.id), el("td", {}, verdict(r)), el("td", { class: "dim" }, r.enabled === false ? "disabled" : "effect" in r ? "(blocked: never fires)" : `${Math.round((100 * (stats.fire[r.id] || 0)) / stats.N)}%`))));
+      p.append(rt);
+    }
+    v.append(p);
+  }
+}
+
+function renderRaw(v) {
+  const ta = el("textarea", { class: "raw", spellcheck: "false" }); ta.value = JSON.stringify(policy, null, 2);
+  const msg = el("span", { class: "dim small" });
+  v.append(el("div", { class: "panel" }, el("h2", {}, "Raw JSON", el("button", { class: "sm primary sp", onclick: () => {
+    try { const next = JSON.parse(ta.value); policy = next; touch(); } catch (e) { msg.textContent = `invalid JSON: ${e.message}`; msg.style.color = "var(--err)"; }
+  } }, "Apply")), ta, msg));
+}
+
+function renderDatalists() {
+  const segIds = prof().segments.map((s) => s.id), tags = installTags();
+  $("dlMembers").replaceChildren(...["all", ...segIds, ...tags.filter((t) => !t.startsWith("orientation:"))].map((x) => el("option", { value: x })));
+  $("dlAt").replaceChildren(...[...Object.keys(policy.zones || {}), ...segIds, ...tags].map((x) => el("option", { value: x })));
+}
+
+function render() {
+  const v = $("view"); v.replaceChildren();
+  renderHeader();
+  if (!DATA) { renderWelcome(v); renderSide(); return; }
+  policy.zones = policy.zones || {};
+  renderDatalists();
+  ({ layout: renderLayout, rules: renderRules, preview: renderPreview, raw: renderRaw }[tab])(v);
+  renderSide();
+}
+
+function renderWelcome(v) {
+  const w = el("div", { class: "welcome", id: "drop" },
+    el("h2", { style: "margin-top:0" }, "Open your config folder"),
+    el("p", { class: "dim" }, "Select the repo's ", el("code", {}, "config/"), " folder. The editor reads modes, segments and policies live from disk and saves straight back — no build step."),
+    el("button", { class: "primary", onclick: openDir }, "Open config folder…"),
+    el("p", { class: "dim small" }, "or drop the folder (or modes.json + segments_*.json + coherence_*.json) here"));
+  v.append(w);
+}
+
+/* ================= file I/O ================= */
+const idb = {
+  open: () => new Promise((res, rej) => { const r = indexedDB.open("vialactee-coherence", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+  async get(k) { try { const db = await this.open(); return await new Promise((res) => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } catch { return null; } },
+  async set(k, v) { try { const db = await this.open(); await new Promise((res) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = res; }); } catch { /* ignore */ } },
+};
+const flattenSegments = (raw) => Object.entries(raw).filter(([k, b]) => k.startsWith("segs") && Array.isArray(b))
+  .flatMap(([, b]) => b.map((s) => ({ id: String(s.id), orientation: s.orientation || "vertical", tags: (s.tags || []).map(String) })));
+
+/** files: Map<filename, () => Promise<string>> */
+async function parseConfig(files) {
+  if (!files.has("modes.json")) throw new Error("modes.json not found (pick the config/ folder)");
+  const modesRaw = JSON.parse(await files.get("modes.json")());
+  const profiles = {};
+  for (const n of files.keys()) {
+    const m = /^segments_(.+)\.json$/.exec(n);
+    if (!m || !files.has(`coherence_${m[1]}.json`)) continue;
+    profiles[m[1]] = { segments: flattenSegments(JSON.parse(await files.get(n)())), policy: JSON.parse(await files.get(`coherence_${m[1]}.json`)()) };
+  }
+  if (!Object.keys(profiles).length) throw new Error("no segments_<profile>.json + coherence_<profile>.json pair found");
+  return { modeVocabulary: modesRaw.vocabulary || {}, modes: (modesRaw.standard_modes || []).map((x) => ({ name: x.name, tags: x.tags || [] })), profiles };
+}
+async function dirFiles(dir) {
+  let d = dir;
+  try { await d.getFileHandle("modes.json"); } catch { try { d = await dir.getDirectoryHandle("config"); } catch { /* keep */ } }
+  const files = new Map();
+  for await (const [name, h] of d.entries()) if (h.kind === "file" && name.endsWith(".json")) files.set(name, async () => (await h.getFile()).text());
+  return { files, handle: d };
+}
+function adopt(data, keepProfile) {
+  DATA = data;
+  const names = Object.keys(DATA.profiles);
+  profile = names.includes(keepProfile) ? keepProfile : names[0];
+  const sel = $("profile"); sel.replaceChildren(...names.map((p) => el("option", { value: p, selected: p === profile }, p)));
+  loadPolicy();
+}
+function loadPolicy() { policy = clone(prof().policy); lastSnap = snapshot(); undoStack = []; redoStack = []; dirty = false; samples = []; stats = null; render(); }
+
+async function useDirHandle(dir) {
+  const { files, handle } = await dirFiles(dir);
+  const data = await parseConfig(files);
+  dirHandle = handle; dirName = handle.name;
+  adopt(data, profile);
+  $("btnRestore").style.display = "none";
+  idb.set("dir", handle);
+}
+async function openDir() {
+  if (!window.showDirectoryPicker) { $("folderInput").click(); return; }
+  try { await useDirHandle(await window.showDirectoryPicker({ mode: "readwrite", id: "vialactee-config" })); }
+  catch (e) { if (e.name !== "AbortError") flash(`Open failed: ${e.message}`); }
+}
+function flash(msg) { const s = $("status"); s.className = ""; s.textContent = msg; setTimeout(renderHeader, 4000); }
+async function filesFromList(list) {
+  const files = new Map();
+  for (const f of list) if (/^(modes|segments_.+|coherence_.+)\.json$/.test(f.name) && !files.has(f.name)) files.set(f.name, () => f.text());
+  return files;
+}
+async function openFromList(list) {
+  try { dirHandle = null; dirName = ""; adopt(await parseConfig(await filesFromList(list)), profile); flash("Loaded read-only (no direct disk access in this browser): Save will download files"); }
+  catch (e) { flash(`Open failed: ${e.message}`); }
+}
+function serialize() { return JSON.stringify(policy, null, 2) + "\n"; }
+function download() {
+  const a = el("a", { href: URL.createObjectURL(new Blob([serialize()], { type: "application/json" })), download: `coherence_${profile}.json` });
+  document.body.append(a); a.click(); a.remove(); flash(`Downloaded coherence_${profile}.json`);
+}
+async function save() {
+  if (!DATA) return;
+  const errs = validate(policy).filter((i) => i.level === "error");
+  if (errs.length && !confirm(`${errs.length} validation error(s): the game will refuse to load this file. Save anyway?`)) return;
+  if (!dirHandle) { download(); return; }
+  try {
+    const w = await (await dirHandle.getFileHandle(`coherence_${profile}.json`, { create: true })).createWritable();
+    await w.write(serialize()); await w.close();
+    prof().policy = clone(policy); dirty = false; renderHeader();
+  } catch (e) { flash(`Save failed: ${e.message}`); }
+}
+async function revert() {
+  if (dirty && !confirm("Discard your edits and re-read the file from disk?")) return;
+  try { await useDirHandle(dirHandle); } catch (e) { flash(`Reload failed: ${e.message}`); }
+}
+function switchProfile(p) {
+  if (dirty && !confirm("Discard unsaved changes to this profile?")) { $("profile").value = profile; return; }
+  profile = p; loadPolicy();
+}
+
+/* ================= wiring ================= */
+async function dropEntries(items) {
+  const files = [];
+  const walk = async (entry) => {
+    if (entry.isFile) files.push(await new Promise((res) => entry.file(res)));
+    else if (entry.isDirectory) { const r = entry.createReader(); let batch; do { batch = await new Promise((res) => r.readEntries(res)); for (const e of batch) await walk(e); } while (batch.length); }
+  };
+  for (const it of items) { const e = it.webkitGetAsEntry && it.webkitGetAsEntry(); if (e) await walk(e); }
+  return files;
+}
+function init() {
+  $("btnOpen").onclick = openDir;
+  $("btnSave").onclick = save; $("btnDl").onclick = download; $("btnRevert").onclick = revert;
+  $("btnUndo").onclick = undo; $("btnRedo").onclick = redo;
+  $("profile").onchange = (e) => switchProfile(e.target.value);
+  $("folderInput").onchange = (e) => openFromList([...e.target.files]);
+  addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || !DATA) return;
+    const k = e.key.toLowerCase(), inText = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName) && document.activeElement.type !== "checkbox";
+    if (k === "s") { e.preventDefault(); save(); }
+    else if (!inText && k === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    else if (!inText && k === "y") { e.preventDefault(); redo(); }
+  });
+  addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+  addEventListener("dragover", (e) => { e.preventDefault(); $("drop")?.classList.add("drag"); });
+  addEventListener("dragleave", () => $("drop")?.classList.remove("drag"));
+  addEventListener("drop", async (e) => { e.preventDefault(); $("drop")?.classList.remove("drag"); openFromList(await dropEntries([...e.dataTransfer.items])); });
+  render();
+  idb.get("dir").then((h) => {
+    if (!h || DATA) return;
+    const b = $("btnRestore"); b.textContent = `↻ Reopen ${h.name}/`; b.style.display = "";
+    b.onclick = async () => { try { if ((await h.requestPermission({ mode: "readwrite" })) !== "granted") return; await useDirHandle(h); } catch (e) { flash(`Reopen failed: ${e.message}`); } };
+  });
+}
+init();
+</script>
+</body>
+</html>
