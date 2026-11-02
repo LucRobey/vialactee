@@ -1,10 +1,10 @@
 """
 Shining Stars Mode
-Ambient dark canvas where soft 3-LED stars twinkle into existence on dominant band-flux onsets.
+Ambient dark canvas where glowing stars twinkle into existence on dominant band-flux onsets.
 Never branches on ctx.scene and eliminates the 1.5s solid fill on DROP_IMPACT.
 Star trail fade scales smoothly with mood_trail, twinkle density scales with energy and mood_pace,
-star colours are sampled across the 256-entry palette_lut per frequency band, and star brightness
-scales with band spectral energy (with a sparse unlocked fallback).
+star count per sub-segment (1..2) scales with band_flux intensity, star colours are sampled across the
+256-entry palette_lut per frequency band, and star brightness scales with band spectral energy and attack punch.
 Adheres strictly to docs/contracts/mode_contract.md with zero runtime heap allocations.
 """
 from typing import List, Dict, Any
@@ -16,9 +16,9 @@ import utils.rgb_hsv as RGB_HSV
 
 
 class Shining_stars_mode(Mode.Mode):
-    """Ambient dark canvas where 3-LED stars twinkle on dominant band-flux onsets.
+    """Ambient dark canvas where glowing stars twinkle on dominant band-flux onsets.
 
-    Lead: transient (dominant band flux decides when a star lights). Secondary: spectrum (band decides color and star brightness). Macro: density.
+    Lead: transient (dominant band flux decides when stars light and scales 1..2 stars per subsegment). Secondary: spectrum (band decides color and star brightness). Macro: density via mood_pace, trail via mood_trail.
     """
     LEAD = "transient"
     SECONDARY = ("spectrum",)
@@ -81,6 +81,7 @@ class Shining_stars_mode(Mode.Mode):
         self.colors = np.array(colors_list, dtype=np.int32)
         self.star_colors = np.copy(self.colors)
         self.neighbor_colors = np.zeros_like(self.star_colors)
+        self.outer_colors = np.zeros_like(self.star_colors)
         self.num_bands: int = min(self.nb_of_fft_band, len(self.colors))
         self._band_lut_idx = np.linspace(0, 255, max(1, self.num_bands), dtype=np.intp)
 
@@ -99,21 +100,30 @@ class Shining_stars_mode(Mode.Mode):
         self.max_offset = min(self.step, self.nb_of_leds)
         return applied
 
-    def _spawn_band_stars(self, band_index: int, n_leds: int, step: int) -> None:
+    def _spawn_band_stars(self, band_index: int, n_leds: int, step: int, stars_per_seg: int = 1) -> None:
         star_c = self.star_colors[band_index]
         neigh_c = self.neighbor_colors[band_index]
+        outer_c = self.outer_colors[band_index]
         base = 0
         while base < n_leds:
             seg_len = step if (base + step) <= n_leds else (n_leds - base)
-            rand_val = self._rand_pool[self._rand_idx]
-            self._rand_idx = (self._rand_idx + 1) & 255
-            pos = base + (rand_val % seg_len)
-            self.rgb_list[pos] = star_c
-            if seg_len >= 3:
-                if pos > base:
-                    self.rgb_list[pos - 1] = neigh_c
-                if pos + 1 < base + seg_len:
-                    self.rgb_list[pos + 1] = neigh_c
+            seg_end = base + seg_len
+            count = stars_per_seg if seg_len >= 8 else 1
+            for _ in range(count):
+                rand_val = self._rand_pool[self._rand_idx]
+                self._rand_idx = (self._rand_idx + 1) & 255
+                pos = base + (rand_val % seg_len)
+                self.rgb_list[pos] = star_c
+                if seg_len >= 3:
+                    if pos > base:
+                        self.rgb_list[pos - 1] = neigh_c
+                    if pos + 1 < seg_end:
+                        self.rgb_list[pos + 1] = neigh_c
+                if seg_len >= 6:
+                    if pos - 1 > base:
+                        self.rgb_list[pos - 2] = outer_c
+                    if pos + 2 < seg_end:
+                        self.rgb_list[pos + 2] = outer_c
             base += step
 
     def run(self) -> None:
@@ -162,6 +172,7 @@ class Shining_stars_mode(Mode.Mode):
             return
 
         # 3. Sample distinct band colours from palette_lut, scaled by each band's energy (SECONDARY="spectrum")
+        #    and brightened at the core by transient attack strength.
         lut = self.palette_lut
         hi = self.highlight_color
         accent = self.mood_accent
@@ -171,6 +182,9 @@ class Shining_stars_mode(Mode.Mode):
             else 1.0
         )
         n_bands_avail = len(bands) if bands is not None else 0
+        n_flux = min(self.num_bands, len(band_flux)) if band_flux is not None else 0
+        thr_ref = max(1.0, current_threshold)
+
         for i in range(self.num_bands):
             base_c = lut[self._band_lut_idx[i]]
             if i < n_bands_avail:
@@ -179,18 +193,26 @@ class Shining_stars_mode(Mode.Mode):
                     b_val = 0.0
                 elif b_val > 1.0:
                     b_val = 1.0
-                gain = (0.25 + 0.75 * b_val) * t_scale
+                spec_gain = 0.52 + 0.48 * b_val
             else:
-                gain = t_scale
-            for c in range(3):
-                val = int(((1.0 - accent) * float(base_c[c]) + accent * float(hi[c])) * gain)
-                self.star_colors[i, c] = val
-                self.neighbor_colors[i, c] = (val * 2) // 5  # 40% soft halo neighbor
+                spec_gain = 1.0
 
-        # 4. Trigger only dominant band-flux onsets (LEAD="transient"), with sparse unlocked fallback (Law 1)
+            f_val = float(band_flux[i]) if i < n_flux else 0.0
+            flux_boost = min(1.0, max(0.0, f_val / (thr_ref * 2.2)))
+            gain = min(1.0, spec_gain * (0.85 + 0.15 * flux_boost)) * t_scale
+            core_hi = min(0.65, accent + 0.25 * flux_boost)
+            for c in range(3):
+                val = int(((1.0 - core_hi) * float(base_c[c]) + core_hi * float(hi[c])) * gain)
+                if val > 255:
+                    val = 255
+                self.star_colors[i, c] = val
+                self.neighbor_colors[i, c] = (val * 2) // 3   # 67% inner halo neighbor
+                self.outer_colors[i, c] = (val * 3) // 10     # 30% outer soft glow
+
+        # 4. Trigger only dominant band-flux onsets (LEAD="transient"), scaling star count (1..2) by flux,
+        #    with sparse unlocked fallback (Law 1).
         n_leds = self.nb_of_leds
         max_flux = 0.0
-        n_flux = min(self.num_bands, len(band_flux)) if band_flux is not None else 0
         for i in range(n_flux):
             fv = float(band_flux[i])
             if fv > max_flux:
@@ -202,7 +224,8 @@ class Shining_stars_mode(Mode.Mode):
             for band_index in range(n_flux):
                 flux_val = float(band_flux[band_index])
                 if flux_val > current_threshold and flux_val >= dom_cutoff:
-                    self._spawn_band_stars(band_index, n_leds, step)
+                    stars_per_seg = 2 if flux_val >= (1.8 * current_threshold) else 1
+                    self._spawn_band_stars(band_index, n_leds, step, stars_per_seg=stars_per_seg)
         elif lock < 0.35 and n_bands_avail > 0:
             self._fallback_tick += 1
             if self._fallback_tick >= 10:
@@ -215,4 +238,4 @@ class Shining_stars_mode(Mode.Mode):
                         best_val = bv
                         best_band = i
                 if best_band >= 0:
-                    self._spawn_band_stars(best_band, n_leds, step)
+                    self._spawn_band_stars(best_band, n_leds, step, stars_per_seg=1)
