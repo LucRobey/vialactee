@@ -55,8 +55,14 @@
   * Created 24 self-contained transition files (`explosion.py`, `supernova.py`, `spiral.py`, `tesla_arc.py`, `box_wipe.py`, `weird_glitch.py`, `shatter_ice.py`, `liquid_geyser.py`, `pendulum_sweep.py`, `gravity_drop.py`, `vertical_wipe.py`, `horizontal_wipe.py`, `zipper_merge.py`, `collider.py`, `fuse_detonate.py`, `silk_wipe.py`, `iris.py`, `prism_sweep.py`, `ember_dissolve.py`, `luma_melt.py`, `breath_dip.py`, `dual_fade.py`, `global_change.py`, `flash_cut.py`, `staccato_shutter.py`, `transformer_cut.py`) and `__init__.py` (`CATALOG` & `TECHNIQUE_CONFIGS`).
 * **[MODIFY]** [`transitions/families.py`](file:///c:/Users/lucro/Desktop/vialactee/transitions/families.py), [`transitions/manager.py`](file:///c:/Users/lucro/Desktop/vialactee/transitions/manager.py), & [`transitions/engine.py`](file:///c:/Users/lucro/Desktop/vialactee/transitions/engine.py):
   * Derived `TRANSITION_FAMILIES` and `TRANSITION_TECHNIQUES` directly from `transitions.catalog`.
-  * Reduced `transitions/engine.py` from **465 lines down to 132 lines** while preserving all re-exported `apply_*` functions and `set_room_bounds` synchronization.
+  * Reduced `transitions/engine.py` from **465 lines down to 97 lines** while preserving `ROOM_MAX_X/Y`, `set_room_bounds()`, and the directly-tested `apply_*` functions.
   * Retired monolithic `transitions/effects.py` and `transitions/spectacles.py`.
+
+### Phase 7: Post-Catalog Export & Dead-Code Cleanup (`transitions/`)
+* **[MODIFY]** [`transitions/engine.py`](file:///c:/Users/lucro/Desktop/vialactee/transitions/engine.py) & [`transitions/catalog/__init__.py`](file:///c:/Users/lucro/Desktop/vialactee/transitions/catalog/__init__.py):
+  * Removed obsolete `TRANSITION_DEFAULTS`, unused `logger`, and 17 unreferenced `apply_*` re-exports from `engine.py` and `catalog/__init__.py`.
+* **[MODIFY]** [`transitions/policy.py`](file:///c:/Users/lucro/Desktop/vialactee/transitions/policy.py) & [`transitions/sandbox.py`](file:///c:/Users/lucro/Desktop/vialactee/transitions/sandbox.py):
+  * Removed unused `random` and `Any` imports.
 
 ---
 

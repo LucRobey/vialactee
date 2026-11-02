@@ -14,7 +14,7 @@ import argparse
 from collections import Counter
 import math
 import random
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from transitions.api import OrderAck, TransitionOrders, create_transition_service
 from transitions.fakes import fake_installation, fake_music
