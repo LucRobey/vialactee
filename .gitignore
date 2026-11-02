@@ -19,3 +19,6 @@ assets/tests
 # Research datasets & heavy telemetry dumps (code and benchmark definitions remain tracked)
 research/benchmarks/ground_truth/academic/data/ballroom/B_1.0/audio/
 research/experiments/runs/*/telemetry.npz
+
+# Local ESP32 Wi-Fi credentials (templates remain tracked as secrets.h.example)
+hardware/esp32_firmware/**/secrets.h
