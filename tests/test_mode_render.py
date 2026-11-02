@@ -51,8 +51,10 @@ def test_shining_stars_mode_settings_and_activation():
     from modes.Shining_stars_mode import Shining_stars_mode
 
     mock_listener = MagicMock()
-    mock_listener.nb_of_fft_band = 8
-    mock_listener.band_flux = np.zeros(8, dtype=np.float64)
+    mock_listener.context = None
+    mock_listener.nb_of_fft_band = 16
+    mock_listener.asserved_fft_band = np.ones(16, dtype=np.float64)
+    mock_listener.band_flux = np.zeros(16, dtype=np.float64)
 
     rgb = np.zeros((80, 3), dtype=np.int32)
     mode = Shining_stars_mode("Shining Stars", "v1", mock_listener, None, list(range(80)), rgb, {})
@@ -72,17 +74,17 @@ def test_shining_stars_mode_settings_and_activation():
     assert exported["sub_segment_size"] == 30
 
     # 3. Dormant when flux is below threshold
-    mock_listener.band_flux = np.array([10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    mock_listener.band_flux = np.array([10.0] + [0.0] * 15, dtype=np.float64)
     mode.run()
     assert np.all(mode.rgb_list == 0)
 
     # 4. Active ignition when flux breaches threshold
-    mock_listener.band_flux = np.array([30.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    mock_listener.band_flux = np.array([30.0] + [0.0] * 15, dtype=np.float64)
     mode.run()
     assert np.any(mode.rgb_list > 0)
 
     # 5. Natural smooth fade to black when audio subsides
-    mock_listener.band_flux = np.zeros(8, dtype=np.float64)
+    mock_listener.band_flux = np.zeros(16, dtype=np.float64)
     for _ in range(60):
         mode.run()
     assert np.all(mode.rgb_list == 0)
@@ -94,9 +96,11 @@ def test_shining_stars_mode_zero_heap_allocation():
     from modes.Shining_stars_mode import Shining_stars_mode
 
     mock_listener = MagicMock()
-    mock_listener.nb_of_fft_band = 8
-    # All 8 bands breach threshold to trigger 8 star flashes per frame
-    mock_listener.band_flux = np.array([50.0] * 8)
+    mock_listener.context = None
+    mock_listener.nb_of_fft_band = 16
+    mock_listener.asserved_fft_band = np.ones(16, dtype=np.float64)
+    # All 16 bands breach threshold to trigger star flashes per frame
+    mock_listener.band_flux = np.full(16, 50.0, dtype=np.float64)
 
     rgb = np.zeros((100, 3), dtype=np.int32)
     mode = Shining_stars_mode("Shining Stars", "v1", mock_listener, None, list(range(100)), rgb, {})
@@ -107,7 +111,7 @@ def test_shining_stars_mode_zero_heap_allocation():
 
     tracemalloc.start()
     s1 = tracemalloc.take_snapshot()
-    # 300 frames * 8 bands = 2,400 star flashes (wrapping through 256 pool > 9 times)
+    # 300 frames * 16 bands = 4,800 star flashes (wrapping through 256 pool > 18 times)
     for _ in range(300):
         mode.run()
     s2 = tracemalloc.take_snapshot()
@@ -126,8 +130,10 @@ def test_shining_stars_mode_boundary_conditions():
     from modes.Shining_stars_mode import Shining_stars_mode
 
     mock_listener = MagicMock()
-    mock_listener.nb_of_fft_band = 8
-    mock_listener.band_flux = np.array([50.0] * 8)
+    mock_listener.context = None
+    mock_listener.nb_of_fft_band = 16
+    mock_listener.asserved_fft_band = np.ones(16, dtype=np.float64)
+    mock_listener.band_flux = np.full(16, 50.0, dtype=np.float64)
 
     # Empty strip
     rgb_empty = np.zeros((0, 3), dtype=np.int32)
@@ -149,7 +155,9 @@ def test_shining_stars_mode_boundary_conditions():
     mode_none_listener.run()  # Should not raise
 
     mock_none_flux = MagicMock()
-    mock_none_flux.nb_of_fft_band = 8
+    mock_none_flux.context = None
+    mock_none_flux.nb_of_fft_band = 16
+    mock_none_flux.asserved_fft_band = None
     mock_none_flux.band_flux = None
     mode_none_flux = Shining_stars_mode("Shining Stars", "none_f", mock_none_flux, None, list(range(10)), rgb_safe, {})
     mode_none_flux.run()  # Should not raise

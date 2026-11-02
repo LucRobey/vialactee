@@ -4,11 +4,11 @@ import pytest
 from core.AppConfigStore import AppConfigStore
 
 
-def test_preset_repository_init():
-    repo = AppConfigStore({"hardware_profile": "full"})
-    assert repo.infos == {"hardware_profile": "full"}
-    assert repo._app_config_flush_task is None
-    assert repo._pending_app_config_snapshot is None
+def test_app_config_store_init():
+    store = AppConfigStore({"hardware_profile": "full"})
+    assert store.infos == {"hardware_profile": "full"}
+    assert store._app_config_flush_task is None
+    assert store._pending_app_config_snapshot is None
 
 
 def test_atomic_write(tmp_path):

@@ -50,17 +50,17 @@ class TestOppositeSidesMode(unittest.TestCase):
 
         core_snapshots = []
         configs = [
-            (-0.85, np.array([0.9, 0.8, 0.7, 0.1, 0.0, 0.0, 0.0, 0.0]), False, False),
-            (0.00, np.array([0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]), True, False),
-            (0.85, np.array([0.0, 0.0, 0.0, 0.1, 0.2, 0.8, 0.9, 1.0]), False, True),
-            (-0.40, np.array([0.6, 0.5, 0.4, 0.3, 0.3, 0.5, 0.6, 0.7]), True, True),
+            (-0.85, np.array([0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.1, 0.0] + [0.0] * 8), False, False),
+            (0.00, np.full(16, 0.4), True, False),
+            (0.85, np.array([0.0] * 8 + [0.1, 0.2, 0.7, 0.75, 0.8, 0.85, 0.9, 1.0]), False, True),
+            (-0.40, np.array([0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.3, 0.3, 0.35, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7]), True, True),
         ]
         for tilt, bands, real_beat, drop_imp in configs:
             self.engine._spectral_tilt = tilt
             self.engine._is_real_beat = real_beat
             self.engine._is_drop_impact = drop_imp
             self.listener.asserved_fft_band = bands
-            self.listener.band_flux = np.array([25.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 25.0])
+            self.listener.band_flux = np.array([25.0] + [0.0] * 14 + [25.0])
             mode.run()
             core = mode.rgb_list[core_slice].copy()
             # Core is solid (every pixel inside the core matches the first core pixel)
@@ -78,8 +78,8 @@ class TestOppositeSidesMode(unittest.TestCase):
         self.engine._spectral_tilt = -0.9
         self.engine._is_real_beat = False
         self.engine._is_drop_impact = False
-        self.listener.band_flux = np.zeros(8)
-        self.listener.asserved_fft_band = np.array([0.9, 0.85, 0.8, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.listener.band_flux = np.zeros(16)
+        self.listener.asserved_fft_band = np.array([0.9, 0.88, 0.85, 0.82, 0.80, 0.78] + [0.0] * 10)
         for _ in range(15):
             mode_bass.run()
 
@@ -91,7 +91,7 @@ class TestOppositeSidesMode(unittest.TestCase):
         # 2. Treble-only
         mode_treble = self._make_mode(num_leds=50)
         self.engine._spectral_tilt = 0.9
-        self.listener.asserved_fft_band = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.8, 0.85, 0.9])
+        self.listener.asserved_fft_band = np.array([0.0] * 10 + [0.78, 0.80, 0.82, 0.85, 0.88, 0.90])
         for _ in range(15):
             mode_treble.run()
 
@@ -113,7 +113,7 @@ class TestOppositeSidesMode(unittest.TestCase):
         self.listener.is_real_beat = False
         self.assertEqual(mode.rhythm_lock, 0.0)
 
-        self.listener.asserved_fft_band = np.array([0.7, 0.6, 0.5, 0.3, 0.3, 0.5, 0.6, 0.7])
+        self.listener.asserved_fft_band = np.array([0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.3, 0.3, 0.3, 0.3, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7])
         for _ in range(10):
             mode.run()
 
@@ -125,8 +125,8 @@ class TestOppositeSidesMode(unittest.TestCase):
     def test_no_sparks_on_ghost_beat_without_is_real_beat(self):
         """When unlocked, ghost beats and coasting phase wraps never spark; when locked, phase reaching 1 sparks."""
         mode = self._make_mode(num_leds=50)
-        self.listener.asserved_fft_band = np.array([0.6, 0.6, 0.6, 0.3, 0.3, 0.6, 0.6, 0.6])
-        self.listener.band_flux = np.zeros(8)
+        self.listener.asserved_fft_band = np.array([0.6] * 6 + [0.3] * 4 + [0.6] * 6)
+        self.listener.band_flux = np.zeros(16)
         self.engine._is_drop_impact = False
         self.engine._is_locked = False
 
@@ -167,11 +167,11 @@ class TestOppositeSidesMode(unittest.TestCase):
                 self.engine._is_real_beat = (f % 12 == 0)
                 self.engine._is_drop_impact = (f == 25)
                 self.listener.asserved_fft_band = np.array([
-                    0.5 + 0.4 * np.sin(f * 0.15 + b * 0.3) for b in range(8)
+                    0.5 + 0.4 * np.sin(f * 0.15 + b * 0.3) for b in range(16)
                 ])
-                self.listener.band_flux = np.zeros(8)
+                self.listener.band_flux = np.zeros(16)
                 if f % 9 == 0:
-                    self.listener.band_flux[f % 8] = 0.85
+                    self.listener.band_flux[f % 16] = 0.85
                 m.run()
                 frames.append(m.rgb_list.copy())
             return np.stack(frames)
@@ -183,8 +183,8 @@ class TestOppositeSidesMode(unittest.TestCase):
     def test_redirected_buffer_and_anti_aliased_tip(self):
         """Mode renders cleanly into a redirected buffer (Law 6) and produces intermediate tip values."""
         mode = self._make_mode(num_leds=60)
-        self.listener.asserved_fft_band = np.array([0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0])
-        self.listener.band_flux = np.zeros(8)
+        self.listener.asserved_fft_band = np.array([0.45] * 6 + [0.0] * 10)
+        self.listener.band_flux = np.zeros(16)
         self.engine._is_real_beat = False
         self.engine._is_drop_impact = False
 
@@ -211,7 +211,7 @@ class TestOppositeSidesMode(unittest.TestCase):
         self.engine._is_locked = False
         self.engine._is_real_beat = True
         self.engine._is_drop_impact = True
-        self.listener.band_flux = np.full(8, 25.0)
+        self.listener.band_flux = np.full(16, 25.0)
         mode.run()
         self.assertEqual(float(np.max(mode._spark)), 0.0)
 
@@ -219,7 +219,7 @@ class TestOppositeSidesMode(unittest.TestCase):
         mode.apply_settings({"sparkCount": 6})
         mode.spark_color[:] = (0.0, 255.0, 0.0)
         self.engine._is_drop_impact = False
-        self.listener.band_flux = np.zeros(8)
+        self.listener.band_flux = np.zeros(16)
         mode.run()
         # On the trigger frame, exactly 1 single-LED pinpoint pops immediately and the rest are queued
         self.assertEqual(int(np.sum(mode._spark > 0.1)), 1)

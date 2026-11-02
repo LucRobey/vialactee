@@ -226,7 +226,7 @@ Lifecycle methods, parent back-reference, and Schmitt / dwell configuration cons
 
 ## 4. `BaseAudioAnalyzer` Subclass Contract & 4-Step Lifecycle
 
-Every rhythm and structural analyzer in `music/` and `research/` subclasses [`music/BaseAudioAnalyzer.py`](../../music/BaseAudioAnalyzer.py) (verified by `tests/test_base_analyzer_contract.py` and `tests/test_analyzer_contract_compliance.py`):
+Every rhythm and structural analyzer in `music/` and `research/` subclasses [`music/BaseAudioAnalyzer.py`](../../music/BaseAudioAnalyzer.py) (verified by `tests/test_analyzer_contract_compliance.py`):
 
 1. **Step 1 — Multi-Band ODF Ingestion (`_ingest_multiband_derivative_odf`):** Computes half-wave rectified onset derivatives across the 32 Mel bands (`ingestion.multiband_fft_values`), separates instrument streams ($y_{\text{kick}}, y_{\text{snare}}, y_{\text{hat}}, y_{\text{mid}}$), and appends to the 5.0 s circular ODF ring buffer.
 2. **Step 2 — Periodic Tempo & Phase Sweep (`_run_tempo_and_phase_sweep`):** Evaluates the dense Pearson pulse template bank (`music/comb_kernels.py`), performs kick-conditioned anti-phase disambiguation ($K_{\text{anti}} > 1.25 \cdot K_1$), and updates `bpm`, `confidence_score`, `live_rhythm_salience`, and `live_beat_trust`.

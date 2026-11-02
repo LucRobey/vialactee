@@ -1,7 +1,7 @@
 """
 tests/governance/test_mode_choreography_profiles.py
 Governance and behavioral stimulus tests across the 3 realistic rhythm-lock synthetic profiles:
-1. Locked profiles (`high_lock`, `groove_lock`): All 8 modes in `CONFORMING_MODES_PHASE_4A`
+1. Locked profiles (`high_lock`, `groove_lock`): All 13 modes in `CONFORMING_MODES_PHASE_4A`
    (including `Shining_stars_mode`) satisfy all 3 Law 7 assertions:
    - Declared LEAD is strictly the largest single-driver ablation among {beat, level, spectrum, transient}
      (with the LOCK_CONFOUNDED rule documented for |delta_lock| > 0.10 when muting `beat` lifts `beat_trust -> 1.0`).
@@ -72,7 +72,7 @@ class TestModeChoreographyProfiles(unittest.TestCase):
 
     def test_locked_profiles_law7_conformance(self):
         """
-        On both locked profiles (`high_lock` and `groove_lock`), all 8 modes in CONFORMING_MODES_PHASE_4A
+        On both locked profiles (`high_lock` and `groove_lock`), all 13 modes in CONFORMING_MODES_PHASE_4A
         must satisfy all 3 Law 7 assertions (strict lead dominance across all 4 drivers, f=0.30, g=0.65).
         Also verifies LOCK_CONFOUNDED detection when |delta_lock| > 0.10 under beat mute on groove_lock.
         """

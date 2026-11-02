@@ -382,7 +382,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
         self.assertTrue(np.any(mode.rgb_list > 0))
 
     def test_metronome_and_wave_modes_behavioral_requirements(self):
-        """Verify Metronome silence fade & Extending_waves continuous outward propagation."""
+        """Verify Metronome silence fade & Extending_waves continuous outward propagation on 16-band spectrum + flux."""
         metronome = self._instantiate_mode(Metronome_mode, num_leds=30)
         self.engine._is_silent = True
         metronome.rgb_list[:] = 100
@@ -390,15 +390,28 @@ class TestAllModesMusicalContext(unittest.TestCase):
         self.assertTrue(np.all(metronome.rgb_list < 100))
 
         waves = self._instantiate_mode(Extending_waves_mode, num_leds=40)
+        waves._enter_progress = 1.0
         self.engine._is_silent = False
-        self.engine._current_scene = MusicalScene.BUILDUP
+        self.engine._current_scene = MusicalScene.GROOVE
+        self.engine._is_real_beat = False
+        self.listener.asserved_fft_band = np.full(16, 0.15, dtype=np.float64)
+        self.listener.band_flux = np.zeros(16, dtype=np.float64)
+        waves.run()
+        scroll_before = waves.scroll_pos
+
+        # Drive a 16-band spectral + transient surge (LEAD="spectrum", SECONDARY=("transient",))
         self.engine._is_real_beat = True
+        self.listener.asserved_fft_band = np.linspace(0.95, 0.20, 16, dtype=np.float64)
+        self.listener.band_flux = np.array([28.0, 20.0] + [0.0] * 14, dtype=np.float64)
         waves.time_since_wave = 1.0
         waves.run()
+
         active_slots = [w for w in range(waves.MAX_WAVES) if waves.wave_active[w]]
         self.assertTrue(len(active_slots) > 0)
         last_slot = (waves.wave_slot - 1) % waves.MAX_WAVES
         self.assertGreater(waves.wave_velocities[last_slot], 0)
+        self.assertGreater(waves.scroll_pos, scroll_before)
+        self.assertTrue(np.any(waves.rgb_list > 0))
 
     def test_bar_modes_and_physics_behavioral_requirements(self):
         """Verify Middle_bar pure-white bass caps and Power_bar continuous scaling."""
@@ -406,7 +419,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
         self.engine._is_silent = False
         self.engine._energy = 0.8
         self.engine._vertical_center = 0.7
-        self.listener.asserved_fft_band = np.array([1.0, 1.0, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1])
+        self.listener.asserved_fft_band = np.array([1.0, 1.0, 0.2] + [0.1] * 13, dtype=np.float64)
         for _ in range(10):
             mb.run()
         self.assertGreater(mb.size, 5.0)
@@ -440,13 +453,21 @@ class TestAllModesMusicalContext(unittest.TestCase):
             )
 
     def test_proportion_rainbow_and_beat_tag_consumption(self):
-        """Verify S7 consumption of listener.band_proportion and listener.beat_tag."""
+        """Verify S7 consumption of 16-band listener.band_proportion and listener.beat_tag."""
         pr = self._instantiate_mode(Proportion_rainbow_mode, num_leds=30)
         self.engine._is_silent = False
         self.engine._energy = 0.8
-        self.listener.band_proportion = np.zeros(8)
+        self.listener.band_proportion = np.zeros(16, dtype=np.float64)
         pr.run()
+        np.testing.assert_allclose(pr.fft_bands_array, np.full(16, 0.04))
         self.assertTrue(np.any(pr.rgb_list > 0))
+
+        # Non-uniform 16-band proportion is consumed directly into fft_bands_array
+        custom_prop = np.linspace(0.12, 0.01, 16, dtype=np.float64)
+        custom_prop /= np.sum(custom_prop)
+        self.listener.band_proportion = custom_prop
+        pr.run()
+        np.testing.assert_allclose(pr.fft_bands_array, custom_prop + 0.04)
 
         hs = self._instantiate_mode(Hyper_strobe_mode, num_leds=20)
         self.engine._is_real_beat = True

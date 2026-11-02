@@ -30,7 +30,7 @@ class MockListener:
         self.asserved_total_power = 0.50  # Nominal audio playback power
         self.live_asserved_total_power = 0.50
         self.asserved_novelty = 0.0
-        self.asserved_fft_band = np.full(8, 0.5, dtype=np.float64)
+        self.asserved_fft_band = np.full(16, 0.5, dtype=np.float64)
         self.is_song_change = False
         self.is_verse_chorus_change = False
         self.live_is_song_change = False
@@ -115,40 +115,32 @@ class TestMusicalContextEngine(unittest.TestCase):
         self.assertAlmostEqual(self.engine.energy, 0.46, places=3)
 
     def test_spectral_tilt_and_vertical_center(self) -> None:
-        """Verify spectral_tilt [-1.0, 1.0] and vertical_center [0.0, 1.0] across 8 bands."""
+        """Verify spectral_tilt [-1.0, 1.0] and vertical_center [0.0, 1.0] across 16 bands."""
         # 1. Pure Bass (band 0 only)
-        self.listener.asserved_fft_band = np.array([1.0, 0, 0, 0, 0, 0, 0, 0], dtype=np.float64)
+        self.listener.asserved_fft_band = np.zeros(16, dtype=np.float64)
+        self.listener.asserved_fft_band[0] = 1.0
         self.engine.update(0.1)
         self.assertAlmostEqual(self.engine.spectral_tilt, -1.0, places=2)
         self.assertAlmostEqual(self.engine.vertical_center, 0.0, places=2)
 
-        # 2. Pure Treble (band 7 only)
-        self.listener.asserved_fft_band = np.array([0, 0, 0, 0, 0, 0, 0, 1.0], dtype=np.float64)
-        self.engine.update(0.1)
-        self.assertAlmostEqual(self.engine.spectral_tilt, 1.0, places=2)
-        self.assertAlmostEqual(self.engine.vertical_center, 1.0, places=2)
-
-        # 3. Balanced Spectrum (equal across all 8 bands)
-        self.listener.asserved_fft_band = np.full(8, 0.5, dtype=np.float64)
-        self.engine.update(0.1)
-        self.assertAlmostEqual(self.engine.spectral_tilt, 0.0, places=2)
-        self.assertAlmostEqual(self.engine.vertical_center, 0.5, places=2)
+        # 2. Pure Treble (band 15 only)
         self.listener.asserved_fft_band = np.zeros(16, dtype=np.float64)
         self.listener.asserved_fft_band[15] = 1.0
         self.engine.update(0.1)
         self.assertAlmostEqual(self.engine.spectral_tilt, 1.0, places=2)
         self.assertAlmostEqual(self.engine.vertical_center, 1.0, places=2)
+
+        # 3. Balanced Spectrum (equal across all 16 bands)
+        self.listener.asserved_fft_band = np.full(16, 0.5, dtype=np.float64)
+        self.engine.update(0.1)
+        self.assertAlmostEqual(self.engine.spectral_tilt, 0.0, places=2)
+        self.assertAlmostEqual(self.engine.vertical_center, 0.5, places=2)
 
         # 4. Silence fallback
-        self.listener.asserved_fft_band = np.zeros(8, dtype=np.float64)
+        self.listener.asserved_fft_band = np.zeros(16, dtype=np.float64)
         self.engine.update(0.1)
         self.assertAlmostEqual(self.engine.spectral_tilt, 0.0, places=2)
         self.assertAlmostEqual(self.engine.vertical_center, 0.5, places=2)
-        self.listener.asserved_fft_band = np.zeros(16, dtype=np.float64)
-        self.listener.asserved_fft_band[15] = 1.0
-        self.engine.update(0.1)
-        self.assertAlmostEqual(self.engine.spectral_tilt, 1.0, places=2)
-        self.assertAlmostEqual(self.engine.vertical_center, 1.0, places=2)
 
     def test_tension_curve_and_gradients(self) -> None:
         """Verify tension reflects novelty, anticipation, and buildup curve."""
@@ -767,16 +759,16 @@ class TestMusicalContextEngine(unittest.TestCase):
         )
 
     def test_pilot_modes_drop_impact_dwell_decay(self) -> None:
-        """Verify Beat_runner, Impact_shockwave, and Rhythm_breather sustain kinetic intensity across DROP_IMPACT dwell."""
+        """Verify Power_bar_mode, Impact_shockwave_mode, and Middle_bar_mode sustain kinetic intensity across DROP_IMPACT dwell."""
         self.listener.context = self.engine
-        rgb_runner = np.zeros((80, 3), dtype=np.int32)
-        mode_runner = Power_bar_mode("PowerBar", "s1", self.listener, None, list(range(80)), rgb_runner, {})
+        rgb_power_bar = np.zeros((80, 3), dtype=np.int32)
+        mode_power_bar = Power_bar_mode("PowerBar", "s1", self.listener, None, list(range(80)), rgb_power_bar, {})
 
         rgb_shockwave = np.zeros((80, 3), dtype=np.int32)
         mode_shockwave = Impact_shockwave_mode("Shockwave", "s2", self.listener, None, list(range(80)), rgb_shockwave, {})
 
-        rgb_breather = np.zeros((80, 3), dtype=np.int32)
-        mode_breather = Middle_bar_mode("MiddleBar", "s3", self.listener, None, list(range(80)), rgb_breather, {})
+        rgb_middle_bar = np.zeros((80, 3), dtype=np.int32)
+        mode_middle_bar = Middle_bar_mode("MiddleBar", "s3", self.listener, None, list(range(80)), rgb_middle_bar, {})
 
         # Trigger drop
         self.listener.analyzer.lookahead_seconds = 2.0
@@ -788,15 +780,15 @@ class TestMusicalContextEngine(unittest.TestCase):
         # Frame 1: Impact frame (is_drop_impact == True)
         self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
         self.assertTrue(self.engine.is_drop_impact)
-        mode_runner.run()
+        mode_power_bar.run()
         mode_shockwave.run()
-        mode_breather.run()
-        f1_runner_max = float(np.max(rgb_runner)) / 255.0
+        mode_middle_bar.run()
+        f1_power_bar_max = float(np.max(rgb_power_bar)) / 255.0
         f1_shock_max = float(np.max(mode_shockwave.half_intensity))
-        self.assertGreater(f1_runner_max, 0.20)
+        self.assertGreater(f1_power_bar_max, 0.20)
         self.assertGreater(f1_shock_max, 0.40)
         self.assertEqual(mode_shockwave.wave_count_total, 1)
-        self.assertTrue(np.any(rgb_breather > 0))
+        self.assertTrue(np.any(rgb_middle_bar > 0))
 
         # Frame 2: is_drop_impact badge clears, but engine is in DROP_IMPACT dwell
         self.engine.update(0.1)
@@ -804,17 +796,17 @@ class TestMusicalContextEngine(unittest.TestCase):
         self.assertEqual(self.engine.scene, MusicalScene.DROP_IMPACT)
         self.assertGreater(self.engine.drop_progress, 0.85)
 
-        mode_runner.run()
+        mode_power_bar.run()
         mode_shockwave.run()
-        mode_breather.run()
-        f2_runner_max = float(np.max(rgb_runner)) / 255.0
+        mode_middle_bar.run()
+        f2_power_bar_max = float(np.max(rgb_power_bar)) / 255.0
         f2_shock_max = float(np.max(mode_shockwave.half_intensity))
 
         # Verify sustained motion across dwell without full-strip flooding or per-frame wave spam
-        self.assertGreater(f2_runner_max, 0.15, "Beat_runner must stay active across dwell")
-        self.assertGreater(f2_shock_max, 0.35, "Impact_shockwave wave must propagate across dwell")
-        self.assertEqual(mode_shockwave.wave_count_total, 1, "Impact_shockwave must not flood waves every dwell frame")
-        self.assertTrue(np.any(rgb_breather > 0))
+        self.assertGreater(f2_power_bar_max, 0.15, "Power_bar_mode must stay active across dwell")
+        self.assertGreater(f2_shock_max, 0.35, "Impact_shockwave_mode wave must propagate across dwell")
+        self.assertEqual(mode_shockwave.wave_count_total, 1, "Impact_shockwave_mode must not flood waves every dwell frame")
+        self.assertTrue(np.any(rgb_middle_bar > 0))
 
         # Step past 1.5s dwell: exits DROP_IMPACT
         for _ in range(16):

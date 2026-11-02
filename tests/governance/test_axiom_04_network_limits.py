@@ -37,20 +37,44 @@ class TestAxiom04NetworkLimits(unittest.TestCase):
 
     def test_sideband_telemetry_throttled_to_10hz(self):
         """Verify Port 9003 analyzer state telemetry is throttled to 10 Hz (0.1s)."""
+        import json
+
         sender = Udp_Sender("127.0.0.1", 9001, 100)
         sender.sock.close()
         sender.sock = MagicMock()
         analyzer = MagicMock()
         analyzer.bpm = 120.0
+        analyzer.speaker_phase = 0.5
+        analyzer.flywheel_status = "locked"
+        analyzer.confidence_score = 0.95
+        analyzer.current_beat_tag = "Kick"
+        analyzer.is_beat = True
+        analyzer.is_real_beat = True
+        analyzer.is_dropped_beat = False
+        analyzer.rolling_flux_baseline = 10.0
+        analyzer.asserved_novelty = 0.1
+        analyzer.combined_novelty = 0.2
+        analyzer.is_song_change = False
+        analyzer.is_verse_chorus_change = False
+        analyzer.silence_frames = 0
         sender.set_analyzer(analyzer)
 
         start = 1000.0
         with patch("time.monotonic", return_value=start):
-            for _ in range(20):
+            for _ in range(50):
                 sender.show()
 
         calls_9003 = [c for c in sender.sock.sendto.call_args_list if c[0][1][1] == SEGMENT_METADATA_PORT]
         self.assertEqual(len(calls_9003), 1, "Must only send 1 telemetry packet in same 0.1s window")
+        data = json.loads(calls_9003[0][0][0].decode("utf-8"))
+        self.assertEqual(data["type"], "analyzer_state")
+        self.assertEqual(data["bpm"], 120.0)
+
+        with patch("time.monotonic", return_value=start + 0.11):
+            sender.show()
+
+        calls_9003 = [c for c in sender.sock.sendto.call_args_list if c[0][1][1] == SEGMENT_METADATA_PORT]
+        self.assertEqual(len(calls_9003), 2, "Must emit a second packet once >= 0.1s has elapsed")
 
     def test_connector_telemetry_throttling_interval(self):
         """Verify Connector.on_frame_tick throttles transitions to 10 Hz (0.1s interval)."""

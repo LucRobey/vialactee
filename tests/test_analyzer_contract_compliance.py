@@ -67,14 +67,42 @@ def drive_click_train(listener, n_frames=900, period=30):
     return frames
 
 
+class DummyMinimalAnalyzer(BaseAudioAnalyzer):
+    """A minimal model that only implements the required abstract methods."""
+
+    def __init__(self, ingestion, infos, config=None):
+        super().__init__(ingestion, infos, config)
+        self._phase = 0.0
+
+    def update(self, current_time: float, dt: float, fps_ratio: float) -> None:
+        self._phase = (self._phase + (self.bpm / 60.0) * dt) % 1.0
+
+    def reset(self) -> None:
+        self._phase = 0.0
+
+    @property
+    def beat_phase(self) -> float:
+        return self._phase
+
+
 class TestSharedAnalyzerContract(unittest.TestCase):
-    """Group A + interface checks, run against every production analyzer."""
+    """Group A + BaseAudioAnalyzer interface checks, run against registered and minimal analyzers."""
 
     def test_interface_and_inheritance(self):
-        for name in PRODUCTION_ANALYZERS:
+        for name in ANALYZER_REGISTRY:
             with self.subTest(model=name):
                 an = make_listener(name).analyzer
                 self.assertIsInstance(an, BaseAudioAnalyzer)
+                self.assertEqual(an.lookahead_seconds, 5.0)
+                self.assertEqual(an.hardware_latency, 0.0)
+                self.assertEqual(an.bpm, 120.0)
+                self.assertEqual(an.beat_phase, 0.0)
+                self.assertFalse(an.is_beat)
+                self.assertFalse(an.is_real_beat)
+                self.assertEqual(an.beat_count, 0)
+                self.assertIsInstance(an.flywheel_status, str)
+                self.assertAlmostEqual(an.rhythm_salience, 0.0)
+                self.assertAlmostEqual(an.live_rhythm_salience, 0.0)
                 for method in ("update", "reset", "update_structural_novelty", "detect_band_peaks",
                                "capture_frame_telemetry", "get_model_metadata"):
                     self.assertTrue(callable(getattr(an, method)), method)
@@ -82,7 +110,41 @@ class TestSharedAnalyzerContract(unittest.TestCase):
                              "standalone_phase", "standalone_bpm", "live_beat_trust"):
                     self.assertTrue(hasattr(an, prop), prop)
                 self.assertFalse(hasattr(an, "band_peak"))
-                self.assertEqual(an.get_model_metadata()["model_class"], name)
+                meta = an.get_model_metadata()
+                self.assertEqual(meta["model_class"], name)
+                self.assertIn("config", meta)
+
+    def test_minimal_subclass_defaults(self):
+        """Ensures an experimental model only needs 3 abstract methods/properties to be fully compliant."""
+        listener = make_listener()
+        minimal = DummyMinimalAnalyzer(listener.ingestion, {"fakeDelay": 5.0})
+        self.assertIsInstance(minimal, BaseAudioAnalyzer)
+
+        self.assertEqual(minimal.bpm, 120.0)
+        self.assertFalse(minimal.is_beat)
+        self.assertFalse(minimal.is_real_beat)
+        self.assertFalse(minimal.is_dropped_beat)
+        self.assertFalse(minimal.is_downbeat)
+        self.assertEqual(minimal.time_signature, (4, 4))
+        self.assertEqual(minimal.current_beat_tag, "Bass/Kick")
+        self.assertFalse(minimal.vocals_present)
+        self.assertFalse(minimal.is_song_change)
+        self.assertFalse(minimal.is_verse_chorus_change)
+        self.assertEqual(minimal.asserved_novelty, 0.0)
+        self.assertEqual(minimal.combined_novelty, 0.0)
+        self.assertAlmostEqual(minimal.rhythm_salience, 1.0)
+        self.assertAlmostEqual(minimal.live_rhythm_salience, 1.0)
+        self.assertTrue(hasattr(minimal, "band_flux"))
+        self.assertFalse(hasattr(minimal, "band_peak"))
+
+        minimal.update(current_time=1.0, dt=DT, fps_ratio=1.0)
+        self.assertGreater(minimal.beat_phase, 0.0)
+        minimal.reset()
+        self.assertEqual(minimal.beat_phase, 0.0)
+
+        telem = minimal.capture_frame_telemetry()
+        self.assertIn("bpm", telem)
+        self.assertIn("beat_phase", telem)
 
     def test_rhythm_core_invariants_on_click_train(self):
         for name in PRODUCTION_ANALYZERS:
@@ -172,7 +234,7 @@ class TestSharedAnalyzerContract(unittest.TestCase):
 
 
 class TestListenerContractWiring(unittest.TestCase):
-    """Facade-level contract: model selection, 8-band band_flux, metrical bpm."""
+    """Facade-level contract: model selection, 16-band band_flux, metrical bpm."""
 
     def test_default_model_is_dyadic(self):
         self.assertEqual(DEFAULT_ANALYZER_MODEL, "DyadicMetricalAudioAnalyzer")
@@ -190,26 +252,26 @@ class TestListenerContractWiring(unittest.TestCase):
         self.assertTrue(any("NoSuchAnalyzer" in line for line in logs.output))
         self.assertIsInstance(listener.analyzer, DyadicMetricalAudioAnalyzer)
 
-    def test_band_flux_is_8_band_mel_flux(self):
-        """Contract: band_flux = max(0, E_b[t]-E_b[t-1]) over the 8 Mel bands (not the 8 lowest fine bands)."""
+    def test_band_flux_is_16_band_mel_flux(self):
+        """Contract: band_flux = max(0, E_b[t]-E_b[t-1]) over the 16 Mel bands (not the 16 lowest fine bands)."""
         for name in PRODUCTION_ANALYZERS:
             with self.subTest(model=name):
                 listener = make_listener(name, fake_delay=0.0)
                 ing = listener.ingestion
                 ing.fft_band_values[:] = 0.0
                 listener._update_ring_buffers(0.0)
-                ing.fft_band_values[7] = 100.0  # hi-hat region of the 8-band spectrum
+                ing.fft_band_values[15] = 100.0  # hi-hat/air region of the 16-band spectrum
                 listener._update_ring_buffers(DT)
                 w = (listener._ring_write - 1) % listener._ring_capacity
                 flux = listener._ring_band_flux[w]
                 self.assertEqual(len(flux), 16)
-                self.assertAlmostEqual(float(flux[7]), 100.0)
-                self.assertAlmostEqual(float(np.sum(flux[:7])), 0.0)
+                self.assertAlmostEqual(float(flux[15]), 100.0)
+                self.assertAlmostEqual(float(np.sum(flux[:15])), 0.0)
                 # falling edge is half-wave rectified to zero
-                ing.fft_band_values[7] = 10.0
+                ing.fft_band_values[15] = 10.0
                 listener._update_ring_buffers(2 * DT)
                 w = (listener._ring_write - 1) % listener._ring_capacity
-                self.assertAlmostEqual(float(listener._ring_band_flux[w][7]), 0.0)
+                self.assertAlmostEqual(float(listener._ring_band_flux[w][15]), 0.0)
 
     def test_listener_bpm_is_metrical_rate(self):
         listener = make_listener("DyadicMetricalAudioAnalyzer")

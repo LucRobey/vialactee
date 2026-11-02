@@ -176,7 +176,7 @@ class TestModeChoreographyGovernance(unittest.TestCase):
 class TestDriverMuteProxyAndMetrics(unittest.TestCase):
     def setUp(self):
         self.repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        self.listener = SyntheticListener(nb_bands=8)
+        self.listener = SyntheticListener(nb_bands=DEFAULT_NB_BANDS)
         self.proxy = DriverMuteProxy(self.listener)
         self.live_mods = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
 
@@ -361,7 +361,7 @@ class TestChoreographyStimulusMeasurement(unittest.TestCase):
         """On the synthetic clip, Impact_shockwave_mode spawns one ring per beat wrap (plus drop hits) and 0 beat rings when beat is muted."""
         from modes.Impact_shockwave_mode import Impact_shockwave_mode
 
-        listener = SyntheticListener(nb_bands=8)
+        listener = SyntheticListener(nb_bands=DEFAULT_NB_BANDS)
         proxy = DriverMuteProxy(listener)
         live_mods = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
         rgb = np.zeros((40, 3), dtype=np.int32)
@@ -378,7 +378,7 @@ class TestChoreographyStimulusMeasurement(unittest.TestCase):
         self.assertEqual(mode.wave_count_total, listener.beat_count)
 
         # When beat is muted, a mode running across the same 85 non-drop frames spawns 0 rings
-        listener_muted = SyntheticListener(nb_bands=8)
+        listener_muted = SyntheticListener(nb_bands=DEFAULT_NB_BANDS)
         proxy_muted = DriverMuteProxy(listener_muted, initial_mutes=("beat",))
         mode_muted = Impact_shockwave_mode(
             "Impact_shockwave_mode", "seg", proxy_muted, None, list(range(40)), np.zeros((40, 3), dtype=np.int32), {}
@@ -391,7 +391,7 @@ class TestChoreographyStimulusMeasurement(unittest.TestCase):
         self.assertEqual(mode_muted.wave_count_total, 0)
 
     def test_all_registered_modes_stimulus_and_calibrated_dominance(self):
-        """Run the 13 x 4 synthetic stimulus suite (8 bands); verify finite metrics and enforce dominance on conforming modes."""
+        """Run the 13 x 4 synthetic stimulus suite (16 bands); verify finite metrics and enforce dominance on conforming modes."""
         results = measure_all_registered_modes(**MATRIX_CONFIG, nb_bands=DEFAULT_NB_BANDS)
         self.assertEqual(len(results), 13)
 
@@ -431,17 +431,17 @@ class TestChoreographyStimulusMeasurement(unittest.TestCase):
             "Conforming modes failed calibrated Law 7 stimulus checks:\n" + "\n".join(conforming_failures),
         )
 
-    def test_all_registered_modes_16_bands_diagnostic(self):
-        """Run the 13 x 4 synthetic stimulus suite at 16 bands (diagnostic only: finite metrics, prints report)."""
-        results_16 = measure_all_registered_modes(**MATRIX_CONFIG, nb_bands=16)
-        self.assertEqual(len(results_16), 13)
-        for r in results_16:
+    def test_all_registered_modes_8_bands_diagnostic(self):
+        """Run the 13 x 4 synthetic stimulus suite at 8 bands (legacy compatibility diagnostic: finite metrics, prints report)."""
+        results_8 = measure_all_registered_modes(**MATRIX_CONFIG, nb_bands=8)
+        self.assertEqual(len(results_8), 13)
+        for r in results_8:
             mode_name = r["mode"]
             for key in ("r_std_full", "r_diff_full", "r_std_mute_lead", "r_std_mute_sec", "r_std_mute_all"):
                 val = r[key]
-                self.assertTrue(math.isfinite(val) and val >= 0.0, f"{mode_name} (16 bands): invalid {key}={val}")
-            self.assertGreater(r["r_std_full"], 1.0, f"{mode_name} (16 bands): expected non-trivial R_std(full)")
-        print("\n--- 16-Band Diagnostic Choreography Matrix ---\n" + format_measurement_report(results_16))
+                self.assertTrue(math.isfinite(val) and val >= 0.0, f"{mode_name} (8 bands): invalid {key}={val}")
+            self.assertGreater(r["r_std_full"], 1.0, f"{mode_name} (8 bands): expected non-trivial R_std(full)")
+        print("\n--- 8-Band Diagnostic Choreography Matrix ---\n" + format_measurement_report(results_8))
 
 
 if __name__ == "__main__":

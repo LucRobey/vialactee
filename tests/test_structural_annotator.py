@@ -8,6 +8,7 @@ import sys
 import json
 import tempfile
 import unittest
+import unittest.mock
 import numpy as np
 
 # Ensure repository root is on sys.path
@@ -30,6 +31,10 @@ from tools.structural_annotator import (
 
 class TestAudioStreamer(unittest.TestCase):
     def setUp(self):
+        self._sd_patcher = unittest.mock.patch("tools.structural_annotator.sd.OutputStream")
+        self.mock_output_stream = self._sd_patcher.start()
+        self.addCleanup(self._sd_patcher.stop)
+
         self.sr = 44100
         # 2 seconds of test sine tone
         t = np.linspace(0, 2.0, self.sr * 2, endpoint=False)
@@ -41,6 +46,7 @@ class TestAudioStreamer(unittest.TestCase):
         self.assertEqual(streamer.total_samples, self.sr * 2)
         self.assertAlmostEqual(streamer.total_duration, 2.0, places=3)
         self.assertFalse(streamer.is_playing)
+        self.mock_output_stream.assert_called_once()
         streamer.stop()
 
     def test_streamer_seek_and_time(self):
@@ -56,10 +62,12 @@ class TestAudioStreamer(unittest.TestCase):
         streamer.stop()
 
     def test_streamer_pause_seek_accuracy_after_playing(self):
-        import time
         streamer = AudioStreamer(self.audio, sample_rate=self.sr)
         streamer.play()
-        time.sleep(0.05)
+        streamer.dac_latency = 0.05
+        streamer.speaker_sample_pos = int(0.50 * self.sr)
+        # While playing, DAC latency (0.05s) is subtracted from speaker_sample_pos (0.50s -> 0.45s)
+        self.assertAlmostEqual(streamer.get_current_time(), 0.45, places=3)
         streamer.pause()
         streamer.seek(0.75)
         # Paused seeking must not subtract DAC latency
@@ -210,17 +218,67 @@ class TestAnnotationManager(unittest.TestCase):
 
 
 class TestStructuralAnnotatorAppHeadless(unittest.TestCase):
-    def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.app = StructuralAnnotatorApp(
+    @classmethod
+    def setUpClass(cls):
+        from tools.structural_annotator import resolve_audio_file
+
+        cls._sd_patcher = unittest.mock.patch("tools.structural_annotator.sd.OutputStream")
+        cls._sd_patcher.start()
+
+        # Load Genesis audio once for the entire test class
+        cls._real_resolve_audio_file = resolve_audio_file
+        cls._genesis_audio = resolve_audio_file("Genesis", _REPO_ROOT)
+
+        def _cached_resolve(track_name: str, repo_root: str):
+            if cls._genesis_audio is not None:
+                y, sr = cls._genesis_audio
+                # For non-Genesis tracks during track cycling, return a fast 1s slice
+                if "Genesis" not in track_name:
+                    return y[:sr], sr
+                return y, sr
+            return None
+
+        cls._resolve_patcher = unittest.mock.patch(
+            "tools.structural_annotator.resolve_audio_file",
+            side_effect=_cached_resolve,
+        )
+        cls._resolve_patcher.start()
+
+        cls.app = StructuralAnnotatorApp(
             repo_root=_REPO_ROOT,
             initial_track="Genesis",
-            headless=True
+            headless=True,
         )
+        cls._initial_track_index = cls.app.track_index
+        cls._genesis_streamer = cls.app.streamer
+        cls._genesis_envelope = cls.app.envelope
+        cls._genesis_downbeats = cls.app.downbeats
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.app.streamer:
+            cls.app.streamer.stop()
+        cls._resolve_patcher.stop()
+        cls._sd_patcher.stop()
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.app = self.__class__.app
+        self.app.track_index = self.__class__._initial_track_index
+        self.app.streamer = self.__class__._genesis_streamer
+        self.app.envelope = self.__class__._genesis_envelope
+        self.app.downbeats = self.__class__._genesis_downbeats
+        self.app.streamer.pause()
+        self.app.streamer.dac_latency = 0.0
+        self.app.streamer.seek(0.0)
+        self.app.selected_event_id = None
+        self.app.timeline_scroll_center = None
+        self.app.is_editing_note = False
+        # Isolate annotations in a temporary file per test so production JSON is never touched
+        self.app.manager = AnnotationManager(os.path.join(self.temp_dir.name, "test_annotations.json"))
+        self.app.manager.ensure_track("Genesis", self.app.streamer.total_duration)
 
     def tearDown(self):
-        if self.app.streamer:
-            self.app.streamer.stop()
         self.temp_dir.cleanup()
 
     def test_headless_initialization_and_track_loading(self):
@@ -310,13 +368,21 @@ class TestStructuralAnnotatorAppHeadless(unittest.TestCase):
         self.assertIsNone(evt_b.get("pair_id"))
 
     def test_arbitrary_track_path_resolution(self):
-        from tools.structural_annotator import resolve_audio_file
-        # Direct relative file path
-        res = resolve_audio_file("assets/musics/mp3_files/Genesis.mp3", _REPO_ROOT)
-        self.assertIsNotNone(res)
-        # Filename with extension
-        res2 = resolve_audio_file("Genesis.mp3", _REPO_ROOT)
-        self.assertIsNotNone(res2)
+        real_resolve = self.__class__._real_resolve_audio_file
+
+        # Exercise the real resolve_audio_file path resolution while reusing the class-loaded audio buffer
+        with unittest.mock.patch(
+            "tools.structural_annotator._load_audio_fallback",
+            return_value=self.__class__._genesis_audio,
+        ) as mock_fallback:
+            # Direct relative file path hits _load_audio_fallback
+            res = real_resolve("assets/musics/mp3_files/Genesis.mp3", _REPO_ROOT)
+            self.assertIsNotNone(res)
+            mock_fallback.assert_called_once()
+
+            # Filename with extension resolves via pre-cached .npz (or fallback)
+            res2 = real_resolve("Genesis.mp3", _REPO_ROOT)
+            self.assertIsNotNone(res2)
 
     def test_track_cycling(self):
         first_track = self.app.current_track_name()
