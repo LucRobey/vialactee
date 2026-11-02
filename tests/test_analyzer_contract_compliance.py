@@ -202,7 +202,7 @@ class TestListenerContractWiring(unittest.TestCase):
                 listener._update_ring_buffers(DT)
                 w = (listener._ring_write - 1) % listener._ring_capacity
                 flux = listener._ring_band_flux[w]
-                self.assertEqual(len(flux), 8)
+                self.assertEqual(len(flux), 16)
                 self.assertAlmostEqual(float(flux[7]), 100.0)
                 self.assertAlmostEqual(float(np.sum(flux[:7])), 0.0)
                 # falling edge is half-wave rectified to zero

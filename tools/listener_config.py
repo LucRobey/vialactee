@@ -1,7 +1,7 @@
 """tools/listener_config.py - Listener configuration shared by Mode Studio and the choreography probe."""
 from typing import Any, Dict
 
-PRODUCTION_VISUAL_FFT_BANDS: int = 8   # AudioIngestion default; modes consume this many bands in production
+PRODUCTION_VISUAL_FFT_BANDS: int = 16   # AudioIngestion default; modes consume this many bands in production
 
 
 def build_listener_infos(nb_fft_bands: int = PRODUCTION_VISUAL_FFT_BANDS) -> Dict[str, Any]:

@@ -130,7 +130,7 @@ class DriverMuteProxy:
         self._muted: Set[str] = set()
         self._ctx_proxy = ContextMuteProxy(self)
 
-        nb_bands = int(getattr(listener, "nb_of_fft_band", 8)) if listener is not None else 8
+        nb_bands = int(getattr(listener, "nb_of_fft_band", 16)) if listener is not None else 16
         self._nb_bands: int = max(1, nb_bands)
         # Neutral mid-decay phase where (1 - phase) ** 2.2 equals its cycle mean (~0.35)
         self._frozen_beat_phase: float = 0.38

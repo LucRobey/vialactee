@@ -20,7 +20,7 @@ class Hyper_strobe_mode(Mode.Mode):
     SECONDARY = ()
 
     def get_settings_schema(self) -> List[Dict[str, Any]]:
-        band_count = getattr(self.listener, "nb_of_fft_band", 8) if self.listener is not None else 8
+        band_count = getattr(self.listener, "nb_of_fft_band", 16) if self.listener is not None else 16
         band_options = [
             {"label": f"Band {band_index + 1}", "value": band_index}
             for band_index in range(band_count)

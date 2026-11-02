@@ -276,6 +276,20 @@ class TestExtendingWavesSpectrumStream(_ModeTestCase):
         soft_peak_intensity = float(np.max(mode_soft._center_rgb))
         self.assertLess(soft_peak_intensity, peak_phase_intensity * 0.70)
 
+    def test_16_band_spectrum_mapping(self):
+        self.listener.nb_of_fft_band = 16
+        self.listener.asserved_fft_band = np.full(16, 0.15, dtype=np.float64)
+        self.listener.band_flux = np.zeros(16, dtype=np.float64)
+        mode = self.mode(n=41)
+        self.assertEqual(mode.nb_bands, 16)
+        mode.run()
+        self.listener.asserved_fft_band[15] = 0.92
+        self.listener.band_flux[15] = 10.0
+        for _ in range(8):
+            mode.run()
+        self.assertEqual(mode.dominant_band, 15)
+        self.assertGreater(mode._current_hue, 0.70)
+
 
 if __name__ == "__main__":
     unittest.main()

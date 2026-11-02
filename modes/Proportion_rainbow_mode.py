@@ -25,7 +25,7 @@ class Proportion_rainbow_mode(Mode.Mode):
 
         self.minimum_hue: float = 0.0
         self.maximum_hue: float = 0.80
-        self.nb_bands: int = int(getattr(listener, "nb_of_fft_band", 8)) if listener is not None else 8
+        self.nb_bands: int = int(getattr(listener, "nb_of_fft_band", 16)) if listener is not None else 16
 
         count = max(1, self.nb_of_leds - 1)
         self.N: float = max(1.0, float(count) / max(1.0, float(self.nb_bands - 1)))

@@ -15,10 +15,10 @@ The audio pipeline transforms raw acoustic PCM stream data into mathematically s
 graph LR
     PCM["Raw PCM Stream<br/>(44.1 kHz, Mono/Stereo)"] --> FFT["Vectorized rFFT<br/>(np.fft.rfft, 4096 pts)"]
     FFT --> DualMel["Dual-Resolution Mel Filterbanks"]
-    DualMel --> Bands8["8 Mel Bands<br/>(Visual Modes)"]
+    DualMel --> Bands16["16 Mel Bands<br/>(Visual Modes)"]
     DualMel --> Bands32["32 Mel Bands<br/>(Rhythm Onsets)"]
     FFT --> Chroma["12-Note Chromagram<br/>(Pitch Analysis)"]
-    Bands8 --> ADSR["Vectorized ADSR Envelopes<br/>(Attack/Decay Smoothing)"]
+    Bands16 --> ADSR["Vectorized ADSR Envelopes<br/>(Attack/Decay Smoothing)"]
     ADSR --> DelayQueue["5.0s Lookahead Delay Queue<br/>(Listener Facade)"]
     DelayQueue --> VisualModes["Visual Modes (Segment.rgb_list)"]
     Bands32 --> MultiBand["DyadicMetricalAudioAnalyzer (extends MultiBandOnsetAudioAnalyzer)"]
@@ -33,7 +33,7 @@ Implemented in `music/AudioIngestion.py`:
    - Real FFT (`np.fft.rfft`) computed on 4096-sample audio frames (`buffer_size = 4096`, yielding 2049 frequency bins) with Hanning windowing.
    - Vectorized matrix multiplications map power spectrum bins into Mel frequency bins.
 2. **Dual-Resolution Mel Filterbanks:**
-   - **8 Bands (`fft_band_values`):** Preserved for visual lighting modes in `modes/` (Sub-bass, Bass, Low-Mid, Mid, High-Mid, Treble, Brilliance, Air).
+   - **16 Bands (`fft_band_values`):** Default visual Mel filterbank fed into lighting modes in `modes/` (Sub-bass through Air).
    - **32 Bands (`multiband_fft_values`):** Fed into `DyadicMetricalAudioAnalyzer` (via its `MultiBandOnsetAudioAnalyzer` parent) to isolate fine-grained transients:
      - Sub-bass: 20–80 Hz
      - Kick fundamental: 60–120 Hz
@@ -63,7 +63,7 @@ Implemented in `music/Listener.py`:
 | :--- | :--- |
 | [`music/api.py`](../../music/api.py) | **Front Door:** Re-exports `Listener`, `ANALYZER_REGISTRY`, `DEFAULT_ANALYZER_MODEL`, `resolve_analyzer_class`, `MusicalScene`, `MusicalContextEngine`, `ListenerProtocol`, and `MusicalContextProtocol`. |
 | [`music/Listener.py`](../../music/Listener.py) | Lookahead delay ring buffer + speaker-time facade + `ANALYZER_REGISTRY`. |
-| [`music/AudioIngestion.py`](../../music/AudioIngestion.py) | Vectorized 4096-pt rFFT, 8-band & 32-band Mel filterbanks, 12-bin chromagram, ADSR & GM/LM normalization. |
+| [`music/AudioIngestion.py`](../../music/AudioIngestion.py) | Vectorized 4096-pt rFFT, 16-band & 32-band Mel filterbanks, 12-bin chromagram, ADSR & GM/LM normalization. |
 | [`music/BaseAudioAnalyzer.py`](../../music/BaseAudioAnalyzer.py) | Abstract base contract for all rhythm analyzers. |
 | [`music/DyadicMetricalAudioAnalyzer.py`](../../music/DyadicMetricalAudioAnalyzer.py) | **Production default** (`DEFAULT_ANALYZER_MODEL`): dyadic metrical hierarchy + causal sub-pulse arbiter on top of the 32-band engine. |
 | [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py) | 32-band 4-stream onset engine (`kick`, `snare`, `hat`, `mid`) + Anticipation Flywheel (stable fallback / parent engine). |

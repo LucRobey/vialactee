@@ -71,7 +71,7 @@ CALIBRATED_SEC_RETAINED_G = 0.65
 # Provenance lock: changing the synthetic clip, band count, profiles, or MATRIX_CONFIG requires recalibrating f/g.
 CALIBRATED_FOR = {
     "clip_version": "2",
-    "nb_bands": 8,
+    "nb_bands": 16,
     "profiles": ("high_lock", "groove_lock", "loose_lock"),
     "matrix_config": {
         "num_leds": 40,

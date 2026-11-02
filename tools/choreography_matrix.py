@@ -10,7 +10,7 @@ from utils.choreography import DRIVERS, MUTE_CHANNELS
 from utils.driver_mute import DriverMuteProxy
 
 SYNTHETIC_CLIP_VERSION: str = "2"
-DEFAULT_NB_BANDS: int = 8
+DEFAULT_NB_BANDS: int = 16
 DEFAULT_PROFILE: str = "high_lock"
 LOCK_CONFOUND_TOLERANCE: float = 0.10
 SYNTHETIC_PROFILES: Dict[str, Dict[str, Any]] = {

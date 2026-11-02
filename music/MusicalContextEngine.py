@@ -3,7 +3,7 @@ music/MusicalContextEngine.py - Unified 3-Tier Musical Context & Visual Conducto
 
 Unified Vialactée Visual Conductor (Offer 4):
 Consumes multi-signal acoustic, rhythmic, and spectral dynamics (rhythm_salience,
-beat_trust, asserved power, lookahead power, structural novelty, and 8-band Mel FFT)
+beat_trust, asserved power, lookahead power, structural novelty, and 16-band Mel FFT)
 to evaluate real-time musical context across 3 unified tiers:
 - Tier 1: Continuous Dynamic Kinetics (energy, tension, drop_progress, spectral_tilt, vertical_center, gradients).
 - Tier 2: 4 Macro Scenes (CHILL, GROOVE, BUILDUP, DROP_IMPACT) with Schmitt hysteresis and dwell locks.
@@ -150,15 +150,23 @@ class MusicalContextEngine:
 
         # --- 3. Spectral Tilt & Vertical Center ---
         if raw_bands is not None and hasattr(raw_bands, "__len__") and len(raw_bands) >= 8:
-            b0 = max(0.0, float(raw_bands[0])) if raw_bands[0] is not None and not math.isnan(raw_bands[0]) and not math.isinf(raw_bands[0]) else 0.0; b1 = max(0.0, float(raw_bands[1])) if raw_bands[1] is not None and not math.isnan(raw_bands[1]) and not math.isinf(raw_bands[1]) else 0.0
-            b2 = max(0.0, float(raw_bands[2])) if raw_bands[2] is not None and not math.isnan(raw_bands[2]) and not math.isinf(raw_bands[2]) else 0.0; b3 = max(0.0, float(raw_bands[3])) if raw_bands[3] is not None and not math.isnan(raw_bands[3]) and not math.isinf(raw_bands[3]) else 0.0
-            b4 = max(0.0, float(raw_bands[4])) if raw_bands[4] is not None and not math.isnan(raw_bands[4]) and not math.isinf(raw_bands[4]) else 0.0; b5 = max(0.0, float(raw_bands[5])) if raw_bands[5] is not None and not math.isnan(raw_bands[5]) and not math.isinf(raw_bands[5]) else 0.0
-            b6 = max(0.0, float(raw_bands[6])) if raw_bands[6] is not None and not math.isnan(raw_bands[6]) and not math.isinf(raw_bands[6]) else 0.0; b7 = max(0.0, float(raw_bands[7])) if raw_bands[7] is not None and not math.isnan(raw_bands[7]) and not math.isinf(raw_bands[7]) else 0.0
-            bass, treble = b0 + b1 + b2 + b3, b4 + b5 + b6 + b7
+            n_bands = len(raw_bands)
+            half = n_bands // 2
+            bass = 0.0
+            treble = 0.0
+            w_sum = 0.0
+            for i in range(n_bands):
+                val = raw_bands[i]
+                bi = max(0.0, float(val)) if val is not None and not math.isnan(val) and not math.isinf(val) else 0.0
+                if i < half:
+                    bass += bi
+                else:
+                    treble += bi
+                w_sum += i * bi
             tot_b = bass + treble
             if tot_b > 1e-6:
                 self._spectral_tilt = max(-1.0, min(1.0, (treble - bass) / tot_b))
-                self._vertical_center = max(0.0, min(1.0, (b1 + 2.0*b2 + 3.0*b3 + 4.0*b4 + 5.0*b5 + 6.0*b6 + 7.0*b7) / (7.0 * tot_b)))
+                self._vertical_center = max(0.0, min(1.0, w_sum / ((n_bands - 1) * tot_b)))
             else:
                 self._spectral_tilt, self._vertical_center = 0.0, 0.5
         else:

@@ -28,7 +28,7 @@ class Extending_waves_mode(Mode.Mode):
 
         self.middle_idx: int = self.nb_of_leds // 2
         self.half_len: int = self.middle_idx + 1
-        self.nb_bands: int = max(2, int(getattr(listener, "nb_of_fft_band", 8)) if listener is not None else 8)
+        self.nb_bands: int = max(2, int(getattr(listener, "nb_of_fft_band", 16)) if listener is not None else 16)
         self.hist_len: int = max(256, self.half_len + 32)
 
         # Precomputed 256-entry vivid rainbow LUT from Red (0.00, bass/drums) to Violet (0.82, treble)
@@ -269,7 +269,7 @@ class Extending_waves_mode(Mode.Mode):
             rel_b = float(self._rel_bands[b])
             flx_b = float(self._norm_flux[b]) * (0.15 + 0.85 * self._spec_activity)
             # Mildly boost b >= 1 to counterbalance natural 1/f bass dominance in raw audio
-            band_eq = 0.80 if b == 0 else (1.02 + 0.03 * min(6, b))
+            band_eq = 0.80 if b == 0 else (1.02 + 0.21 * (float(b) / float(max(1, nb - 1))))
             raw_s = band_eq * (2.4 * dev_b + 3.0 * rise_b + 0.60 * rel_b + 0.85 * flx_b)
 
             if b == 0 and is_drum_peak:

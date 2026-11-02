@@ -348,7 +348,7 @@ class MusicStudioApp:
         # Rhythm Model Resolution & Dynamic Band Configuration
         self.model_class = load_studio_model_class(model_name, _REPO_ROOT)
         self.model_name = self.model_class.__name__
-        self.nb_bands = int(getattr(self.model_class, "NB_AUDIO_BANDS", 8))
+        self.nb_bands = int(getattr(self.model_class, "NB_AUDIO_BANDS", 16))
 
         dummy_infos = {
             "sensi": 1.0,

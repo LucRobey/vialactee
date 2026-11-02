@@ -38,7 +38,18 @@
 * **[MODIFY]** [`docs/reference/modes_catalog.md`](../docs/reference/modes_catalog.md):
   * Updated row 13 (`Extending Waves`) Lead (`spectrum`), Secondary (`transient`), visual description, and Section 4 `tags` to match the code.
 * **[MODIFY]** [`tests/test_extending_waves.py`](../tests/test_extending_waves.py):
-  * Replaced legacy `level_accum` tests with 8 behavioral tests covering Red drum peaks, full-spectrum wavelength mapping (`b=0` Red, `b=4` Green/Cyan, `b=7` Blue/Violet), anti-stagnation band rotation, post-drum melodic handoff, volume-independent steady scroll speed, outward propagation in `BUILDUP`, center symmetry, and silence decay.
+  * Replaced legacy `level_accum` tests with behavioral tests covering Red drum peaks, full-spectrum wavelength mapping (`b=0` Red, `b=4` Green/Cyan, `b=7` Blue/Violet, plus 16-band `b=15` Violet), anti-stagnation band rotation, post-drum melodic handoff, volume-independent steady scroll speed, outward propagation in `BUILDUP`, center symmetry, silence decay, big-beat saturation resilience, and locked `beat_phase` + sound-power intensity modulation.
+
+### 16-Band Visual Mel Filterbank Upgrade Across Codebase
+* **[MODIFY]** [`music/AudioIngestion.py`](../music/AudioIngestion.py), [`music/BaseAudioAnalyzer.py`](../music/BaseAudioAnalyzer.py), [`music/Listener.py`](../music/Listener.py), [`music/MusicalContextEngine.py`](../music/MusicalContextEngine.py):
+  * Upgraded default visual Mel filterbank count `nb_of_fft_band` from `8` to `16` (`nb_multiband = 32` preserved for rhythm onset analysis).
+  * Generalized `MusicalContextEngine` `_spectral_tilt` (`half = n_bands // 2`) and `_vertical_center` (`w_sum / ((n_bands - 1) * tot_b)`) across all `n_bands = len(raw_bands) >= 8` with zero heap allocations.
+* **[MODIFY]** [`modes/Bary_rainbow_mode.py`](../modes/Bary_rainbow_mode.py), [`modes/Coloured_middle_wave_mode.py`](../modes/Coloured_middle_wave_mode.py), [`modes/Extending_waves_mode.py`](../modes/Extending_waves_mode.py), [`modes/Hyper_strobe_mode.py`](../modes/Hyper_strobe_mode.py), [`modes/Proportion_rainbow_mode.py`](../modes/Proportion_rainbow_mode.py), [`modes/Rainbow_mode.py`](../modes/Rainbow_mode.py), [`modes/Shining_stars_mode.py`](../modes/Shining_stars_mode.py), [`utils/driver_mute.py`](../utils/driver_mute.py):
+  * Updated fallback `nb_of_fft_band` default from `8` to `16` and scaled `Extending_waves_mode` high-band equalization `band_eq` smoothly across all `nb` bands.
+* **[MODIFY]** [`tools/listener_config.py`](../tools/listener_config.py), [`tools/choreography_matrix.py`](../tools/choreography_matrix.py), [`tools/mode_studio.py`](../tools/mode_studio.py), [`tools/music_studio.py`](../tools/music_studio.py):
+  * Set `PRODUCTION_VISUAL_FFT_BANDS = 16` and `DEFAULT_NB_BANDS = 16`.
+* **[MODIFY]** [`tests/governance/test_mode_choreography.py`](../tests/governance/test_mode_choreography.py), [`tests/test_analyzer_contract_compliance.py`](../tests/test_analyzer_contract_compliance.py), [`tests/test_audio_presets.py`](../tests/test_audio_presets.py), [`tests/test_listener.py`](../tests/test_listener.py), [`tests/test_oracle_analyzer.py`](../tests/test_oracle_analyzer.py), [`tests/test_studio_visual_bands.py`](../tests/test_studio_visual_bands.py), [`tests/test_all_modes_musical_context.py`](../tests/test_all_modes_musical_context.py), [`tests/test_musical_context_engine.py`](../tests/test_musical_context_engine.py), [`docs/contracts/music_analyzer_contract.md`](../docs/contracts/music_analyzer_contract.md), [`docs/architecture/audio_pipeline.md`](../docs/architecture/audio_pipeline.md), [`docs/architecture/musical_context_engine.md`](../docs/architecture/musical_context_engine.md), [`docs/architecture/structural_novelty.md`](../docs/architecture/structural_novelty.md):
+  * Updated `CALIBRATED_FOR["nb_bands"] = 16`, contract/architecture documentation, and unit test assertions to 16 visual Mel bands.
 
 ---
 

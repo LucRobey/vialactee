@@ -17,7 +17,7 @@ Sibling of [`mood_contract.md`](mood_contract.md) and [`transition_contract.md`]
 | # | Door | Dir | Trust | Shape (in `music/api.py`) | Notes |
 | :-: | :--- | :-: | :-: | :--- | :--- |
 | 1 | Construction | in | ⚙️ CONFIG | `Listener(infos, analyzer_class=None)` | Reads `useMicrophone`, `fakeDelay` (`5.0 s`), `analyzer_model`, `luminosity`, `sensibility`, `led_latency`, `audio_output_latency`, and `musical_context`. |
-| 2 | PCM Audio Stream | in | 🟢 Physical | `listener.process_raw_audio(audio_data)` | Accepts a 4096-sample `float64`/`float32` PCM chunk (`44.1 kHz`) and updates 8-band Mel, 32-band Mel, and 12-bin chroma arrays in place. |
+| 2 | PCM Audio Stream | in | 🟢 Physical | `listener.process_raw_audio(audio_data)` | Accepts a 4096-sample `float64`/`float32` PCM chunk (`44.1 kHz`) and updates 16-band Mel, 32-band Mel, and 12-bin chroma arrays in place. |
 | 3 | Driving Clock & Reset | in | ⚙️ Lifecycle | `listener.update(fixed_dt=None)`, `listener.reset()` | Ticks ingestion envelopes, rhythm analyzer, 5.0 s ring buffer, and `listener.context`. |
 | 4 | Runtime Gain & Latency | in/out | ⚙️ CONFIG / 🟢 HIGH | `listener.luminosite`, `listener.sensi`, `listener.dynamic_audio_latency` | Live UI brightness/sensitivity sliders and PortAudio latency calibration setter. |
 | 5 | `Listener` Signals | out | 🟢 / 🟡 / 🟠 / ⚙️ | `ListenerProtocol` (42 `@property` attributes) | Speaker-aligned ($T_{\text{speaker}}$) and lookahead ($T_{\text{lookahead}}$) signals (§2). |
@@ -67,12 +67,12 @@ Direct spectral measurements, ADSR-normalized envelopes, and hardware calibratio
 
 | Signal | Type & Shape | Range / Units | Time Horizon | Description |
 | :--- | :--- | :--- | :-: | :--- |
-| `fft_band_values` | `np.ndarray (8,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Raw 8-band Mel filterbank magnitudes. |
-| `smoothed_fft_band_values` | `np.ndarray (8,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | ADSR-smoothed (fast attack, slow release) 8-band Mel magnitudes. |
-| `asserved_fft_band` | `np.ndarray (8,) float64` | $[0.0, 1.0]$ | $T_{\text{speaker}}$ | ADSR-normalized (local/global max) 8-band Mel spectrum; primary per-band drive for visual modes. |
-| `band_proportion` | `np.ndarray (8,) float64` | $[0.0, 1.0]$, $\sum \le 1$ | $T_{\text{speaker}}$ | Relative energy share of each of the 8 Mel bands. |
-| `band_means` | `np.ndarray (8,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Rolling mean energy per Mel band. |
-| `band_flux` | `np.ndarray (8,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Half-wave rectified spectral onset flux $\max(0, E_b[t] - E_b[t-1])$ across the 8 Mel bands. |
+| `fft_band_values` | `np.ndarray (16,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Raw 16-band Mel filterbank magnitudes. |
+| `smoothed_fft_band_values` | `np.ndarray (16,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | ADSR-smoothed (fast attack, slow release) 16-band Mel magnitudes. |
+| `asserved_fft_band` | `np.ndarray (16,) float64` | $[0.0, 1.0]$ | $T_{\text{speaker}}$ | ADSR-normalized (local/global max) 16-band Mel spectrum; primary per-band drive for visual modes. |
+| `band_proportion` | `np.ndarray (16,) float64` | $[0.0, 1.0]$, $\sum \le 1$ | $T_{\text{speaker}}$ | Relative energy share of each of the 16 Mel bands. |
+| `band_means` | `np.ndarray (16,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Rolling mean energy per Mel band. |
+| `band_flux` | `np.ndarray (16,) float64` | $\ge 0.0$ | $T_{\text{speaker}}$ | Half-wave rectified spectral onset flux $\max(0, E_b[t] - E_b[t-1])$ across the 16 Mel bands. |
 | `smoothed_total_power` | `float` | $\ge 0.0$ | $T_{\text{speaker}}$ | Exponentially smoothed total acoustic power. |
 | `asserved_total_power` | `float` | $[0.0, 1.0]$ | $T_{\text{speaker}}$ | ADSR-normalized total acoustic power at speaker time. |
 | `live_asserved_total_power` | `float` | $[0.0, 1.0]$ | $T_{\text{lookahead}}$ | ADSR-normalized total acoustic power at the live lookahead horizon. |
@@ -129,7 +129,7 @@ User-configurable runtime settings and static filterbank dimensions proxied from
 | :--- | :--- | :--- | :--- |
 | `luminosite` | `float` | $[0.0, 1.0]$ (default `1.0`) | Master chandelier brightness scalar controlled from the Live Deck UI. |
 | `sensi` | `float` | $> 0.0$ (default `1.0`) | Global audio input sensitivity multiplier controlled from the Live Deck UI. |
-| `nb_of_fft_band` | `int` | `8` | Number of coarse Mel frequency bands exposed to visual modes. |
+| `nb_of_fft_band` | `int` | `16` | Number of coarse Mel frequency bands exposed to visual modes. |
 
 ### 2.5 `Listener` Internal Attributes (6 Non-Signals)
 
@@ -157,8 +157,8 @@ Continuous physical kinetics and Schmitt-stabilized acoustic power/silence state
 | `energy` | `float` | $[0.0, 1.0]$ | $T_{\text{speaker}}$ | Composite continuous visual energy drive ($\text{clamp}(0.50 \cdot P + 0.30 \cdot S + 0.20 \cdot (S \cdot T), 0.0, 1.0)$). |
 | `power` | `float` | $[0.0, 1.0]$ | $T_{\text{speaker}}$ | Speaker-aligned `asserved_total_power`. |
 | `live_power` | `float` | $[0.0, 1.0]$ | $T_{\text{lookahead}}$ | Lookahead `live_asserved_total_power`. |
-| `spectral_tilt` | `float` | $[-1.0, 1.0]$ | $T_{\text{speaker}}$ | High-frequency vs low-frequency balance across the 8 Mel bands ($-1$ = bass-heavy, $+1$ = treble-heavy). |
-| `vertical_center` | `float` | $[0.0, 1.0]$ | $T_{\text{speaker}}$ | Normalized spectral center of mass across the 8 Mel bands. |
+| `spectral_tilt` | `float` | $[-1.0, 1.0]$ | $T_{\text{speaker}}$ | High-frequency vs low-frequency balance across the 16 Mel bands ($-1$ = bass-heavy, $+1$ = treble-heavy). |
+| `vertical_center` | `float` | $[0.0, 1.0]$ | $T_{\text{speaker}}$ | Normalized spectral center of mass across the 16 Mel bands. |
 | `is_power_high` | `bool` | `True` / `False` | $T_{\text{speaker}}$ | Schmitt-triggered high acoustic power state (`power_low = 0.35`, `power_high = 0.50`). |
 | `is_silent` | `bool` | `True` / `False` | $T_{\text{speaker}}$ | Schmitt-triggered acoustic silence guard (`silence_threshold = 0.05`, `silence_exit_threshold = 0.08`). |
 

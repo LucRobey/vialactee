@@ -1724,7 +1724,7 @@ def main():
         "--bands", "-b",
         type=int,
         default=PRODUCTION_VISUAL_FFT_BANDS,
-        help="Visual FFT band count fed to modes (default 8 = production; 16 to preview the 16-band transition). The analyzer keeps its own 32-band filterbank."
+        help="Visual FFT band count fed to modes (default 16 = production; 8 for legacy comparison). The analyzer keeps its own 32-band filterbank."
     )
     args = parser.parse_args()
     if args.bands not in (8, 16):

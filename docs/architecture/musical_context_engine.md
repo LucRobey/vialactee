@@ -84,8 +84,8 @@ Continuous kinetics eliminate manual normalization in modes, providing pre-fused
 | **`energy`** | $[0.0, 1.0]$ | Master visual drive: $\text{clamp}(0.50 \cdot P + 0.30 \cdot S + 0.20 \cdot (S \cdot T))$. Fuses acoustic volume, rhythmic presence, and metronomic confidence into a unified master brightness/speed parameter. |
 | **`tension`** | $[0.0, 1.0]$ | Anticipation, buildup, and novelty curve: $\max(\text{drop\_progress}, \text{novelty}, 0.5 \cdot \max(\Delta R, \Delta P))$, peaking at $1.0$ on drop impact. Drives spatial contraction, chromatic warmth, and vibration. |
 | **`drop_progress`** | $[0.0, 1.0]$ | Normalized countdown ramp: $1.0 - (T_{\text{countdown}} / T_{\text{duration}})$, peaking at $1.0$ at drop landing. Smoothly scales buildup intensity. |
-| **`spectral_tilt`** | $[-1.0, 1.0]$ | Bass vs treble balance across 8 Mel bands: $(T - B) / (T + B)$. $-1.0 = \text{pure bass}$, $+1.0 = \text{pure treble}$, $0.0 = \text{balanced/silence}$. |
-| **`vertical_center`** | $[0.0, 1.0]$ | Spectral center of gravity: $\sum_{i=0}^7 (i/7) \cdot b_i / \sum b_i$. $0.0 = \text{bottom strips (bass)}$, $1.0 = \text{top strips (treble)}$, $0.5 = \text{geometric center}$. |
+| **`spectral_tilt`** | $[-1.0, 1.0]$ | Bass vs treble balance across the 16 Mel bands: $(T - B) / (T + B)$. $-1.0 = \text{pure bass}$, $+1.0 = \text{pure treble}$, $0.0 = \text{balanced/silence}$. |
+| **`vertical_center`** | $[0.0, 1.0]$ | Spectral center of gravity: $\sum_{i=0}^{N-1} (i/(N-1)) \cdot b_i / \sum b_i$. $0.0 = \text{bottom strips (bass)}$, $1.0 = \text{top strips (treble)}$, $0.5 = \text{geometric center}$. |
 | **`salience_gradient`** | $[-1.0, 1.0]$ | Differential rhythm influx: $\Delta R = S_{\text{live}} - S_{\text{speaker}}$. |
 | **`power_gradient`** | $[-1.0, 1.0]$ | Differential power influx: $\Delta P = P_{\text{live}} - P_{\text{speaker}}$. |
 

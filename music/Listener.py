@@ -229,7 +229,7 @@ class Listener:
         self._ring_smoothed_total_power[w] = self.ingestion.smoothed_total_power
         self._ring_asserved_total_power[w] = self.ingestion.asserved_total_power
         nb_fft = self.ingestion.nb_of_fft_band
-        # Contract: band_flux is the 8-band Mel half-wave-rectified onset flux. Fine-resolution analyzers
+        # Contract: band_flux is the 16-band Mel half-wave-rectified onset flux. Fine-resolution analyzers
         # (e.g. 32 bands) expose a different width, so derive the coarse flux directly from ingestion.
         analyzer_flux = getattr(self.analyzer, 'band_flux', None)
         np.subtract(self.ingestion.fft_band_values, self._prev_coarse_fft, out=self._coarse_flux)

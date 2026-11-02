@@ -4,9 +4,9 @@ from music.Listener import Listener
 from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 
 
-def test_infos_default_is_production_8_and_has_no_multiband_key():
+def test_infos_default_is_production_16_and_has_no_multiband_key():
     infos = build_listener_infos()
-    assert infos["nb_of_fft_band"] == 8
+    assert infos["nb_of_fft_band"] == 16
     assert "nb_multiband" not in infos
 
 

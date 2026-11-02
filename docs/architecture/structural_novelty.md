@@ -17,7 +17,7 @@ It achieves this by continuously tracking the mathematical tension between Short
 ## 2. Core Novelty Metrics
 
 ### Timbre Novelty
-Calculated across the 8 Mel frequency bands (`AudioIngestion.band_proportion`):
+Calculated across the 16 Mel frequency bands (`AudioIngestion.band_proportion`):
 - **STM (`stm_retention_base = 0.98`):** Represents immediate sonic texture (~0.5s half-life).
 - **LTM (`ltm_retention_base = 0.9985`):** Represents recent baseline texture (~8.0s half-life).
 - **Novelty:** Euclidean distance between normalized STM and LTM vectors.

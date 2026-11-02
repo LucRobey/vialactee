@@ -133,12 +133,22 @@ class TestMusicalContextEngine(unittest.TestCase):
         self.engine.update(0.1)
         self.assertAlmostEqual(self.engine.spectral_tilt, 0.0, places=2)
         self.assertAlmostEqual(self.engine.vertical_center, 0.5, places=2)
+        self.listener.asserved_fft_band = np.zeros(16, dtype=np.float64)
+        self.listener.asserved_fft_band[15] = 1.0
+        self.engine.update(0.1)
+        self.assertAlmostEqual(self.engine.spectral_tilt, 1.0, places=2)
+        self.assertAlmostEqual(self.engine.vertical_center, 1.0, places=2)
 
         # 4. Silence fallback
         self.listener.asserved_fft_band = np.zeros(8, dtype=np.float64)
         self.engine.update(0.1)
         self.assertAlmostEqual(self.engine.spectral_tilt, 0.0, places=2)
         self.assertAlmostEqual(self.engine.vertical_center, 0.5, places=2)
+        self.listener.asserved_fft_band = np.zeros(16, dtype=np.float64)
+        self.listener.asserved_fft_band[15] = 1.0
+        self.engine.update(0.1)
+        self.assertAlmostEqual(self.engine.spectral_tilt, 1.0, places=2)
+        self.assertAlmostEqual(self.engine.vertical_center, 1.0, places=2)
 
     def test_tension_curve_and_gradients(self) -> None:
         """Verify tension reflects novelty, anticipation, and buildup curve."""

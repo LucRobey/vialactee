@@ -158,4 +158,4 @@ def test_listener_ring_capacity_floor():
     # Verify that raw audio process does not crash and updates smoothly
     audio_chunk = np.zeros(4096)
     listener.process_raw_audio(audio_chunk)
-    assert len(listener.fft_band_values) == 8
+    assert len(listener.fft_band_values) == 16

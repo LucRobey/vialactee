@@ -23,7 +23,7 @@ class Coloured_middle_wave_mode(Mode.Mode):
 
         self.middle: int = self.nb_of_leds // 2
         self.half_len: int = self.middle + 1
-        self.nb_bands: int = int(getattr(listener, "nb_of_fft_band", 8)) if listener is not None else 8
+        self.nb_bands: int = int(getattr(listener, "nb_of_fft_band", 16)) if listener is not None else 16
 
         # Pre-allocate all scratch arrays (ZERO runtime heap allocation - AXIOM-02)
         self.pos_array: np.ndarray = np.arange(self.half_len, dtype=np.float32)

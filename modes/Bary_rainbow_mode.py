@@ -23,7 +23,7 @@ class Bary_rainbow_mode(Mode.Mode):
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
-        self.nb_bands: int = int(getattr(listener, "nb_of_fft_band", 8)) if listener is not None else 8
+        self.nb_bands: int = int(getattr(listener, "nb_of_fft_band", 16)) if listener is not None else 16
         mid = self.nb_of_leds // 2
         if self.nb_of_leds % 2 == 0:
             self.middle_index = [max(0, mid - 1), min(self.nb_of_leds - 1, mid)]

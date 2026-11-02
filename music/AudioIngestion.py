@@ -11,7 +11,7 @@ class AudioIngestion:
         self.dynamic_audio_latency = 0.069
         self.luminosite = max(0.0, min(1.0, float(infos.get("luminosity", 100)) / 100.0))
         self.sensi = max(0.0, float(infos.get("sensibility", 100)) / 100.0)
-        self.nb_of_fft_band = int(infos.get("nb_of_fft_band", 8))
+        self.nb_of_fft_band = int(infos.get("nb_of_fft_band", 16))
         self.nb_multiband = int(infos.get("nb_multiband", 32))
 
         self.build_asserved_fft_lists()
@@ -46,7 +46,7 @@ class AudioIngestion:
                     mat[i, :] /= band_sum
             return mat
 
-        # 8-band Mel filterbank (for visual modes and ring buffer)
+        # 16-band Mel filterbank (for visual modes and ring buffer)
         self.weight_matrix = build_mel_matrix(self.nb_of_fft_band)
         # 32-band high-resolution Mel filterbank (for MultiBandOnsetAudioAnalyzer)
         self.multiband_weight_matrix = build_mel_matrix(self.nb_multiband)
@@ -72,7 +72,7 @@ class AudioIngestion:
         """Initialize the FFT band and chromagram analysis arrays."""
         self.nb_of_chroma = 12
 
-        # FFT band arrays (nb_of_fft_band = 8 for visual modes, nb_multiband = 32 for rhythm analyzer)
+        # FFT band arrays (nb_of_fft_band = 16 for visual modes, nb_multiband = 32 for rhythm analyzer)
         self.fft_band_values = np.zeros(self.nb_of_fft_band)
         self.multiband_fft_values = np.zeros(self.nb_multiband)
         self.smoothed_fft_band_values = np.zeros(self.nb_of_fft_band)
@@ -158,7 +158,7 @@ class AudioIngestion:
         fft_result = np.abs(np.fft.rfft(windowed_data))
         scale = 150.0 / (self.buffer_size / 1024.0)
         
-        # 8-band Mel projection for chandelier lighting modes
+        # 16-band Mel projection for chandelier lighting modes
         mel_bands = np.dot(self.weight_matrix, fft_result) * scale
         self.fft_band_values[:] = mel_bands.astype(int)
 

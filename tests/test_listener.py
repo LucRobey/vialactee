@@ -26,11 +26,11 @@ class TestListener(unittest.TestCase):
         self.assertAlmostEqual(self.listener.bpm, 120.0)
         self.assertAlmostEqual(self.listener.beat_phase, 0.0)
         self.assertEqual(self.listener.beat_count, 0)
-        self.assertEqual(self.listener.nb_of_fft_band, 8)
-        self.assertEqual(len(self.listener.fft_band_values), 8)
+        self.assertEqual(self.listener.nb_of_fft_band, 16)
+        self.assertEqual(len(self.listener.fft_band_values), 16)
         self.assertEqual(len(self.listener.chroma_values), 12)
-        self.assertEqual(len(self.listener.asserved_fft_band), 8)
-        self.assertEqual(len(self.listener.band_flux), 8)
+        self.assertEqual(len(self.listener.asserved_fft_band), 16)
+        self.assertEqual(len(self.listener.band_flux), 16)
         self.assertFalse(hasattr(self.listener, "band_peak"))
         self.assertFalse(hasattr(self.listener, "_ring_band_peak"))
 
@@ -91,7 +91,7 @@ class TestListener(unittest.TestCase):
         t0 = 1000.0
 
         # Inject a unique synthetic item into the ring buffer timestamped at t0
-        synthetic_bands = np.array([11.0, 22.0, 33.0, 44.0, 55.0, 66.0, 77.0, 88.0])
+        synthetic_bands = np.arange(1, 17, dtype=np.float64) * 11.0
         w = self.listener._ring_write
         self.listener._ring_timestamps[w] = t0
         self.listener._ring_fft_band[w, :] = synthetic_bands

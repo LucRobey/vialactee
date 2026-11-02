@@ -422,8 +422,9 @@ class TestPart1ModeBugFixes(_ModeTestCase):
         mode = self.make(Shining_stars_mode, n=60)
         applied = mode.apply_settings({"sub_segment_size": 15, "threshold": 5.0})
         self.assertEqual(applied, {"sub_segment_size": 15, "threshold": 5.0})
-        self.listener.band_flux = np.array([20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        self.listener.asserved_fft_band = np.zeros(8)
+        self.listener.band_flux = np.zeros(self.listener.nb_of_fft_band)
+        self.listener.band_flux[0] = 20.0
+        self.listener.asserved_fft_band = np.zeros(self.listener.nb_of_fft_band)
         mode.rgb_list.fill(0)
         mode.run()
         full_max = int(np.max(mode.rgb_list))
@@ -447,8 +448,8 @@ class TestColouredMiddleWaveBuffer(_ModeTestCase):
     def test_draws_into_redirected_transition_buffer(self):
         mode = self.make(Coloured_middle_wave_mode, n=41)
         self.engine._energy = 0.9
-        self.listener.asserved_fft_band = np.ones(8) * 0.9
-        self.listener._delayed_asserved_fft_band = np.ones(8) * 0.9
+        self.listener.asserved_fft_band = np.ones(self.listener.nb_of_fft_band) * 0.9
+        self.listener._delayed_asserved_fft_band = np.ones(self.listener.nb_of_fft_band) * 0.9
         own_before = mode.rgb_list.copy()
         other = np.zeros_like(mode.rgb_list)
         for _ in range(5):

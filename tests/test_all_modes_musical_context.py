@@ -69,11 +69,11 @@ class MockListener:
         self.live_rhythm_salience = 0.6
         self.beat_trust = 0.7
         self.asserved_novelty = 0.1
-        self.nb_of_fft_band = 8
-        self.asserved_fft_band = np.array([0.5, 0.4, 0.3, 0.2, 0.2, 0.1, 0.1, 0.1])
+        self.nb_of_fft_band = 16
+        self.asserved_fft_band = np.linspace(0.5, 0.1, 16)
         self._delayed_asserved_fft_band = np.copy(self.asserved_fft_band)
         self.smoothed_fft_band_values = np.copy(self.asserved_fft_band)
-        self.band_flux = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.band_flux = np.zeros(16)
         self.smoothed_chroma_values = np.ones(12) * 0.2
         self.chroma_values = np.ones(12) * 0.2
         self.is_song_change = False
@@ -334,7 +334,7 @@ class TestAllModesMusicalContext(unittest.TestCase):
             self.listener.beat_confidence = 0.0
             self.listener.is_beat = False
             self.listener.is_real_beat = False
-            self.listener.asserved_fft_band = np.array([0.7, 0.6, 0.5, 0.4, 0.35, 0.3, 0.25, 0.2])
+            self.listener.asserved_fft_band = np.linspace(0.7, 0.2, self.listener.nb_of_fft_band)
             self.listener._delayed_asserved_fft_band = np.copy(self.listener.asserved_fft_band)
 
             snapshots = []

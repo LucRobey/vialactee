@@ -164,10 +164,11 @@ class TestAudioAnalyzerIntegration(unittest.TestCase):
         
         for frame in range(400):
             current_time = frame * dt
+            self.listener.ingestion.fft_band_values.fill(0.0)
             if frame % 30 == 0:
-                self.listener.ingestion.fft_band_values = np.array([200.0, 150.0, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0])
+                self.listener.ingestion.fft_band_values[:4] = [200.0, 150.0, 10.0, 5.0]
             else:
-                self.listener.ingestion.fft_band_values = np.array([2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                self.listener.ingestion.fft_band_values[:2] = [2.0, 1.0]
                 
             self.analyzer.detect_band_peaks(current_time, dt, fps_ratio)
             
@@ -182,16 +183,17 @@ class TestAudioAnalyzerIntegration(unittest.TestCase):
         
         for frame in range(300):
             current_time = frame * dt
+            self.listener.ingestion.fft_band_values.fill(0.0)
             if frame % 30 == 0:
-                self.listener.ingestion.fft_band_values = np.array([200.0, 150.0, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0])
+                self.listener.ingestion.fft_band_values[:4] = [200.0, 150.0, 10.0, 5.0]
             else:
-                self.listener.ingestion.fft_band_values = np.array([2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                self.listener.ingestion.fft_band_values[:2] = [2.0, 1.0]
             self.analyzer.detect_band_peaks(current_time, dt, fps_ratio)
 
         initial_beats = self.analyzer.beat_count
         for frame in range(300, 420):
             current_time = frame * dt
-            self.listener.ingestion.fft_band_values = np.zeros(8)
+            self.listener.ingestion.fft_band_values.fill(0.0)
             self.analyzer.detect_band_peaks(current_time, dt, fps_ratio)
             
         self.assertGreater(self.analyzer.beat_count, initial_beats)
@@ -229,10 +231,10 @@ class TestMultiBandOnsetAudioAnalyzerIntegration(unittest.TestCase):
         self.assertIsInstance(self.analyzer.structural_changes_times, list)
 
     def test_dual_resolution_ingestion_parity(self):
-        # AudioIngestion should expose both 8-band for visual modes and 32-band for MultiBand analyzer
-        self.assertEqual(len(self.listener.ingestion.fft_band_values), 8)
+        # AudioIngestion should expose both 16-band for visual modes and 32-band for MultiBand analyzer
+        self.assertEqual(len(self.listener.ingestion.fft_band_values), 16)
         self.assertEqual(len(self.listener.ingestion.multiband_fft_values), 32)
-        self.assertEqual(len(self.listener.fft_band_values), 8)
+        self.assertEqual(len(self.listener.fft_band_values), 16)
 
     def test_synthetic_pulse_tracking(self):
         fps = 60.0
@@ -422,6 +424,7 @@ class TestMultiBandOnsetAudioAnalyzerIntegration(unittest.TestCase):
         fps = 60.0
         dt = 1.0 / fps
         self.listener.reset()
+        self.listener.ingestion.useMicrophone = True
 
         import unittest.mock
 

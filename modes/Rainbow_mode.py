@@ -62,7 +62,7 @@ class Rainbow_mode(Mode.Mode):
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
-        self.nb_of_fft_band: int = getattr(self.listener, "nb_of_fft_band", 8) if self.listener is not None else 8
+        self.nb_of_fft_band: int = getattr(self.listener, "nb_of_fft_band", 16) if self.listener is not None else 16
         self.delta_margin: float = float(self.nb_of_leds) / max(1.0, float(self.nb_of_fft_band - 1))
 
         self.minimum_hue: float = colors.red_hue

@@ -59,7 +59,7 @@ class BaseAudioAnalyzer(ABC):
         self.time_signature: Tuple[int, int] = (4, 4)
 
         # 2. Spectral & Transient Dynamics Defaults
-        nb_bands = getattr(self.ingestion, 'nb_of_fft_band', 8)
+        nb_bands = getattr(self.ingestion, 'nb_of_fft_band', 16)
         self.band_flux: np.ndarray = np.zeros(nb_bands)
         self.spectral_centroid: float = 0.5
 

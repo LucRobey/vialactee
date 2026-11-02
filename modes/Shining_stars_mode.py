@@ -68,7 +68,7 @@ class Shining_stars_mode(Mode.Mode):
     def __init__(self, name: str, segment_name: str, listener: Any, leds: Any, indexes: List[int], rgb_list: np.ndarray, infos: Dict[str, Any]):
         super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
 
-        self.nb_of_fft_band = getattr(listener, "nb_of_fft_band", 8) if listener is not None else 8
+        self.nb_of_fft_band = getattr(listener, "nb_of_fft_band", 16) if listener is not None else 16
         self.sub_segment_size = int(infos.get("stars_sub_segment_size", infos.get("sub_segment_size", self.sub_segment_size_default)))
         self.threshold = float(infos.get("stars_threshold", infos.get("threshold", self.threshold_default)))
         self.fade_ratio = float(infos.get("stars_fade_ratio", infos.get("fade_ratio", self.fade_ratio_default)))
