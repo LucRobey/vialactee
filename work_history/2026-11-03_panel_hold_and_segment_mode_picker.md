@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Sonnet 5.5 (High)  
 > **Primary Goal:** From the pygame control panel opened by `Main.py` (not the web app), stop automatic transitions and choose each segment's mode, for a live presentation.  
 > **Status:** COMPLETED  
-> **Commits:** see `git log` (pushed: see final message)  
+> **Commits:** `5e6d45d` (pushed: yes)  
 > **Skills Used:** `vialactee-project`  
 > **Skill Friction:** none
 
@@ -38,7 +38,7 @@
 
 ## 3. Verification & Testing
 
-* `.venv\Scripts\python.exe -m pytest -q` -> `573 passed, 5 deselected` (before the final one-line hint-text edit; re-run before commit, see below).
+* `.venv\Scripts\python.exe -m pytest -q` -> `573 passed, 5 deselected` (re-run after the last edit, before commit).
 * Rendered the panel off-screen (SDL dummy driver) in LIVE and HOLD states and checked the layout by eye (732x661 window with analyzer data).
 * **Not tested:** a real run of `Main.py` with the ESP32 / microphone, i.e. clicking in the live window.
 
