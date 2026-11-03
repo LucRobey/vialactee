@@ -54,8 +54,8 @@ graph TD
 | :---: | :--- | :--- | :--- |
 | `9001` | `PORT_STRIP_1` | `Udp_Sender -> ESP32 / Fake_ESP32` | Binary pixel chunks (`<H` uint16 LE `start_index` + RGB bytes, $\le 400$ LEDs / $1,202\text{ B}$ per packet) for Channel 1 at 30 FPS. |
 | `9002` | `PORT_STRIP_2` | `Udp_Sender -> ESP32 / Fake_ESP32` | Binary pixel chunks for Channel 2 at 30 FPS (`full` profile only). |
-| `9003` | `SEGMENT_METADATA_PORT` | `Udp_Sender -> Fake_ESP32` | UTF-8 JSON sideband telemetry for the simulator HUD: `{"type": "segment_mode", ...}` (on transition or 1 Hz heartbeat), `{"type": "analyzer_state", ...}` (10 Hz throttle), and `{"type": "transition_state", ...}` (on change or 10 Hz throttle). Ignored by physical ESP32 hardware. |
-| `9004` | `CONTROL_PORT` | `Fake_leds UI -> Udp_Sender` | UTF-8 JSON control socket bound on `127.0.0.1:9004` allowing the Pygame simulator toolbar to trigger transitions (`{"type": "request_transition", "technique": ..., "duration": ...}`). |
+| `9003` | `SEGMENT_METADATA_PORT` | `Udp_Sender -> Fake_ESP32` | UTF-8 JSON sideband telemetry for the simulator HUD: `{"type": "segment_mode", ...}` (on transition or 1 Hz heartbeat), `{"type": "analyzer_state", ...}` (10 Hz throttle), `{"type": "transition_state", ...}` (on change or 10 Hz throttle, includes `is_locked`), and `{"type": "mode_catalog", "modes": {segment_id: [mode names]}}` (1 Hz, feeds the panel's `<` `>` buttons). Ignored by physical ESP32 hardware. |
+| `9004` | `CONTROL_PORT` | `Fake_leds UI -> Udp_Sender` | UTF-8 JSON control socket bound on `127.0.0.1:9004` allowing the Pygame panel to trigger transitions (`{"type": "request_transition", "technique": ..., "duration": ...}`), hold/resume automatic transitions (`{"type": "set_locked", "locked": bool}`) and pick a segment's mode (`{"type": "set_segment_mode", "segment": "v4", "mode": "Rainbow"}`). Every type except `request_transition` is forwarded to `Mode_master.handle_panel_command` via `Udp_Sender.set_control_handler`. |
 
 ---
 

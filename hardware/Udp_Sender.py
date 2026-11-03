@@ -30,6 +30,22 @@ class Udp_Sender(HardwareInterface):
         self._last_transition_state = None
         self._last_segment_heartbeats = {}  # {segment_name: monotonic_timestamp}
         self._cached_segment_modes = {}     # {segment_name: (mode_name, target_mode_name)}
+        self._control_handler = None        # callable(dict) applying panel commands (HOLD, segment mode)
+        self._mode_catalog = None           # {segment_id: [mode names]} behind the panel's < > buttons
+        self._last_catalog_send = 0.0
+
+    def set_control_handler(self, handler, mode_catalog=None):
+        """
+        Let the simulator/ESP32 panel drive the show.
+
+        Args:
+            handler: callable receiving every panel command dict other than
+                `request_transition` (e.g. `set_locked`, `set_segment_mode`).
+            mode_catalog: {segment_id: [mode names]} streamed to the panel at 1 Hz so
+                it knows which modes each segment accepts.
+        """
+        self._control_handler = handler
+        self._mode_catalog = mode_catalog
 
     def set_analyzer(self, analyzer):
         """Store a reference to the AudioAnalyzer so show() can stream its state to the simulator."""
@@ -80,6 +96,7 @@ class Udp_Sender(HardwareInterface):
         if self._transitions is not None:
             self._poll_control_requests()
             self._send_transition_state()
+            self._send_mode_catalog()
 
     def _poll_control_requests(self):
         """Drain simulator UI transition requests from CONTROL_PORT in non-blocking mode."""
@@ -100,6 +117,8 @@ class Udp_Sender(HardwareInterface):
                         technique=tech,
                         duration=float(dur) if dur is not None else None,
                     )
+                elif self._control_handler is not None:
+                    self._control_handler(payload)
             except Exception:
                 pass
 
@@ -110,7 +129,8 @@ class Udp_Sender(HardwareInterface):
         try:
             now = time.monotonic()
             st = self._transitions.get_status()
-            curr = (bool(st.is_in_transition), bool(st.is_pending), round(float(st.progress), 2), st.technique)
+            is_locked = bool(getattr(st, "is_locked", False))
+            curr = (bool(st.is_in_transition), bool(st.is_pending), round(float(st.progress), 2), st.technique, is_locked)
             if curr == self._last_transition_state and (now - self._last_transition_send) < 0.1:
                 return
             self._last_transition_state = curr
@@ -121,7 +141,22 @@ class Udp_Sender(HardwareInterface):
                 "is_pending": bool(st.is_pending),
                 "progress": round(float(st.progress), 3),
                 "technique": st.technique,
+                "is_locked": is_locked,
             }
+            self.sock.sendto(json.dumps(payload).encode("utf-8"), ("127.0.0.1", SEGMENT_METADATA_PORT))
+        except Exception:
+            pass
+
+    def _send_mode_catalog(self):
+        """Send the per-segment list of selectable modes to the panel at 1 Hz."""
+        if self._mode_catalog is None:
+            return
+        now = time.monotonic()
+        if (now - self._last_catalog_send) < 1.0:
+            return
+        self._last_catalog_send = now
+        try:
+            payload = {"type": "mode_catalog", "modes": self._mode_catalog}
             self.sock.sendto(json.dumps(payload).encode("utf-8"), ("127.0.0.1", SEGMENT_METADATA_PORT))
         except Exception:
             pass

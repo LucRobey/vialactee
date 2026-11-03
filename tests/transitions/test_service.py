@@ -95,6 +95,15 @@ class TestFrontDoorBehavior(unittest.TestCase):
         for _ in range(200):
             self.assertIsNone(self.svc.update(0.033, beat_music()))
 
+    def test_locking_withdraws_queued_transitions_but_manual_requests_still_work(self):
+        self.svc.request_next()  # queued, waiting for a beat
+        self.assertTrue(self.svc.get_status().is_pending)
+        self.svc.set_locked(True)
+        self.assertFalse(self.svc.get_status().is_pending)
+        self.assertIsNone(self.svc.update(0.01, beat_music()))
+        self.svc.request_next()  # an explicit GO is still honoured while held
+        self.assertIsNotNone(self.svc.update(0.01, beat_music()))
+
     def test_interval_is_reported_in_status(self):
         self.svc.set_auto_interval(42)
         self.assertEqual(self.svc.get_status().auto_interval, 42.0)

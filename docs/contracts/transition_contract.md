@@ -195,7 +195,7 @@ Each transition in `TRANSITION_FAMILIES` belongs to a `frozenset` of one or more
 
 | Source | Path | Quantized to beat | Technique |
 | :--- | :--- | :-: | :--- |
-| Director timer (`auto_transition_time`, default 20 s), skipped if `locked` | `update()` (reason: `timer`) | yes | auto |
+| Director timer (`auto_transition_time`, default 20 s), skipped if `locked` (locking also withdraws any queued, not-yet-started transition; a running one finishes) | `update()` (reason: `timer`) | yes | auto |
 | Song change countdown arrival at speakers (`upcoming_song_change_countdown <= 0.0`) | `update()` (reason: `song_change`) | no | auto |
 | Structural change countdown arrival at speakers (`upcoming_structural_change_countdown <= 0.0`) | `update()` (reason: `structural_change`) | no | auto |
 | Pre-drop lookahead alignment (`drop_countdown > 0` or `scene == BUILDUP`) | `update()` (reason: `pre_drop_buildup`) | no | `explosion` ($D = \text{lookahead} / 0.80$) |

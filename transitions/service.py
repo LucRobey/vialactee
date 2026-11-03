@@ -127,6 +127,17 @@ class DefaultTransitionService(TransitionService):
 
     def set_locked(self, locked: bool) -> None:
         self._director.locked = bool(locked)
+        if locked:
+            # HOLD also withdraws anything queued but not yet started (waiting for a
+            # downbeat, armed musical triggers), so nothing fires after the switch.
+            # A transition already running is left to finish.
+            d = self._director
+            d.is_pending = False
+            d._song_change_armed = False
+            d._structural_change_armed = False
+            d._drop_buildup_armed = False
+            self._drop_requested = False
+            self._manager._pending_transition = None
 
     def set_auto_interval(self, seconds: float) -> None:
         self._director.configuration_duration = float(seconds)

@@ -6,7 +6,7 @@ import sys
 import time
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
-from hardware.VisualizerHud import VisualizerHud
+from hardware.VisualizerHud import VisualizerHud, CONTROL_PANEL_H
 
 CONTROL_PORT = 9004
 
@@ -32,6 +32,7 @@ class FakeLedsVisualizer:
             cls._instance._analyzer_data = None
             cls._instance._transition_data = None
             cls._instance._transition_controller = None
+            cls._instance._control_handler = None
             cls._instance._control_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             cls._instance.audio_player = None
             cls._instance._last_caption_update = 0.0
@@ -68,7 +69,8 @@ class FakeLedsVisualizer:
         }
         modes_h = 38 + max(1, len(seen)) * 22
         left_h = (modes_h + 12 + 345) if self._analyzer_data is not None else modes_h
-        return (732, max(205, left_h) + 24)
+        right_h = 205 + 12 + CONTROL_PANEL_H  # Transition Tester + SHOW CONTROL
+        return (732, max(right_h, left_h) + 24)
 
     def set_hud_only(self, hud_only):
         self.hud_only = bool(hud_only)
@@ -204,12 +206,29 @@ class FakeLedsVisualizer:
         except Exception:
             pass
 
+    def set_control_handler(self, handler):
+        """In-process handler for panel commands (HOLD, segment mode); otherwise they go over UDP."""
+        self._control_handler = handler
+
+    def send_control_command(self, command: dict) -> None:
+        """Send a panel command (`set_locked`, `set_segment_mode`) to the main process."""
+        if self._control_handler is not None:
+            try:
+                self._control_handler(command)
+            except Exception:
+                pass
+            return
+        try:
+            self._control_sock.sendto(json.dumps(command).encode("utf-8"), ("127.0.0.1", CONTROL_PORT))
+        except Exception:
+            pass
+
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit(0)
-            if self.hud.handle_event(event, self.send_transition_request):
+            if self.hud.handle_event(event, self.send_transition_request, self.send_control_command):
                 continue
             if event.type == pygame.KEYDOWN and self.audio_player is not None:
                 p = self.audio_player
@@ -255,6 +274,7 @@ class FakeLedsVisualizer:
                 py=12,
             )
             self.hud.draw_transition_panel(self.screen, self._transition_data, px=320, py=12)
+            self.hud.draw_control_panel(self.screen, self._transition_data, px=320, py=12 + 205 + 12)
             if self._analyzer_data is not None:
                 self.hud.draw_analyzer_hud(self.screen, self._analyzer_data, px=12, py=12 + modes_h + 12)
             pygame.display.flip()
@@ -313,6 +333,7 @@ class FakeLedsVisualizer:
         )
         self._draw_analyzer_hud()
         self.hud.draw_transition_panel(self.screen, self._transition_data)
+        self.hud.draw_control_panel(self.screen, self._transition_data, px=730, py=685)
         pygame.display.flip()
 
     def update_analyzer_data(self, data):
@@ -322,6 +343,10 @@ class FakeLedsVisualizer:
     def update_transition_data(self, data):
         """Store latest transition state received from the main process via UDP."""
         self._transition_data = data
+
+    def update_mode_catalog(self, catalog):
+        """Store the {segment_id: [mode names]} list that the < > buttons cycle through."""
+        self.hud.mode_catalog = dict(catalog or {})
 
     def _draw_analyzer_hud(self):
         """Draw the music analyzer HUD overlay in the bottom-left corner."""
@@ -347,6 +372,11 @@ class Fake_leds(HardwareInterface):
     def set_transition_controller(self, transitions):
         self._transitions = transitions
         visualizer.set_transition_controller(transitions)
+
+    def set_control_handler(self, handler, mode_catalog=None):
+        visualizer.set_control_handler(handler)
+        if mode_catalog:
+            visualizer.update_mode_catalog(mode_catalog)
 
     def __getitem__(self, index):
         return self.data[index]
@@ -395,6 +425,7 @@ class Fake_leds(HardwareInterface):
                 "is_pending": bool(st.is_pending),
                 "progress": round(float(st.progress), 3),
                 "technique": st.technique,
+                "is_locked": bool(getattr(st, "is_locked", False)),
             })
         visualizer.update_strip(self.strip_id, self.data)
         visualizer.show()

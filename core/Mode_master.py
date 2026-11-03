@@ -68,6 +68,8 @@ class Mode_master:
         self.transitions = create_transition_service(self.infos)
         if len(self.leds_list) > 0 and hasattr(self.leds_list[0], "set_transition_controller"):
             self.leds_list[0].set_transition_controller(self.transitions)
+        if len(self.leds_list) > 0 and hasattr(self.leds_list[0], "set_control_handler"):
+            self.leds_list[0].set_control_handler(self.handle_panel_command, self._panel_mode_catalog())
         self.mood = create_mood_service(auto_scene=True)  # auto_scene is a code default (off) in mood.api
         Mode.bind_mood_colors(self.mood.colors())
         Mode.bind_mood_modifiers(self.mood.modifiers())
@@ -413,6 +415,42 @@ class Mode_master:
             key = f"segs_{i+1}"
             if key in data:
                 add_segments(data[key], leds)
+
+    def _panel_mode_catalog(self) -> Dict[str, List[str]]:
+        """{segment id: sorted mode names it can run}, streamed to the desktop control panel."""
+        return {
+            getattr(segment, "id", "") or segment.name: sorted(getattr(segment, "modes", {}).keys())
+            for segment in self.segments_list
+        }
+
+    def handle_panel_command(self, command: Dict[str, Any]) -> bool:
+        """
+        Apply a command from the desktop control panel (the pygame window opened by Main.py).
+
+        Supported `type`s:
+          * `set_locked` {locked}: HOLD / LIVE, freezes or resumes automatic transitions.
+          * `set_segment_mode` {segment, mode}: instantly puts a segment on a mode.
+
+        Returns True when the command was applied. Runs synchronously on the render loop.
+        """
+        ctype = command.get("type")
+        if ctype == "set_locked":
+            self.transitions.set_locked(bool(command.get("locked")))
+            self._state_dirty = True
+            return True
+        if ctype == "set_segment_mode":
+            segment_ref = command.get("segment")
+            mode_name = command.get("mode")
+            if not isinstance(segment_ref, str) or not isinstance(mode_name, str):
+                return False
+            segment = self._find_segment_by_name(segment_ref)
+            if segment is None or segment._normalize_mode_name(mode_name) not in segment.modes:
+                return False
+            segment.execute_mode_swap(mode_name)
+            self._push_installation()
+            self._state_dirty = True
+            return True
+        return False
 
     def _push_installation(self) -> None:
         """Describe the current segments to the transition sector."""

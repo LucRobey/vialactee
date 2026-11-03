@@ -7,6 +7,9 @@ from typing import Any, Callable, Dict, Optional, Tuple
 import pygame
 from transitions.api import AVAILABLE_TRANSITIONS
 
+# Height of the SHOW CONTROL (HOLD / LIVE) panel drawn under the Transition Tester.
+CONTROL_PANEL_H = 100
+
 
 class VisualizerHud:
     """Renders the Music Analyzer HUD and the interactive Transition Tester panel."""
@@ -25,6 +28,16 @@ class VisualizerHud:
         self.selected_idx: int = 0
         self.selected_duration: float = 3.0
         self._last_request_ts: float = 0.0
+
+        # Show control state: HOLD (no automatic transitions) and per-segment mode picking
+        self.is_locked: bool = False
+        self.mode_catalog: Dict[str, Any] = {}  # {segment_id: [mode names]} streamed by the main process
+        self._row_rects: list = []  # (segment panel name, "<" rect, ">" rect), rebuilt on every draw
+        self._modes_snapshot: Dict[str, Dict[str, Any]] = {}
+        self._optimistic_modes: Dict[str, Tuple[str, float]] = {}
+        self._last_hold_ts: float = 0.0
+        self._control_bg_surf: Optional[Any] = None
+        self._rect_hold = pygame.Rect(334, 265, 372, 34)
 
         # Clickable rects populated on draw
         self._rect_prev = pygame.Rect(334, 726, 36, 28)
@@ -54,10 +67,53 @@ class VisualizerHud:
     def adjust_duration(self, delta: float) -> None:
         self.selected_duration = round(max(0.2, min(10.0, self.selected_duration + delta)), 1)
 
-    def handle_event(self, event: Any, on_send: Callable[[str, float], None]) -> bool:
-        """Handle mouse clicks and hotkeys for the Transition Tester panel."""
+    def _toggle_hold(self, on_command: Callable[[Dict[str, Any]], None]) -> None:
+        self._last_hold_ts = time.monotonic()
+        on_command({"type": "set_locked", "locked": not self.is_locked})
+
+    def _cycle_segment_mode(self, name: str, delta: int, on_command: Callable[[Dict[str, Any]], None]) -> None:
+        """Send the previous/next mode (wrapping) of a segment, based on what the panel currently shows."""
+        seg_id = name[len("segment_"):] if name.startswith("segment_") else name
+        modes = self.mode_catalog.get(seg_id) or []
+        if not modes:
+            return
+        now = time.monotonic()
+        current = (self._modes_snapshot.get(name) or {}).get("mode")
+        pending = self._optimistic_modes.get(name)
+        if pending is not None and now - pending[1] < 0.5:
+            current = pending[0]  # a click still in flight: chain from it so fast clicks do not repeat
+        if current in modes:
+            new_mode = modes[(modes.index(current) + delta) % len(modes)]
+        else:
+            new_mode = modes[0] if delta > 0 else modes[-1]
+        self._optimistic_modes[name] = (new_mode, now)
+        on_command({"type": "set_segment_mode", "segment": seg_id, "mode": new_mode})
+
+    def handle_event(
+        self,
+        event: Any,
+        on_send: Callable[[str, float], None],
+        on_command: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> bool:
+        """
+        Handle mouse clicks and hotkeys for the Transition Tester and show-control panels.
+
+        `on_command` receives the HOLD toggle (`set_locked`) and per-segment mode picks
+        (`set_segment_mode`); without it those controls are inert.
+        """
         if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, "button", 0) == 1:
             pos = event.pos
+            if on_command is not None:
+                if self._rect_hold.collidepoint(pos):
+                    self._toggle_hold(on_command)
+                    return True
+                for name, rect_prev, rect_next in self._row_rects:
+                    if rect_prev.collidepoint(pos):
+                        self._cycle_segment_mode(name, -1, on_command)
+                        return True
+                    if rect_next.collidepoint(pos):
+                        self._cycle_segment_mode(name, 1, on_command)
+                        return True
             if self._rect_prev.collidepoint(pos):
                 self.step_transition(-1)
                 return True
@@ -97,6 +153,9 @@ class VisualizerHud:
                 self._last_request_ts = time.monotonic()
                 on_send(self.selected_transition, self.selected_duration)
                 return True
+            if event.key == pygame.K_h and on_command is not None:
+                self._toggle_hold(on_command)
+                return True
         return False
 
     def _ensure_fonts(self) -> None:
@@ -109,6 +168,7 @@ class VisualizerHud:
         self._hud_value_font = pygame.font.SysFont("consolas", 11, bold=True)
         self._hud_title_surf = self._hud_title_font.render("MUSIC ANALYZER", True, (220, 220, 255))
         self._panel_title_surf = self._hud_title_font.render("TRANSITION TESTER", True, (180, 240, 255))
+        self._control_title_surf = self._hud_title_font.render("SHOW CONTROL", True, (255, 225, 160))
         self._modes_title_surf = self._hud_title_font.render("SEGMENT MODES", True, (200, 235, 255))
         self._hud_bg_surf = pygame.Surface((295, 345), pygame.SRCALPHA)
         self._hud_bg_surf.fill((12, 12, 20, 215))
@@ -136,6 +196,9 @@ class VisualizerHud:
                     seen.add(name)
                     rows.append((name, border_color))
         rows.sort(key=lambda r: (0 if "_v" in r[0] else 1, r[0]))
+
+        self._row_rects = []
+        self._modes_snapshot = segment_modes
 
         row_h = 22
         pw = 295
@@ -174,7 +237,19 @@ class VisualizerHud:
                 if len(mode_label_cache) > 256:
                     mode_label_cache.clear()
                 m_surf = mode_label_cache[m_key] = mode_font.render(mode_label, True, color)
+
+            has_buttons = bool(self.mode_catalog.get(name[len("segment_"):] if name.startswith("segment_") else name))
+            label_w = pw - 72 - (52 if has_buttons else 6)
+            old_clip = screen.get_clip()
+            screen.set_clip(pygame.Rect(px + 72, cy, label_w, row_h))
             screen.blit(m_surf, (px + 72, cy + 1))
+            screen.set_clip(old_clip)
+            if has_buttons:
+                rect_prev = pygame.Rect(px + pw - 50, cy - 1, 20, row_h - 3)
+                rect_next = pygame.Rect(px + pw - 27, cy - 1, 20, row_h - 3)
+                self._draw_button(screen, rect_prev, "<", (40, 55, 70), (90, 150, 190))
+                self._draw_button(screen, rect_next, ">", (40, 55, 70), (90, 150, 190))
+                self._row_rects.append((name, rect_prev, rect_next))
             cy += row_h
         return ph
 
@@ -244,6 +319,42 @@ class VisualizerHud:
         st_surf = self._hud_value(status_txt, status_col)
         screen.blit(st_surf, (px + 14, sy))
         self._hud_bar(screen, px + 14, sy + 18, pw - 28, 12, progress if is_in_trans else (1.0 if is_pending else 0.0), status_col)
+
+    def draw_control_panel(
+        self,
+        screen: Any,
+        transition_data: Optional[Dict[str, Any]],
+        px: int = 320,
+        py: int = 229,
+    ) -> None:
+        """Draw the HOLD / LIVE switch (freezes or resumes all automatic transitions)."""
+        self._ensure_fonts()
+        pw, ph = 400, CONTROL_PANEL_H
+        self.is_locked = bool((transition_data or {}).get("is_locked", False))
+        self._rect_hold = pygame.Rect(px + 14, py + 36, 372, 34)
+        if self._control_bg_surf is None:
+            self._control_bg_surf = pygame.Surface((pw, ph), pygame.SRCALPHA)
+            self._control_bg_surf.fill((12, 18, 26, 225))
+        screen.blit(self._control_bg_surf, (px, py))
+
+        if self.is_locked:
+            border, btn_bg, btn_border = (230, 150, 40), (150, 70, 20), (255, 190, 90)
+            label = "HOLD - AUTO TRANSITIONS OFF  (Hotkey: H)"
+            hint = "Choose each segment's mode with < > in SEGMENT MODES"
+            hint_col = (255, 210, 120)
+        else:
+            border, btn_bg, btn_border = (60, 180, 220), (28, 110, 90), (90, 230, 170)
+            label = "LIVE - AUTO TRANSITIONS ON  (Hotkey: H)"
+            hint = "Use HOLD first, or the next transition replaces your picks"
+            hint_col = (160, 185, 200)
+        if (time.monotonic() - self._last_hold_ts) < 0.25:
+            btn_border = (255, 255, 255)
+
+        pygame.draw.rect(screen, border, (px, py, pw, ph), 2)
+        screen.blit(self._control_title_surf, (px + pw // 2 - self._control_title_surf.get_width() // 2, py + 8))
+        pygame.draw.line(screen, (60, 80, 100), (px + 8, py + 28), (px + pw - 8, py + 28), 1)
+        self._draw_button(screen, self._rect_hold, label, btn_bg, btn_border)
+        screen.blit(self._hud_value(hint, hint_col), (px + 14, py + 78))
 
     def _draw_button(self, screen: Any, rect: pygame.Rect, label: str, bg: Tuple[int, int, int], border: Tuple[int, int, int]) -> None:
         pygame.draw.rect(screen, bg, rect, border_radius=4)

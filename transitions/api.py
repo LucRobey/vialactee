@@ -263,7 +263,11 @@ class TransitionService:
         raise NotImplementedError
 
     def set_locked(self, locked: bool) -> None:
-        """While locked the sector never fires automatic transitions."""
+        """While locked the sector never fires automatic transitions.
+
+        Locking also withdraws any transition still queued (not yet started); one already
+        running finishes normally. Manual requests (`request_next`, `request_drop`) still work.
+        """
         raise NotImplementedError
 
     def set_auto_interval(self, seconds: float) -> None:

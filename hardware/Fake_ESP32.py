@@ -59,7 +59,7 @@ def drain_metadata_packets(sock_meta, visualizer, max_packets=64):
     has_new_meta = False
     for _ in range(max_packets):
         try:
-            data, _ = sock_meta.recvfrom(4096)
+            data, _ = sock_meta.recvfrom(65535)
         except (BlockingIOError, OSError):
             break
         try:
@@ -80,6 +80,9 @@ def drain_metadata_packets(sock_meta, visualizer, max_packets=64):
                 has_new_meta = True
             elif p_type == "transition_state":
                 visualizer.update_transition_data(payload)
+                has_new_meta = True
+            elif p_type == "mode_catalog":
+                visualizer.update_mode_catalog(payload.get("modes"))
                 has_new_meta = True
         except Exception:
             pass
