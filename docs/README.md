@@ -57,7 +57,7 @@ All documentation in this repository is governed by a strict **5-Tier Documentat
 - **[`mood_contract.md`](./contracts/mood_contract.md)** — `mood.api` Front Door, Curated Palettes, `2.5s` Cosine Crossfade & `MoodModifiers`
 - **[`transition_contract.md`](./contracts/transition_contract.md)** — `transitions.api` Front Door, 23 Transition Techniques & Cooperative Mode Handshake
 - **[`mode_contract.md`](./contracts/mode_contract.md)** — `modes/` Sector Contract, Input/Output Doors, Signal Trust Handling & Perceptual Laws
-- **[`global_mode_contract.md`](./contracts/global_mode_contract.md)** — `modes/` (`IS_GLOBAL = True`) Global Installation Contract, 5 Doors, `SegmentSpatialProfile` & 10 Perceptual/Architectural Laws
+- **[`global_mode_contract.md`](./contracts/global_mode_contract.md)** — `modes/` (`IS_GLOBAL = True`) Global Installation Contract, 5 Doors, `SegmentSpatialProfile`, 10 Perceptual/Architectural Laws & the three families (field, cast, ensemble)
 
 ---
 
