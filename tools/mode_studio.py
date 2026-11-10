@@ -320,9 +320,15 @@ class ModeManager:
             mod_name = os.path.splitext(fname)[0]
             try:
                 mod = importlib.import_module(f"modes.{mod_name}")
-                for attr_name in dir(mod):
-                    attr = getattr(mod, attr_name)
-                    if inspect.isclass(attr) and issubclass(attr, Mode) and attr is not Mode:
+                # Prefer the class named after its module; skip abstract bases (e.g. Cast_mode_base),
+                # which concrete modes import and which would otherwise win the alphabetical dir() scan.
+                candidates = [mod_name] + sorted(dir(mod))
+                for attr_name in candidates:
+                    attr = getattr(mod, attr_name, None)
+                    if (
+                        inspect.isclass(attr) and issubclass(attr, Mode) and attr is not Mode
+                        and not attr.__dict__.get("ABSTRACT", False)
+                    ):
                         display_name = mod_name.replace("_mode", "").replace("_", " ").title()
                         self.mode_catalog.append((display_name, mod_name, attr_name))
                         break

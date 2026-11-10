@@ -135,6 +135,48 @@
       "class": "Spectral_avalanche_mode",
       "dna": { "energy": 0.80, "punch": 0.75, "rhythm": 0.70, "complexity": 0.35 },
       "tags": ["lead:spectrum", "axis:vertical", "form:wave", "origin:global", "color:palette", "layer:meter"]
+    },
+    {
+      "name": "Tableaux",
+      "module": "Tableaux_mode",
+      "class": "Tableaux_mode",
+      "dna": { "energy": 0.55, "punch": 0.60, "rhythm": 0.70, "complexity": 0.20 },
+      "tags": ["lead:beat", "form:flash", "origin:global", "color:palette", "layer:pulse"]
+    },
+    {
+      "name": "Bar Clock",
+      "module": "Bar_clock_mode",
+      "class": "Bar_clock_mode",
+      "dna": { "energy": 0.60, "punch": 0.70, "rhythm": 0.95, "complexity": 0.30 },
+      "tags": ["lead:beat", "form:bar", "origin:sweep", "color:palette", "layer:pulse"]
+    },
+    {
+      "name": "Construction",
+      "module": "Construction_mode",
+      "class": "Construction_mode",
+      "dna": { "energy": 0.65, "punch": 0.65, "rhythm": 0.85, "complexity": 0.25 },
+      "tags": ["lead:beat", "form:bar", "origin:center", "color:palette", "layer:meter"]
+    },
+    {
+      "name": "Flip-Flop",
+      "module": "Flip_flop_mode",
+      "class": "Flip_flop_mode",
+      "dna": { "energy": 0.75, "punch": 0.85, "rhythm": 0.95, "complexity": 0.20 },
+      "tags": ["lead:beat", "form:flash", "origin:global", "color:palette", "layer:pulse"]
+    },
+    {
+      "name": "Negative Space",
+      "module": "Negative_space_mode",
+      "class": "Negative_space_mode",
+      "dna": { "energy": 0.85, "punch": 0.90, "rhythm": 0.75, "complexity": 0.25 },
+      "tags": ["lead:transient", "form:flash", "origin:global", "color:palette", "layer:accent"]
+    },
+    {
+      "name": "Mosaic",
+      "module": "Mosaic_mode",
+      "class": "Mosaic_mode",
+      "dna": { "energy": 0.30, "punch": 0.25, "rhythm": 0.85, "complexity": 0.10 },
+      "tags": ["lead:beat", "form:field", "origin:scatter", "color:palette", "layer:bed"]
     }
   ]
 }

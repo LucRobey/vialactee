@@ -252,8 +252,13 @@ async def main(cli_args: Optional[argparse.Namespace] = None) -> Optional[str]:
     atexit.register(mode_master.flush_sync)
 
     if cli_args.mode:
-        for seg in mode_master.segments_list:
-            seg.force_mode(cli_args.mode)
+        # A Global Mode goes through the panel's Global picker path so the transition sector
+        # switches to global scope; otherwise every segment is forced onto the local mode.
+        if not mode_master.handle_panel_command({"type": "set_global_mode", "mode": cli_args.mode}):
+            for seg in mode_master.segments_list:
+                seg.force_mode(cli_args.mode)
+        # Start in HOLD so the startup re-cast cannot replace the requested mode (LIVE resumes).
+        mode_master.handle_panel_command({"type": "set_locked", "locked": True})
    
     if use_audio_file:
         infos["useMicrophone"] = False

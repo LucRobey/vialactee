@@ -3,7 +3,7 @@
 > **Location:** `docs/contracts/global_mode_contract.md` (Tier 1 Canonical Specification — Sealed Sector Contract)  
 > **Scope:** Every global visual mode in [`modes/`](../../modes/) (and its base class [`modes/Mode.py`](../../modes/Mode.py)) orchestrating all 11 segments across the chandelier (1,304 physical LEDs) as a single physical instrument.  
 > **Inheritance & Hierarchy:** Global modes inherit all foundational sector invariants from [`docs/contracts/mode_contract.md`](./mode_contract.md) while establishing global installation-wide spatial, perceptual, and performance invariants.  
-> **Enforced by:** `tests/test_global_modes.py`, `tests/test_mode_helpers.py`, `tests/governance/test_axiom_01_frame_budget.py`, `tests/governance/test_axiom_02_zero_allocation.py`, `tests/governance/test_axiom_03_geometry.py`, `tests/governance/test_axiom_07_code_governance.py`, `tests/governance/test_mode_choreography.py`, `tests/governance/test_docs_parity.py`.
+> **Enforced by:** `tests/test_global_modes.py`, `tests/test_cast_modes.py`, `tests/test_mode_helpers.py`, `tests/governance/test_axiom_01_frame_budget.py`, `tests/governance/test_axiom_02_zero_allocation.py`, `tests/governance/test_axiom_03_geometry.py`, `tests/governance/test_axiom_07_code_governance.py`, `tests/governance/test_mode_choreography.py`, `tests/governance/test_docs_parity.py`.
 
 ---
 
@@ -12,6 +12,17 @@
 Unlike local sector modes—which execute independent visual algorithms on isolated segments—a **Global Audio Mode** (`IS_GLOBAL: bool = True`) orchestrates the entire physical installation as a unified kinetic light sculpture. 
 
 The physical chandelier consists of **1,304 WS2812B LEDs** distributed across **11 segments** (4 vertical pillars, 4 horizontal bridges, and 3 canopy bars). Because the installation occupies a 2D room bounding box of $432 \times 246$ units with an active LED fill factor under 2%, treating the chandelier as a conventional 2D bitmap screen produces visual noise and spatial incoherence ("The Display Fallacy").
+
+### The Two Global Mode Families (`FAMILY`)
+
+Global modes come in two families, declared by the class attribute `FAMILY` (absent = `"field"`):
+
+| Family | Unit of decision | Time | Space | Examples |
+| :--- | :--- | :--- | :--- | :--- |
+| **Field** (`"field"`) | Each LED samples one continuous function $f(x_{\text{norm}}, y_{\text{norm}}, t)$ | Continuous accumulation every frame | Room coordinates, centroid, polar | Monolithic Beat Blast, Architectural VU Equalizer, Concentric Radial Ripple, Horizon Scanning Blade, Spectral Avalanche |
+| **Cast** (`"cast"`) | Each **segment is one light fixture** (on / off / colour slot) | Quantized: state changes only on musical steps (beat, bar, phrase) and is **held** in between | Architectural identity: groups, mirror pairs, floors, build order | Tableaux, Bar Clock, Construction, Flip-Flop, Negative Space, Mosaic |
+
+Field modes read the chandelier as a sparse surface; cast modes read it as an **11-fixture lighting rig** (a lighting console, not a video wall). Both families obey Laws 1–10 below, except where **Part B2 — Cast Mode Laws** replaces a field-only clause for `FAMILY = "cast"`. Cast modes subclass [`modes/Cast_mode_base.py`](../../modes/Cast_mode_base.py) and implement only their cast rule.
 
 A Global Mode must resolve this physical reality by operating as a **pure visual consumer** across five sealed upstream boundaries:
 1. **Music (`music/`)** — Delayed speaker-aligned audio metrics ($T_{\text{speaker}}$) per [`docs/contracts/music_analyzer_contract.md`](./music_analyzer_contract.md).
@@ -219,6 +230,23 @@ From `config/segments_full.json`:
 | `h10` | `segs_2`: 9002 (GPIO 18) | 86 | `bridge` | `low` | $(205, 189)$ | $(1, 0)$ | $0.232$ (fixed) | Low bridge (`v1` $\leftrightarrow$ `v2`) |
 | `h31` | `segs_1`: 9001 (GPIO 21) | 48 | `bridge` | `low` | $(383, 171)$ | $(1, 0)$ | $0.305$ (fixed) | Low bridge (`v3` $\leftrightarrow$ `v4`) |
 
+#### Cast Topology, Clock & Fixture Looks (`utils/cast.py`, cast family only)
+
+[`utils/cast.py`](../../utils/cast.py) gives every canonical segment an architectural identity and provides the shared cast machinery (all zero-allocation in the hot path):
+
+| Segment | Group | Colour slot | Mirror | Build order |
+| :---: | :--- | :---: | :---: | :---: |
+| `v2` / `v3` | `core_pillar` | 0 (pillars) | each other | 0 / 1 |
+| `h10` / `h31` | `low_rung` | 1 (rungs) | each other | 2 / 3 |
+| `v1` / `v4` | `outer_pillar` | 0 | each other | 4 / 5 |
+| `h11` / `h32` | `mid_rung` | 1 | each other | 6 / 7 |
+| `h00` / `h30` | `wing` | 2 (canopy) | each other | 8 / 9 |
+| `h20` | `crown` | 2 | — | 10 |
+
+- **Fixtures (`build_fixtures`):** a canonical segment renders 1 fixture (itself). A small-profile strip (`s1` canopy, `s2` pillars, `s3` rungs) or tag-only strip renders its group, split into one sub-fixture per member. A composite studio/test strip renders a miniature 11-fixture chandelier (pillars bottom third, rungs middle, canopy top).
+- **`CastClock`:** counts `step`, `bar = step // 4`, `phrase = step // 16`. Locked (`rhythm_lock` $\ge 0.45$, exit $< 0.30$): one step per `beat_count` increment. Unlocked: one step per bass `band_flux` onset (0.25 s refractory) or, failing that, an energy-scaled timer (1.25 s → 0.55 s). `music/` exposes no downbeat, so bar alignment is arbitrary; spectators perceive the 4-cycle.
+- **Fixture looks (`render_fixture`, the `look` list setting):** `snap` (white strike frame, then solid), `neon` (deterministic strike flicker seeded by `Mode.segment_phase_offset`, release flutter), `rise` (pillars fill from the floor, other fixtures from the centre, over ≈ ¼ beat), `flash` (white strike then exponential decay scaled by `mood_trail`), `steady` (plain on/off colour, no strike crest).
+
 ---
 
 ## A.2 Outputs: What Leaves a Global Mode (`OUT`)
@@ -237,6 +265,8 @@ From `config/segments_full.json`:
 ---
 
 ### Law 1: Universal Flywheel Resilience (Always Alive & Rhythm-Locked)
+
+> **Cast family:** clauses 1 and 3 are replaced by Cast Laws C3 and C2. Clauses 2, 4 and 5 apply unchanged.
 
 A Global Mode must satisfy both halves of the confidence continuum without jarring snaps or freezing:
 
@@ -369,6 +399,8 @@ Choreographic clarity requires strict visual hierarchy. Every global mode declar
 
 ### Law 8: Monolithic Visual Simplicity & Immediate Legibility
 
+> **Cast family:** clauses 1 and 2 are read through Cast Law C4 (one rule, roles allowed). Clause 3 (the 2-bar spectator test) applies unchanged.
+
 The Display Fallacy occurs when sparse 1D LED strips are treated as a dense 2D TV screen. Because the chandelier has a physical fill factor under 2%, spectators 5 to 10 meters away rely on the visual system's **Magnocellular (M-pathway)** processing, which tracks large-scale coherent motion and high contrast while discarding fine topological details.
 
 ```
@@ -417,7 +449,31 @@ Global modes must respect the physical electrical and geometric assembly of the 
 2. **Direction Inversion Bypass:**
    In `core/Segment.py`, when `IS_GLOBAL == True`, `Segment.update_leds()` **must bypass the user `way == "DOWN"` inversion**, ensuring index 0 is always at the physical floor across all segments.
 3. **Concentric Core / Flank Symmetry:**
-   Pillars `v2` and `v3` form the inner core ($X \in [292, 383]$), flanked symmetrically by outer pillars `v1` ($X = 205$) and `v4` ($X = 431$). Wave propagations and sweeps must maintain geometric continuity across segment boundaries without tearing.
+   Pillars `v2` and `v3` form the inner core ($X \in [292, 383]$), flanked symmetrically by outer pillars `v1` ($X = 205$) and `v4` ($X = 431$). Wave propagations and sweeps must maintain geometric continuity across segment boundaries without tearing. *(Field family only; see Cast Law C6.)*
+
+---
+
+# Part B2 — Cast Mode Laws (`FAMILY = "cast"`)
+
+Cast modes treat the chandelier as 11 fixtures with an identity. The laws below replace the field-only clauses noted in Laws 1, 8 and 10. **Laws 2, 3, 4, 5, 6, 7, 9 and 10.1–10.2 apply unchanged.**
+
+### Law C1: The Segment Is the Unit
+A cast rule decides per **segment** (`segment_slot(seg_id)` → colour slot or `OFF`), never per LED. Variation *inside* a fixture comes only from the shared fixture look (`u` / `u_center` fill, strike flicker, decay), never from room coordinates (`x_norm`, `y_norm`, polar). A lit fixture shows one solid colour slot from `self.mood_colors`; pillars, rungs and canopy use distinct slots (Law 9 complementary segregation by structure).
+
+### Law C2: Quantized Time (Hold Still Between Steps)
+Fixture state changes only on `CastClock` steps (beat / bar / phrase) or on a 1-frame transient event (Law 3), and is **held** between them. Continuous kinetic accumulation (Law 1.3) does not apply: there is nothing to accumulate. A held state is not a "full-strip flash" (Law 3.2): only the strike frame may be white.
+
+### Law C3: Alive Without the Flywheel
+When `rhythm_lock` drops, the clock must keep stepping from acoustic onsets or the energy-scaled timer, so the chandelier keeps changing pose. A cast mode may never freeze or go dark while audio plays. Transient-led cast modes (e.g. Negative Space) fall back to `band_flux` onsets with a refractory period of at least 0.12 s.
+
+### Law C4: One Rule, Roles Allowed
+The whole chandelier obeys **one legible rule** driven by **one lead driver**. Structural groups may play different *roles of that same driver* (Bar Clock: pillars count beats, rungs count bars, canopy marks the phrase — all the beat driver). What remains banned is Law 8.2's real hazard: different *drivers* on different tiers. A spectator must be able to state the rule within 2 bars: *"each beat adds a piece"*, *"the chandelier is counting"*, *"every kick cuts the pillars out"*.
+
+### Law C5: Deterministic Agreement
+Segment instances share no state. Every decision is a pure function of `(seg_id, CastClock counters, shared listener signals)`: no unseeded randomness, no per-instance history that could diverge. Pseudo-random choices use `utils.cast.mix_index`. Every cast mode resets its clock and fixture state in `start()` and in silence, so all segments restart on the same frame.
+
+### Law C6: Boundaries Are Features
+Law 10.3 continuity does not apply. A fixture switching on or off at a segment boundary is the intended visual event, not tearing.
 
 ---
 
@@ -430,8 +486,8 @@ Global modes must respect the physical electrical and geometric assembly of the 
 Every compliant Global Mode must pass four automated verification suites in CI:
 
 ```bash
-# 1. Functional role resolution, silence decay, and flywheel resilience
-pytest tests/test_global_modes.py
+# 1. Functional role resolution, silence decay, and flywheel resilience (field + cast families)
+pytest tests/test_global_modes.py tests/test_cast_modes.py
 
 # 2. Base Mode helper stability, dead settings ratchet, and transition hooks
 pytest tests/test_mode_helpers.py
@@ -500,7 +556,7 @@ $$\text{Total Score} = \sum_{i=1}^6 D_i \quad (\text{Max } 60\text{ points})$$
 | # | Dimension | Weight | Scoring Standard (0 - 10) |
 |---|---|:---:|---|
 | **D1** | **Instant Spectator Legibility** | 20% | **9-10:** Understood in $\le 1$ bar ($\le 1.5\text{s}$). Whole room moves as one acoustic mirror.<br>**7-8:** Understood in 2-3 bars. Clear primary motion.<br>**5-6:** Takes 5-10s to decode. Conflicting sub-motions create hesitation.<br>**0-4:** Indistinguishable from random uncoordinated lighting. |
-| **D2** | **Visual Simplicity & Monolithic Metaphor** | 20% | **9-10:** Exactly 1 bold physical metaphor. All 1,304 LEDs share congruent motion.<br>**7-8:** Unified metaphor with minor role variations.<br>**5-6:** Split across tiers (bass on pillars, treble on canopy). Visual clutter.<br>**0-4:** Multi-layered chaos. Conflicting algorithms fight for attention. |
+| **D2** | **Visual Simplicity & Monolithic Metaphor** | 20% | **9-10:** Exactly 1 bold physical metaphor. All 1,304 LEDs share congruent motion (cast family: all 11 fixtures obey one legible rule, Law C4).<br>**7-8:** Unified metaphor with minor role variations.<br>**5-6:** Split across tiers (bass on pillars, treble on canopy). Visual clutter.<br>**0-4:** Multi-layered chaos. Conflicting algorithms fight for attention. |
 | **D3** | **Bright Color Vibrancy & Anti-Mud** | 15% | **9-10:** Saturated neon primaries ($S \ge 0.95, V \ge 0.95$), pure black unlit space `(0, 0, 0)`, blinding white 1-frame transient crests, zero gray mud.<br>**7-8:** Bright vivid colors, solid contrast, near-black inactive space.<br>**5-6:** Noticeable desaturation during blends; faint ambient glow reduces contrast.<br>**0-4:** Washed-out pastels, linear RGB mud, or low dynamic range. |
 | **D4** | **NumPy Vectorization & Zero Heap Churn** | 15% | **9-10:** Strictly 0 bytes allocated per frame in `run()`. All buffers pre-allocated in `__init__`. In-place operations exclusively.<br>**7-8:** Zero allocations in steady-state; minor scalars in initialization.<br>**5-6:** Occasional allocations during rare scene events.<br>**0-4:** Allocates arrays or lists inside `run()`. Fails `tracemalloc`. |
 | **D5** | **30 FPS Frame Budget (AXIOM-01)** | 15% | **9-10:** Total render time across 11 segments $\le 0.15\text{ ms}$ ($>99.5\%$ CPU headroom).<br>**7-8:** Render time $\le 0.35\text{ ms}$.<br>**5-6:** Render time between $0.35\text{ ms}$ and $0.80\text{ ms}$.<br>**0-4:** Exceeds $1.0\text{ ms}$ or drops frames on Raspberry Pi 4B. |
@@ -673,6 +729,52 @@ class Compliant_global_template_mode(Mode):
         np.maximum(0.0, self._target_rgb, out=self._target_rgb)
         np.minimum(255.0, self._target_rgb, out=self._target_rgb)
         np.copyto(self.rgb_list, self._target_rgb, casting="unsafe")
+```
+
+## Cast Family Template
+
+A cast mode implements only its rule; [`modes/Cast_mode_base.py`](../../modes/Cast_mode_base.py) owns the clock, fixtures, looks, silence protocol and the `look` setting. Hooks: `on_step(clock)` (once per musical step and on the first frame), `on_frame(ctx)` (optional per-frame events), `segment_slot(seg_id)` (colour slot or `OFF`), `on_reset()`, `cast_settings()`, and `request_restrike()` (re-strike every lit fixture, e.g. on `drop_hit`). Reference: [`modes/Construction_mode.py`](../../modes/Construction_mode.py).
+
+```python
+"""
+modes/Compliant_cast_template_mode.py
+Lead: beat
+"""
+from typing import Any, Dict, List
+
+from modes.Cast_mode_base import Cast_mode_base
+from utils.cast import OFF, PILLARS, topology_slot
+
+
+class Compliant_cast_template_mode(Cast_mode_base):
+    """
+    One pillar per beat, walking v1 -> v4 (Laws C1-C6).
+    Lead: beat
+    """
+    LEAD: str = "beat"
+    SECONDARY: tuple = ("transient",)
+    DEFAULT_LOOK: str = "snap"
+
+    def __init__(self, name, segment_name, listener, leds, indexes, rgb_list, infos) -> None:
+        self.walk_back: bool = bool(infos.get("walk_back", False))
+        self._beat: int = 0
+        super().__init__(name, segment_name, listener, leds, indexes, rgb_list, infos)
+
+    def cast_settings(self) -> List[Dict[str, Any]]:
+        return [{"key": "walk_back", "label": "Walk Back", "valueType": "boolean",
+                 "default": False, "attr": "walk_back"}]
+
+    def on_step(self, clock) -> None:          # C2: state changes only here
+        self._beat = (3 - clock.beat_in_bar) if self.walk_back else clock.beat_in_bar
+
+    def on_frame(self, ctx) -> None:           # Law 3: 1-frame transient accent
+        if self.drop_hit:
+            self.request_restrike()
+
+    def segment_slot(self, seg_id: str) -> int:  # C1 + C5: pure function of (seg_id, counters)
+        if seg_id in PILLARS and PILLARS.index(seg_id) == self._beat:
+            return topology_slot(seg_id)
+        return OFF
 ```
 
 ---
