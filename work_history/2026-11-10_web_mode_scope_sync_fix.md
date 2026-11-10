@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Fix the web UI bug left open by the HUD-split session: picking a mode from the web UI did not switch the transition sector's scope.  
 > **Status:** COMPLETED  
-> **Commits:** none yet (pushed: no)  
+> **Commits:** `5327519` (pushed: no)  
 > **Skills Used:** none  
 > **Skill Friction:** none
 
@@ -55,5 +55,5 @@
 
 ## 6. Open Items & Next Steps
 
-* [ ] Commit the HUD-split work and this fix.
+* [x] Commit the HUD-split work (`6b8ce37`) and this fix (`5327519`).
 * [ ] `wabb-interface/src/components/pages/TopologyEditor.tsx` was not checked for how it reacts to `applied: false` on an unknown mode.
