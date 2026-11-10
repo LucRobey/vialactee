@@ -10,6 +10,9 @@ render loop, and returns True when the command was applied.
 - set_mode_scope {scope, mode?}: "global" (unison Global Modes) or "local" (per-segment allocation).
 - set_mood {palette}:            manual palette pick, pausing auto-scene for DEFAULT_MANUAL_HOLD seconds.
 - set_mood_auto {auto_scene}:    turns mood auto-scene on or off.
+
+select_segment_mode() is also the entry point for the web UI's topology/select_segment_mode
+instruction, so a mode picked there switches the transition scope exactly like the panel does.
 """
 from typing import Any, Callable, Dict
 
@@ -62,9 +65,12 @@ def _set_locked(mode_master: Any, command: Dict[str, Any]) -> bool:
     return True
 
 
-def _set_segment_mode(mode_master: Any, command: Dict[str, Any]) -> bool:
-    segment_ref = command.get("segment")
-    mode_name = command.get("mode")
+def select_segment_mode(mode_master: Any, segment_ref: Any, mode_name: Any) -> bool:
+    """
+    Put one segment (or, for a Global Mode, every segment) on a mode and keep the transition
+    sector's scope in step with the choice. Shared by the desktop panel and the web UI
+    (core/CommandRouter.py), so both leave the sector in the same state.
+    """
     if not isinstance(segment_ref, str) or not isinstance(mode_name, str):
         return False
     segment = mode_master._find_segment_by_name(segment_ref)
@@ -79,6 +85,10 @@ def _set_segment_mode(mode_master: Any, command: Dict[str, Any]) -> bool:
     else:
         mode_master._push_installation()
     return True
+
+
+def _set_segment_mode(mode_master: Any, command: Dict[str, Any]) -> bool:
+    return select_segment_mode(mode_master, command.get("segment"), command.get("mode"))
 
 
 def _set_global_mode(mode_master: Any, command: Dict[str, Any]) -> bool:

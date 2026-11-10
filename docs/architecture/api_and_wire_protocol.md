@@ -150,7 +150,7 @@ Every inbound command receives a synchronous JSON acknowledgment on the same Web
 | `live_deck` | `go_to_next_configuration` | `{}` | Calls `mm.transitions.request_next()` to trigger the next DNA transition. |
 | `live_deck` | `manual_drop` | `{}` | Calls `mm.transitions.request_drop()` to trigger an immediate drop transition. |
 | `live_deck` | `lock_current_configuration` | `{ "locked": <bool> }` | Calls `mm.transitions.set_locked(bool(locked))` to freeze or unfreeze automatic transitions. |
-| `topology` | `select_segment_mode` | `{ "segmentId": "<id>", "mode": "<name>" }` | Calls `segment.execute_mode_swap(mode_name)` and `mm._push_installation()`. |
+| `topology` | `select_segment_mode` | `{ "segmentId": "<id>", "mode": "<name>" }` | Calls `PanelCommands.select_segment_mode()`, the same path as the desktop panel: swaps that segment (or every segment for a Global Mode) and switches the transition sector between global and per-segment scope to match. An unknown mode returns `{ "applied": false, "reason": "unknown_mode" }`. |
 | `topology` | `toggle_segment_direction` | `{ "segmentId": "<id>", "direction": "UP"\|"DOWN" }` | Calls `segment.change_way(direction)` to invert strip rendering direction. |
 | `mode_settings` | `set_mode_setting` | `{ "mode": "<name>", "key": "<key>", "value": <val> }` | Validates via `Mode.normalize_setting_value()`, applies across segments (`mm._apply_active_mode_settings()`), and persists `"mode_settings"` to `config/app_config.json`. |
 | `system` | `restart_python_loop` | `{}` | Schedules `mm._restart_python_process_task()` (`close_properly()` + `os.execv()`). |

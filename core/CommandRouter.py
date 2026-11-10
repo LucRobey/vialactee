@@ -8,6 +8,7 @@ by (page, action) pair.
 import logging
 from typing import Dict, Any, Callable, Awaitable, Optional, Tuple
 
+import core.PanelCommands as PanelCommands
 from modes.Mode import Mode
 from mood.api import DEFAULT_MANUAL_HOLD
 
@@ -165,11 +166,10 @@ async def _handle_topology_select_segment_mode(mm: Any, payload: Dict[str, Any])
     segment = mm._find_segment_by_name(segment_name)
     if segment is None:
         return {"applied": False, "reason": "unknown_segment"}
-    target_mode = segment.modes.get(segment._normalize_mode_name(mode_name))
-    targets = mm.segments_list if getattr(target_mode, "IS_GLOBAL", False) else [segment]
-    for seg in targets:
-        seg.execute_mode_swap(mode_name)
-    mm._push_installation()
+    # Same path as the desktop panel: swaps the segment (or all of them for a Global Mode) and
+    # switches the transition sector between global and per-segment scope to match.
+    if not PanelCommands.select_segment_mode(mm, segment_name, mode_name):
+        return {"applied": False, "reason": "unknown_mode"}
     return {"applied": True}
 
 

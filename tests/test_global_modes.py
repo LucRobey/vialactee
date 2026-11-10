@@ -198,6 +198,58 @@ class TestGlobalModes(unittest.TestCase):
         for seg in mm.segments_list:
             self.assertEqual(seg.get_current_mode(), "Concentric Radial Ripple")
 
+    def test_web_mode_selection_keeps_the_transition_scope_in_sync(self):
+        """A mode picked from the web UI must switch the transition sector's scope, like the desktop panel does."""
+        import core.Mode_master as Mode_master
+        import core.TransitionBridge as TransitionBridge
+
+        leds_1 = np.zeros((785, 3), dtype=np.int32)
+        leds_2 = np.zeros((519, 3), dtype=np.int32)
+        mm = Mode_master.Mode_master(self.listener, {"hardware_profile": "full", "useMicrophone": False}, leds_1, leds_2)
+
+        def web_pick(segment_id, mode):
+            return asyncio.run(mm.process_instruction({
+                "page": "topology",
+                "action": "select_segment_mode",
+                "payload": {"segmentId": segment_id, "mode": mode},
+            }))
+
+        def next_transition_targets():
+            """Modes the transition sector orders for its next automatic transition, per segment."""
+            music = TransitionBridge.build_music_snapshot(mm.listener)
+            mm.transitions.request_next()
+            for _ in range(600):
+                orders = mm.transitions.update(0.033, music)
+                if orders is not None:
+                    return {o.segment: o.target_mode for o in orders.orders}
+            self.fail("the transition sector never issued orders")
+
+        def is_global(mode_name):
+            return bool(getattr(mm.segments_list[0].modes[mode_name], "IS_GLOBAL", False))
+
+        # 1. Global Mode picked on one segment: every segment follows, and the unison survives the next transition.
+        self.assertTrue(web_pick("h00", "Concentric Radial Ripple").get("applied"))
+        self.assertTrue(getattr(mm, "_use_global_modes", False), "the web pick left the sector in per-segment scope")
+        targets = next_transition_targets()
+        self.assertEqual(len(targets), 11)
+        self.assertEqual(len(set(targets.values())), 1, f"unison broken at the next transition: {targets}")
+        self.assertTrue(is_global(next(iter(targets.values()))))
+
+        # 2. Local mode picked while in global scope: that segment switches, and the sector returns to local scope.
+        self.assertTrue(web_pick("v4", "Power Bar").get("applied"))
+        self.assertFalse(getattr(mm, "_use_global_modes", True), "the web pick left the sector in global scope")
+        self.assertEqual(mm._find_segment_by_name("v4").get_current_mode(), "Power Bar")
+        targets = next_transition_targets()
+        self.assertFalse(any(is_global(m) for m in targets.values()), f"global mode ordered in local scope: {targets}")
+
+        # 3. An unknown mode is refused and changes nothing.
+        before = {seg.name: seg.get_current_mode() for seg in mm.segments_list}
+        res = web_pick("v4", "No Such Mode")
+        self.assertFalse(res.get("applied"))
+        self.assertEqual(res.get("reason"), "unknown_mode")
+        self.assertEqual({seg.name: seg.get_current_mode() for seg in mm.segments_list}, before)
+        self.assertFalse(getattr(mm, "_use_global_modes", True))
+
 
 if __name__ == "__main__":
     unittest.main()

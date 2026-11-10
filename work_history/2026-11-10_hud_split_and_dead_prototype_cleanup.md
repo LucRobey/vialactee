@@ -68,5 +68,5 @@
 
 ## 6. Open Items & Next Steps
 
-* [ ] **Bug (not fixed here):** `CommandRouter._handle_topology_select_segment_mode` (web UI) swaps every segment to a Global Mode but never calls `PanelCommands.sync_mode_scope`. As a result the transition sector stays in per-segment mode and breaks the unison at the next automatic transition. The reverse case (picking a local mode while global is active) never switches back. The fix is probably to route it through `PanelCommands._set_segment_mode`. A test for the web path is needed too.
+* [x] **Fixed later the same day in [`2026-11-10_web_mode_scope_sync_fix.md`](2026-11-10_web_mode_scope_sync_fix.md).** Bug (not fixed here): `CommandRouter._handle_topology_select_segment_mode` (web UI) swaps every segment to a Global Mode but never calls `PanelCommands.sync_mode_scope`. As a result the transition sector stays in per-segment mode and breaks the unison at the next automatic transition. The reverse case (picking a local mode while global is active) never switches back. The fix is probably to route it through `PanelCommands._set_segment_mode`. A test for the web path is needed too.
 * [ ] `modes/Mode.py` (498 lines) and `core/Segment.py` (479 lines) are close to the 500-line cap.
