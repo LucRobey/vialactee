@@ -177,6 +177,13 @@
       "class": "Mosaic_mode",
       "dna": { "energy": 0.30, "punch": 0.25, "rhythm": 0.85, "complexity": 0.10 },
       "tags": ["lead:beat", "form:field", "origin:scatter", "color:palette", "layer:bed"]
+    },
+    {
+      "name": "Stalagmites",
+      "module": "Stalagmites_mode",
+      "class": "Stalagmites_mode",
+      "dna": { "energy": 0.75, "punch": 0.90, "rhythm": 0.80, "complexity": 0.45 },
+      "tags": ["lead:transient", "axis:vertical", "form:bar", "origin:global", "color:own-hue", "layer:pulse"]
     }
   ]
 }

@@ -3,7 +3,7 @@
 > **Location:** `docs/contracts/global_mode_contract.md` (Tier 1 Canonical Specification — Sealed Sector Contract)  
 > **Scope:** Every global visual mode in [`modes/`](../../modes/) (and its base class [`modes/Mode.py`](../../modes/Mode.py)) orchestrating all 11 segments across the chandelier (1,304 physical LEDs) as a single physical instrument.  
 > **Inheritance & Hierarchy:** Global modes inherit all foundational sector invariants from [`docs/contracts/mode_contract.md`](./mode_contract.md) while establishing global installation-wide spatial, perceptual, and performance invariants.  
-> **Enforced by:** `tests/test_global_modes.py`, `tests/test_cast_modes.py`, `tests/test_mode_helpers.py`, `tests/governance/test_axiom_01_frame_budget.py`, `tests/governance/test_axiom_02_zero_allocation.py`, `tests/governance/test_axiom_03_geometry.py`, `tests/governance/test_axiom_07_code_governance.py`, `tests/governance/test_mode_choreography.py`, `tests/governance/test_docs_parity.py`.
+> **Enforced by:** `tests/test_global_modes.py`, `tests/test_cast_modes.py`, `tests/test_ensemble_modes.py`, `tests/test_mode_helpers.py`, `tests/governance/test_axiom_01_frame_budget.py`, `tests/governance/test_axiom_02_zero_allocation.py`, `tests/governance/test_axiom_03_geometry.py`, `tests/governance/test_axiom_07_code_governance.py`, `tests/governance/test_mode_choreography.py`, `tests/governance/test_docs_parity.py`.
 
 ---
 
@@ -21,14 +21,14 @@ The physical chandelier consists of **1,304 WS2812B LEDs** distributed across **
 | :--- | :--- | :--- | :--- | :--- |
 | **Field** (`"field"`) | Each LED samples one continuous function $f(x_{\text{norm}}, y_{\text{norm}}, t)$ | Continuous accumulation every frame | Room coordinates, centroid, polar | Monolithic Beat Blast, Architectural VU Equalizer, Concentric Radial Ripple, Horizon Scanning Blade, Spectral Avalanche |
 | **Cast** (`"cast"`) | Each **segment is one light fixture** (on / off / colour slot) | Quantized: state changes only on musical steps (beat, bar, phrase) and is **held** in between | Architectural identity: groups, mirror pairs, floors, build order | Tableaux, Bar Clock, Construction, Flip-Flop, Negative Space, Mosaic |
-| **Ensemble** (`"ensemble"`) | Each **part is an instrument with its own job** (one driver, one mechanic). Different parts may listen to different drivers | Free per part: continuous, or quantized and held | Parts: a segment, a topology group, or a section of a segment cut at an architectural landmark | *(none yet)* e.g. bass bars rising from the floor on two pillars while treble bars hang from the canopy on the other two |
+| **Ensemble** (`"ensemble"`) | Each **part is an instrument with its own job** (one driver, one mechanic). Different parts may listen to different drivers | Free per part: continuous, or quantized and held | Parts: a segment, a topology group, or a section of a segment cut at an architectural landmark | Stalagmites (each bass hit throws a red bar up the inner pillars, each snare hit throws a blue bar down the outer pillars, the canopy sparkles on hi-hats) |
 
 How each family earns legibility:
 - **Field** — one metaphor, one driver, every LED in unison (Laws 7 and 8).
 - **Cast** — one rule, one driver, structural groups play roles of it (Law C4).
 - **Ensemble** — several jobs at once, each simple and separately readable; the complexity lives in the combination (Laws E1–E6). This is the family for multi-driver and multi-mechanic modes.
 
-Field modes read the chandelier as a sparse surface; cast modes read it as an **11-fixture lighting rig** (a lighting console, not a video wall); ensemble modes read it as a **band of instruments**, each part playing its own line. All families obey Laws 1–10 below, except where **Part B2 — Cast Mode Laws** or **Part B3 — Ensemble Mode Laws** replaces a clause for that family. Cast modes subclass [`modes/Cast_mode_base.py`](../../modes/Cast_mode_base.py) and implement only their cast rule.
+Field modes read the chandelier as a sparse surface; cast modes read it as an **11-fixture lighting rig** (a lighting console, not a video wall); ensemble modes read it as a **band of instruments**, each part playing its own line. All families obey Laws 1–10 below, except where **Part B2 — Cast Mode Laws** or **Part B3 — Ensemble Mode Laws** replaces a clause for that family. Cast modes subclass [`modes/Cast_mode_base.py`](../../modes/Cast_mode_base.py) and implement only their cast rule. Ensemble modes subclass [`modes/Ensemble_mode_base.py`](../../modes/Ensemble_mode_base.py) and implement only their parts.
 
 > The single-driver, all-in-unison rules (Law 7 hegemony, Law 8.1–8.2) describe the **field** family. They are not a ceiling on what a global mode may do. Where the 2026-11-09 research document (`docs/research/`) states them as universal, this contract wins.
 
@@ -504,24 +504,28 @@ The chandelier is divided into named **parts**. A part is one segment, one `CAST
 The class declares its parts and their drivers, and the class docstring gives each part one line:
 
 ```python
-class Stalagmites_mode(Mode):
+class Stalagmites_mode(Ensemble_mode_base):       # modes/Stalagmites_mode.py
     """
-    Bass grows from the floor, treble hangs from the ceiling.
-    Lead: spectrum
-    Part outer_pillar: bass bar rising from the floor (spectrum)
-    Part core_pillar:  treble bar hanging from the canopy (spectrum)
-    Part rungs:        lit when the bars on both their pillars reach them (spectrum)
-    Part canopy:       flashes on hi-hat onsets (transient)
+    Stalagmites: the drum kit drawn on the chandelier.
+    Lead: transient (onset strength per frequency range, from band_flux)
+    Secondary: spectrum (a held note keeps a short stub of its bar lit)
+    Part stalagmites:  inner pillars; red bar thrown up from the floor by each bass onset (transient)
+    Part stalactites:  outer pillars; blue bar thrown down from the top by each snare onset (transient)
+    Part bass_rungs:   mid rungs; struck when a bass hit throws its bar to the top (transient)
+    Part treble_rungs: low rungs; struck when a snare hit throws its bar to the bottom (transient)
+    Part canopy:       sparkles on hi-hat onsets (transient)
     """
-    IS_GLOBAL: bool = True
-    FAMILY: str = "ensemble"
-    LEAD: str = "spectrum"            # driver of the parts covering the most LEDs
-    SECONDARY: tuple = ("transient",)  # at most one, as for every mode
-    PARTS: dict = {"outer_pillar": "spectrum", "core_pillar": "spectrum",
-                   "rungs": "spectrum", "canopy": "transient"}
+    LEAD: str = "transient"           # driver of the parts covering the most LEDs
+    SECONDARY: tuple = ("spectrum",)   # at most one, as for every mode
+    PARTS: dict = {"stalagmites": "transient", "stalactites": "transient", "bass_rungs": "transient",
+                   "treble_rungs": "transient", "canopy": "transient"}
 ```
 
+Here every part listens to the same driver but to a **different frequency range** of it, which is as valid a split as different drivers: what matters is one job per part. A part may carry a small contribution from a second signal (the stub above) as long as it still passes the per-part mute test of Law E3.
+
 `LEAD` remains mandatory: the registry needs one `lead:` tag per mode and the transition policy reads it. It names the driver whose parts cover the most LEDs. `SECONDARY` keeps its at-most-one limit; `PARTS` is the full picture.
+
+[`modes/Ensemble_mode_base.py`](../../modes/Ensemble_mode_base.py) (`ABSTRACT = True`, `IS_GLOBAL = True`, `FAMILY = "ensemble"`) owns part resolution, the silence protocol and the final clip / copy. A concrete mode implements `part_of(seg_id)` (the part a canonical segment belongs to), `on_frame(ctx, dt)` (shared per-frame state, computed once), `render_part(part, fx, out)` (draw one part), plus the optional `on_bind()` and `on_reset()`. Shared mechanics: `draw_bar` (solid bar grown from either end of the part) and `draw_solid` (whole part at a level, with an optional white strike frame). Part resolution reuses `utils.cast.build_fixtures`: a canonical segment is one part, a small-profile strip stands for its group, and a composite studio/test strip renders a miniature 11-segment chandelier.
 
 ### Law E3: One Job Per Part (the Per-Part Mute Test)
 Law 7 is enforced inside each part instead of over the whole chandelier. Measured on that part's LEDs only:
@@ -529,13 +533,13 @@ Law 7 is enforced inside each part instead of over the whole chandelier. Measure
 - Muting any *other* driver must leave it recognizable: $g \ge 0.65$ of its variance retained.
 - Mood modifiers stay macro ($\le 10\%$), as in Law 7.
 
-A part therefore never mixes two drivers. A part's job is fixed for the life of the mode: it never swaps driver or mechanic mid-run. A setting may choose between layouts, applied at `start()`.
+A part therefore has one driver; anything else it reads must stay small enough to pass the second check. A part's job is fixed for the life of the mode: it never swaps driver or mechanic mid-run. A setting may choose between layouts, applied at `start()`.
 
 ### Law E4: Alive, Part by Part
 - While audio plays, the mode never goes fully dark and never fully freezes: at least one part is always visibly responding.
 - A part may be dark by design (a drop light, a peak light) for as long as its trigger is absent.
 - A part driven by `beat` must survive `rhythm_lock == 0.0`: a continuously moving part blends to acoustic motion with the Law 1.3 accumulation formula; a quantized part keeps stepping from `CastClock` (Law C3).
-- Law 1.4 (phase wrap protection) and Law 1.5 (silence protocol) apply to every part. Held parts may use the cast debounce: hold through silence shorter than 0.6 s, then fade.
+- Law 1.4 (phase wrap protection) and Law 1.5 (silence protocol) apply to every part, with the cast debounce: the silence detector fires in the short gaps between hits, so parts keep rendering through silence shorter than 0.6 s (the audio itself pulls them down), then drain their state and fade to black.
 
 ### Law E5: Interplay Allowed, Agreement Required
 Parts may react to each other: a rung lights when the bars on both its pillars pass its altitude; outer pillars repeat what the inner pillars showed one beat ago. Segment instances still share no state, so an instance that needs another part's state **recomputes it** from the shared listener signals and its own deterministic history. No unseeded randomness (`utils.cast.mix_index`), and every instance resets in `start()` and after sustained silence so all segments agree on every frame. Law 10.3 continuity does not apply: a change of behaviour at a part boundary is intended.
@@ -554,8 +558,8 @@ The 2-bar spectator test (Law 8.3) applies to **each part alone**: someone watch
 Every compliant Global Mode must pass four automated verification suites in CI:
 
 ```bash
-# 1. Functional role resolution, silence decay, and flywheel resilience (field + cast families)
-pytest tests/test_global_modes.py tests/test_cast_modes.py
+# 1. Functional role resolution, silence decay, and flywheel resilience (field, cast and ensemble families)
+pytest tests/test_global_modes.py tests/test_cast_modes.py tests/test_ensemble_modes.py
 
 # 2. Base Mode helper stability, dead settings ratchet, and transition hooks
 pytest tests/test_mode_helpers.py
@@ -567,7 +571,7 @@ pytest tests/governance/test_axiom_01_frame_budget.py tests/governance/test_axio
 pytest tests/governance/test_mode_choreography.py tests/governance/test_mode_choreography_profiles.py
 ```
 
-**Ensemble family:** no ensemble mode exists yet, so no suite exists yet. The first ensemble mode ships with its own test file (as the cast family did with `tests/test_cast_modes.py`) covering: the per-part mute test (Law E3), a lockstep 11-segment run proving agreement (Law E5), aliveness at `rhythm_lock == 0.0` and the silence protocol (Law E4), AXIOM-01/02, and Law 5 honesty. The whole-chandelier Law 7 dominance check in `tests/test_global_modes.py` does not apply to ensemble modes.
+**Ensemble family:** `pytest tests/test_ensemble_modes.py` covers every mode listed in its `ENSEMBLE_MODE_SPECS`: the declared score (Laws E1–E2), the per-part mute test (Law E3), a lockstep 11-segment and 3-segment run proving agreement (Law E5), aliveness without beat lock and the debounced silence protocol (Law E4), AXIOM-01/02, Law 5 honesty, and real-orchestrator part resolution. The per-part mute test is measured by `tools/ensemble_matrix.py`, which also prints the per-part table: `python -m tools.ensemble_matrix Stalagmites_mode`. The whole-chandelier Law 7 dominance check in `tests/test_global_modes.py` does not apply to ensemble modes.
 
 ---
 
