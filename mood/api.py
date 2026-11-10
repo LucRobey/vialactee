@@ -11,7 +11,7 @@ Rules (enforced by tests/governance/test_mood_isolation.py):
 - Only standard library + numpy appear here.
 
 Doors:
-  IN : update(dt, scene) every frame, request_palette(), next_palette(), set_auto_scene()
+  IN : update(dt, scene) every frame, request_palette(name, duration, hold), next_palette(), set_auto_scene()
   OUT: colors() (live read-only (4, 3) int32 view), modifiers() (live read-only (4,) float32 view), get_status() (MoodStatus)
 
 Guarantees:
@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import numpy as np
+
+DEFAULT_MANUAL_HOLD: float = 45.0
 
 
 @dataclass(frozen=True)
@@ -44,8 +46,13 @@ class MoodService:
         """Advance the crossfade by dt seconds. `scene` (e.g. "BUILDUP") drives modifiers and (if enabled) auto-palette."""
         raise NotImplementedError
 
-    def request_palette(self, name: str, duration: Optional[float] = None) -> bool:
-        """Start a cosine crossfade to `name`. False if the palette is unknown."""
+    def request_palette(self, name: str, duration: Optional[float] = None,
+                        hold: Optional[float] = None) -> bool:
+        """Start a cosine crossfade to `name`. False if the palette is unknown.
+
+        `hold` is seconds during which auto-scene is paused; `None` leaves any
+        existing hold untouched, and `0.0` cancels it.
+        """
         raise NotImplementedError
 
     def next_palette(self, duration: Optional[float] = None) -> str:
@@ -88,4 +95,4 @@ def create_mood_service(
     return DefaultMoodService(initial_palette, transition_duration, auto_scene)
 
 
-__all__ = ["MoodStatus", "MoodService", "create_mood_service"]
+__all__ = ["MoodStatus", "MoodService", "create_mood_service", "DEFAULT_MANUAL_HOLD"]

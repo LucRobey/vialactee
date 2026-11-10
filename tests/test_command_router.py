@@ -62,3 +62,19 @@ async def test_command_router_custom_registration():
         "payload": {"data": 123}
     })
     assert res == {"applied": True, "echo": 123}
+
+
+@pytest.mark.anyio
+async def test_command_router_select_mood_passes_default_manual_hold():
+    from mood.api import DEFAULT_MANUAL_HOLD
+
+    mock_mm = MagicMock()
+    mock_mm.mood.request_palette.return_value = True
+
+    result = await router.dispatch(mock_mm, {
+        "page": "live_deck",
+        "action": "select_mood",
+        "payload": {"palette": "Solar Ember"},
+    })
+    assert result == {"applied": True, "mood": "Solar Ember"}
+    mock_mm.mood.request_palette.assert_called_once_with("Solar Ember", hold=DEFAULT_MANUAL_HOLD)

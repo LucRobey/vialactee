@@ -51,6 +51,8 @@ class CrossfadeEngine:
 
     def start(self, target: str, duration: float) -> None:
         """Begin a crossfade from the current blended colours to `target` (must be a known palette)."""
+        if self.is_transitioning and target == self.current:
+            self.current = self.target
         self._from[:] = self.colors
         self._to[:] = self._cached[target]
         np.subtract(self._to, self._from, out=self._diff)

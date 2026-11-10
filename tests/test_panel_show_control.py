@@ -101,6 +101,105 @@ class TestHudShowControl(unittest.TestCase):
         width, height = self.visualizer._current_window_size
         self.assertLessEqual(self.hud._rect_hold.right, width)
         self.assertLessEqual(self.hud._rect_hold.bottom, height)
+        self.assertLessEqual(self.hud._rect_global_next.right, width)
+        self.assertLessEqual(self.hud._rect_global_apply.bottom, height)
+        self.assertLessEqual(self.hud._rect_mood_next.right, width)
+        self.assertLessEqual(self.hud._rect_mood_apply.bottom, height)
+        self.assertLessEqual(self.hud._rect_mood_auto.bottom, height)
+
+    def test_mood_selector_buttons_hotkeys_and_auto_toggle(self):
+        self.hud.selected_mood_idx = 0
+        self.hud.mood_auto_scene = True
+        self._render({"is_locked": False})
+
+        # 1. Clicking > on the Mood row steps to the next palette and dispatches set_mood
+        self.assertTrue(
+            self.hud.handle_event(click(self.hud._rect_mood_next.center), MagicMock(), self.visualizer.send_control_command)
+        )
+        self.assertEqual(self.sent[-1], {"type": "set_mood", "palette": self.hud.mood_palettes[1]})
+
+        # 2. Clicking < steps back to palette 0
+        self.assertTrue(
+            self.hud.handle_event(click(self.hud._rect_mood_prev.center), MagicMock(), self.visualizer.send_control_command)
+        )
+        self.assertEqual(self.sent[-1], {"type": "set_mood", "palette": self.hud.mood_palettes[0]})
+
+        # 3. Clicking the center MOOD bar re-applies the currently selected palette
+        self.assertTrue(
+            self.hud.handle_event(click(self.hud._rect_mood_apply.center), MagicMock(), self.visualizer.send_control_command)
+        )
+        self.assertEqual(self.sent[-1], {"type": "set_mood", "palette": self.hud.mood_palettes[0]})
+
+        # 4. Hotkey M steps forward; Shift+M steps backward
+        self.assertTrue(self.hud.handle_event(key(pygame.K_m), MagicMock(), self.visualizer.send_control_command))
+        self.assertEqual(self.sent[-1], {"type": "set_mood", "palette": self.hud.mood_palettes[1]})
+        shift_m = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_m, mod=pygame.KMOD_SHIFT)
+        self.assertTrue(self.hud.handle_event(shift_m, MagicMock(), self.visualizer.send_control_command))
+        self.assertEqual(self.sent[-1], {"type": "set_mood", "palette": self.hud.mood_palettes[0]})
+
+        # 5. Clicking AUTO: ON/OFF button or pressing A toggles mood_auto_scene in both directions
+        self.assertTrue(
+            self.hud.handle_event(click(self.hud._rect_mood_auto.center), MagicMock(), self.visualizer.send_control_command)
+        )
+        self.assertFalse(self.hud.mood_auto_scene)
+        self.assertEqual(self.sent[-1], {"type": "set_mood_auto", "auto_scene": False})
+
+        self.assertTrue(self.hud.handle_event(key(pygame.K_a), MagicMock(), self.visualizer.send_control_command))
+        self.assertTrue(self.hud.mood_auto_scene)
+        self.assertEqual(self.sent[-1], {"type": "set_mood_auto", "auto_scene": True})
+
+        # 6. Live crossfade status updates mood_palette, mood_target, and mood_auto_scene immediately without resetting timestamps
+        self._render({
+            "is_locked": False,
+            "mood_palette": "Cyberpunk",
+            "mood_target": "Solar Ember",
+            "mood_progress": 0.5,
+            "mood_is_transitioning": True,
+            "mood_auto_scene": False,
+            "mood_colors": [[255, 40, 10], [250, 140, 20], [255, 220, 90], [20, 8, 4]],
+        })
+        self.assertEqual(self.hud.mood_palette, "Cyberpunk")
+        self.assertEqual(self.hud.mood_target, "Solar Ember")
+        self.assertAlmostEqual(self.hud.mood_progress, 0.5)
+        self.assertTrue(self.hud.mood_is_transitioning)
+        self.assertFalse(self.hud.mood_auto_scene)
+        self.assertEqual(self.hud.mood_colors[0], (255, 40, 10))
+
+    def test_global_scope_toggle_and_global_mode_picker(self):
+        self.hud.global_scope = False
+        self.hud.selected_global_idx = 0
+        self._render({"is_locked": True})
+
+        # 1. Hotkey G or clicking _rect_scope switches from Local to Global scope
+        self.assertTrue(self.hud.handle_event(key(pygame.K_g), MagicMock(), self.visualizer.send_control_command))
+        self.assertTrue(self.hud.global_scope)
+        self.assertEqual(
+            self.sent[-1],
+            {"type": "set_mode_scope", "scope": "global", "mode": self.hud.global_modes[0]},
+        )
+
+        # 2. Clicking > on the Global Mode row steps to the next Global Mode
+        self.assertTrue(
+            self.hud.handle_event(click(self.hud._rect_global_next.center), MagicMock(), self.visualizer.send_control_command)
+        )
+        self.assertEqual(
+            self.sent[-1],
+            {"type": "set_global_mode", "mode": self.hud.global_modes[1]},
+        )
+
+        # 3. Clicking _rect_scope returns to Local scope
+        self.assertTrue(
+            self.hud.handle_event(click(self.hud._rect_scope.center), MagicMock(), self.visualizer.send_control_command)
+        )
+        self.assertFalse(self.hud.global_scope)
+        self.assertEqual(self.sent[-1], {"type": "set_mode_scope", "scope": "local"})
+
+    def test_segment_arrows_skip_global_modes_when_mixed_in_catalog(self):
+        name = "segment_v4"
+        self.hud.mode_catalog = {"v4": ["Alpha", "Monolithic Beat Blast", "Beta"]}
+        self.visualizer.set_segment_mode(name, "Alpha")
+        self.hud._cycle_segment_mode(name, 1, self.sent.append)
+        self.assertEqual(self.sent[-1]["mode"], "Beta")
 
     def test_commands_go_over_udp_without_an_in_process_handler(self):
         self.visualizer.set_control_handler(None)
@@ -167,6 +266,24 @@ class TestUdpSenderPanelLink(unittest.TestCase):
         self.assertTrue(sent[0]["is_locked"])
         self.assertEqual(sent[1]["modes"], {"v4": ["A", "B"]})
 
+    def test_transition_state_includes_mood_status_when_mood_controller_set(self):
+        from mood.api import create_mood_service
+        mood_svc = create_mood_service(initial_palette="Cyberpunk", auto_scene=True)
+        mood_svc.request_palette("Solar Ember", duration=2.0, hold=45.0)
+        self.sender.set_mood_controller(mood_svc)
+        with patch("time.monotonic", return_value=5100.0):
+            self.sender._send_transition_state()
+        sent = [json.loads(c[0][0].decode()) for c in self.sender.sock.sendto.call_args_list
+                if c[0][1] == ("127.0.0.1", SEGMENT_METADATA_PORT)]
+        self.assertEqual(len(sent), 1)
+        payload = sent[0]
+        self.assertEqual(payload["mood_palette"], "Cyberpunk")
+        self.assertEqual(payload["mood_target"], "Solar Ember")
+        self.assertTrue(payload["mood_is_transitioning"])
+        self.assertTrue(payload["mood_auto_scene"])
+        self.assertIn("Solar Ember", payload["available_moods"])
+        self.assertEqual(len(payload["mood_colors"]), 4)
+
 
 class TestModeMasterPanelCommands(unittest.TestCase):
     def setUp(self):
@@ -208,6 +325,44 @@ class TestModeMasterPanelCommands(unittest.TestCase):
         catalog = self.mm._panel_mode_catalog()
         for segment in self.mm.segments_list:
             self.assertEqual(catalog[segment.id], sorted(segment.modes))
+
+    def test_global_mode_and_scope_commands_on_mode_master(self):
+        # 1. set_global_mode switches all 11 segments to the chosen Global Mode
+        self.assertTrue(self.mm.handle_panel_command({"type": "set_global_mode", "mode": "Concentric Radial Ripple"}))
+        for seg in self.mm.segments_list:
+            self.assertEqual(seg.get_current_mode(), "Concentric Radial Ripple")
+        self.assertTrue(getattr(self.mm, "_use_global_modes", False))
+
+        # Reject non-global modes on set_global_mode
+        self.assertFalse(self.mm.handle_panel_command({"type": "set_global_mode", "mode": "Rainbow"}))
+
+        # 2. set_mode_scope 'local' switches all segments back to local modes
+        self.assertTrue(self.mm.handle_panel_command({"type": "set_mode_scope", "scope": "local"}))
+        self.assertFalse(getattr(self.mm, "_use_global_modes", True))
+        for seg in self.mm.segments_list:
+            self.assertFalse(getattr(seg.modes[seg.get_current_mode()], "IS_GLOBAL", False))
+
+        # 3. set_mode_scope 'global' activates the requested Global Mode across all segments
+        self.assertTrue(self.mm.handle_panel_command({"type": "set_mode_scope", "scope": "global", "mode": "Horizon Scanning Blade"}))
+        self.assertTrue(getattr(self.mm, "_use_global_modes", False))
+        for seg in self.mm.segments_list:
+            self.assertEqual(seg.get_current_mode(), "Horizon Scanning Blade")
+
+    def test_mood_and_auto_scene_commands_on_mode_master(self):
+        # 1. set_mood requests a valid palette on Mode_master.mood
+        self.assertTrue(self.mm.handle_panel_command({"type": "set_mood", "palette": "Solar Ember"}))
+        self.assertEqual(self.mm.mood.get_status().target_palette, "Solar Ember")
+
+        # Reject unknown or non-string palettes
+        self.assertFalse(self.mm.handle_panel_command({"type": "set_mood", "palette": "NonExistentMood"}))
+        self.assertFalse(self.mm.handle_panel_command({"type": "set_mood", "palette": ""}))
+        self.assertFalse(self.mm.handle_panel_command({"type": "set_mood", "palette": None}))
+
+        # 2. set_mood_auto toggles auto_scene
+        self.assertTrue(self.mm.handle_panel_command({"type": "set_mood_auto", "auto_scene": False}))
+        self.assertFalse(self.mm.mood.get_status().auto_scene)
+        self.assertTrue(self.mm.handle_panel_command({"type": "set_mood_auto", "auto_scene": True}))
+        self.assertTrue(self.mm.mood.get_status().auto_scene)
 
 
 if __name__ == "__main__":

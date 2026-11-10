@@ -342,7 +342,19 @@ class FakeLedsVisualizer:
 
     def update_transition_data(self, data):
         """Store latest transition state received from the main process via UDP."""
-        self._transition_data = data
+        if isinstance(data, dict) and isinstance(self._transition_data, dict):
+            preserved = {k: v for k, v in self._transition_data.items() if k.startswith("mood_") or k == "available_moods"}
+            preserved.update(data)
+            self._transition_data = preserved
+        else:
+            self._transition_data = data
+
+    def update_mood_data(self, data):
+        """Merge latest mood state received from the main process into transition_data."""
+        if isinstance(data, dict):
+            merged = dict(self._transition_data or {})
+            merged.update(data)
+            self._transition_data = merged
 
     def update_mode_catalog(self, catalog):
         """Store the {segment_id: [mode names]} list that the < > buttons cycle through."""
@@ -365,6 +377,7 @@ class Fake_leds(HardwareInterface):
         self.strip_id = visualizer.register_strip(nb_of_leds)
         self._analyzer = None
         self._transitions = None
+        self._mood = None
 
     def set_analyzer(self, analyzer):
         self._analyzer = analyzer
@@ -372,6 +385,9 @@ class Fake_leds(HardwareInterface):
     def set_transition_controller(self, transitions):
         self._transitions = transitions
         visualizer.set_transition_controller(transitions)
+
+    def set_mood_controller(self, mood):
+        self._mood = mood
 
     def set_control_handler(self, handler, mode_catalog=None):
         visualizer.set_control_handler(handler)
@@ -417,16 +433,30 @@ class Fake_leds(HardwareInterface):
                 "is_verse_chorus_change": bool(a.is_verse_chorus_change),
                 "silence_frames": int(a.silence_frames),
             })
-        if self._transitions is not None:
-            st = self._transitions.get_status()
-            visualizer.update_transition_data({
-                "type": "transition_state",
-                "is_in_transition": bool(st.is_in_transition),
-                "is_pending": bool(st.is_pending),
-                "progress": round(float(st.progress), 3),
-                "technique": st.technique,
-                "is_locked": bool(getattr(st, "is_locked", False)),
-            })
+        if self._transitions is not None or self._mood is not None:
+            td = dict(visualizer._transition_data or {"type": "transition_state"})
+            if self._transitions is not None:
+                st = self._transitions.get_status()
+                td.update({
+                    "type": "transition_state",
+                    "is_in_transition": bool(st.is_in_transition),
+                    "is_pending": bool(st.is_pending),
+                    "progress": round(float(st.progress), 3),
+                    "technique": st.technique,
+                    "is_locked": bool(getattr(st, "is_locked", False)),
+                })
+            if self._mood is not None:
+                mst = self._mood.get_status()
+                td.update({
+                    "mood_palette": mst.palette,
+                    "mood_target": mst.target_palette,
+                    "mood_progress": round(float(mst.progress), 3),
+                    "mood_is_transitioning": bool(mst.is_transitioning),
+                    "mood_auto_scene": bool(mst.auto_scene),
+                    "available_moods": list(mst.available_palettes),
+                    "mood_colors": self._mood.colors().tolist(),
+                })
+            visualizer.update_transition_data(td)
         visualizer.update_strip(self.strip_id, self.data)
         visualizer.show()
 

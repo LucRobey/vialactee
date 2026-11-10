@@ -22,7 +22,7 @@ All documentation in this repository is governed by a strict **5-Tier Documentat
 
 | If you are working on... | Read First (Contract / Spec) | Operational Manual / Skill |
 | :--- | :--- | :--- |
-| **Visual Lighting Modes (`modes/`)** | [`docs/contracts/mode_contract.md`](./contracts/mode_contract.md)<br/>[`docs/reference/modes_catalog.md`](./reference/modes_catalog.md) | [`docs/manuals/mode_authoring_guide.md`](./manuals/mode_authoring_guide.md)<br/>[`.agents/skills/vialactee-mode-creator/SKILL.md`](../.agents/skills/vialactee-mode-creator/SKILL.md) |
+| **Visual Lighting Modes (`modes/`)** | [`docs/contracts/mode_contract.md`](./contracts/mode_contract.md)<br/>[`docs/contracts/global_mode_contract.md`](./contracts/global_mode_contract.md)<br/>[`docs/reference/modes_catalog.md`](./reference/modes_catalog.md) | [`docs/manuals/mode_authoring_guide.md`](./manuals/mode_authoring_guide.md)<br/>[`.agents/skills/vialactee-mode-creator/SKILL.md`](../.agents/skills/vialactee-mode-creator/SKILL.md) |
 | **Audio DSP, Beat Tracking & Musical Context (`music/`)** | [`docs/contracts/music_analyzer_contract.md`](./contracts/music_analyzer_contract.md)<br/>[`docs/architecture/audio_pipeline.md`](./architecture/audio_pipeline.md)<br/>[`docs/architecture/rhythm_engine.md`](./architecture/rhythm_engine.md)<br/>[`docs/architecture/musical_context_engine.md`](./architecture/musical_context_engine.md) | [`docs/manuals/developer_tools.md`](./manuals/developer_tools.md)<br/>[`.agents/skills/vialactee-dsp-engine/SKILL.md`](../.agents/skills/vialactee-dsp-engine/SKILL.md) |
 | **Spatial Transitions (`transitions/`)** | [`docs/contracts/transition_contract.md`](./contracts/transition_contract.md)<br/>[`docs/architecture/core_orchestrator.md`](./architecture/core_orchestrator.md) | [`docs/architecture/system_overview.md`](./architecture/system_overview.md) |
 | **Mood Palettes & Scene Crossfades (`mood/`)** | [`docs/contracts/mood_contract.md`](./contracts/mood_contract.md) | [`docs/architecture/musical_context_engine.md`](./architecture/musical_context_engine.md) |
@@ -57,6 +57,7 @@ All documentation in this repository is governed by a strict **5-Tier Documentat
 - **[`mood_contract.md`](./contracts/mood_contract.md)** — `mood.api` Front Door, Curated Palettes, `2.5s` Cosine Crossfade & `MoodModifiers`
 - **[`transition_contract.md`](./contracts/transition_contract.md)** — `transitions.api` Front Door, 23 Transition Techniques & Cooperative Mode Handshake
 - **[`mode_contract.md`](./contracts/mode_contract.md)** — `modes/` Sector Contract, Input/Output Doors, Signal Trust Handling & Perceptual Laws
+- **[`global_mode_contract.md`](./contracts/global_mode_contract.md)** — `modes/` (`IS_GLOBAL = True`) Global Installation Contract, 5 Doors, `SegmentSpatialProfile` & 10 Perceptual/Architectural Laws
 
 ---
 

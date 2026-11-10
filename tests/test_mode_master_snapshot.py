@@ -98,6 +98,17 @@ class TestModeMasterSnapshot(unittest.TestCase):
         self.assertIsNone(self.mode_master._segment_name_from_id(""))
         self.assertIsNone(self.mode_master._segment_name_from_id(None))
 
+    def test_active_mood_reflects_target_palette_mid_crossfade(self):
+        self.mode_master.mood.request_palette("Solar Ember", duration=2.0)
+        self.mode_master.mood.update(0.5)
+        status = self.mode_master.mood.get_status()
+        self.assertTrue(status.is_transitioning)
+        self.assertEqual(status.palette, "Cyberpunk")
+        self.assertEqual(status.target_palette, "Solar Ember")
+        snapshot = self.mode_master.get_state_snapshot()
+        self.assertEqual(snapshot["activeMood"], status.target_palette)
+        self.assertEqual(snapshot["activeMood"], "Solar Ember")
+
 
 if __name__ == '__main__':
     unittest.main()

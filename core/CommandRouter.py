@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, Callable, Awaitable, Optional, Tuple
 
 from modes.Mode import Mode
+from mood.api import DEFAULT_MANUAL_HOLD
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +127,7 @@ async def _handle_select_mood(mm: Any, payload: Dict[str, Any]) -> Dict[str, Any
     palette = payload.get("palette") or payload.get("mood")
     if not isinstance(palette, str):
         return {"applied": False, "reason": "invalid_palette"}
-    success = mm.mood.request_palette(palette)
+    success = mm.mood.request_palette(palette, hold=DEFAULT_MANUAL_HOLD)
     if success:
         return {"applied": True, "mood": palette}
     return {"applied": False, "reason": "unknown_palette"}
@@ -164,7 +165,7 @@ async def _handle_topology_select_segment_mode(mm: Any, payload: Dict[str, Any])
     segment = mm._find_segment_by_name(segment_name)
     if segment is None:
         return {"applied": False, "reason": "unknown_segment"}
-    segment.execute_mode_swap(mode_name)
+    for seg in (mm.segments_list if getattr(segment.modes.get(segment._normalize_mode_name(mode_name)), "IS_GLOBAL", False) else [segment]): seg.execute_mode_swap(mode_name)
     mm._push_installation()
     return {"applied": True}
 

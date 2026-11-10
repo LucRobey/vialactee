@@ -114,5 +114,69 @@ class TestStudioMutesKeyBindings(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(HAS_PYGAME, "pygame is required for Mode Studio mood readout tests")
+class TestStudioMoodReadoutAndControls(unittest.TestCase):
+    def setUp(self):
+        from tools.mode_studio import ModeManager
+        modes_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "modes"))
+        self.listener = SyntheticListener(nb_bands=8)
+        self.mgr = ModeManager(modes_dir, self.listener)
+        self.proxy = self.mgr.mute_proxy
+
+    def test_get_mood_readout_returns_palette_swatches_and_modifiers(self):
+        # Advance mood modifiers into DROP_IMPACT so unmuted modifiers differ from neutral (1, 1, 1, 0)
+        self.mgr.mood.update(0.35, "DROP_IMPACT")
+        self.mgr.mood.update(2.5, "DROP_IMPACT")
+        readout = self.mgr.get_mood_readout()
+        self.assertIn("palette", readout)
+        self.assertIn("target_palette", readout)
+        self.assertIn("progress", readout)
+        self.assertIn("is_transitioning", readout)
+        self.assertEqual(len(readout["swatches"]), 4)
+        for rgb in readout["swatches"]:
+            self.assertEqual(len(rgb), 3)
+        self.assertEqual(len(readout["modifiers"]), 4)
+        self.assertGreater(readout["modifiers"][0], 1.1)
+        self.assertFalse(readout["macro_muted"])
+
+        self.proxy.set_muted("macro", True)
+        readout_muted = self.mgr.get_mood_readout()
+        self.assertTrue(readout_muted["macro_muted"])
+        self.assertEqual(readout_muted["modifiers"], (1.0, 1.0, 1.0, 0.0))
+
+    def test_step_palette_and_toggle_auto_scene(self):
+        initial = self.mgr.get_mood_readout()
+        palettes = initial["available_palettes"]
+        self.assertGreaterEqual(len(palettes), 2)
+        self.assertEqual(initial["hold_remaining"], 0.0)
+
+        next_pal = self.mgr.step_palette(1)
+        self.assertEqual(next_pal, palettes[1])
+        after_next = self.mgr.get_mood_readout()
+        self.assertEqual(after_next["palette"], palettes[0])
+        self.assertEqual(after_next["target_palette"], palettes[1])
+        self.assertTrue(after_next["is_transitioning"])
+        self.assertEqual(after_next["hold_remaining"], 45.0)
+
+        # Stepping back mid-fade must show palettes[1] -> palettes[0], not palettes[0] -> palettes[0]
+        prev_pal = self.mgr.step_palette(-1)
+        self.assertEqual(prev_pal, palettes[0])
+        after_prev = self.mgr.get_mood_readout()
+        self.assertEqual(after_prev["palette"], palettes[1])
+        self.assertEqual(after_prev["target_palette"], palettes[0])
+
+        # render() decrements hold_remaining, and re-enabling auto_scene clears it
+        self.mgr.render()
+        self.assertLess(self.mgr._hold_timer, 45.0)
+
+        self.assertTrue(initial["auto_scene"])
+        self.assertFalse(self.mgr.toggle_auto_scene())
+        self.assertFalse(self.mgr.get_mood_readout()["auto_scene"])
+        self.assertTrue(self.mgr.toggle_auto_scene())
+        self.assertTrue(self.mgr.get_mood_readout()["auto_scene"])
+        self.assertEqual(self.mgr.get_mood_readout()["hold_remaining"], 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
+

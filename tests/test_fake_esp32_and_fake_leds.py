@@ -188,13 +188,25 @@ class TestFakeLedsAndFakeESP32(unittest.TestCase):
         }).encode("utf-8")
 
         mock_meta = MagicMock()
+        mood_payload = json.dumps({
+            "type": "mood_state",
+            "mood_palette": "Cyberpunk",
+            "mood_target": "Solar Ember",
+            "mood_progress": 0.65,
+            "mood_is_transitioning": True,
+            "mood_auto_scene": False,
+        }).encode("utf-8")
         mock_meta.recvfrom.side_effect = [
+            (mood_payload, ("127.0.0.1", 9003)),
             (trans_payload, ("127.0.0.1", 9003)),
             BlockingIOError(),
         ]
         Fake_ESP32.drain_metadata_packets(mock_meta, self.visualizer)
         self.assertEqual(self.visualizer._transition_data.get("technique"), "silk_wipe")
         self.assertAlmostEqual(self.visualizer._transition_data.get("progress"), 0.42)
+        self.assertEqual(self.visualizer._transition_data.get("mood_target"), "Solar Ember")
+        self.assertAlmostEqual(self.visualizer._transition_data.get("mood_progress"), 0.65)
+        self.assertFalse(self.visualizer._transition_data.get("mood_auto_scene", True))
 
         # Test stepping transition and duration in HUD
         hud = self.visualizer.hud
@@ -226,13 +238,15 @@ class TestFakeLedsAndFakeESP32(unittest.TestCase):
             self.visualizer.set_hud_only(True)
             self.assertTrue(self.visualizer.hud_only)
             self.assertEqual(self.visualizer._current_window_size[0], 732)
-            self.assertLess(self.visualizer._current_window_size[1], 400)
+            self.assertLess(self.visualizer._current_window_size[1], 480)
 
             with patch.object(self.visualizer, "handle_events"):
                 self.visualizer.show()
                 # Transition panel is drawn at (320, 12), so _rect_send is at (334, 131)
                 self.assertEqual(self.visualizer.hud._rect_send.topleft, (334, 131))
                 self.assertEqual(self.visualizer.hud._rect_prev.topleft, (334, 53))
+                self.assertEqual(self.visualizer.hud._rect_mood_apply.topleft, (376, 363))
+                self.assertEqual(self.visualizer.hud._rect_mood_auto.topleft, (334, 395))
         finally:
             self.visualizer.set_hud_only(False)
 

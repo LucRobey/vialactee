@@ -35,7 +35,7 @@ from music.Listener import Listener
 from music.BaseAudioAnalyzer import BaseAudioAnalyzer
 from music.AudioAnalyzer import AudioAnalyzer, bpm_to_class
 from music.MusicalContextEngine import MusicalScene
-from mood.api import create_mood_service
+from mood.api import DEFAULT_MANUAL_HOLD, MoodStatus, create_mood_service
 from modes.Mode import Mode
 from utils.driver_mute import DriverMuteProxy
 import tools.studio_mutes as studio_mutes
@@ -301,6 +301,7 @@ class ModeManager:
         self.indexes = list(range(self.nb_leds))
 
         self.mood = create_mood_service(auto_scene=True)
+        self._hold_timer: float = 0.0
         Mode.bind_mood_colors(self.mood.colors())
         Mode.bind_mood_modifiers(self.mood.modifiers())
 
@@ -371,13 +372,65 @@ class ModeManager:
     def prev_mode(self) -> Tuple[bool, str]:
         return self.load_mode(self.current_idx - 1)
 
+    def step_palette(self, delta: int = 1, hold: float = DEFAULT_MANUAL_HOLD) -> str:
+        """Manually cycle to the next/previous curated palette with a manual hold."""
+        st = self.mood.get_status()
+        names = st.available_palettes
+        if not names:
+            return st.target_palette
+        try:
+            idx = (names.index(st.target_palette) + delta) % len(names)
+        except ValueError:
+            idx = 0
+        target = names[idx]
+        if self.mood.request_palette(target, hold=hold) and hold is not None:
+            self._hold_timer = max(0.0, float(hold))
+        return target
+
+    def toggle_auto_scene(self) -> bool:
+        """Toggle automatic scene-driven palette selection on the mood service."""
+        st = self.mood.get_status()
+        new_state = not st.auto_scene
+        self.mood.set_auto_scene(new_state)
+        if new_state:
+            self._hold_timer = 0.0
+        return new_state
+
+    def get_mood_readout(self) -> Dict[str, Any]:
+        """Build a live readout snapshot of the mood sector (palette, progress, 4 swatches, modifiers)."""
+        st = self.mood.get_status()
+        raw_cols = self.mood.colors()
+        swatches = [
+            (int(np.clip(raw_cols[i, 0], 0, 255)), int(np.clip(raw_cols[i, 1], 0, 255)), int(np.clip(raw_cols[i, 2], 0, 255)))
+            for i in range(min(4, len(raw_cols)))
+        ]
+        self.mute_proxy.sync_macro_modifiers(Mode, self.mood.modifiers())
+        macro_muted = "macro" in self.mute_proxy.muted
+        raw_mods = self.mood.modifiers()
+        mods = (1.0, 1.0, 1.0, 0.0) if macro_muted else (float(raw_mods[0]), float(raw_mods[1]), float(raw_mods[2]), float(raw_mods[3]))
+        return {
+            "palette": st.palette,
+            "target_palette": st.target_palette,
+            "progress": float(st.progress),
+            "is_transitioning": bool(st.is_transitioning),
+            "available_palettes": st.available_palettes,
+            "auto_scene": bool(st.auto_scene),
+            "hold_remaining": round(self._hold_timer, 1),
+            "swatches": swatches,
+            "modifiers": mods,
+            "macro_muted": macro_muted,
+        }
+
     def render(self) -> None:
         """Executes mood sector update and rendering of the active mode into self.rgb_buffer."""
         ctx = getattr(self.listener, "context", None)
         raw_scene = getattr(ctx, "scene", None) if ctx is not None else None
         scene_str = str(raw_scene.value if hasattr(raw_scene, "value") else raw_scene) if raw_scene is not None else None
         dt = float(getattr(self.listener, "dt", 1.0 / 60.0))
-        self.mood.update(dt if dt > 0.0 else (1.0 / 60.0), scene_str)
+        step_dt = dt if dt > 0.0 else (1.0 / 60.0)
+        if self._hold_timer > 0.0:
+            self._hold_timer = max(0.0, self._hold_timer - step_dt)
+        self.mood.update(step_dt, scene_str)
         self.mute_proxy.observe()
         self.mute_proxy.sync_macro_modifiers(Mode, self.mood.modifiers())
         if self.active_mode_instance is not None:
@@ -460,6 +513,9 @@ class StudioApp:
         # Text rendering cache (avoids heap thrashing at 60 FPS)
         self._text_cache: Dict[Tuple[int, str, Tuple[int, int, int]], pygame.Surface] = {}
         self._pulse_glow_surf: Optional[pygame.Surface] = None
+        self._mood_header_rect: Optional[pygame.Rect] = None
+        self._mood_card_rect: Optional[pygame.Rect] = None
+        self._mood_auto_rect: Optional[pygame.Rect] = None
 
         # Find all available songs in assets/musics/mp3_files
         self.assets_music_dir = os.path.join(_REPO_ROOT, "assets", "musics", "mp3_files")
@@ -673,13 +729,36 @@ class StudioApp:
                         if ctx is not None:
                             ctx._pre_drop_cooldown = 0.0
                             self.set_status("COOLDOWN RESET (Trigger Armed)", self.ACCENT_GREEN)
+                    elif event.key == pygame.K_m:
+                        delta = -1 if (event.mod & pygame.KMOD_SHIFT) else 1
+                        pal = self.mode_mgr.step_palette(delta)
+                        self.set_status(f"Mood Palette: {pal} ({int(DEFAULT_MANUAL_HOLD)}s hold)", self.ACCENT_CYAN)
+                    elif event.key == pygame.K_a:
+                        auto_on = self.mode_mgr.toggle_auto_scene()
+                        self.set_status(
+                            f"Mood Auto-Scene: {'ON' if auto_on else 'OFF (Manual)'}",
+                            self.ACCENT_GREEN if auto_on else self.ACCENT_ORANGE,
+                        )
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    # Check if clicked on seek progress bar
                     mx, my = event.pos
+                    btn = getattr(event, "button", 1)
                     if 40 <= mx <= self.width - 40 and 65 <= my <= 80:
                         ratio = (mx - 40) / float(self.width - 80)
                         target_sec = ratio * self.streamer.total_duration
                         self.streamer.seek(target_sec, self.sync_offset_ms / 1000.0)
+                    elif self._mood_auto_rect is not None and self._mood_auto_rect.collidepoint((mx, my)):
+                        auto_on = self.mode_mgr.toggle_auto_scene()
+                        self.set_status(
+                            f"Mood Auto-Scene: {'ON' if auto_on else 'OFF (Manual)'}",
+                            self.ACCENT_GREEN if auto_on else self.ACCENT_ORANGE,
+                        )
+                    elif (
+                        (self._mood_header_rect is not None and self._mood_header_rect.collidepoint((mx, my)))
+                        or (self._mood_card_rect is not None and self._mood_card_rect.collidepoint((mx, my)))
+                    ):
+                        delta = -1 if btn == 3 else 1
+                        pal = self.mode_mgr.step_palette(delta)
+                        self.set_status(f"Mood Palette: {pal} ({int(DEFAULT_MANUAL_HOLD)}s hold)", self.ACCENT_CYAN)
 
             # Advance audio analysis pipeline & step modes.
             # The mode MUST render after every analyzer step: is_beat / is_real_beat are one-frame
@@ -730,6 +809,25 @@ class StudioApp:
         song_name = os.path.basename(self.streamer.file_path)
         song_surf = self.get_text(self.font_main, f"Track: {song_name}", self.TEXT_MAIN)
         self.screen.blit(song_surf, (self.width - song_surf.get_width() - 40, 22))
+
+        # Live Mood Strip in Header (right-aligned at y=42)
+        mr = self.mode_mgr.get_mood_readout()
+        pal_str = (
+            f"Mood: {mr['palette']} → {mr['target_palette']} ({int(mr['progress'] * 100)}%)"
+            if mr["is_transitioning"]
+            else f"Mood: {mr['target_palette']}"
+        )
+        hold_rem = float(mr.get("hold_remaining", 0.0))
+        auto_tag = f"[HOLD {int(math.ceil(hold_rem))}s]" if (mr["auto_scene"] and hold_rem > 0.0) else ("[AUTO]" if mr["auto_scene"] else "[MANUAL]")
+        p_surf = self.get_text(self.font_small, f"{pal_str} {auto_tag}", self.ACCENT_CYAN if mr["is_transitioning"] else self.TEXT_MAIN)
+        sw_total_w = 4 * 14
+        mx_start = self.width - 40 - p_surf.get_width() - sw_total_w - 8
+        self._mood_header_rect = pygame.Rect(mx_start - 4, 42, p_surf.get_width() + sw_total_w + 16, 18)
+        for i, rgb_col in enumerate(mr["swatches"]):
+            sw_r = pygame.Rect(mx_start + i * 14, 45, 11, 12)
+            pygame.draw.rect(self.screen, rgb_col, sw_r, border_radius=3)
+            pygame.draw.rect(self.screen, self.PANEL_BORDER, sw_r, width=1, border_radius=3)
+        self.screen.blit(p_surf, (mx_start + sw_total_w + 4, 43))
 
         # Interactive Progress Scrubber
         bar_x = 40
@@ -1179,7 +1277,7 @@ class StudioApp:
             self.screen.blit(txt_s, (b_rect.centerx - txt_s.get_width() // 2, b_rect.centery - txt_s.get_height() // 2))
 
         # Row 2: 3 badges [IMMINENT] [IMPACT 💥] [STRUCT CUT ⚡]
-        cy += 24
+        cy += 22
         bw3 = (bar_w - 6) // 3
         badge_defs_row2 = [
             ("IMMINENT" if countdown <= 0 else f"IMM ({countdown:.1f}s)", b_imminent, (255, 40, 130), (60, 15, 30)),
@@ -1188,7 +1286,7 @@ class StudioApp:
         ]
         for i, (b_name, b_val, b_fg, b_bg_act) in enumerate(badge_defs_row2):
             bx_cur = x + 16 + i * (bw3 + 3)
-            b_rect = pygame.Rect(bx_cur, cy, bw3, 20)
+            b_rect = pygame.Rect(bx_cur, cy, bw3, 18)
             if b_val:
                 pygame.draw.rect(self.screen, b_bg_act, b_rect, border_radius=4)
                 pygame.draw.rect(self.screen, b_fg, b_rect, width=1, border_radius=4)
@@ -1197,6 +1295,79 @@ class StudioApp:
                 pygame.draw.rect(self.screen, (18, 20, 28), b_rect, border_radius=4)
                 txt_s = self.get_text(self.font_tiny, b_name, (70, 78, 95))
             self.screen.blit(txt_s, (b_rect.centerx - txt_s.get_width() // 2, b_rect.centery - txt_s.get_height() // 2))
+
+        # =========================================================
+        # SECTION 4: MOOD SECTOR (PALETTE, SWATCHES & MODIFIERS)
+        # =========================================================
+        cy += 22
+        mr = self.mode_mgr.get_mood_readout()
+        self.screen.blit(self.get_text(self.font_main, "MOOD SECTOR", self.ACCENT_PURPLE), (x + 16, cy))
+
+        auto_on = mr["auto_scene"]
+        hold_rem = float(mr.get("hold_remaining", 0.0))
+        is_free_auto = auto_on and hold_rem <= 0.0
+        auto_lbl = "AUTO [A]" if is_free_auto else (f"HOLD {int(math.ceil(hold_rem))}s [A]" if auto_on else "MANUAL [A]")
+        auto_fg = self.ACCENT_GREEN if is_free_auto else self.ACCENT_ORANGE
+        auto_bg = (16, 46, 28) if is_free_auto else (50, 32, 12)
+        auto_s = self.get_text(self.font_tiny, auto_lbl, auto_fg)
+        self._mood_auto_rect = pygame.Rect(x + w - auto_s.get_width() - 28, cy + 1, auto_s.get_width() + 12, 16)
+        pygame.draw.rect(self.screen, auto_bg, self._mood_auto_rect, border_radius=4)
+        pygame.draw.rect(self.screen, auto_fg, self._mood_auto_rect, width=1, border_radius=4)
+        self.screen.blit(auto_s, (self._mood_auto_rect.centerx - auto_s.get_width() // 2, self._mood_auto_rect.centery - auto_s.get_height() // 2))
+
+        cy += 19
+        self._mood_card_rect = pygame.Rect(x + 16, cy, bar_w, 40)
+        pygame.draw.rect(self.screen, (12, 14, 20), self._mood_card_rect, border_radius=6)
+        pygame.draw.rect(self.screen, self.ACCENT_CYAN if mr["is_transitioning"] else self.PANEL_BORDER, self._mood_card_rect, width=1, border_radius=6)
+
+        if mr["is_transitioning"]:
+            pal_txt = f"{mr['palette']} → {mr['target_palette']}"
+            prog_txt = f"{int(mr['progress'] * 100)}%"
+            pal_col = self.ACCENT_CYAN
+        else:
+            pal_txt = f"Palette: {mr['target_palette']}"
+            prog_txt = "[M] Next"
+            pal_col = self.TEXT_MAIN
+        prog_s = self.get_text(self.font_tiny, prog_txt, self.ACCENT_CYAN if mr["is_transitioning"] else self.TEXT_MUTED)
+        old_clip = self.screen.get_clip()
+        self.screen.set_clip(pygame.Rect(x + 22, cy + 1, max(10, bar_w - 12 - prog_s.get_width() - 4), 15))
+        self.screen.blit(self.get_text(self.font_tiny, pal_txt, pal_col), (x + 22, cy + 2))
+        self.screen.set_clip(old_clip)
+        self.screen.blit(prog_s, (x + w - prog_s.get_width() - 22, cy + 2))
+
+        # 4 Live Colour Swatches [PRI, SEC, ACC, BG]
+        sw_labels = ("PRI", "SEC", "ACC", "BG")
+        sw_w = (bar_w - 12 - 9) // 4
+        for i, rgb_col in enumerate(mr["swatches"]):
+            sx = x + 22 + i * (sw_w + 3)
+            sy_sw = cy + 16
+            sw_rect = pygame.Rect(sx, sy_sw, sw_w, 15)
+            pygame.draw.rect(self.screen, rgb_col, sw_rect, border_radius=3)
+            pygame.draw.rect(self.screen, (70, 80, 100), sw_rect, width=1, border_radius=3)
+            lum = 0.299 * rgb_col[0] + 0.587 * rgb_col[1] + 0.114 * rgb_col[2]
+            lbl_col = (15, 18, 24) if lum > 140 else (240, 245, 255)
+            lbl_s = self.get_text(self.font_tiny, sw_labels[i], lbl_col)
+            self.screen.blit(lbl_s, (sw_rect.centerx - lbl_s.get_width() // 2, sw_rect.centery - lbl_s.get_height() // 2))
+
+        # Crossfade progress bar inside mood card
+        pygame.draw.rect(self.screen, (24, 28, 38), (x + 22, cy + 34, bar_w - 12, 3), border_radius=2)
+        fill_mp = int((bar_w - 12) * min(1.0, max(0.0, mr["progress"])))
+        if fill_mp > 0:
+            pygame.draw.rect(
+                self.screen,
+                self.ACCENT_CYAN if mr["is_transitioning"] else self.ACCENT_GREEN,
+                (x + 22, cy + 34, fill_mp, 3),
+                border_radius=2,
+            )
+
+        # Live Scene Modifiers [pace, sharpness, trail, accent_mix]
+        cy += 42
+        pace, sharp, trail, acc = mr["modifiers"]
+        mod_col = self.ACCENT_ORANGE if mr["macro_muted"] else self.TEXT_DIM
+        mod_str = f"pace:{pace:.2f} sharp:{sharp:.2f} trail:{trail:.2f} acc:{int(acc * 100)}%"
+        if mr["macro_muted"]:
+            mod_str += " [MUTE]"
+        self.screen.blit(self.get_text(self.font_tiny, mod_str, mod_col), (x + 16, cy))
 
     def _draw_salience_trust_card(self, x: int, y: int, w: int, h: int) -> None:
         """Card 3: Rhythmic Salience (S), Beat Trust (T), Schmitt Deadbands & Salience Gradient (ΔR)."""
@@ -1691,6 +1862,8 @@ class StudioApp:
             "[Space] Pause",
             "[↑/↓] Mode",
             "[←/→] Seek",
+            "[M] Mood",
+            "[A] Auto-Mood",
             "[B] Test Buildup",
             "[D] Test Drop",
             "[C] Reset CD",

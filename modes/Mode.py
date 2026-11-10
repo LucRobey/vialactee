@@ -29,6 +29,7 @@ _FALLBACK_MOOD_MODIFIERS = np.array([1.0, 1.0, 1.0, 0.0], dtype=np.float32)
 _FALLBACK_MOOD_MODIFIERS.flags.writeable = False
 
 class Mode:
+    IS_GLOBAL: bool = False
     listener = None
     white = (255, 255, 255)
     _mood_colors: np.ndarray = _FALLBACK_MOOD_COLORS

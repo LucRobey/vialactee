@@ -239,12 +239,12 @@ class Segment:
                     module = importlib.import_module(module_name)
                     mode_class = getattr(module, class_name)
                     
-                    self.modes[mode_name] = mode_class(mode_name, *args)
+                    instance = mode_class(mode_name, *args); getattr(instance, "bind_segment_geometry", lambda *_: None)(self.id, self.orientation, self.tags, self.coords_array); self.modes[mode_name] = instance
                 except Exception as e:
                     self.logger.error(f"Failed to load mode {mode_info.get('name', 'Unknown')}: {e}")
 
         # Load standard modes
-        load_mode_list(mode_config.get("standard_modes", []))
+        load_mode_list(mode_config.get("standard_modes", []) + mode_config.get("global_modes", []))
 
         if orientation == "vertical":
             load_mode_list(mode_config.get("vertical_modes", []))
@@ -260,7 +260,7 @@ class Segment:
     def update_leds(self) -> None:
         """Flush the local segment RGB buffer to the global LED array without allocation."""
         np.multiply(self.rgb_list, self.listener.luminosite, out=self._scaled_buffer, casting='unsafe')
-        if self.way == "UP":
+        if self.way == "UP" or getattr(self.modes.get(self.activ_mode), "IS_GLOBAL", False):
             self.leds[self.indexes] = self._scaled_buffer
         else:
             self.leds[self._reversed_indexes] = self._scaled_buffer

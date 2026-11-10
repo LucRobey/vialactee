@@ -66,13 +66,15 @@ class Mode_master:
         self.initiate_segments()
         self.mode_settings_catalog = self._build_mode_settings_catalog()
         self.transitions = create_transition_service(self.infos)
-        if len(self.leds_list) > 0 and hasattr(self.leds_list[0], "set_transition_controller"):
-            self.leds_list[0].set_transition_controller(self.transitions)
-        if len(self.leds_list) > 0 and hasattr(self.leds_list[0], "set_control_handler"):
-            self.leds_list[0].set_control_handler(self.handle_panel_command, self._panel_mode_catalog())
         self.mood = create_mood_service(auto_scene=True)  # auto_scene is a code default (off) in mood.api
         Mode.bind_mood_colors(self.mood.colors())
         Mode.bind_mood_modifiers(self.mood.modifiers())
+        if len(self.leds_list) > 0 and hasattr(self.leds_list[0], "set_transition_controller"):
+            self.leds_list[0].set_transition_controller(self.transitions)
+        if len(self.leds_list) > 0 and hasattr(self.leds_list[0], "set_mood_controller"):
+            self.leds_list[0].set_mood_controller(self.mood)
+        if len(self.leds_list) > 0 and hasattr(self.leds_list[0], "set_control_handler"):
+            self.leds_list[0].set_control_handler(self.handle_panel_command, self._panel_mode_catalog())
         self.initiate_modes()
         self.system_status = System_status.SystemStatus(self.infos, self.listener, self.leds_list, getattr(self, "profiler", None))
 
@@ -270,7 +272,7 @@ class Mode_master:
             "sensibility": int(round(max(0.0, float(getattr(self.listener, "sensi", 0.0))) * 100)),
             "autoTransitionTime": int(round(transition_status.auto_interval)),
             "availableModes": available_modes,
-            "activeMood": self.mood.get_status().palette,
+            "activeMood": self.mood.get_status().target_palette,
             "availableMoods": list(self.mood.get_status().available_palettes),
             "segments": segments,
             "modeSettingsCatalog": list(self.mode_settings_catalog.values()),
@@ -424,38 +426,17 @@ class Mode_master:
         }
 
     def handle_panel_command(self, command: Dict[str, Any]) -> bool:
-        """
-        Apply a command from the desktop control panel (the pygame window opened by Main.py).
-
-        Supported `type`s:
-          * `set_locked` {locked}: HOLD / LIVE, freezes or resumes automatic transitions.
-          * `set_segment_mode` {segment, mode}: instantly puts a segment on a mode.
-
-        Returns True when the command was applied. Runs synchronously on the render loop.
-        """
-        ctype = command.get("type")
-        if ctype == "set_locked":
-            self.transitions.set_locked(bool(command.get("locked")))
-            self._state_dirty = True
-            return True
-        if ctype == "set_segment_mode":
-            segment_ref = command.get("segment")
-            mode_name = command.get("mode")
-            if not isinstance(segment_ref, str) or not isinstance(mode_name, str):
-                return False
-            segment = self._find_segment_by_name(segment_ref)
-            if segment is None or segment._normalize_mode_name(mode_name) not in segment.modes:
-                return False
-            segment.execute_mode_swap(mode_name)
-            self._push_installation()
-            self._state_dirty = True
-            return True
-        return False
+        """Apply a command (`set_locked`, `set_segment_mode`, `set_global_mode`, `set_mode_scope`) from the desktop panel."""
+        return TransitionBridge.apply_panel_command(self, command)
 
     def _push_installation(self) -> None:
         """Describe the current segments to the transition sector."""
         self.transitions.set_installation(
-            TransitionBridge.build_installation_snapshot(self.segments_list, self._room_bounds)
+            TransitionBridge.build_installation_snapshot(
+                self.segments_list,
+                self._room_bounds,
+                global_only=bool(getattr(self, "_use_global_modes", False)),
+            )
         )
 
     def _segment_name_from_id(self, segment_id: Any) -> Optional[str]:

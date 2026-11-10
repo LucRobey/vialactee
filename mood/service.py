@@ -11,10 +11,10 @@ from mood.api import MoodService, MoodStatus
 from mood.engine import CrossfadeEngine
 from mood.palettes import DEFAULT_PALETTE, PALETTES
 from mood.scene_policy import (
-    AUTO_PALETTE_DURATION,
     MODIFIER_FADE_DURATION,
     ModifierGovernor,
     SceneGovernor,
+    fade_duration_for_scene,
 )
 
 
@@ -28,6 +28,7 @@ class DefaultMoodService(MoodService):
         self._governor = SceneGovernor()
         self._mod_governor = ModifierGovernor()
         self._auto_scene = bool(auto_scene)
+        self._hold_timer: float = 0.0
         self._names: Tuple[str, ...] = tuple(PALETTES.keys())
 
         # Read-only views of the live buffers: the engine mutates the base arrays in place.
@@ -38,22 +39,35 @@ class DefaultMoodService(MoodService):
 
     def update(self, dt: float, scene: Optional[str] = None) -> None:
         self._engine.advance(dt)
-        if scene is not None:
-            if self._auto_scene:
-                due = self._governor.update(dt, scene)
-                if due is not None:
-                    self.request_palette(due, duration=AUTO_PALETTE_DURATION)
-            mod_due = self._mod_governor.update(dt, scene)
-            if mod_due is not None:
-                self._engine.start_modifiers(mod_due, MODIFIER_FADE_DURATION)
+        held = self._hold_timer > 0.0
+        if held:
+            self._hold_timer = max(0.0, self._hold_timer - dt)
+        if scene is None:
+            return
+        if self._auto_scene and not held:
+            due = self._governor.update(dt, scene)
+            if due is not None:
+                self._apply(due, fade_duration_for_scene(scene))
+        mod_due = self._mod_governor.update(dt, scene)
+        if mod_due is not None:
+            self._engine.start_modifiers(mod_due, MODIFIER_FADE_DURATION)
 
-    def request_palette(self, name: str, duration: Optional[float] = None) -> bool:
+    def _apply(self, name: str, duration: Optional[float] = None) -> bool:
         if name not in PALETTES:
             return False
         if name == self._engine.target:
             return True
         self._engine.start(name, duration if duration is not None else self._engine.default_duration)
         return True
+
+    def request_palette(self, name: str, duration: Optional[float] = None,
+                        hold: Optional[float] = None) -> bool:
+        if name not in PALETTES:
+            return False
+        self._governor.notify_manual()
+        if hold is not None:
+            self._hold_timer = max(0.0, float(hold))
+        return self._apply(name, duration)
 
     def next_palette(self, duration: Optional[float] = None) -> str:
         try:
@@ -66,6 +80,8 @@ class DefaultMoodService(MoodService):
 
     def set_auto_scene(self, enabled: bool) -> None:
         self._auto_scene = bool(enabled)
+        if self._auto_scene:
+            self._hold_timer = 0.0
 
     def colors(self) -> np.ndarray:
         return self._view

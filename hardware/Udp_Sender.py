@@ -24,6 +24,7 @@ class Udp_Sender(HardwareInterface):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._analyzer = None
         self._transitions = None
+        self._mood = None
         self._control_sock = None
         self._last_analyzer_send = 0.0
         self._last_transition_send = 0.0
@@ -33,6 +34,16 @@ class Udp_Sender(HardwareInterface):
         self._control_handler = None        # callable(dict) applying panel commands (HOLD, segment mode)
         self._mode_catalog = None           # {segment_id: [mode names]} behind the panel's < > buttons
         self._last_catalog_send = 0.0
+
+    def _ensure_control_sock(self):
+        if self._control_sock is None:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.bind(("127.0.0.1", CONTROL_PORT))
+                sock.setblocking(False)
+                self._control_sock = sock
+            except OSError:
+                self._control_sock = None
 
     def set_control_handler(self, handler, mode_catalog=None):
         """
@@ -46,22 +57,24 @@ class Udp_Sender(HardwareInterface):
         """
         self._control_handler = handler
         self._mode_catalog = mode_catalog
+        if handler is not None:
+            self._ensure_control_sock()
 
     def set_analyzer(self, analyzer):
         """Store a reference to the AudioAnalyzer so show() can stream its state to the simulator."""
         self._analyzer = analyzer
 
+    def set_mood_controller(self, mood):
+        """Attach the MoodService so show() can stream palette status & swatches to the simulator."""
+        self._mood = mood
+        if mood is not None:
+            self._ensure_control_sock()
+
     def set_transition_controller(self, transitions):
         """Attach the TransitionService so simulator UI requests on CONTROL_PORT can trigger transitions."""
         self._transitions = transitions
-        if self._control_sock is None:
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                sock.bind(("127.0.0.1", CONTROL_PORT))
-                sock.setblocking(False)
-                self._control_sock = sock
-            except OSError:
-                self._control_sock = None
+        if transitions is not None:
+            self._ensure_control_sock()
 
     def __getitem__(self, index):
         return self.data[index]
@@ -93,14 +106,14 @@ class Udp_Sender(HardwareInterface):
 
         if self._analyzer is not None:
             self._send_analyzer_state()
-        if self._transitions is not None:
+        if self._transitions is not None or self._mood is not None or self._control_handler is not None:
             self._poll_control_requests()
             self._send_transition_state()
             self._send_mode_catalog()
 
     def _poll_control_requests(self):
         """Drain simulator UI transition requests from CONTROL_PORT in non-blocking mode."""
-        if self._control_sock is None or self._transitions is None:
+        if self._control_sock is None or (self._transitions is None and self._control_handler is None):
             return
         for _ in range(8):
             try:
@@ -109,7 +122,7 @@ class Udp_Sender(HardwareInterface):
                 break
             try:
                 payload = json.loads(data.decode("utf-8"))
-                if payload.get("type") == "request_transition":
+                if payload.get("type") == "request_transition" and self._transitions is not None:
                     raw_tech = payload.get("technique")
                     tech = None if raw_tech in (None, "", "AUTO") else str(raw_tech)
                     dur = payload.get("duration")
@@ -123,26 +136,47 @@ class Udp_Sender(HardwareInterface):
                 pass
 
     def _send_transition_state(self):
-        """Send transition status to the simulator UI on state change or 10 Hz heartbeat."""
-        if self._transitions is None:
+        """Send transition and mood status to the simulator UI on state change or 10 Hz heartbeat."""
+        if self._transitions is None and self._mood is None:
             return
         try:
             now = time.monotonic()
-            st = self._transitions.get_status()
-            is_locked = bool(getattr(st, "is_locked", False))
-            curr = (bool(st.is_in_transition), bool(st.is_pending), round(float(st.progress), 2), st.technique, is_locked)
+            st = self._transitions.get_status() if self._transitions is not None else None
+            is_locked = bool(getattr(st, "is_locked", False)) if st is not None else False
+            mood_st = self._mood.get_status() if self._mood is not None else None
+            mood_sig = (
+                (mood_st.palette, mood_st.target_palette, round(float(mood_st.progress), 2),
+                 bool(mood_st.is_transitioning), bool(mood_st.auto_scene))
+                if mood_st is not None else None
+            )
+            trans_sig = (
+                (bool(st.is_in_transition), bool(st.is_pending), round(float(st.progress), 2), st.technique, is_locked)
+                if st is not None else None
+            )
+            curr = (trans_sig, mood_sig)
             if curr == self._last_transition_state and (now - self._last_transition_send) < 0.1:
                 return
             self._last_transition_state = curr
             self._last_transition_send = now
-            payload = {
-                "type": "transition_state",
-                "is_in_transition": bool(st.is_in_transition),
-                "is_pending": bool(st.is_pending),
-                "progress": round(float(st.progress), 3),
-                "technique": st.technique,
-                "is_locked": is_locked,
-            }
+            payload = {"type": "transition_state"}
+            if st is not None:
+                payload.update({
+                    "is_in_transition": bool(st.is_in_transition),
+                    "is_pending": bool(st.is_pending),
+                    "progress": round(float(st.progress), 3),
+                    "technique": st.technique,
+                    "is_locked": is_locked,
+                })
+            if mood_st is not None:
+                payload.update({
+                    "mood_palette": mood_st.palette,
+                    "mood_target": mood_st.target_palette,
+                    "mood_progress": round(float(mood_st.progress), 3),
+                    "mood_is_transitioning": bool(mood_st.is_transitioning),
+                    "mood_auto_scene": bool(mood_st.auto_scene),
+                    "available_moods": list(mood_st.available_palettes),
+                    "mood_colors": self._mood.colors().tolist(),
+                })
             self.sock.sendto(json.dumps(payload).encode("utf-8"), ("127.0.0.1", SEGMENT_METADATA_PORT))
         except Exception:
             pass

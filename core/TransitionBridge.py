@@ -16,6 +16,7 @@ import os
 from typing import Any, Dict, List, Optional, Tuple
 
 import core.Segment as Segment
+from mood.api import DEFAULT_MANUAL_HOLD
 from transitions.api import (
     InstallationSnapshot,
     ModeProfile,
@@ -85,7 +86,10 @@ def build_music_snapshot(listener: Any) -> MusicSnapshot:
     )
 
 
-def build_mode_profiles(modes_config: Optional[Dict[str, Any]] = None) -> Tuple[ModeProfile, ...]:
+def build_mode_profiles(
+    modes_config: Optional[Dict[str, Any]] = None,
+    global_only: bool = False,
+) -> Tuple[ModeProfile, ...]:
     """Build frozen ModeProfile objects from config/modes.json (or cached Segment config)."""
     cfg = modes_config
     if cfg is None:
@@ -102,8 +106,9 @@ def build_mode_profiles(modes_config: Optional[Dict[str, Any]] = None) -> Tuple[
             except Exception:
                 cfg = {}
 
+    section = "global_modes" if global_only else "standard_modes"
     profiles: List[ModeProfile] = []
-    for entry in (cfg or {}).get("standard_modes", []):
+    for entry in (cfg or {}).get(section, []):
         if not isinstance(entry, dict) or not entry.get("name"):
             continue
         dna_raw = entry.get("dna") or {}
@@ -139,14 +144,129 @@ def build_installation_snapshot(
     segments: List[Any],
     room_bounds: Optional[Tuple[float, float]] = None,
     modes: Optional[Tuple[ModeProfile, ...]] = None,
+    global_only: bool = False,
 ) -> InstallationSnapshot:
     """Describe the physical segments and mode profiles to the sector."""
-    mode_profiles = modes if modes is not None else build_mode_profiles()
+    mode_profiles = modes if modes is not None else build_mode_profiles(global_only=global_only)
     return InstallationSnapshot(
         segments=tuple(_segment_descriptor(seg) for seg in segments),
         modes=mode_profiles,
         room_bounds=room_bounds,
     )
+
+
+def sync_mode_scope(mode_master: Any, use_global: bool) -> None:
+    """Switch the transition sector between Global Modes (unison) and Local Modes (per-segment)."""
+    mode_master._use_global_modes = bool(use_global)
+    if use_global and mode_master.segments_list:
+        sids = [
+            str(getattr(s, "id", "") or s.name.replace("Segment ", "", 1))
+            for s in mode_master.segments_list
+        ]
+        policy = {
+            "version": 1,
+            "settings": {"maxDifferentModes": 1, "temperature": 1.0, "memoryDepth": 8, "repeatPenalty": 3.0},
+            "zones": {
+                "chandelier": {
+                    "segments": sids,
+                    "groupings": [{"id": "global-unison", "weight": 1, "groups": [["all"]]}],
+                }
+            },
+            "rules": [],
+        }
+        mode_master.transitions.configure(policy)
+        mode_master._push_installation()
+    else:
+        mode_master._push_installation()
+        from config.coherence_loader import load_coherence_config
+        try:
+            mode_master.transitions.configure(load_coherence_config(mode_master.infos))
+        except Exception:
+            mode_master.transitions.configure(None)
+
+
+def apply_panel_command(mode_master: Any, command: Dict[str, Any]) -> bool:
+    """Apply a desktop control panel command (`set_locked`, `set_segment_mode`, `set_global_mode`, `set_mode_scope`)."""
+    ctype = command.get("type")
+    if ctype == "set_locked":
+        mode_master.transitions.set_locked(bool(command.get("locked")))
+        mode_master._state_dirty = True
+        return True
+    if ctype == "set_segment_mode":
+        segment_ref = command.get("segment")
+        mode_name = command.get("mode")
+        if not isinstance(segment_ref, str) or not isinstance(mode_name, str):
+            return False
+        segment = mode_master._find_segment_by_name(segment_ref)
+        if segment is None or segment._normalize_mode_name(mode_name) not in segment.modes:
+            return False
+        norm_name = segment._normalize_mode_name(mode_name)
+        is_global = bool(getattr(segment.modes[norm_name], "IS_GLOBAL", False))
+        for seg in (mode_master.segments_list if is_global else [segment]):
+            seg.execute_mode_swap(norm_name)
+        if is_global != bool(getattr(mode_master, "_use_global_modes", False)):
+            sync_mode_scope(mode_master, is_global)
+        else:
+            mode_master._push_installation()
+        mode_master._state_dirty = True
+        return True
+    if ctype == "set_global_mode":
+        mode_name = command.get("mode")
+        if not isinstance(mode_name, str) or not mode_master.segments_list:
+            return False
+        seg0 = mode_master.segments_list[0]
+        norm_name = seg0._normalize_mode_name(mode_name)
+        if norm_name not in seg0.modes or not getattr(seg0.modes[norm_name], "IS_GLOBAL", False):
+            return False
+        for seg in mode_master.segments_list:
+            seg.execute_mode_swap(norm_name)
+        sync_mode_scope(mode_master, True)
+        mode_master._state_dirty = True
+        return True
+    if ctype == "set_mode_scope":
+        scope = command.get("scope")
+        if scope == "global" and mode_master.segments_list:
+            seg0 = mode_master.segments_list[0]
+            req = command.get("mode")
+            norm_name = seg0._normalize_mode_name(req) if isinstance(req, str) else ""
+            if norm_name not in seg0.modes or not getattr(seg0.modes[norm_name], "IS_GLOBAL", False):
+                gmodes = sorted(k for k, m in seg0.modes.items() if getattr(m, "IS_GLOBAL", False))
+                if not gmodes:
+                    return False
+                norm_name = gmodes[0]
+            for seg in mode_master.segments_list:
+                seg.execute_mode_swap(norm_name)
+            sync_mode_scope(mode_master, True)
+            mode_master._state_dirty = True
+            return True
+        if scope == "local" and mode_master.segments_list:
+            sync_mode_scope(mode_master, False)
+            music = build_music_snapshot(mode_master.listener)
+            alloc = mode_master.transitions.allocate_initial(music) if hasattr(mode_master.transitions, "allocate_initial") else {}
+            for seg in mode_master.segments_list:
+                local_modes = sorted(k for k, m in seg.modes.items() if not getattr(m, "IS_GLOBAL", False))
+                target = alloc.get(seg.name) or alloc.get(getattr(seg, "id", "")) or (local_modes[0] if local_modes else seg.get_current_mode())
+                if target in seg.modes:
+                    seg.execute_mode_swap(target)
+            mode_master._push_installation()
+            mode_master._state_dirty = True
+            return True
+    if ctype == "set_mood":
+        mood = getattr(mode_master, "mood", None)
+        palette = command.get("palette") or command.get("mood")
+        if mood is None or not isinstance(palette, str) or not mood.request_palette(palette, hold=DEFAULT_MANUAL_HOLD):
+            return False
+        mode_master._state_dirty = True
+        return True
+    if ctype == "set_mood_auto":
+        mood = getattr(mode_master, "mood", None)
+        auto_scene = command.get("auto_scene")
+        if mood is None or not isinstance(auto_scene, bool):
+            return False
+        mood.set_auto_scene(auto_scene)
+        mode_master._state_dirty = True
+        return True
+    return False
 
 
 def apply_orders(mode_master: Any, orders: TransitionOrders) -> OrderAck:

@@ -5,18 +5,29 @@ Pure logic (no numpy, no project imports): scenes arrive as plain strings.
 """
 from typing import Dict, Optional, Tuple
 
-SCENE_TO_PALETTE: Dict[str, str] = {
-    "CHILL": "Deep Ocean",
-    "GROOVE": "Cyberpunk",
-    "BUILDUP": "Solar Ember",
-    "DROP_IMPACT": "Neon Acid",
+SCENE_TO_PALETTES: Dict[str, Tuple[str, ...]] = {
+    "CHILL": ("Deep Ocean", "Ethereal"),
+    "GROOVE": ("Cyberpunk", "Monochrome Chrome"),
+    "BUILDUP": ("Solar Ember",),
+    "DROP_IMPACT": ("Neon Acid",),
 }
+SCENE_TO_PALETTE: Dict[str, str] = {k: v[0] for k, v in SCENE_TO_PALETTES.items()}
 
 # Seconds a scene must persist before its palette is requested in auto-scene mode.
-# All scenes share the same 4.0s dwell (no 0.0s DROP_IMPACT palette hijack).
 DEFAULT_DWELL = 4.0
-SCENE_DWELL: Dict[str, float] = {}
-AUTO_PALETTE_DURATION = 3.0
+SCENE_DWELL: Dict[str, float] = {
+    "CHILL": 4.0,
+    "GROOVE": 4.0,
+    "BUILDUP": 1.5,
+    "DROP_IMPACT": 0.25,
+}
+AUTO_PALETTE_DURATION = 3.0   # fallback fade
+SCENE_FADE_DURATION: Dict[str, float] = {
+    "CHILL": 3.0,
+    "GROOVE": 3.0,
+    "BUILDUP": 2.0,
+    "DROP_IMPACT": 0.8,
+}
 
 # Bounded scene modifiers: (pace, sharpness, trail, accent_mix)
 DEFAULT_MODIFIERS: Tuple[float, float, float, float] = (1.00, 1.00, 1.00, 0.00)
@@ -35,6 +46,11 @@ def palette_for_scene(scene: str) -> Optional[str]:
     return SCENE_TO_PALETTE.get(scene.upper())
 
 
+def fade_duration_for_scene(scene: str) -> float:
+    """Crossfade duration for an entering `scene`, falling back to AUTO_PALETTE_DURATION."""
+    return SCENE_FADE_DURATION.get(scene, AUTO_PALETTE_DURATION)
+
+
 def modifiers_for_scene(scene: str) -> Optional[Tuple[float, float, float, float]]:
     """Modifier tuple (pace, sharpness, trail, accent_mix) suited to `scene`, or None."""
     return SCENE_TO_MODIFIERS.get(scene.upper())
@@ -47,24 +63,32 @@ class SceneGovernor:
         self._pending: Optional[str] = None
         self._timer: float = 0.0
         self._applied: Optional[str] = None
+        self._next_variant: Dict[str, int] = {k: 0 for k in SCENE_TO_PALETTES}
 
     def update(self, dt: float, scene: str) -> Optional[str]:
         """Returns a palette name to request on the frame it becomes due, else None."""
-        wanted = SCENE_TO_PALETTE.get(scene)  # canonical uppercase names: no per-frame allocation
-        if wanted is None or wanted == self._applied:
+        variants = SCENE_TO_PALETTES.get(scene)
+        if variants is None or scene == self._applied:
             self._pending = None
             return None
 
-        if wanted != self._pending:
-            self._pending = wanted
+        if scene != self._pending:
+            self._pending = scene
             self._timer = 0.0
         self._timer += dt
 
         if self._timer >= SCENE_DWELL.get(scene, DEFAULT_DWELL):
-            self._applied = wanted
+            self._applied = scene
             self._pending = None
-            return wanted
+            i = self._next_variant[scene]
+            self._next_variant[scene] = (i + 1) % len(variants)
+            return variants[i]
         return None
+
+    def notify_manual(self) -> None:
+        """Restarts a running debounce while keeping the last applied scene."""
+        self._pending = None
+        self._timer = 0.0
 
 
 class ModifierGovernor:
