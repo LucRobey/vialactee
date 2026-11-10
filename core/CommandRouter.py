@@ -165,7 +165,10 @@ async def _handle_topology_select_segment_mode(mm: Any, payload: Dict[str, Any])
     segment = mm._find_segment_by_name(segment_name)
     if segment is None:
         return {"applied": False, "reason": "unknown_segment"}
-    for seg in (mm.segments_list if getattr(segment.modes.get(segment._normalize_mode_name(mode_name)), "IS_GLOBAL", False) else [segment]): seg.execute_mode_swap(mode_name)
+    target_mode = segment.modes.get(segment._normalize_mode_name(mode_name))
+    targets = mm.segments_list if getattr(target_mode, "IS_GLOBAL", False) else [segment]
+    for seg in targets:
+        seg.execute_mode_swap(mode_name)
     mm._push_installation()
     return {"applied": True}
 

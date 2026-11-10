@@ -44,11 +44,13 @@ The physical installation spans a 2D bounding box of $432 \times 246$ units ($X 
 
 ### 1.2 Forensic Diagnosis: Why Previous Global Modes Failed Perceptually
 During early prototyping, five initial global modes were implemented:
-1. `modes/Architectural_drum_mode.py` (3-tier frequency splitting)
-2. `modes/Synaptic_grid_mode.py` (topological graph packet routing)
-3. `modes/Tilt_tank_mode.py` (2D sloshing liquid plane)
-4. `modes/Prism_lighthouse_mode.py` (counter-rotating polar searchlights)
-5. `modes/Attractor_orb_mode.py` (2D Lissajous floating attractor)
+1. `Architectural_drum_mode` (3-tier frequency splitting)
+2. `Synaptic_grid_mode` (topological graph packet routing)
+3. `Tilt_tank_mode` (2D sloshing liquid plane)
+4. `Prism_lighthouse_mode` (counter-rotating polar searchlights)
+5. `Attractor_orb_mode` (2D Lissajous floating attractor)
+
+> These five prototype files (under `modes/`) were deleted on 2026-11-10 because they were never wired into `config/modes.json`. Recover any of them from git history at commit `115558e` (for example `git show 115558e:modes/<Name>_mode.py`).
 
 Each of these modes adhered to real-time execution constraints: they were fully vectorized with NumPy, allocated zero heap memory in `run()` (AXIOM-02), and met the 30 FPS deadline (AXIOM-01). **Yet every single one failed in live spectator observation.**
 

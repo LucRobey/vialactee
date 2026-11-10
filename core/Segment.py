@@ -239,7 +239,11 @@ class Segment:
                     module = importlib.import_module(module_name)
                     mode_class = getattr(module, class_name)
                     
-                    instance = mode_class(mode_name, *args); getattr(instance, "bind_segment_geometry", lambda *_: None)(self.id, self.orientation, self.tags, self.coords_array); self.modes[mode_name] = instance
+                    instance = mode_class(mode_name, *args)
+                    # Global Modes need the real segment geometry, which is only known after construction.
+                    if hasattr(instance, "bind_segment_geometry"):
+                        instance.bind_segment_geometry(self.id, self.orientation, self.tags, self.coords_array)
+                    self.modes[mode_name] = instance
                 except Exception as e:
                     self.logger.error(f"Failed to load mode {mode_info.get('name', 'Unknown')}: {e}")
 

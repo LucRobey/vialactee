@@ -231,7 +231,7 @@ Music-driven triggers execute immediately at the speaker boundary time without w
 | :--- | :--- |
 | Mode matchmaking & Coherence Casting | Done, tested. Driven by `config/modes.json` (`dna` + `tags`), `config/segments_*.json` (`tags`), and `config/coherence_*.json` (`zones`, `rules`, `settings`) via `transitions/policy.py`, `transitions/casting.py`, and `transitions/memory.py`. |
 | Zone groupings & Stagger tags | Done, tested. Zone groupings partition segments declaratively; `transitions/stagger.py` resolves tiers (`tier:*`) and halves (`half:*`) from segment tags with legacy suffix fallback. |
-| Technique selection, Families & Effects | Done. 29 transition effects mapped across 8 `TransitionFamily` contracts (`transitions/families.py`) with dynamic generative parameter rolling (`roll_transition_params`) and the `Fake_leds.py` / `VisualizerHud.py` Transition Tester UI + left-side `SEGMENT MODES` table. |
+| Technique selection, Families & Effects | Done. 29 transition effects mapped across 8 `TransitionFamily` contracts (`transitions/families.py`) with dynamic generative parameter rolling (`roll_transition_params`) and the `Fake_leds.py` / `VisualizerHud.py` Transition Tester UI + left-side `SEGMENT MODES` table (`ShowControlPanel.py`). |
 | Beat quantization | Done (`beat_phase < 0.05` gated by `beat_trust >= 0.20`, or `is_beat`, or 1.2 s timeout). |
 | Music-driven triggers | Done (`song_change`, `structural_change`, `pre_drop_buildup`, `drop_impact`). |
 | Lookahead / pre-drop scheduling | Done (`live_is_song_change`, `live_is_verse_chorus_change` countdowns and `pre_drop_buildup` duration scaling $D = \text{lookahead} / 0.80$). |

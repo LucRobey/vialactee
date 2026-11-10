@@ -11,6 +11,7 @@ import connectors.System_status as System_status
 import core.Segment as Segment
 import music.api as Listener
 import core.TransitionBridge as TransitionBridge
+import core.PanelCommands as PanelCommands
 from config.room_bounds import compute_room_bounds
 from transitions.api import create_transition_service
 from mood.api import create_mood_service
@@ -426,8 +427,8 @@ class Mode_master:
         }
 
     def handle_panel_command(self, command: Dict[str, Any]) -> bool:
-        """Apply a command (`set_locked`, `set_segment_mode`, `set_global_mode`, `set_mode_scope`) from the desktop panel."""
-        return TransitionBridge.apply_panel_command(self, command)
+        """Apply a desktop control panel command (see core/PanelCommands.py for the supported types)."""
+        return PanelCommands.apply_panel_command(self, command)
 
     def _push_installation(self) -> None:
         """Describe the current segments to the transition sector."""
