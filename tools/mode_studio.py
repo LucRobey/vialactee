@@ -392,8 +392,7 @@ class ModeManager:
         st = self.mood.get_status()
         new_state = not st.auto_scene
         self.mood.set_auto_scene(new_state)
-        if new_state:
-            self._hold_timer = 0.0
+        self._hold_timer = 0.0
         return new_state
 
     def get_mood_readout(self) -> Dict[str, Any]:

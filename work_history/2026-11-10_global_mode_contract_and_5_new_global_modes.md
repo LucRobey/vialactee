@@ -59,7 +59,7 @@
 
 ### Mood Sector, Desktop Show Control & Mode Studio Dependencies
 * **[MODIFY]** [`mood/api.py`](../mood/api.py), [`mood/engine.py`](../mood/engine.py), [`mood/scene_policy.py`](../mood/scene_policy.py), [`mood/service.py`](../mood/service.py) & [`docs/contracts/mood_contract.md`](../docs/contracts/mood_contract.md):
-  * Added per-scene dwell (`0.25s` on `DROP_IMPACT`, `2.0s` on `BUILDUP`, `3.5s` on `GROOVE`, `4.0s` on `CHILL`), per-scene crossfade durations (`0.8s`–`3.0s`), two-palette variant rotation per scene, and `DEFAULT_MANUAL_HOLD = 45.0s` manual override hold timer (`request_palette(..., hold=...)`).
+  * Added per-scene dwell (`0.25s` on `DROP_IMPACT`, `1.5s` on `BUILDUP`, `4.0s` on `GROOVE`, `4.0s` on `CHILL`), per-scene crossfade durations (`0.8s`–`3.0s`), two-palette variant rotation per scene, and `DEFAULT_MANUAL_HOLD = 45.0s` manual override hold timer (`request_palette(..., hold=...)`).
 * **[MODIFY]** [`core/Mode_master.py`](../core/Mode_master.py), [`core/TransitionBridge.py`](../core/TransitionBridge.py), [`core/CommandRouter.py`](../core/CommandRouter.py), [`hardware/Fake_leds.py`](../hardware/Fake_leds.py), [`hardware/Udp_Sender.py`](../hardware/Udp_Sender.py), [`hardware/Fake_ESP32.py`](../hardware/Fake_ESP32.py), [`hardware/VisualizerHud.py`](../hardware/VisualizerHud.py) & [`tools/mode_studio.py`](../tools/mode_studio.py):
   * Wired live Mood palette/auto-scene controls (`set_mood`, `set_mood_auto`, `[M]` / `[A]` hotkeys, 4 RGB swatches, crossfade progress) into both the `Fake_leds` Show Control panel and `tools/mode_studio.py` alongside the Global Mode scope (`G`) and `<` / `>` pickers.
 
