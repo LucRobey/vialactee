@@ -5,7 +5,7 @@
 > **Agent / Model:** Gemini 4 Argon (High)  
 > **Primary Goal:** Implement the final Mood Sector Plan (per-scene entry dwells and entering crossfade durations, 6-palette variant rotation on committed scene re-entry, 45s manual-pick hold, mid-crossfade UI highlight fix) and adapt `tools/mode_studio.py` and the Pygame `SHOW CONTROL` HUD (`VisualizerHud.py`, `Udp_Sender.py`, `Fake_leds.py`, `Fake_ESP32.py`, `TransitionBridge.py`) for live mood telemetry and controls.  
 > **Status:** COMPLETED  
-> **Commits:** `115558e` (pushed: yes)  
+> **Commits:** `115558e`, `60141a5` (pushed: yes)  
 > **Skills Used:** `vialactee-project`  
 > **Skill Friction:** none
 
