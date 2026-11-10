@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Amend the global mode contract so Global Modes may be complex: add a third family ("ensemble") where different parts of the chandelier may follow different drivers and mechanics.  
 > **Status:** COMPLETED  
-> **Commits:** `d347f89` (pushed: no)  
+> **Commits:** `d347f89` (pushed: yes)  
 > **Skills Used:** none (followed `.agents/skills/vialactee-project/SKILL.md` conventions by hand)  
 > **Skill Friction:** none
 
