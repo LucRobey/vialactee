@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Build the first mode of the new ensemble family ("Stalagmites"), with the shared ensemble base class and the per-part mute test the contract asks for.  
 > **Status:** COMPLETED (third version, approved by the user after viewing it live)  
-> **Commits:** none yet (pushed: no)  
+> **Commits:** `7d9a207` (pushed: no)  
 > **Skills Used:** none (followed `.agents/skills/vialactee-mode-creator/SKILL.md` conventions by hand)  
 > **Skill Friction:** `vialactee-mode-creator`: says nothing about Global Modes or their families; the global mode contract is the only guide.
 
