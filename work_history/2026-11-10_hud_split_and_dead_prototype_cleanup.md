@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Opus 5.5  
 > **Primary Goal:** Undo the AXIOM-07 (500-line cap) workarounds introduced in `115558e` and remove the 5 unused Global Mode prototypes.  
 > **Status:** COMPLETED  
-> **Commits:** `6b8ce37` (pushed: no)  
+> **Commits:** `6b8ce37` (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** none
 

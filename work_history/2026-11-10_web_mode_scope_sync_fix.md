@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Fix the web UI bug left open by the HUD-split session: picking a mode from the web UI did not switch the transition sector's scope.  
 > **Status:** COMPLETED  
-> **Commits:** `5327519` (pushed: no)  
+> **Commits:** `5327519` (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** none
 
