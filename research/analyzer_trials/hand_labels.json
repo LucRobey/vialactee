@@ -1,0 +1,32 @@
+{
+  "_about": "Timings judged by ear in the beat viewer. These are the only human labels in this folder; everything in output/ is machine-made. Times in seconds. An edge listed under 'timed' was given as a time by the listener. An edge listed under 'accepted' was a detector value the listener looked at and called right: weaker evidence, because the listener saw the value first. 'beat_present' lists stretches a detector doubted and the listener confirmed have a beat.",
+  "06": {
+    "file": "Bohemian Rhapsody - Remastered 2011.mp3",
+    "labelled_on": "2026-11-22",
+    "no_beat": [
+      {"start": 0.0, "end": 9.9, "timed": [], "accepted": ["start", "end"], "note": "accepted as displayed ('the rest is good')"},
+      {"start": 143.0, "end": 150.6, "timed": [], "accepted": ["start", "end"], "note": "accepted as displayed"},
+      {"start": 179.4, "end": 185.3, "timed": [], "accepted": ["start", "end"], "note": "accepted as displayed"},
+      {"start": 289.4, "end": 295.9, "timed": [], "accepted": ["start", "end"], "note": "accepted as displayed"},
+      {"start": 318.4, "end": 326.5, "timed": [], "accepted": ["start", "end"], "note": "accepted as displayed"},
+      {"start": 323.8, "end": 354.3, "timed": [], "accepted": ["start", "end"], "note": "accepted as displayed"}
+    ],
+    "beat_present": [
+      {"start": 13.6, "end": 24.4, "note": "0:13.6 to 0:24.4, shown as no-beat region 2; listener: 'I think' completely wrong"},
+      {"start": 102.7, "end": 108.1, "note": "1:42.7 to 1:48.1, shown as no-beat region 3; listener: completely wrong. BeatNet glitches to a wrong tempo for 8 beats here while Beat This stays steady."}
+    ],
+    "other": "Listener agrees with the combined beat overall and finds the kick / snare / hat lane 'pretty good' on this track."
+  },
+  "19": {
+    "file": "01-Plastic-People.mp3",
+    "labelled_on": "2026-11-22",
+    "no_beat": [
+      {"start": 78.2, "end": 101.5, "timed": ["end"], "accepted": ["start"], "note": "first break (talking, out-of-time percussion); beat starts again at 1:41.5"},
+      {"start": 195.0, "end": 218.0, "timed": ["start", "end"], "accepted": [], "note": "second break, 3:15 to 3:38; the drums cut out at 3:15"},
+      {"start": 288.9, "end": 304.0, "timed": [], "accepted": ["start", "end"], "note": "third break, accepted as displayed (4:48.9 to 5:04.0)"}
+    ],
+    "beat_present": [
+      {"start": 333.0, "end": 344.0, "note": "5:33 to 5:44, flagged by the removed onsets-off-the-grid test; by ear the beat is there"}
+    ]
+  }
+}

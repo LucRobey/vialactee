@@ -1,0 +1,25 @@
+{
+  "audio_dir": "assets/musics/mp3_files",
+  "tracks": [
+    {"id": "01", "file": "Sweet Child O' Mine.mp3", "group": "rock"},
+    {"id": "02", "file": "Hotel California - 2013 Remaster.mp3", "group": "rock", "note": "half-time feel"},
+    {"id": "03", "file": "Come Together - Remastered.mp3", "group": "rock", "note": "slow, swung"},
+    {"id": "04", "file": "Where Is My Mind_.mp3", "group": "rock"},
+    {"id": "05", "file": "Message In A Bottle - Remastered 2003.mp3", "group": "rock"},
+    {"id": "06", "file": "Bohemian Rhapsody - Remastered 2011.mp3", "group": "rock", "note": "stress: tempo/meter changes"},
+    {"id": "07", "file": "Piece of My Heart - Live at The Grande Ballroom, Detroit, MI - March 1968.mp3", "group": "rock", "note": "stress: live, loose timing"},
+    {"id": "08", "file": "Pumped Up Kicks.mp3", "group": "pop"},
+    {"id": "09", "file": "You Know I'm No Good.mp3", "group": "pop"},
+    {"id": "10", "file": "Sugar (feat. Francesco Yates).mp3", "group": "pop"},
+    {"id": "11", "file": "Sucker for Pain (with Wiz Khalifa, Imagine Dragons, Logic & Ty Dolla $ign feat. X Ambassadors).mp3", "group": "pop", "note": "hip-hop feel"},
+    {"id": "12", "file": "Stayin' Alive - From _Saturday Night Fever_ Soundtrack.mp3", "group": "pop", "note": "disco"},
+    {"id": "13", "file": "Another One Bites The Dust - Remastered 2011.mp3", "group": "pop", "note": "clear kick/snare"},
+    {"id": "14", "file": "Nightcall.mp3", "group": "electro", "note": "synthwave, 4.3 min"},
+    {"id": "15", "file": "Roadgame.mp3", "group": "electro"},
+    {"id": "16", "file": "Flashback.mp3", "group": "electro"},
+    {"id": "17", "file": "Genesis.mp3", "group": "electro"},
+    {"id": "18", "file": "Palladium.mp3", "group": "electro"},
+    {"id": "19", "file": "01-Plastic-People.mp3", "group": "electro"},
+    {"id": "20", "file": "Nobody Rules the Streets.mp3", "group": "electro", "note": "four-on-the-floor"}
+  ]
+}
