@@ -1,0 +1,269 @@
+<title>Vialactée Signal Priorities</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+  /* Layout: one ranked ledger. Each signal is a row; the two ratings are drawn as 5-pixel LED meters. */
+  :root {
+    --bg: #f5f5fa; --surface: #ffffff; --ink: #1c1b29; --muted: #5d5b73; --line: #dcdbe8;
+    --accent: #5b3fd6; --live: #0d8576; --value: #b8530a; --off: #e2e1ee; --chip: #ecebf5;
+    --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+    --body: "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12111c; --surface: #1b1a29; --ink: #ecebf6; --muted: #a3a1bd; --line: #2e2c44;
+      --accent: #a792ff; --live: #3fd0bb; --value: #ffab5c; --off: #2b2940; --chip: #262438;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12111c; --surface: #1b1a29; --ink: #ecebf6; --muted: #a3a1bd; --line: #2e2c44;
+    --accent: #a792ff; --live: #3fd0bb; --value: #ffab5c; --off: #2b2940; --chip: #262438;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); }
+  .page { max-width: 1280px; margin: 0 auto; padding-block: 28px 48px;
+          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1 { font: 600 28px/1.15 var(--display); margin: 0 0 10px; text-wrap: balance; }
+  h2 { font: 600 16px/1.3 var(--display); margin: 0 0 6px; }
+  .lede { max-width: 68ch; margin: 0 0 8px; }
+  .muted { color: var(--muted); }
+  .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 28px; margin: 22px 0 26px;
+         padding-top: 18px; border-top: 1px solid var(--line); }
+  .how p { margin: 0; color: var(--muted); }
+  .scale { display: grid; gap: 4px; margin: 6px 0 0; padding: 0; list-style: none; color: var(--muted); }
+  .scale li { display: flex; gap: 8px; align-items: center; }
+
+  .meter { display: inline-flex; gap: 3px; vertical-align: middle; flex: none; }
+  .meter i { width: 9px; height: 9px; border-radius: 2px; background: var(--off); }
+  .meter.live i.on { background: var(--live); }
+  .meter.value i.on { background: var(--value); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { font: 500 13px var(--body); color: var(--ink); background: var(--chip); border: 1px solid transparent;
+                  border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+  .chips button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+  .chips button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  label.sort { display: inline-flex; gap: 8px; align-items: center; color: var(--muted); margin-left: auto; }
+  select { font: 500 13px var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+           border-radius: 6px; padding: 5px 8px; }
+  .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; min-width: 1080px; }
+  th { font: 600 11px/1.3 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+       text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.rank { font: 600 13px var(--display); color: var(--muted); font-variant-numeric: tabular-nums; width: 40px; }
+  td.signal { width: 19%; }
+  td.score { width: 96px; white-space: nowrap; }
+  td.use { width: 24%; }
+  td.livecol { width: 22%; }
+  .name { font: 600 15px/1.25 var(--display); display: block; }
+  .group { display: inline-block; margin-top: 5px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+           color: var(--accent); }
+  .what { display: block; color: var(--muted); margin-top: 3px; }
+  .num { font: 600 20px/1 var(--display); font-variant-numeric: tabular-nums; }
+  .num small { font: 500 12px var(--body); color: var(--muted); }
+  .row2 { display: flex; gap: 8px; align-items: center; margin-top: 7px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .why { display: block; margin-top: 5px; }
+  .status { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+            padding: 2px 7px; border-radius: 4px; background: var(--chip); color: var(--muted); margin-bottom: 5px; }
+  .status.have { color: var(--live); }
+  .status.partly { color: var(--value); }
+  tr.tier td { background: var(--bg); padding: 9px 12px; font: 600 13px var(--display); color: var(--ink); }
+  tr.tier td span { font: 400 13px var(--body); color: var(--muted); margin-left: 8px; }
+  td::before { display: none; }
+  footer { margin-top: 18px; color: var(--muted); max-width: 80ch; }
+
+  @media (max-width: 760px) {
+    h1 { font-size: 23px; }
+    label.sort { margin-left: 0; }
+    .scroll { overflow: visible; background: none; border: 0; }
+    table, tbody, tr, td { display: block; width: auto !important; min-width: 0; }
+    thead { display: none; }
+    tr.item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; padding: 12px; }
+    tr.item td { border: 0; padding: 0; margin-bottom: 10px; }
+    tr.item td:last-child { margin-bottom: 0; }
+    td.rank { float: right; }
+    tr.item td[data-label]::before { content: attr(data-label); display: block; font: 600 11px var(--body); letter-spacing: .06em;
+                                     text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+    tr.tier td { background: none; padding: 14px 0 8px; }
+    tr.tier td span { display: block; margin: 2px 0 0; }
+  }
+</style>
+
+<div class="page">
+  <h1>Which signals are worth chasing for the light show</h1>
+  <p class="lede">Every piece of information we could put in the source of truth, ranked by one question: is it useful for a
+    choreography <em>and</em> could the real-time analyzer on the Raspberry Pi realistically detect it later?</p>
+  <p class="lede muted">The two ratings are my judgement from how each signal is normally detected. None has been measured on the Pi.
+    "Live" assumes one audio input, no lookahead, no instrument separation and no large models.</p>
+
+  <div class="how">
+    <div>
+      <h2>Priority</h2>
+      <p>Show value × live confidence, from 1 to 25. A signal that would look great but cannot be detected live scores low,
+        and so does one that is easy to detect but adds little.</p>
+    </div>
+    <div>
+      <h2>Show value</h2>
+      <ul class="scale">
+        <li><span class="meter value" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> carries the show on its own</li>
+        <li><span class="meter value" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span> clear improvement to a mode</li>
+        <li><span class="meter value" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></span> hard to see a use</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Live confidence</h2>
+      <ul class="scale">
+        <li><span class="meter live" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> standard real-time signal processing</li>
+        <li><span class="meter live" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span> plausible, with visible mistakes</li>
+        <li><span class="meter live" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></span> not realistic on the Pi</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="chips" id="chips" role="group" aria-label="Filter by family"></div>
+    <label class="sort" for="sort">Sort by
+      <select id="sort">
+        <option value="priority">Priority</option>
+        <option value="value">Show value</option>
+        <option value="live">Live confidence</option>
+        <option value="name">Name</option>
+      </select>
+    </label>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Signal</th><th>Priority</th><th>Use in a choreography</th><th>Live confidence</th><th>How we get it for the source of truth</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    <p>"Have" means it is already in the trial outputs for the 20 tracks. "Partly" means a weak or incomplete version exists.
+      Everything in the source of truth is machine-made unless you confirmed it by ear in the beat viewer.</p>
+  </footer>
+</div>
+
+<script>
+// n name, g family, d what it is, v show value 1-5, l live confidence 1-5, lw why, s status, o offline source, u use
+const S = [
+ {n:"Kick hits", g:"Drums", d:"Each bass-drum hit: the boom.", v:5, l:4, lw:"Sudden low-frequency energy is one of the easiest things to detect live. Bass notes cause some false hits.", s:"partly", o:"Drum stem plus a trained drum model (ADTOF, not installed yet). Today a simple rule that loses hi-hats.", u:"The punch of the show: pulse the bass zone or the whole strip on every kick."},
+ {n:"Beats", g:"Pulse", d:"The steady pulse you tap your foot to.", v:5, l:4, lw:"The live analyzer already tracks beats. Loose live recordings and tempo changes still fool it.", s:"have", o:"Combined grid from three trackers (Beat This, BeatNet, librosa).", u:"Steps, chases and colour changes land on the beat."},
+ {n:"Loudness", g:"Energy", d:"Overall level, moment by moment.", v:4, l:5, lw:"One line of arithmetic per audio frame.", s:"to build", o:"Level of the full mix. Trivial to compute.", u:"Master brightness and the size of every effect."},
+ {n:"Band energies", g:"Energy", d:"Level in sub, bass, mid and high bands.", v:4, l:5, lw:"A standard spectrum split, cheap on the Pi.", s:"to build", o:"Frequency bands of the full mix. Trivial to compute.", u:"Readable bass and treble colours, one zone per band."},
+ {n:"Kick drop-out and return", g:"Big moments", d:"The kick disappears (breakdown), then comes back.", v:5, l:4, lw:"Missing kicks show after a bar or two. The return is visible the instant it happens.", s:"to build", o:"Presence of kick hits over time.", u:"Go sparse and floating in the breakdown, explode when the kick returns."},
+ {n:"Silence, stops and fade-outs", g:"Big moments", d:"The music cuts, pauses or fades away.", v:4, l:5, lw:"Level falling to nothing is unmistakable.", s:"partly", o:"Level of the mix and of each stem.", u:"Blackout on a stop, freeze on a pause, slow fade at the end."},
+ {n:"Beat strength", g:"Pulse", d:"How hard each beat is hit by the drums.", v:4, l:4, lw:"Percussive energy right at the beat is cheap to measure.", s:"have", o:"Drum-stem level at each grid beat.", u:"Scale each flash to the hit, soften when the drums thin out."},
+ {n:"Regular grid through gaps", g:"Pulse", d:"Keep counting when the drums stop briefly.", v:4, l:4, lw:"A tempo clock that coasts is how live beat trackers already work.", s:"to build", o:"Bridge a gap when the tempo before and after lines up.", u:"Motion stays alive through a short break and lands exactly on the return."},
+ {n:"Snare and clap hits", g:"Drums", d:"The backbeat, usually on 2 and 4.", v:5, l:3, lw:"A broadband burst is detectable, but guitars, vocals and other sharp sounds get confused with it.", s:"partly", o:"Trained drum model on the drum stem. Today a simple rule.", u:"White accent or flash on the backbeat."},
+ {n:"Drop", g:"Big moments", d:"Bass and kick slam back after a build-up.", v:5, l:3, lw:"The energy and sub-bass jump is visible when it happens. False alarms are likely without knowing a build-up came first.", s:"to build", o:"Rules on energy, kick return and a preceding build-up, checked by ear. No ready-made library.", u:"The biggest moment in electro: full flash, palette switch, maximum intensity."},
+ {n:"Build-up", g:"Big moments", d:"Rising tension: snare roll, riser, filter opening.", v:5, l:3, lw:"Accelerating hits and rising brightness can be followed, but many passages look similar.", s:"to build", o:"Hit density speeding up plus rising brightness, checked by ear.", u:"Ramp speed and brightness, accelerate a strobe, fill the strip progressively."},
+ {n:"Energy contrast", g:"Energy", d:"How loud now compared with the song so far.", v:4, l:4, lw:"A running comparison against recent history. Needs a minute of music to settle.", s:"to build", o:"Smoothed loudness per section.", u:"Keep full brightness for the loudest part, dim the quiet verse."},
+ {n:"Any note or hit starting", g:"Energy", d:"Generic attacks, whatever the instrument.", v:3, l:5, lw:"Onset strength is a classic real-time measure.", s:"to build", o:"Onset strength of the mix. Trivial to compute.", u:"Sparkle and twinkle on every attack."},
+ {n:"Brightness of the sound", g:"Energy", d:"Dull and warm versus bright and hissy.", v:3, l:5, lw:"One number from the spectrum.", s:"to build", o:"Spectral centroid of the mix.", u:"Colour temperature, amount of white, visible filter sweeps."},
+ {n:"Beat confidence and no-beat stretches", g:"Pulse", d:"Where no beat is really there (talking, intro).", v:4, l:3, lw:"A tracker can report when it is unsure, but telling a real break from a hard passage is error-prone.", s:"have", o:"Where the two neural trackers stop landing together. Checked by ear on two songs.", u:"Switch to an ambient look instead of flashing on made-up beats."},
+ {n:"Tempo", g:"Pulse", d:"Beats per minute, and how steady it is.", v:3, l:4, lw:"Comes with beat tracking. Half and double tempo mistakes remain.", s:"have", o:"From the combined grid.", u:"Speed of chases and animations."},
+ {n:"Percussion density", g:"Drums", d:"How many hits per second.", v:3, l:4, lw:"Counting onsets is cheap.", s:"to build", o:"Count of drum hits over time.", u:"Busy versus sparse textures, amount of sparkle."},
+ {n:"Sharp versus sustained sound", g:"Energy", d:"Hits and plucks versus pads and held notes.", v:3, l:4, lw:"A light version of the harmonic and percussive split runs in real time.", s:"to build", o:"Harmonic and percussive split of the mix.", u:"Hard flashes for percussive music, smooth fades for sustained music."},
+ {n:"Long bass notes", g:"Energy", d:"Sustained sub-bass under the hits.", v:3, l:4, lw:"Low-band level that stays high between kicks.", s:"to build", o:"Envelope of the bass stem.", u:"A slow glow under the kick flashes."},
+ {n:"Section change", g:"Structure", d:"Something new starts: verse to chorus.", v:4, l:3, lw:"A change in the sound can be noticed a few seconds late, with misses.", s:"partly", o:"Rough boundaries today. A trained model (allin1) to try.", u:"Change scene or palette at the boundary."},
+ {n:"Kick pattern type", g:"Drums", d:"Four-on-the-floor, breakbeat or half-time.", v:4, l:3, lw:"Needs reliable kicks and beats over a few bars. A kick on every beat is the easy case.", s:"to build", o:"Where kicks fall inside each bar.", u:"Pick the animation family: steady pump or syncopated."},
+ {n:"Chord change moments", g:"Harmony", d:"When the harmony moves, without naming the chord.", v:4, l:3, lw:"A shift in pitch content is detectable. Drums and noise blur it.", s:"have", o:"Chord times from the chord model (BTC).", u:"Colour shifts locked to the harmony, slow moves in ballads."},
+ {n:"Crash cymbal hits", g:"Drums", d:"Big cymbal accents, often at section starts.", v:4, l:3, lw:"A loud broadband burst with a long tail. Open hi-hats and noise sweeps look alike.", s:"to build", o:"Cymbal class of a trained drum model.", u:"Starburst accent, a cue that a new section begins."},
+ {n:"Drum fills and rolls", g:"Drums", d:"The drummer's flourish before a change.", v:4, l:3, lw:"A burst of fast hits is visible. Telling a fill from a busy groove is harder.", s:"to build", o:"Hit density and acceleration per bar.", u:"Ripple or accelerating strobe that announces a change."},
+ {n:"Risers and sweeps", g:"Big moments", d:"A noise or pitch that climbs before a drop.", v:4, l:3, lw:"Brightness rising steadily over seconds can be followed.", s:"to build", o:"Slope of brightness in the non-drum instruments.", u:"A fill that climbs along the strip."},
+ {n:"Bass note", g:"Harmony", d:"The pitch the bass is playing.", v:4, l:3, lw:"One low note at a time can be tracked, but slowly, and the kick gets in the way.", s:"to build", o:"Note transcription on the bass stem (Basic Pitch, not tried).", u:"The bass zone changes colour with the note."},
+ {n:"Hi-hat hits", g:"Drums", d:"The fine ticking on top.", v:3, l:3, lw:"High-band attacks are easy to see, but cymbals, shakers and vocal consonants look the same.", s:"partly", o:"Hi-hat class of a trained drum model. The current rule misses most of them.", u:"Fine sparkle on the subdivisions."},
+ {n:"Pitch classes (chroma)", g:"Harmony", d:"Strength of each of the 12 notes.", v:3, l:4, lw:"A cheap filter bank. Noisy when drums are loud.", s:"to build", o:"Chroma of the mix or of the non-drum stems.", u:"Direct pitch-to-colour mapping, palette drifting with the harmony."},
+ {n:"Downbeat and position in the bar", g:"Pulse", d:"Which beat is the 1.", v:5, l:2, lw:"The hardest classic problem live. Even the offline trackers disagree on a quarter of the downbeats here.", s:"partly", o:"Downbeats from Beat This and BeatNet, not merged yet.", u:"Accent the 1, run bar-long patterns."},
+ {n:"Stereo position", g:"Energy", d:"Left, right or wide.", v:3, l:3, lw:"Easy with a stereo line input. Impossible with a single microphone.", s:"to build", o:"Level differences between the two channels.", u:"Pan effects across the installation."},
+ {n:"Bass line note starts", g:"Melody", d:"Each new bass note.", v:3, l:3, lw:"Low-band attacks that are not kicks. Kicks and bass overlap.", s:"to build", o:"Note transcription on the bass stem.", u:"The bass zone pulses on notes when there is no kick."},
+ {n:"Tempo change", g:"Pulse", d:"The song speeds up, slows down or jumps.", v:3, l:3, lw:"The tracker can notice it has lost the tempo before it re-locks.", s:"have", o:"Tempo curve from the grid.", u:"Pause beat effects while re-locking, then resume."},
+ {n:"Excitement level", g:"Mood", d:"Calm versus excited.", v:3, l:3, lw:"Approximated from loudness, tempo, brightness and density.", s:"to build", o:"A mood model (Music2Emo, not tried), or the same approximation.", u:"A global speed and intensity preset."},
+ {n:"Key and major or minor", g:"Harmony", d:"The home note and the mood of the scale.", v:3, l:3, lw:"Pitch content adds up over 30 seconds or more. Major versus minor is less reliable.", s:"to build", o:"A key model (madmom) or statistics of the chords.", u:"A base palette per song: warm or cold."},
+ {n:"Vocal presence", g:"Voice", d:"Someone is singing now.", v:4, l:2, lw:"No way to separate the voice live. A small classifier might get a rough answer.", s:"partly", o:"Level of the vocal stem. The current rule is wrong on instrumental tracks.", u:"A spotlight or warmer look when the singer is in."},
+ {n:"Phrases of 4, 8 or 16 bars", g:"Structure", d:"The musical sentences.", v:4, l:2, lw:"Depends on knowing where the 1 is, which is the weak point.", s:"to build", o:"Counting bars from downbeats and sections.", u:"Change the look every phrase, prepare the end of a phrase."},
+ {n:"Same section coming back", g:"Structure", d:"This is the chorus again.", v:4, l:2, lw:"Would need a memory of how earlier parts sounded. Conceivable, unproven.", s:"to build", o:"Section labels plus similarity between sections.", u:"Reuse the same look for the same section."},
+ {n:"Half or double tempo feel", g:"Pulse", d:"Slow feel versus fast feel at the same tempo.", v:3, l:2, lw:"Trackers argue about this even offline.", s:"partly", o:"Which trackers mark the in-between beats.", u:"Slow sweep versus fast strobe."},
+ {n:"Chord names", g:"Harmony", d:"C major, A minor and so on.", v:3, l:2, lw:"Needs a model and clean pitch content. Too heavy and too fragile live.", s:"have", o:"Chord model (BTC) on all 20 tracks.", u:"The same chord always gets the same colour."},
+ {n:"Melody pitch", g:"Melody", d:"The tune, as a curve going up and down.", v:3, l:2, lw:"Following a melody inside a full mix is hard. Fast trackers need a clean signal.", s:"to build", o:"Pitch tracker on the vocal stem (RMVPE or PESTO, not tried).", u:"A light whose position follows the tune."},
+ {n:"Melody direction", g:"Melody", d:"The tune is rising or falling.", v:3, l:2, lw:"Only as good as the melody tracking above.", s:"to build", o:"From the melody pitch curve.", u:"Movement direction along the strip."},
+ {n:"Harmonic tension", g:"Harmony", d:"Tense, dissonant chords versus resolved ones.", v:3, l:2, lw:"Needs chords and key first.", s:"to build", o:"Chords compared with the key.", u:"Saturation or flicker that rises with tension."},
+ {n:"Vocal intensity", g:"Voice", d:"Soft, belted or shouted.", v:3, l:2, lw:"Needs the voice isolated first.", s:"to build", o:"Loudness and brightness of the vocal stem.", u:"Brightness of the vocal layer."},
+ {n:"Vocal phrase starts and ends", g:"Voice", d:"Where each sung line begins and stops.", v:3, l:2, lw:"Needs vocal presence, which is already weak live.", s:"to build", o:"Gaps in the vocal stem.", u:"A swell per sung line."},
+ {n:"Section type", g:"Structure", d:"Verse, chorus, solo, break.", v:4, l:1, lw:"Needs the whole song. Not possible while it plays.", s:"to build", o:"A trained model (allin1 or SongFormer).", u:"One look per kind of section."},
+ {n:"Level per instrument", g:"Energy", d:"Drums, bass, voice and the rest, separately.", v:4, l:1, lw:"Separation is far too heavy for the Pi. Band energies are the stand-in.", s:"have", o:"Demucs stems for all 20 tracks.", u:"One strip per instrument family."},
+ {n:"Swing", g:"Pulse", d:"Off-beats played late, a shuffle feel.", v:2, l:2, lw:"Needs precise timing of off-beat hits.", s:"to build", o:"Timing of off-beat hits against the grid.", u:"Shuffle the off-beat flashes."},
+ {n:"Time signature", g:"Pulse", d:"4/4, 3/4, 6/8.", v:2, l:2, lw:"Needs bar tracking. Most of the library is 4/4 anyway.", s:"to build", o:"Bar tracking with BeatNet or madmom.", u:"Length of a repeating pattern."},
+ {n:"Tom hits", g:"Drums", d:"The rolling drums in fills.", v:2, l:2, lw:"Hard to tell from kicks and snares without a model.", s:"to build", o:"Tom class of a trained drum model.", u:"A fill that travels along the strip."},
+ {n:"Long held notes", g:"Melody", d:"A note that stays.", v:2, l:2, lw:"Needs melody tracking.", s:"to build", o:"Stability of the pitch curve.", u:"A sustained glow."},
+ {n:"Arpeggios and fast runs", g:"Melody", d:"Rapid note patterns.", v:2, l:2, lw:"Needs note-level detection.", s:"to build", o:"Note density from transcription of the non-drum stem.", u:"Running-light patterns."},
+ {n:"Happy versus sad", g:"Mood", d:"The emotional colour of the song.", v:3, l:1, lw:"Needs a large model. Simple stand-ins are unreliable.", s:"to build", o:"A mood model (Music2Emo, not tried).", u:"Warm or cold palette."},
+ {n:"Genre and danceability", g:"Mood", d:"Rock, techno, ballad; made for dancing or not.", v:3, l:1, lw:"Needs a large model.", s:"to build", o:"A tagging model (not tried).", u:"Choose a family of modes automatically."},
+ {n:"Key change", g:"Harmony", d:"The song shifts to a new key.", v:2, l:1, lw:"Key itself takes half a minute to settle.", s:"to build", o:"Key per section.", u:"A palette shift."},
+ {n:"Guitar or piano presence", g:"Energy", d:"A guitar solo, a piano part.", v:2, l:1, lw:"Needs separation or a large model.", s:"to build", o:"Demucs six-stem model. Its piano stem is poor by its author's own account.", u:"A dedicated look for a solo."},
+ {n:"Sung, spoken or rapped", g:"Voice", d:"The kind of vocal delivery.", v:2, l:1, lw:"Needs the voice isolated and analysed.", s:"to build", o:"Pitch stability of the vocal stem.", u:"A different look for talking passages."},
+ {n:"Notes per instrument", g:"Melody", d:"Every guitar, synth or piano note.", v:2, l:1, lw:"Needs separation and transcription.", s:"to build", o:"Note transcription on the non-drum stem.", u:"Sparkle per instrument."},
+ {n:"Lead versus backing vocals", g:"Voice", d:"One voice or stacked harmonies.", v:1, l:1, lw:"Needs specialised separation.", s:"not planned", o:"Dedicated vocal separators.", u:"A wider look on stacked vocals."},
+ {n:"Lyrics with word times", g:"Voice", d:"The words, timed.", v:1, l:1, lw:"Speech recognition is out of reach on the Pi, and the show could not use the words anyway.", s:"not planned", o:"Speech recognition on the vocal stem.", u:"None that is realistic."}
+];
+S.forEach(x => x.p = x.v * x.l);
+const TIERS = [[16, "Core", "useful and realistic live"], [9, "Worth trying", "useful, with real risk live"],
+               [5, "Long shots", "offline truth mostly, live only as a rough stand-in"], [0, "Offline only", "nice to have in the data, not a live target"]];
+const tierOf = p => TIERS.find(t => p >= t[0]);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+function meter(kind, n) {
+  const m = el("span", "meter " + kind); m.setAttribute("role", "img"); m.setAttribute("aria-label", n + " of 5");
+  for (let i = 1; i <= 5; i++) m.appendChild(el("i", i <= n ? "on" : ""));
+  return m;
+}
+const order = [...S].sort((a, b) => b.p - a.p || b.v - a.v || a.n.localeCompare(b.n));
+order.forEach((x, i) => x.rank = i + 1);
+let group = "All";
+function render() {
+  const sort = document.getElementById("sort").value;
+  const cmp = { priority: (a, b) => a.rank - b.rank, value: (a, b) => b.v - a.v || a.rank - b.rank,
+                live: (a, b) => b.l - a.l || a.rank - b.rank, name: (a, b) => a.n.localeCompare(b.n) }[sort];
+  const list = S.filter(x => group === "All" || x.g === group).sort(cmp);
+  const body = document.getElementById("rows"); body.textContent = "";
+  let last = null;
+  for (const x of list) {
+    const t = tierOf(x.p);
+    if (sort === "priority" && t !== last) {
+      const tr = el("tr", "tier"), td = el("td", null, t[1]); td.colSpan = 6; td.appendChild(el("span", null, t[2]));
+      tr.appendChild(td); body.appendChild(tr); last = t;
+    }
+    const tr = el("tr", "item");
+    tr.appendChild(el("td", "rank", String(x.rank)));
+    const sig = el("td", "signal"); sig.append(el("span", "name", x.n), el("span", "what", x.d), el("span", "group", x.g)); tr.appendChild(sig);
+    const sc = el("td", "score"); sc.dataset.label = "Priority";
+    const num = el("div", "num", String(x.p)); num.appendChild(el("small", null, " / 25")); sc.appendChild(num);
+    const r2 = el("div", "row2"); r2.append(meter("value", x.v), document.createTextNode("show value")); sc.appendChild(r2); tr.appendChild(sc);
+    const use = el("td", "use", x.u); use.dataset.label = "Use in a choreography"; tr.appendChild(use);
+    const lv = el("td", "livecol"); lv.dataset.label = "Live confidence"; lv.append(meter("live", x.l), el("span", "why", x.lw)); tr.appendChild(lv);
+    const off = el("td", "offline"); off.dataset.label = "How we get it for the source of truth";
+    off.append(el("span", "status " + (x.s === "have" ? "have" : x.s === "partly" ? "partly" : ""), x.s), el("div", null, x.o)); tr.appendChild(off);
+    body.appendChild(tr);
+  }
+  document.getElementById("count").textContent = list.length + " of " + S.length + " signals";
+}
+const chips = document.getElementById("chips");
+for (const g of ["All", ...new Set(order.map(x => x.g))]) {
+  const b = el("button", null, g); b.type = "button"; b.setAttribute("aria-pressed", g === "All");
+  b.onclick = () => { group = g; chips.querySelectorAll("button").forEach(o => o.setAttribute("aria-pressed", o === b)); render(); };
+  chips.appendChild(b);
+}
+document.getElementById("sort").onchange = render;
+render();
+</script>
