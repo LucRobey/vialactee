@@ -82,6 +82,20 @@ class MockAudioIngestion:
             self.band_proportion.fill(0.0)
 
 
+def _resample_audio(y: np.ndarray, sr_in: int, sr_out: int) -> np.ndarray:
+    """Resamples a mono signal, with anti-aliasing when SciPy is available."""
+    try:
+        from math import gcd
+        from scipy.signal import resample_poly
+        g = gcd(int(sr_in), int(sr_out))
+        return resample_poly(y, int(sr_out) // g, int(sr_in) // g).astype(np.float32)
+    except ImportError:
+        num_target = int(len(y) * sr_out / sr_in)
+        return np.interp(
+            np.linspace(0, len(y), num_target, endpoint=False), np.arange(len(y)), y
+        ).astype(np.float32)
+
+
 def load_audio_file(audio_path: str, target_sr: int = 44100) -> Tuple[np.ndarray, int]:
     """Loads WAV, MP3, or M4A audio into a 1D float numpy array."""
     ext = os.path.splitext(audio_path)[1].lower()
@@ -127,7 +141,13 @@ def load_audio_file(audio_path: str, target_sr: int = 44100) -> Tuple[np.ndarray
             try:
                 data = np.load(npz_path, allow_pickle=True)
                 if "y" in data:
-                    return data["y"].astype(np.float32), target_sr
+                    # The cache stores its own sample rate. Returning it under `target_sr` without
+                    # resampling made 44.1 kHz audio play at half speed for 22.05 kHz callers.
+                    cached_sr = int(data["sr"]) if "sr" in data else 44100
+                    y = data["y"].astype(np.float32)
+                    if cached_sr != target_sr:
+                        y = _resample_audio(y, cached_sr, target_sr)
+                    return y, target_sr
             except Exception:
                 pass
 
