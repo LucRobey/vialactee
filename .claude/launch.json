@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "truth-review",
+      "runtimeExecutable": "research/analyzer_trials/.venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "research.truth.review_server"],
+      "port": 8766
+    },
+    {
+      "name": "beat-viewer",
+      "runtimeExecutable": "research/analyzer_trials/.venv/Scripts/python.exe",
+      "runtimeArgs": ["research/analyzer_trials/beat_viewer.py"],
+      "port": 8765
+    }
+  ]
+}
