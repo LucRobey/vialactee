@@ -9,9 +9,9 @@
   "compute_time_sec": 4.58,
   "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
   "salience_data": {
-    "mean_salience": 0.626,
-    "high_salience_ratio": 0.601,
-    "low_salience_ratio": 0.215,
+    "mean_salience": 0.687,
+    "high_salience_ratio": 0.658,
+    "low_salience_ratio": 0.216,
     "has_salience_curve": true,
     "salience_npz": "Genesis.salience.npz"
   }

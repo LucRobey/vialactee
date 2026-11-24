@@ -9,9 +9,9 @@
   "compute_time_sec": 6.54,
   "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
   "salience_data": {
-    "mean_salience": 0.847,
-    "high_salience_ratio": 0.91,
-    "low_salience_ratio": 0.067,
+    "mean_salience": 0.859,
+    "high_salience_ratio": 0.908,
+    "low_salience_ratio": 0.068,
     "has_salience_curve": true,
     "salience_npz": "Where Is My Mind_.salience.npz"
   }

@@ -9,9 +9,9 @@
   "compute_time_sec": 6.39,
   "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
   "salience_data": {
-    "mean_salience": 0.816,
-    "high_salience_ratio": 0.858,
-    "low_salience_ratio": 0.084,
+    "mean_salience": 0.793,
+    "high_salience_ratio": 0.843,
+    "low_salience_ratio": 0.105,
     "has_salience_curve": true,
     "salience_npz": "Sweet Child O' Mine.salience.npz"
   }

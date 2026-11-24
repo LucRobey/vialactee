@@ -9,9 +9,9 @@
   "compute_time_sec": 4.04,
   "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
   "salience_data": {
-    "mean_salience": 0.792,
-    "high_salience_ratio": 0.837,
-    "low_salience_ratio": 0.088,
+    "mean_salience": 0.832,
+    "high_salience_ratio": 0.897,
+    "low_salience_ratio": 0.084,
     "has_salience_curve": true,
     "salience_npz": "Roadgame.salience.npz"
   }

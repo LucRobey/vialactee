@@ -1,11 +1,18 @@
 {
   "track": "Sugar (feat. Francesco Yates)",
-  "audio_path": "C:\\Users\\Users\\Desktop\\vialact\u00e9e\\vialactee\\assets\\musics\\mp3_files\\Sugar (feat. Francesco Yates).mp3",
-  "duration_sec": 438.1,
+  "audio_path": "C:\\Users\\Users\\Desktop\\vialactée\\vialactee\\assets\\musics\\mp3_files\\Sugar (feat. Francesco Yates).mp3",
+  "duration_sec": 219.05,
   "total_beats": 896,
   "total_downbeats": 448,
   "estimated_bpm": 125.0,
   "interval_jitter_ms": 17.49,
   "compute_time_sec": 6.35,
-  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)"
+  "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
+  "salience_data": {
+    "mean_salience": 0.645,
+    "high_salience_ratio": 0.656,
+    "low_salience_ratio": 0.148,
+    "has_salience_curve": true,
+    "salience_npz": "Sugar (feat. Francesco Yates).salience.npz"
+  }
 }

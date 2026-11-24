@@ -9,9 +9,9 @@
   "compute_time_sec": 16.01,
   "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
   "salience_data": {
-    "mean_salience": 0.589,
-    "high_salience_ratio": 0.537,
-    "low_salience_ratio": 0.225,
+    "mean_salience": 0.591,
+    "high_salience_ratio": 0.544,
+    "low_salience_ratio": 0.234,
     "has_salience_curve": true,
     "salience_npz": "Bohemian Rhapsody - Remastered 2011.salience.npz"
   }

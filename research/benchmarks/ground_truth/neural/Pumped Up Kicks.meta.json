@@ -1,17 +1,17 @@
 {
   "track": "Pumped Up Kicks",
-  "audio_path": "C:\\Users\\Users\\Desktop\\vialactée\\vialactee\\assets\\musics\\mp3_files\\Pumped Up Kicks.mp3",
-  "duration_sec": 479.23,
-  "total_beats": 1018,
-  "total_downbeats": 509,
+  "audio_path": "C:\\Users\\lucro\\Desktop\\vialactee\\assets\\musics\\mp3_files\\Pumped Up Kicks.mp3",
+  "duration_sec": 239.62,
+  "total_beats": 508,
+  "total_downbeats": 127,
   "estimated_bpm": 130.43,
-  "interval_jitter_ms": 20.62,
-  "compute_time_sec": 6.29,
+  "interval_jitter_ms": 18.1,
+  "compute_time_sec": 3.91,
   "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
   "salience_data": {
-    "mean_salience": 0.683,
-    "high_salience_ratio": 0.679,
-    "low_salience_ratio": 0.197,
+    "mean_salience": 0.646,
+    "high_salience_ratio": 0.629,
+    "low_salience_ratio": 0.212,
     "has_salience_curve": true,
     "salience_npz": "Pumped Up Kicks.salience.npz"
   }

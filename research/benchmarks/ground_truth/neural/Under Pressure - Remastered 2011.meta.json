@@ -9,9 +9,9 @@
   "compute_time_sec": 4.23,
   "generator": "BeatNet 1.1.1 (CRNN + DBN, Numba-accelerated)",
   "salience_data": {
-    "mean_salience": 0.726,
-    "high_salience_ratio": 0.733,
-    "low_salience_ratio": 0.144,
+    "mean_salience": 0.636,
+    "high_salience_ratio": 0.611,
+    "low_salience_ratio": 0.192,
     "has_salience_curve": true,
     "salience_npz": "Under Pressure - Remastered 2011.salience.npz"
   }
