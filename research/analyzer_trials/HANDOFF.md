@@ -44,7 +44,14 @@ were the raw material for P1/P2.
 - 2026-11-24: the owner used the tool and found everything good except the section changes. They were replaced
   by `research/truth/sections.py` (measured, no model; on Plastic People the changes fall within 0.7 s of the
   owner's five timed or accepted edges). The owner has not judged the new ones yet.
-- **Next**: the owner reviews tracks in the tool. Then techno tracks to add to the 20 (the owner was asked to
+- 2026-11-25: the owner declared the 20 drafts the full ground truth (variable list closed) and everything was
+  committed and pushed (`7e334bc` to `f3b0ee0`). The analyzer now has a contract that mirrors the truth:
+  `listener.signals` (`music/MusicSignals.py`, 36 slots, `None` until produced, 8 bridged from existing signals),
+  the list in `config/music_signals.json`, section 6 of `docs/contracts/music_analyzer_contract.md`, and parity
+  tests. Log: `work_history/2026-11-25_truth_mirrored_signal_contract.md`.
+- **Next (agreed with the owner)**: the scoreboard. Run the production `Listener` with the 5 s look-ahead on the
+  20 tracks and grade every slot of `listener.signals` against its truth value; mark provisional lines.
+- **In parallel**: the owner reviews tracks in the tool. Then techno tracks to add to the 20 (the owner was asked to
   pick some), SongFormer for sections, and a rule for drops and build-ups.
 
 ## 2. Owner rulings (do not re-ask)

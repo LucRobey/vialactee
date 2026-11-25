@@ -116,6 +116,11 @@ Each gets a full definition only when its truth reaches a level that may grade.
 
 ## 10. Decisions asked from you
 
+**Built on 2026-11-25 at the owner's request, ahead of the answers below:** the signal list is
+`config/music_signals.json` (36 signals, exactly the values of the truth files), the analyzer exposes them at
+`listener.signals` (empty slots answer `None`), and section 6 of `docs/contracts/music_analyzer_contract.md`
+is the contract. No trust level was set. Sections 6 to 8 of this paper are superseded by that list.
+
 1. Agree with the three places (section 2), and with `config/music_signals.json` as the home of the definitions?
 2. Agree with the five status steps and that only you make a signal trusted?
 3. Agree that half and double tempo count as **wrong** for the tempo signal? (For the lights they are: the

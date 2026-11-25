@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Sonnet 5.5, then Claude Fable 5.2  
 > **Primary Goal:** Build a richer source of truth for the music analyzer; in doing so, fix a loader bug that had stretched part of the BeatNet references, correct those references, and re-score every analyzer model.  
 > **Status:** COMPLETED (references corrected and re-scored, truth pipeline and review tool built; the wider plan in `research/analyzer_trials/PLAN.md` continues in later logs)  
-> **Commits:** `7e334bc` (loader fix), `fd34dc3` (corrected references), `60a4f61` (trial tools), `582a00d` (plan and papers), `5724a0d` (truth pipeline and review tool) (pushed: no)  
+> **Commits:** `7e334bc` (loader fix), `fd34dc3` (corrected references), `60a4f61` (trial tools), `582a00d` (plan and papers), `5724a0d` (truth pipeline and review tool), `61d9f9c` (this log) (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-researcher` / `vialactee-research-manager`: assume beat F1 is the only scored signal and that the references are correct; neither says how to change or validate ground truth.
 

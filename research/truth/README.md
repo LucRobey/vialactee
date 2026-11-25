@@ -35,6 +35,13 @@ can be dragged, added, deleted; a beat can be made the "1" of the bar. Every cha
 `labels/<id>.json`. Those files are the owner's word and are committed; `build_truth.py` reads them and never
 writes them. Run `build_truth.py` again to fold the corrections into `tracks/<id>.json`.
 
+## The live mirror
+
+Every value of a truth file that describes the music has a matching slot in the analyzer, at
+`listener.signals` (`music/MusicSignals.py`). The list is `config/music_signals.json`; the contract is
+section 6 of `docs/contracts/music_analyzer_contract.md`. `research/tests/test_truth_contract_parity.py` fails
+if a value is added to the truth without a slot, or the reverse.
+
 ## Levels of evidence
 
 Every value carries one: **H** timed by ear, **A** accepted by ear, **M2** two tools agree, **M1** one tool,
