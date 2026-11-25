@@ -24,6 +24,7 @@ from music.MusicalContextEngine import (
     MusicalScene,
     MusicalContextEngine,
 )
+from music.MusicSignals import MusicSignals
 
 
 # =============================================================================
@@ -202,6 +203,7 @@ __all__ = [
     "resolve_analyzer_class",
     "MusicalScene",
     "MusicalContextEngine",
+    "MusicSignals",
     "ListenerProtocol",
     "MusicalContextProtocol",
 ]

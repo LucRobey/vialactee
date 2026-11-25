@@ -11,6 +11,7 @@ Sibling of [`mood_contract.md`](mood_contract.md) and [`transition_contract.md`]
 2. Production code outside `music/` imports **only** `music.api`. (Tests, `research/`, and developer studios in `tools/` / `scripts/` may import internal modules directly for benchmarking and diagnostics.)
 3. None of the 10 music modules (`AudioIngestion.py`, `BaseAudioAnalyzer.py`, `AudioAnalyzer.py`, `MultiBandOnsetAudioAnalyzer.py`, `DyadicMetricalAudioAnalyzer.py`, `comb_kernels.py`, `StructuralNoveltyDetector.py`, `RhythmConfig.py`, `MusicalContextEngine.py`, `Listener.py`) may exist as shims in `core/`.
 4. Every public attribute on `Listener` and `listener.context` (`MusicalContextEngine`) is documented in §2 and §3 below (`TestDocsParity.test_music_contract_parity`). **This file is the only place that states our trust (🟢 HIGH / 🟡 MEDIUM / 🟠 LOW) in each of these signals.** Trust is engineering guidance for people and agents writing or reviewing consumers; it is not encoded in Python and not enforced by a test. To change a signal's trust, edit its table row here and nowhere else.
+5. The truth-mirrored signal record `listener.signals` (§6) has exactly the slots listed in [`config/music_signals.json`](../../config/music_signals.json), each documented in §6 and each tied to a value of the source of truth in `research/truth/` (`tests/governance/test_music_signals_contract.py`, `research/tests/test_truth_contract_parity.py`).
 
 ### Doors Across the Wall
 
@@ -22,6 +23,7 @@ Sibling of [`mood_contract.md`](mood_contract.md) and [`transition_contract.md`]
 | 4 | Runtime Gain & Latency | in/out | ⚙️ CONFIG / 🟢 HIGH | `listener.luminosite`, `listener.sensi`, `listener.dynamic_audio_latency` | Live UI brightness/sensitivity sliders and PortAudio latency calibration setter. |
 | 5 | `Listener` Signals | out | 🟢 / 🟡 / 🟠 / ⚙️ | `ListenerProtocol` (42 `@property` attributes) | Speaker-aligned ($T_{\text{speaker}}$) and lookahead ($T_{\text{lookahead}}$) signals (§2). |
 | 6 | `MusicalContextEngine` | out | 🟢 / 🟡 / 🟠 | `listener.context` (`MusicalContextProtocol`, 31 `@property` attributes) | Unified 3-tier kinetics, macro scenes, and micro badges (§3). |
+| 7 | Truth-Mirrored Signal Record | out | ⚪ unrated | `listener.signals` (`MusicSignals`, 36 slots) | One slot per value of the source of truth, at $T_{\text{speaker}}$; empty slots are `None` (§6). Not part of `ListenerProtocol`: modes do not read it yet. |
 
 ### Exported Symbols in `music/api.py`
 
@@ -29,6 +31,7 @@ Sibling of [`mood_contract.md`](mood_contract.md) and [`transition_contract.md`]
 | :--- | :--- | :--- |
 | `Listener` | Class | Primary facade & zero-allocation circular delay ring buffer synchronizing `AudioIngestion`, `BaseAudioAnalyzer`, and `MusicalContextEngine` at speaker time ($T_{\text{speaker}}$). |
 | `MusicalContextEngine` | Class | Unified 3-tier visual conductor exposed at `listener.context` (also used via `isinstance(ctx, MusicalContextEngine)`). |
+| `MusicSignals` | Class | The truth-mirrored signal record exposed at `listener.signals` and written by analyzers through `analyzer.signals` (§6). |
 | `MusicalScene` | `str, Enum` | 4 canonical macro scenes: `CHILL`, `GROOVE`, `BUILDUP`, `DROP_IMPACT`. |
 | `ANALYZER_REGISTRY` | `Dict[str, Type]` | Maps `"DyadicMetricalAudioAnalyzer"`, `"MultiBandOnsetAudioAnalyzer"`, and `"AudioAnalyzer"` to their classes. |
 | `DEFAULT_ANALYZER_MODEL` | `str` | `"DyadicMetricalAudioAnalyzer"` (Cycle 012 production default). |
@@ -131,7 +134,7 @@ User-configurable runtime settings and static filterbank dimensions proxied from
 | `sensi` | `float` | $> 0.0$ (default `1.0`) | Global audio input sensitivity multiplier controlled from the Live Deck UI. |
 | `nb_of_fft_band` | `int` | `16` | Number of coarse Mel frequency bands exposed to visual modes. |
 
-### 2.5 `Listener` Internal Attributes (6 Non-Signals)
+### 2.5 `Listener` Internal Attributes (7 Non-Signals)
 
 Orchestrator lifecycle methods and internal component references (not visual signals):
 
@@ -140,6 +143,7 @@ Orchestrator lifecycle methods and internal component references (not visual sig
 | `analyzer` | `BaseAudioAnalyzer` | Active rhythm analyzer instance (used by simulator HUD and tests). |
 | `context` | `MusicalContextEngine` | Unified 3-tier musical context engine (§3). |
 | `ingestion` | `AudioIngestion` | Vectorized DSP front-end instance. |
+| `signals` | `MusicSignals` | Truth-mirrored signal record (§6); the same object as `analyzer.signals`. |
 | `reset` | Method (`reset()`) | Resets ingestion, analyzer, ring buffers, and `context` on track change. |
 | `update` | Method (`update()`) | Advances one 60 Hz / 30 FPS tick of ingestion, analyzer, ring buffer, and `context`. |
 | `process_raw_audio` | Method (`process_raw_audio(audio_data)`) | Feeds a raw PCM audio chunk into `AudioIngestion`. |
@@ -241,3 +245,85 @@ Every rhythm and structural analyzer in `music/` and `research/` subclasses [`mu
 * **AXIOM-02 (Zero Heap Allocations):** All FFT windows, Mel matrices, ring buffers, and context states are pre-allocated in `__init__()`. `update()` mutates arrays in place with zero dynamic heap allocations.
 * **AXIOM-05 (Lookahead Sync):** All unprefixed properties on `Listener` and `MusicalContextEngine` are delayed by `lookahead_seconds` so visual events align with speaker output within $< 50\text{ ms}$.
 * **AXIOM-07 (Code Governance):** Every file in `music/` obeys the 500-line cap (or the one-way ratchet in `test_axiom_07_code_governance.py`).
+
+---
+
+## 6. Truth-Mirrored Signal Record (`listener.signals`, 36 Slots)
+
+The source of truth (`research/truth/`, one file per track, built offline) says what is in a song and when. `listener.signals` is its live mirror: **one slot per value of the truth, with the same meaning**, so that the analyzer can be graded against the truth slot by slot. The record is the class `MusicSignals` in [`music/MusicSignals.py`](../../music/MusicSignals.py); the machine-readable list of slots is [`config/music_signals.json`](../../config/music_signals.json).
+
+### 6.1 Rules
+
+1. **Speaker time.** Every slot describes what is being heard right now ($T_{\text{speaker}}$). The analyzer hears the music `lookahead_seconds` earlier and may use that future to decide.
+2. **Empty is `None`.** A slot that nothing produces holds `None`, which is falsy: a reader sees "no hit", "not present", "nothing". `None` never means "false"; it means "the analyzer does not know".
+3. **Three kinds.** An *event* is true (or a strength above 0) on the single frame where the thing happens. A *state* holds for as long as the thing lasts. A *value* changes continuously.
+4. **Who fills a slot.** `Listener` fills the 8 🔗 BRIDGED slots from signals the sector already produces (`MusicSignals.BRIDGED`). Any other slot is filled by a rhythm analyzer writing `self.signals.<name>` once per tick, with the value at speaker time. `BaseAudioAnalyzer` creates the record, so a model only writes the slots it works on, and `Listener` shares the same object.
+5. **No allocation.** Writing a slot stores a reference (AXIOM-02). `as_dict()` allocates and is for studios, telemetry and the benchmark only.
+6. **Not rated, not for modes yet.** No slot has a trust level. A 🔗 BRIDGED slot is only as good as the signal it copies (see its row in §2 or §3), and that quality has not been measured against the truth. `listener.signals` is not part of `ListenerProtocol`; a mode reads a slot only after the owner has rated it in this section.
+7. **One list, four places.** The slots of `MusicSignals`, the entries of `config/music_signals.json`, the rows below, and the values of the truth files are kept identical by `tests/governance/test_music_signals_contract.py` and `research/tests/test_truth_contract_parity.py`. To add a signal, add it to the truth first.
+
+### 6.2 Pulse
+
+| Slot | Kind | Type & Range | Meaning | Truth it is graded against | Status |
+| :--- | :-: | :--- | :--- | :--- | :--- |
+| `signals.beat` | event | `bool`, true / false | A main beat falls on this frame: the pulse a person would tap. | `beats.t`: found within 50 ms of a truth beat outside no-beat stretches: hits, misses, false alarms (F1) | 🔗 BRIDGED from `Listener.is_beat` |
+| `signals.bpm` | value | `float`, 60 to 260 | Tempo in beats per minute, at the level a person would tap. Half and double count as wrong. | `beats.bpm`: share of the time within 4% of the truth tempo; half and double reported apart | 🔗 BRIDGED from `Listener.bpm` |
+| `signals.no_beat` | state | `bool`, true / false | There is no pulse to follow right now: free intro, talking, a passage out of time. | `regions.no_beat`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.bar_position` | state | `int`, 1 to beats_per_bar, 0 = unknown | Position in the bar of the latest beat. 1 is the first beat of the bar. | `beats.bar_pos`: share of the beats carrying the right number | ⚪ EMPTY |
+| `signals.beats_per_bar` | value | `int`, 2 to 12 | Number of beats in a bar. | `meter.beats_per_bar`: share of the time equal to the truth | ⚪ EMPTY |
+| `signals.beat_strength` | state | `float`, 0 to 1 | How hard the drums mark the latest beat. | `beats.strength`: follows the truth value beat by beat (correlation) | ⚪ EMPTY |
+
+### 6.3 Drums
+
+| Slot | Kind | Type & Range | Meaning | Truth it is graded against | Status |
+| :--- | :-: | :--- | :--- | :--- | :--- |
+| `signals.kick` | event | `float`, 0 to 1, 0 = no hit | A kick drum hit on this frame, with its strength. | `drums.pieces.kick`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
+| `signals.snare` | event | `float`, 0 to 1, 0 = no hit | A snare or clap hit on this frame, with its strength. | `drums.pieces.snare`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
+| `signals.hat` | event | `float`, 0 to 1, 0 = no hit | A hi-hat hit on this frame, with its strength. | `drums.pieces.hat`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
+| `signals.tom` | event | `float`, 0 to 1, 0 = no hit | A tom hit on this frame, with its strength. | `drums.pieces.tom`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
+| `signals.cymbal` | event | `float`, 0 to 1, 0 = no hit | A crash or ride cymbal hit on this frame, with its strength. | `drums.pieces.cymbal`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
+| `signals.kick_present` | state | `bool`, true / false | The kick drum keeps coming, whatever its pattern. | `regions.kick_present`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.kick_level` | value | `float`, 0 to 1 | Level of the low thump of the drums. | `curves.kick_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+
+### 6.4 Moments and structure
+
+| Slot | Kind | Type & Range | Meaning | Truth it is graded against | Status |
+| :--- | :-: | :--- | :--- | :--- | :--- |
+| `signals.drop` | event | `bool`, true / false | The music comes back at full power on this frame. | `drops`: found within one beat: hits, misses, false alarms (F1) | 🔗 BRIDGED from `MusicalContextEngine.is_drop_impact` |
+| `signals.section_change` | event | `bool`, true / false | The song moves to a new part on this frame. | `sections.items`: found within one bar: hits, misses, false alarms (F1) | 🔗 BRIDGED from `Listener.is_verse_chorus_change` |
+| `signals.breakdown` | state | `bool`, true / false | The kick has left and will come back: the calm before the return. | `regions.breakdown`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.buildup` | state | `bool`, true / false | Tension is rising toward a drop. | `regions.buildup`: share of the time correct; delay at each edge | 🔗 BRIDGED from `MusicalContextEngine.is_buildup` |
+| `signals.riser` | state | `bool`, true / false | The sound keeps getting brighter for several seconds: a sweep, a filter opening. | `regions.riser`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.silence` | state | `bool`, true / false | Nothing is playing. | `regions.silence`: share of the time correct; delay at each edge | 🔗 BRIDGED from `MusicalContextEngine.is_silent` |
+
+### 6.5 Who is playing
+
+| Slot | Kind | Type & Range | Meaning | Truth it is graded against | Status |
+| :--- | :-: | :--- | :--- | :--- | :--- |
+| `signals.bass_present` | state | `bool`, true / false | A bass line is playing. | `regions.bass_present`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.drums_present` | state | `bool`, true / false | Percussion is playing, kick or not. | `regions.drums_present`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.vocal_present` | state | `bool`, true / false | Someone sings or speaks. | `regions.vocal_present`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.other_present` | state | `bool`, true / false | Instruments that are neither drums, bass nor voice are playing: guitars, synths, keyboards. | `regions.other_present`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.bass_level` | value | `float`, 0 to 1 | Level of the bass line. | `curves.stem_bass_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.drums_level` | value | `float`, 0 to 1 | Level of the percussion. | `curves.stem_drums_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.vocal_level` | value | `float`, 0 to 1 | Level of the voice. | `curves.stem_vocals_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.other_level` | value | `float`, 0 to 1 | Level of the other instruments. | `curves.stem_other_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.layers` | value | `int`, 0 to 4 | How many of the four families (drums, bass, voice, other) are playing. | `curves.layers`: share of the time equal to the truth | ⚪ EMPTY |
+
+### 6.6 Sound
+
+| Slot | Kind | Type & Range | Meaning | Truth it is graded against | Status |
+| :--- | :-: | :--- | :--- | :--- | :--- |
+| `signals.loudness` | value | `float`, 0 to 1 | How loud the whole music is. | `curves.loud_db`: follows the truth curve (correlation) and its delay | 🔗 BRIDGED from `Listener.asserved_total_power` |
+| `signals.band_sub` | value | `float`, 0 to 1 | Level of the deepest sounds, under 60 Hz. | `curves.sub_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.band_bass` | value | `float`, 0 to 1 | Level of the bass range, 60 to 250 Hz. | `curves.bass_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.band_mid` | value | `float`, 0 to 1 | Level of the middle range, 250 Hz to 4 kHz. | `curves.mid_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.band_high` | value | `float`, 0 to 1 | Level of the treble, above 4 kHz. | `curves.high_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.brightness` | value | `float`, 0 to 1 | Whether the sound is dark (0) or bright (1). | `curves.bright_oct`: follows the truth curve (correlation) and its delay | 🔗 BRIDGED from `MusicalContextEngine.vertical_center` |
+| `signals.fullness` | value | `float`, 0 to 1 | How much of the frequency range is busy: low when the music is sparse, high when everything plays. | `curves.fullness`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+
+### 6.7 Harmony
+
+| Slot | Kind | Type & Range | Meaning | Truth it is graded against | Status |
+| :--- | :-: | :--- | :--- | :--- | :--- |
+| `signals.chord` | state | `str`, a chord name such as G#:min, or N for no chord | The chord being played. | `chords.items`: share of the time with the right chord | ⚪ EMPTY |

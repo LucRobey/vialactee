@@ -9,6 +9,7 @@ from music.AudioAnalyzer import AudioAnalyzer
 from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 from music.MusicalContextEngine import MusicalContextEngine
+from music.MusicSignals import MusicSignals
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,12 @@ class Listener:
         )
 
         self.analyzer = resolved_class(self.ingestion, infos)
+
+        # Truth-mirrored signal record (music/MusicSignals.py): shared with the analyzer, which writes its own slots.
+        self.signals = getattr(self.analyzer, 'signals', None)
+        if self.signals is None:
+            self.signals = MusicSignals()
+            self.analyzer.signals = self.signals
 
         # Ring buffer dimensions
         lookahead = getattr(self.analyzer, 'lookahead_seconds', 5.0)
@@ -135,6 +142,7 @@ class Listener:
 
         if hasattr(self, 'context'):
             self.context.reset()
+        self.signals.clear()
 
         if hasattr(self.analyzer, 'reset'):
             self.analyzer.reset()
@@ -214,6 +222,19 @@ class Listener:
 
         if hasattr(self, 'context'):
             self.context.update(self.dt)
+            self._bridge_signals()
+
+    def _bridge_signals(self) -> None:
+        """Fills the truth-mirrored slots that an existing speaker-time signal already expresses (MusicSignals.BRIDGED)."""
+        s, ctx = self.signals, self.context
+        s.beat = self.is_beat
+        s.bpm = self.bpm
+        s.section_change = self._delayed_is_verse_chorus_change
+        s.loudness = self._delayed_asserved_total_power
+        s.silence = ctx.is_silent
+        s.drop = ctx.is_drop_impact
+        s.buildup = ctx.is_buildup
+        s.brightness = ctx.vertical_center
 
     def _update_ring_buffers(self, current_time: float) -> None:
         """Writes current audio and analysis metrics into pre-allocated circular ring arrays."""

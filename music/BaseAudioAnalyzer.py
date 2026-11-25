@@ -12,6 +12,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 
+from music.MusicSignals import MusicSignals
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,6 +46,10 @@ class BaseAudioAnalyzer(ABC):
         self.config = config
         self.lookahead_seconds: float = float(infos.get("fakeDelay", 5.0))
         self.hardware_latency: float = resolve_hardware_latency(infos)
+
+        # 0. Truth-mirrored signal record: one slot per signal of config/music_signals.json, all None until a
+        #    model writes self.signals.<name> (value at speaker time) in its update().
+        self.signals: MusicSignals = MusicSignals()
 
         # 1. Rhythmic & Metronome State Defaults
         self.bpm: float = 120.0
