@@ -19,7 +19,7 @@ Sibling of [`mood_contract.md`](mood_contract.md) and [`transition_contract.md`]
 | :-: | :--- | :-: | :-: | :--- | :--- |
 | 1 | Construction | in | ⚙️ CONFIG | `Listener(infos, analyzer_class=None)` | Reads `useMicrophone`, `fakeDelay` (`5.0 s`), `analyzer_model`, `luminosity`, `sensibility`, `led_latency`, `audio_output_latency`, and `musical_context`. |
 | 2 | PCM Audio Stream | in | 🟢 Physical | `listener.process_raw_audio(audio_data)` | Accepts a 4096-sample `float64`/`float32` PCM chunk (`44.1 kHz`) and updates 16-band Mel, 32-band Mel, and 12-bin chroma arrays in place. |
-| 3 | Driving Clock & Reset | in | ⚙️ Lifecycle | `listener.update(fixed_dt=None)`, `listener.reset()` | Ticks ingestion envelopes, rhythm analyzer, 5.0 s ring buffer, and `listener.context`. |
+| 3 | Driving Clock & Reset | in | ⚙️ Lifecycle | `listener.update(fixed_dt=None)`, `listener.reset()`, `listener.begin_display_frame()` | `update` ticks ingestion envelopes, rhythm analyzer, 5.0 s ring buffer, and `listener.context`; it is called by the audio connector, 60 times per second of music. `begin_display_frame` is called by the display loop once per frame (§1.1). |
 | 4 | Runtime Gain & Latency | in/out | ⚙️ CONFIG / 🟢 HIGH | `listener.luminosite`, `listener.sensi`, `listener.dynamic_audio_latency` | Live UI brightness/sensitivity sliders and PortAudio latency calibration setter. |
 | 5 | `Listener` Signals | out | 🟢 / 🟡 / 🟠 / ⚙️ | `ListenerProtocol` (42 `@property` attributes) | Speaker-aligned ($T_{\text{speaker}}$) and lookahead ($T_{\text{lookahead}}$) signals (§2). |
 | 6 | `MusicalContextEngine` | out | 🟢 / 🟡 / 🟠 | `listener.context` (`MusicalContextProtocol`, 31 `@property` attributes) | Unified 3-tier kinetics, macro scenes, and micro badges (§3). |
@@ -59,6 +59,18 @@ Speaker Output (T_speaker = t - 5.0s) ──► Listener delayed properties + Mu
 2. **Lookahead Properties ($T_{\text{lookahead}}$, `live_*` prefix & gradients):**
    * Reflect the audio stream 5.0 seconds *ahead* of the speakers (`live_asserved_total_power`, `live_rhythm_salience`, `live_beat_trust`, `live_asserved_novelty`, `live_combined_novelty`, `live_is_song_change`, `live_is_verse_chorus_change`, plus `salience_gradient` $\Delta R$ and `power_gradient` $\Delta P$).
    * Consumed internally by `MusicalContextEngine` (to compute `BUILDUP` ramps and `drop_countdown`) and by `transitions/` (to pre-schedule transitions before a song boundary or drop reaches the speakers).
+
+### 1.1 One-Frame Signals and the Display Loop
+
+The analyzer ticks 60 times per second of music; the display loop ([`core/Mode_master.py`](../../core/Mode_master.py)) draws 30 times a second. A signal that is true for one tick and cleared on the next would be missed by the display about half the time. So:
+
+* The one-frame signals are `is_beat`, `is_real_beat`, `is_dropped_beat`, `is_song_change`, `is_verse_chorus_change`, `live_is_song_change`, `live_is_verse_chorus_change` on `Listener`; `is_real_beat` and `is_drop_impact` on `listener.context`; and the event slots of `listener.signals` (§6).
+* After every tick the `Listener` remembers which of them fired. `begin_display_frame()`, called once per display frame before the modes draw, makes everything that fired since the previous frame visible for that frame, then starts again. **Each event is seen for exactly one display frame.**
+* Until `begin_display_frame()` has been called once, these properties show the value of the current tick. Benchmarks, studios and tests that read after every tick are therefore unchanged.
+* Inside `music/`, per-tick logic reads the tick value (`Listener._tick`), never the held one.
+* Consequence for modes: a one-frame signal can be up to one display frame (33 ms) late. Effects that must be tight should follow the continuous `beat_phase`; one-frame signals are for triggers.
+
+Enforced by `tests/test_listener_display_hold.py`.
 
 ---
 
@@ -134,7 +146,7 @@ User-configurable runtime settings and static filterbank dimensions proxied from
 | `sensi` | `float` | $> 0.0$ (default `1.0`) | Global audio input sensitivity multiplier controlled from the Live Deck UI. |
 | `nb_of_fft_band` | `int` | `16` | Number of coarse Mel frequency bands exposed to visual modes. |
 
-### 2.5 `Listener` Internal Attributes (7 Non-Signals)
+### 2.5 `Listener` Internal Attributes (8 Non-Signals)
 
 Orchestrator lifecycle methods and internal component references (not visual signals):
 
@@ -145,7 +157,8 @@ Orchestrator lifecycle methods and internal component references (not visual sig
 | `ingestion` | `AudioIngestion` | Vectorized DSP front-end instance. |
 | `signals` | `MusicSignals` | Truth-mirrored signal record (§6); the same object as `analyzer.signals`. |
 | `reset` | Method (`reset()`) | Resets ingestion, analyzer, ring buffers, and `context` on track change. |
-| `update` | Method (`update()`) | Advances one 60 Hz / 30 FPS tick of ingestion, analyzer, ring buffer, and `context`. |
+| `update` | Method (`update()`) | Advances one 1/60 s tick of ingestion, analyzer, ring buffer, and `context`. Called by the audio connector (or by the display loop when no audio device clocks the listener). |
+| `begin_display_frame` | Method (`begin_display_frame()`) | Called by the display loop once per frame: shows the one-frame signals that fired since the previous frame (§1.1). |
 | `process_raw_audio` | Method (`process_raw_audio(audio_data)`) | Feeds a raw PCM audio chunk into `AudioIngestion`. |
 
 ---

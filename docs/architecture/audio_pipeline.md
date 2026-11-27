@@ -34,7 +34,7 @@ The rhythm analyzers count time in ticks of 1/60 s (`odf_fps = 60.0`): their mem
 
 Until 2026-11-27 the live connector left the ticking to the display loop; measured offline on 20 tracks, beats scored 22 instead of 77 (`research/scoreboard/runs/live_path/LIVE_PATH.md`). Guarded by `tests/test_local_microphone_clock.py`.
 
-One-frame signals (`is_beat`, `is_real_beat`, `is_dropped_beat`) are raised for a single 1/60 s tick: a 30 FPS reader sees about half of them. Prefer the continuous `beat_phase` / `beat_count`, or expect misses, until such signals are held for the display loop.
+One-frame signals (`is_beat`, `is_real_beat`, `is_dropped_beat`, the structural change flags, `context.is_drop_impact`, the event slots of `listener.signals`) are raised for a single 1/60 s tick. A 30 FPS reader would see about half of them, so the `Listener` holds them: the display loop calls `listener.begin_display_frame()` once per frame, before the modes draw, and each event is then visible for exactly one display frame (contract §1.1, `music/MusicSignals.py` `DisplayHold`, `tests/test_listener_display_hold.py`).
 
 ---
 

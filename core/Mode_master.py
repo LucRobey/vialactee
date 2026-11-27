@@ -312,6 +312,10 @@ class Mode_master:
         with self.profiler.measure("listener"):
             if not getattr(self.listener, "is_externally_clocked", False):
                 self.listener.update()
+            # The analyzer may have ticked several times since the last frame: collect its one-frame signals once.
+            begin_display_frame = getattr(self.listener, "begin_display_frame", None)
+            if begin_display_frame is not None:
+                begin_display_frame()
 
         with self.profiler.measure("hardware_show"):
             if self.infos.get("onRaspberry", False) or self.infos.get("HARDWARE_MODE") == "rpi" or self._is_rpi_hardware:

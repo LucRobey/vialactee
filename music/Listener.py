@@ -9,7 +9,7 @@ from music.AudioAnalyzer import AudioAnalyzer
 from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 from music.MusicalContextEngine import MusicalContextEngine
-from music.MusicSignals import MusicSignals
+from music.MusicSignals import DisplayHold, MusicSignals
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,10 @@ ANALYZER_REGISTRY = {
     "DyadicMetricalAudioAnalyzer": DyadicMetricalAudioAnalyzer,  # production default (Cycle 012)
 }
 DEFAULT_ANALYZER_MODEL = "DyadicMetricalAudioAnalyzer"
+
+# Where each live one-frame flag lives on the analyzer (the speaker-time ones are the Listener's own delayed flags).
+_TICK_ATTR = {"is_beat": "is_beat", "is_real_beat": "is_real_beat", "is_dropped_beat": "is_dropped_beat",
+              "live_is_song_change": "is_song_change", "live_is_verse_chorus_change": "is_verse_chorus_change"}
 
 
 def resolve_analyzer_class(spec: Any) -> Any:
@@ -49,10 +53,12 @@ class Listener:
         self.analyzer = resolved_class(self.ingestion, infos)
 
         # Truth-mirrored signal record (music/MusicSignals.py): shared with the analyzer, which writes its own slots.
-        self.signals = getattr(self.analyzer, 'signals', None)
-        if self.signals is None:
-            self.signals = MusicSignals()
-            self.analyzer.signals = self.signals
+        self._tick_signals = getattr(self.analyzer, 'signals', None)
+        if self._tick_signals is None:
+            self._tick_signals = MusicSignals()
+            self.analyzer.signals = self._tick_signals
+        # One-frame signals held for the display loop (begin_display_frame); inactive until the display uses it.
+        self._hold = DisplayHold()
 
         # Ring buffer dimensions
         lookahead = getattr(self.analyzer, 'lookahead_seconds', 5.0)
@@ -142,7 +148,8 @@ class Listener:
 
         if hasattr(self, 'context'):
             self.context.reset()
-        self.signals.clear()
+        self._tick_signals.clear()
+        self._hold.reset()
 
         if hasattr(self.analyzer, 'reset'):
             self.analyzer.reset()
@@ -223,16 +230,41 @@ class Listener:
         if hasattr(self, 'context'):
             self.context.update(self.dt)
             self._bridge_signals()
+            self.context._hold_events()
+            self._hold.hold(self, self._tick_signals)
+
+    def begin_display_frame(self) -> None:
+        """Called once per display frame, before the modes draw: makes every one-frame signal that fired since
+        the previous frame visible for this frame. Without it a signal lasting one 1/60 s tick is missed by a
+        30 FPS reader about half the time."""
+        self._hold.publish(self._tick_signals)
+        self.context._publish_events()
+
+    def _tick(self, name: str) -> bool:
+        """A one-frame flag on the current analyzer tick (its property may show the value held for the display)."""
+        if name == "is_song_change":
+            return self._delayed_is_song_change
+        if name == "is_verse_chorus_change":
+            return self._delayed_is_verse_chorus_change
+        return bool(getattr(self.analyzer, _TICK_ATTR[name], False))
+
+    def _flag(self, name: str) -> bool:
+        return self._hold.shown[name] if self._hold.active else self._tick(name)
+
+    @property
+    def signals(self) -> MusicSignals:
+        """The truth-mirrored record: as held for the display once it runs, else as of the current tick."""
+        return self._hold.signals if self._hold.active else self._tick_signals
 
     def _bridge_signals(self) -> None:
         """Fills the truth-mirrored slots that an existing speaker-time signal already expresses (MusicSignals.BRIDGED)."""
-        s, ctx = self.signals, self.context
-        s.beat = self.is_beat
+        s, ctx = self._tick_signals, self.context
+        s.beat = self._tick('is_beat')              # the tick's own value: the display's held view is built from this record
         s.bpm = self.bpm
         s.section_change = self._delayed_is_verse_chorus_change
         s.loudness = self._delayed_asserved_total_power
         s.silence = ctx.is_silent
-        s.drop = ctx.is_drop_impact
+        s.drop = ctx._is_drop_impact
         s.buildup = ctx.is_buildup
         s.brightness = ctx.vertical_center
 
@@ -347,13 +379,13 @@ class Listener:
     def beat_phase(self): return self.analyzer.beat_phase
 
     @property
-    def is_beat(self): return getattr(self.analyzer, 'is_beat', False)
+    def is_beat(self): return self._flag('is_beat')
 
     @property
-    def is_real_beat(self): return getattr(self.analyzer, 'is_real_beat', False)
+    def is_real_beat(self): return self._flag('is_real_beat')
 
     @property
-    def is_dropped_beat(self): return getattr(self.analyzer, 'is_dropped_beat', False)
+    def is_dropped_beat(self): return self._flag('is_dropped_beat')
 
     @property
     def beat_tag(self): return getattr(self.analyzer, 'current_beat_tag', 'Bass/Kick')
@@ -365,16 +397,16 @@ class Listener:
     def flywheel_status(self): return getattr(self.analyzer, 'flywheel_status', 'coasting')
 
     @property
-    def is_song_change(self): return self._delayed_is_song_change
+    def is_song_change(self): return self._flag('is_song_change')
 
     @property
-    def is_verse_chorus_change(self): return self._delayed_is_verse_chorus_change
+    def is_verse_chorus_change(self): return self._flag('is_verse_chorus_change')
     
     @property
-    def live_is_song_change(self): return getattr(self.analyzer, 'is_song_change', False)
+    def live_is_song_change(self): return self._flag('live_is_song_change')
     
     @property
-    def live_is_verse_chorus_change(self): return getattr(self.analyzer, 'is_verse_chorus_change', False)
+    def live_is_verse_chorus_change(self): return self._flag('live_is_verse_chorus_change')
 
     @property
     def asserved_novelty(self): return self._delayed_asserved_novelty

@@ -73,6 +73,9 @@ class MusicalContextEngine:
         self._is_drop_impact = False
         self._is_drop_imminent = False
         self._is_structural_cut = False
+        # One-frame badges held for the display loop (see Listener.begin_display_frame)
+        self._display_held = False
+        self._held_real_beat = self._held_drop_impact = self._shown_real_beat = self._shown_drop_impact = False
 
     def reset(self) -> None:
         """Resets all scenes, timers, hysteresis flags, badges, and modulation metrics."""
@@ -90,6 +93,23 @@ class MusicalContextEngine:
         self._spectral_tilt, self._vertical_center = 0.0, 0.5
         self._is_locked, self._is_syncopated, self._is_real_beat = False, False, False
         self._is_drop_impact, self._is_drop_imminent, self._is_structural_cut = False, False, False
+        self._held_real_beat = self._held_drop_impact = self._shown_real_beat = self._shown_drop_impact = False
+    def _now(self, name: str) -> bool:
+        """A one-frame flag of the listener on this tick, not the value it holds for the display loop."""
+        tick = getattr(self.listener, "_tick", None)
+        return bool(tick(name)) if tick is not None else bool(getattr(self.listener, name, False))
+
+    def _hold_events(self) -> None:
+        """After a tick: remember the one-frame badges that fired (see Listener.begin_display_frame)."""
+        self._held_real_beat = self._held_real_beat or self._is_real_beat
+        self._held_drop_impact = self._held_drop_impact or self._is_drop_impact
+
+    def _publish_events(self) -> None:
+        """Once per display frame: show the badges that fired since the previous frame."""
+        self._display_held = True
+        self._shown_real_beat, self._shown_drop_impact = self._held_real_beat, self._held_drop_impact
+        self._held_real_beat = self._held_drop_impact = False
+
     def update(self, dt: float) -> None:
         """Executes one frame tick of scene classification and 3-tier context updates."""
         self._is_drop_impact = False
@@ -102,9 +122,9 @@ class MusicalContextEngine:
         raw_power = getattr(self.listener, "asserved_total_power", 0.0)
         raw_live_power = getattr(self.listener, "live_asserved_total_power", raw_power)
         raw_novelty = getattr(self.listener, "asserved_novelty", 0.0)
-        is_song_change = bool(getattr(self.listener, "is_song_change", False))
-        is_verse_chorus = bool(getattr(self.listener, "is_verse_chorus_change", False))
-        live_is_song_change = bool(getattr(self.listener, "live_is_song_change", False))
+        is_song_change = self._now("is_song_change")
+        is_verse_chorus = self._now("is_verse_chorus_change")
+        live_is_song_change = self._now("live_is_song_change")
         raw_bands = getattr(self.listener, "asserved_fft_band", None)
         if raw_bands is None or not hasattr(raw_bands, "__len__") or len(raw_bands) < 8:
             raw_bands = getattr(self.listener, "fft_band_values", None)
@@ -144,7 +164,7 @@ class MusicalContextEngine:
         elif p < self.silence_threshold: self._is_silent = True
 
         self._is_syncopated = bool(self._is_salience_high and t < self.trust_low)
-        self._is_real_beat = bool(getattr(self.listener, "is_beat", False) and p >= 0.20)
+        self._is_real_beat = bool(self._now("is_beat") and p >= 0.20)
         if is_song_change or is_verse_chorus:
             self._structural_cut_timer = self.structural_dwell_time
 
@@ -366,11 +386,11 @@ class MusicalContextEngine:
     @property
     def is_syncopated(self) -> bool: return bool(self._is_syncopated)
     @property
-    def is_real_beat(self) -> bool: return bool(self._is_real_beat)
+    def is_real_beat(self) -> bool: return bool(self._shown_real_beat if self._display_held else self._is_real_beat)
     @property
     def is_silent(self) -> bool: return bool(self._is_silent)
     @property
-    def is_drop_impact(self) -> bool: return bool(self._is_drop_impact)
+    def is_drop_impact(self) -> bool: return bool(self._shown_drop_impact if self._display_held else self._is_drop_impact)
     @property
     def is_drop_imminent(self) -> bool: return bool(self._is_drop_imminent)
     @property
