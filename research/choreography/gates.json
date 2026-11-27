@@ -1,4 +1,124 @@
 {
+ "Architectural_vu_equalizer_mode": {
+  "date": "2026-11-27",
+  "passed": true,
+  "failed_rules": [],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "pass",
+   "4": "not applicable",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 9,
+   "renders": 9,
+   "today_dark_share_max": 0.0308,
+   "today_movement_min": 0.2547,
+   "flashes_per_second_max": 3.0,
+   "tied_gap_min": null,
+   "draw_ms": 0.152
+  },
+  "source": "modes",
+  "source_sha": "7f77a0199dd1",
+  "thresholds_provisional": true
+ },
+ "Avalanche_bands_mode": {
+  "date": "2026-11-27",
+  "passed": true,
+  "failed_rules": [],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "pass",
+   "4": "pass",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 9,
+   "renders": 9,
+   "today_dark_share_max": 0.0,
+   "today_movement_min": 0.396,
+   "flashes_per_second_max": 3.0,
+   "tied_gap_min": 0.48029999999999995,
+   "draw_ms": 0.579
+  },
+  "source": "candidates",
+  "source_sha": "d05283127666",
+  "thresholds_provisional": true
+ },
+ "Band_vu_mode": {
+  "date": "2026-11-27",
+  "passed": true,
+  "failed_rules": [],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "pass",
+   "4": "pass",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 9,
+   "renders": 9,
+   "today_dark_share_max": 0.1392,
+   "today_movement_min": 0.506,
+   "flashes_per_second_max": 2.5,
+   "tied_gap_min": 0.621,
+   "draw_ms": 0.269
+  },
+  "source": "candidates",
+  "source_sha": "5c62d0998cf1",
+  "thresholds_provisional": true
+ },
+ "Beat_blast_kick_mode": {
+  "date": "2026-11-27",
+  "passed": true,
+  "failed_rules": [],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "pass",
+   "4": "pass",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 9,
+   "renders": 9,
+   "today_dark_share_max": 0.0,
+   "today_movement_min": 0.744,
+   "flashes_per_second_max": 2.5,
+   "tied_gap_min": 0.9165,
+   "draw_ms": 0.858
+  },
+  "source": "candidates",
+  "source_sha": "c5f6ca4ab5b8",
+  "thresholds_provisional": true
+ },
+ "Concentric_radial_ripple_mode": {
+  "date": "2026-11-27",
+  "passed": true,
+  "failed_rules": [],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "pass",
+   "4": "not applicable",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 9,
+   "renders": 9,
+   "today_dark_share_max": 0.0683,
+   "today_movement_min": 0.3432,
+   "flashes_per_second_max": 0.0,
+   "tied_gap_min": null,
+   "draw_ms": 0.396
+  },
+  "source": "modes",
+  "source_sha": "c2eaf6026375",
+  "thresholds_provisional": true
+ },
  "Kick_bands_mode": {
   "date": "2026-11-27",
   "passed": false,
@@ -47,6 +167,82 @@
   },
   "source": "candidates",
   "source_sha": "7290fbea55ac",
+  "thresholds_provisional": true
+ },
+ "Monolithic_beat_blast_mode": {
+  "date": "2026-11-27",
+  "passed": false,
+  "failed_rules": [
+   3
+  ],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "fail",
+   "4": "not applicable",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 9,
+   "renders": 9,
+   "today_dark_share_max": 0.0583,
+   "today_movement_min": 0.7059,
+   "flashes_per_second_max": 3.5,
+   "tied_gap_min": null,
+   "draw_ms": 0.622
+  },
+  "source": "modes",
+  "source_sha": "4acd81abcaff",
+  "thresholds_provisional": true
+ },
+ "Ripple_kick_mode": {
+  "date": "2026-11-27",
+  "passed": true,
+  "failed_rules": [],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "pass",
+   "4": "pass",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 9,
+   "renders": 9,
+   "today_dark_share_max": 0.0,
+   "today_movement_min": 0.3985,
+   "flashes_per_second_max": 3.0,
+   "tied_gap_min": 0.9459,
+   "draw_ms": 0.895
+  },
+  "source": "candidates",
+  "source_sha": "1136a8c002ca",
+  "thresholds_provisional": true
+ },
+ "Spectral_avalanche_mode": {
+  "date": "2026-11-27",
+  "passed": false,
+  "failed_rules": [
+   3
+  ],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "fail",
+   "4": "not applicable",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 9,
+   "renders": 9,
+   "today_dark_share_max": 0.1271,
+   "today_movement_min": 0.7374,
+   "flashes_per_second_max": 19.5,
+   "tied_gap_min": null,
+   "draw_ms": 0.437
+  },
+  "source": "modes",
+  "source_sha": "e01dc1fc8de3",
   "thresholds_provisional": true
  }
 }

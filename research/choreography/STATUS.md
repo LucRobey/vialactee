@@ -7,9 +7,38 @@ Do not edit by hand. The gate's limits are provisional proposals, not decisions 
 
 | Mode | Latest gate | Failed rule | Clips nominated | Still waiting | Against another mode: chosen / not chosen / no difference | Feeds clips: what the owner chose |
 |---|---|---|---|---|---|---|
+| `Avalanche_bands_mode` | passed 2026-11-27 | - | 3 | 3 | - | - |
+| `Band_vu_mode` | passed 2026-11-27 | - | 3 | 3 | - | - |
+| `Beat_blast_kick_mode` | passed 2026-11-27 | - | 3 | 3 | - | - |
 | `Kick_bands_mode` | FAILED 2026-11-27 | 3 (flash safety) | 0 | 0 | - | truth 2 |
 | `Kick_bands_safe_mode` | passed 2026-11-27 | - | 3 | 0 | - | today 1, truth 2 |
+| `Ripple_kick_mode` | passed 2026-11-27 | - | 3 | 3 | - | - |
 
-## Waiting for the owner: 0
+## Other modes that went through the gate
 
-Nothing is waiting.
+| Mode | Latest gate | Failed rule |
+|---|---|---|
+| `Architectural_vu_equalizer_mode` | passed 2026-11-27 | - |
+| `Concentric_radial_ripple_mode` | passed 2026-11-27 | - |
+| `Monolithic_beat_blast_mode` | FAILED 2026-11-27 | 3 (flash safety) |
+| `Spectral_avalanche_mode` | FAILED 2026-11-27 | 3 (flash safety) |
+
+## Waiting for the owner: 12
+
+| Clip | What is compared | Track | From | Nominated | Note |
+|---|---|---|---|---|---|
+| `19_0208_Beat_blast_kick_mode_vs_Monolithic_beat_blast_mode_today_n1` | `Beat_blast_kick_mode` against `Monolithic_beat_blast_mode`, both hearing: today | 19 | 3:28, 24 s | 2026-11-27 | Same rings as Monolithic Beat Blast, but punched by the kick the analyzer hears (rationed, never 4 flashes a second), calm in breaks, bass at the core and treble at the rim. Which one shows the beat better? |
+| `13_0030_Beat_blast_kick_mode_vs_Monolithic_beat_blast_mode_today_n1` | `Beat_blast_kick_mode` against `Monolithic_beat_blast_mode`, both hearing: today | 13 | 0:30, 20 s | 2026-11-27 | Same rings as Monolithic Beat Blast, but punched by the kick the analyzer hears (rationed, never 4 flashes a second), calm in breaks, bass at the core and treble at the rim. Which one shows the beat better? |
+| `20_0160_Beat_blast_kick_mode_vs_Monolithic_beat_blast_mode_today_n1` | `Beat_blast_kick_mode` against `Monolithic_beat_blast_mode`, both hearing: today | 20 | 2:40, 24 s | 2026-11-27 | Same rings as Monolithic Beat Blast, but punched by the kick the analyzer hears (rationed, never 4 flashes a second), calm in breaks, bass at the core and treble at the rim. Which one shows the beat better? |
+| `19_0208_Ripple_kick_mode_vs_Concentric_radial_ripple_mode_today_n1` | `Ripple_kick_mode` against `Concentric_radial_ripple_mode`, both hearing: today | 19 | 3:28, 24 s | 2026-11-27 | Same violet rings as Concentric Radial Ripple, but one ring and a white heart per heard kick, and a steady drift in breaks instead of pulsing on predicted beats. Is the kick clearer, and is the break right? |
+| `13_0030_Ripple_kick_mode_vs_Concentric_radial_ripple_mode_today_n1` | `Ripple_kick_mode` against `Concentric_radial_ripple_mode`, both hearing: today | 13 | 0:30, 20 s | 2026-11-27 | Same violet rings as Concentric Radial Ripple, but one ring and a white heart per heard kick, and a steady drift in breaks instead of pulsing on predicted beats. Is the kick clearer, and is the break right? |
+| `20_0160_Ripple_kick_mode_vs_Concentric_radial_ripple_mode_today_n1` | `Ripple_kick_mode` against `Concentric_radial_ripple_mode`, both hearing: today | 20 | 2:40, 24 s | 2026-11-27 | Same violet rings as Concentric Radial Ripple, but one ring and a white heart per heard kick, and a steady drift in breaks instead of pulsing on predicted beats. Is the kick clearer, and is the break right? |
+| `19_0208_Band_vu_mode_vs_Architectural_vu_equalizer_mode_today_n1` | `Band_vu_mode` against `Architectural_vu_equalizer_mode`, both hearing: today | 19 | 3:28, 24 s | 2026-11-27 | A three-band equalizer instead of one column: bass red in the outer pillars and low bridges (punched white on each heard kick), middle amber in the inner pillars, treble cool white on the canopy. Can you read bass and treble apart, and is the kick clear? |
+| `13_0030_Band_vu_mode_vs_Architectural_vu_equalizer_mode_today_n1` | `Band_vu_mode` against `Architectural_vu_equalizer_mode`, both hearing: today | 13 | 0:30, 20 s | 2026-11-27 | A three-band equalizer instead of one column: bass red in the outer pillars and low bridges (punched white on each heard kick), middle amber in the inner pillars, treble cool white on the canopy. Can you read bass and treble apart, and is the kick clear? |
+| `20_0160_Band_vu_mode_vs_Architectural_vu_equalizer_mode_today_n1` | `Band_vu_mode` against `Architectural_vu_equalizer_mode`, both hearing: today | 20 | 2:40, 24 s | 2026-11-27 | A three-band equalizer instead of one column: bass red in the outer pillars and low bridges (punched white on each heard kick), middle amber in the inner pillars, treble cool white on the canopy. Can you read bass and treble apart, and is the kick clear? |
+| `19_0208_Avalanche_bands_mode_vs_Spectral_avalanche_mode_today_n1` | `Avalanche_bands_mode` against `Spectral_avalanche_mode`, both hearing: today | 19 | 3:28, 24 s | 2026-11-27 | Same falling waterfall as Spectral Avalanche, but calm (the original strobes: up to 19.5 flashes a second), lit by bass low, mid middle, treble high, and flaring with a white front on every heard kick. Is it still an avalanche, and is the kick clear? |
+| `13_0030_Avalanche_bands_mode_vs_Spectral_avalanche_mode_today_n1` | `Avalanche_bands_mode` against `Spectral_avalanche_mode`, both hearing: today | 13 | 0:30, 20 s | 2026-11-27 | Same falling waterfall as Spectral Avalanche, but calm (the original strobes: up to 19.5 flashes a second), lit by bass low, mid middle, treble high, and flaring with a white front on every heard kick. Is it still an avalanche, and is the kick clear? |
+| `20_0160_Avalanche_bands_mode_vs_Spectral_avalanche_mode_today_n1` | `Avalanche_bands_mode` against `Spectral_avalanche_mode`, both hearing: today | 20 | 2:40, 24 s | 2026-11-27 | Same falling waterfall as Spectral Avalanche, but calm (the original strobes: up to 19.5 flashes a second), lit by bass low, mid middle, treble high, and flaring with a white front on every heard kick. Is it still an avalanche, and is the kick clear? |
+
+To judge them: start the clip page (`python -m research.choreography.clip_server`); they are listed first.
+If a clip is missing on this computer: `python -m research.choreography.nominate --rebuild`.

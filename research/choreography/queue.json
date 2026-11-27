@@ -31,5 +31,137 @@
   "duration_s": 24.0,
   "nominated": "2026-11-27",
   "note": "C01, Kick_bands_mode made safe: a full flash at most every 0.46 s. Does the kick still punch? Look at the hits between two flashes (a thin line, a sparkle) and at the zones, much dimmer than before."
+ },
+ {
+  "clip": "19_0208_Beat_blast_kick_mode_vs_Monolithic_beat_blast_mode_today_n1",
+  "mode": "Beat_blast_kick_mode",
+  "against": "Monolithic_beat_blast_mode",
+  "feed": "today",
+  "track": "19",
+  "start_s": 208.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "Same rings as Monolithic Beat Blast, but punched by the kick the analyzer hears (rationed, never 4 flashes a second), calm in breaks, bass at the core and treble at the rim. Which one shows the beat better?"
+ },
+ {
+  "clip": "13_0030_Beat_blast_kick_mode_vs_Monolithic_beat_blast_mode_today_n1",
+  "mode": "Beat_blast_kick_mode",
+  "against": "Monolithic_beat_blast_mode",
+  "feed": "today",
+  "track": "13",
+  "start_s": 30.0,
+  "duration_s": 20.0,
+  "nominated": "2026-11-27",
+  "note": "Same rings as Monolithic Beat Blast, but punched by the kick the analyzer hears (rationed, never 4 flashes a second), calm in breaks, bass at the core and treble at the rim. Which one shows the beat better?"
+ },
+ {
+  "clip": "20_0160_Beat_blast_kick_mode_vs_Monolithic_beat_blast_mode_today_n1",
+  "mode": "Beat_blast_kick_mode",
+  "against": "Monolithic_beat_blast_mode",
+  "feed": "today",
+  "track": "20",
+  "start_s": 160.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "Same rings as Monolithic Beat Blast, but punched by the kick the analyzer hears (rationed, never 4 flashes a second), calm in breaks, bass at the core and treble at the rim. Which one shows the beat better?"
+ },
+ {
+  "clip": "19_0208_Ripple_kick_mode_vs_Concentric_radial_ripple_mode_today_n1",
+  "mode": "Ripple_kick_mode",
+  "against": "Concentric_radial_ripple_mode",
+  "feed": "today",
+  "track": "19",
+  "start_s": 208.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "Same violet rings as Concentric Radial Ripple, but one ring and a white heart per heard kick, and a steady drift in breaks instead of pulsing on predicted beats. Is the kick clearer, and is the break right?"
+ },
+ {
+  "clip": "13_0030_Ripple_kick_mode_vs_Concentric_radial_ripple_mode_today_n1",
+  "mode": "Ripple_kick_mode",
+  "against": "Concentric_radial_ripple_mode",
+  "feed": "today",
+  "track": "13",
+  "start_s": 30.0,
+  "duration_s": 20.0,
+  "nominated": "2026-11-27",
+  "note": "Same violet rings as Concentric Radial Ripple, but one ring and a white heart per heard kick, and a steady drift in breaks instead of pulsing on predicted beats. Is the kick clearer, and is the break right?"
+ },
+ {
+  "clip": "20_0160_Ripple_kick_mode_vs_Concentric_radial_ripple_mode_today_n1",
+  "mode": "Ripple_kick_mode",
+  "against": "Concentric_radial_ripple_mode",
+  "feed": "today",
+  "track": "20",
+  "start_s": 160.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "Same violet rings as Concentric Radial Ripple, but one ring and a white heart per heard kick, and a steady drift in breaks instead of pulsing on predicted beats. Is the kick clearer, and is the break right?"
+ },
+ {
+  "clip": "19_0208_Band_vu_mode_vs_Architectural_vu_equalizer_mode_today_n1",
+  "mode": "Band_vu_mode",
+  "against": "Architectural_vu_equalizer_mode",
+  "feed": "today",
+  "track": "19",
+  "start_s": 208.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "A three-band equalizer instead of one column: bass red in the outer pillars and low bridges (punched white on each heard kick), middle amber in the inner pillars, treble cool white on the canopy. Can you read bass and treble apart, and is the kick clear?"
+ },
+ {
+  "clip": "13_0030_Band_vu_mode_vs_Architectural_vu_equalizer_mode_today_n1",
+  "mode": "Band_vu_mode",
+  "against": "Architectural_vu_equalizer_mode",
+  "feed": "today",
+  "track": "13",
+  "start_s": 30.0,
+  "duration_s": 20.0,
+  "nominated": "2026-11-27",
+  "note": "A three-band equalizer instead of one column: bass red in the outer pillars and low bridges (punched white on each heard kick), middle amber in the inner pillars, treble cool white on the canopy. Can you read bass and treble apart, and is the kick clear?"
+ },
+ {
+  "clip": "20_0160_Band_vu_mode_vs_Architectural_vu_equalizer_mode_today_n1",
+  "mode": "Band_vu_mode",
+  "against": "Architectural_vu_equalizer_mode",
+  "feed": "today",
+  "track": "20",
+  "start_s": 160.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "A three-band equalizer instead of one column: bass red in the outer pillars and low bridges (punched white on each heard kick), middle amber in the inner pillars, treble cool white on the canopy. Can you read bass and treble apart, and is the kick clear?"
+ },
+ {
+  "clip": "19_0208_Avalanche_bands_mode_vs_Spectral_avalanche_mode_today_n1",
+  "mode": "Avalanche_bands_mode",
+  "against": "Spectral_avalanche_mode",
+  "feed": "today",
+  "track": "19",
+  "start_s": 208.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "Same falling waterfall as Spectral Avalanche, but calm (the original strobes: up to 19.5 flashes a second), lit by bass low, mid middle, treble high, and flaring with a white front on every heard kick. Is it still an avalanche, and is the kick clear?"
+ },
+ {
+  "clip": "13_0030_Avalanche_bands_mode_vs_Spectral_avalanche_mode_today_n1",
+  "mode": "Avalanche_bands_mode",
+  "against": "Spectral_avalanche_mode",
+  "feed": "today",
+  "track": "13",
+  "start_s": 30.0,
+  "duration_s": 20.0,
+  "nominated": "2026-11-27",
+  "note": "Same falling waterfall as Spectral Avalanche, but calm (the original strobes: up to 19.5 flashes a second), lit by bass low, mid middle, treble high, and flaring with a white front on every heard kick. Is it still an avalanche, and is the kick clear?"
+ },
+ {
+  "clip": "20_0160_Avalanche_bands_mode_vs_Spectral_avalanche_mode_today_n1",
+  "mode": "Avalanche_bands_mode",
+  "against": "Spectral_avalanche_mode",
+  "feed": "today",
+  "track": "20",
+  "start_s": 160.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "Same falling waterfall as Spectral Avalanche, but calm (the original strobes: up to 19.5 flashes a second), lit by bass low, mid middle, treble high, and flaring with a white front on every heard kick. Is it still an avalanche, and is the kick clear?"
  }
 ]
