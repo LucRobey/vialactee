@@ -4,7 +4,7 @@
 > **Session ID:** `71d81268-3807-434b-a0b6-70555148b388`  
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Check whether the analyzer behaves on live sound (Spotify, aux) as it does on audio files, after noticing that the display loop runs at 30 and every lab tool steps the analyzer at 60.  
-> **Status:** COMPLETED (fault measured offline on 20 tracks; fixes A and B applied with the owner's approval and measured offline; not verified on the installation)  
+> **Status:** COMPLETED (fault measured offline on 20 tracks; fixes A and B applied with the owner's approval and measured offline; the owner then tried the installation and reported that everything looks good)  
 > **Commits:** `97676ee` (fix A), `4d6f024` (replay), `34bc82f` (fix B), `0a525b5` (replay with the display loop collecting) (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-dsp-engine`: states that the analyzer ticks at 60 Hz without saying who ticks it; nothing warns that the live connector leaves this to a 30 FPS loop.
@@ -79,7 +79,7 @@ Until the display loop calls `begin_display_frame()` once, every property shows 
 
 ## 6. Open Items & Next Steps
 
-* [ ] Owner: check both fixes by ear on the installation (Spotify or aux against an MP3 of the same song; modes that flash on the beat).
+* [x] Owner: check both fixes by ear on the installation. Done 2026-11-27: "everything looks good" (no detail on inputs and modes).
 * [ ] Make the scoreboard and the choreography lab read signals the way the display does (30 frames a second, `begin_display_frame`); today they read every tick.
 * [ ] A test caught that the bridged slots of `listener.signals` were built from held values and arrived one frame late; fixed, keep the test.
 * [ ] Count the modes that depend on one-frame flags.

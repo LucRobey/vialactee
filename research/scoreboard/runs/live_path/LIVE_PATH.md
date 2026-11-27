@@ -62,6 +62,8 @@ is again at the wrong speed. A is robust to a slow loop; this is not.
 
 ## What is not verified
 
+- **Update, 2026-11-27:** after fixes A and B the owner tried the installation and reported that everything looks
+  good. That is a judgement by eye and ear, with no detail on inputs and modes; the points below stay unmeasured.
 - Nothing was measured on the real installation, before or after the fix. The owner can check by ear: with
   Spotify or aux, the lights should now be as much on the beat as with an MP3 of the same song.
 - The fix was exercised offline only. The real sound card, its latency reports and the task's real pace were not.

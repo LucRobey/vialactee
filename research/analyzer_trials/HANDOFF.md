@@ -56,7 +56,12 @@ were the raw material for P1/P2.
 - 2026-11-27, pilot research cycle (log `work_history/2026-11-27_music_lab_pilot_cycle_bands_and_kick.md`):
   candidate `research/experiments/models/BandKickSlotsAudioAnalyzer.py` fills `band_bass` / `band_mid` /
   `band_high` (83 / 89 / 93), `kick` (80) and `kick_present` (85); gate passed; run folder
-  `research/scoreboard/runs/2026-11-27_bands_kick/` with `PROPOSAL.md` for the owner. Nothing promoted to `music/`.
+  `research/scoreboard/runs/2026-11-27_bands_kick/` with `PROPOSAL.md` for the owner. **Promoted the same day with
+  the owner's approval:** the five signals are now written by the production `DyadicMetricalAudioAnalyzer` through
+  `music/BandKickSignals.py` (`MusicSignals.PRODUCED`, status `produced` in `config/music_signals.json`); scores
+  identical to the pilot's; the candidate file is kept as an empty alias. No mode reads them yet, the owner has
+  not rated them, and their cost on the Raspberry Pi is not measured. Log:
+  `work_history/2026-11-27_band_and_kick_signals_promoted.md`.
   The scoreboard now runs any candidate (`--model NAME --out runs/<run>`), and `research/scoreboard/compare.py`
   writes the before/after and the gate.
 - 2026-11-27, the choreography lab exists as a first slice (`research/choreography/`, its `README.md`, log
@@ -69,10 +74,11 @@ were the raw material for P1/P2.
   analyzer at 30 instead of 60: beats 77 to 22 on the 20 tracks in an offline replay. `connectors/Local_Microphone.py`
   now ticks it by the audio (80 through the real connector). **Fix B also applied:** a 30 FPS reader saw only half of
   the one-frame signals, on every input; the `Listener` now holds them and `core/Mode_master.py` collects them once
-  per frame (`listener.begin_display_frame()`, contract section 1.1): 100% seen, beats as displayed 79. The owner
-  still has to check both by ear on the installation. Read `research/scoreboard/runs/live_path/LIVE_PATH.md` (result and
-  fixes A and B) and `work_history/2026-11-27_live_sound_path_runs_analyzer_at_half_rate.md`. Not verified
-  on the installation; the owner uses Spotify, aux and MP3 files.
+  per frame (`listener.begin_display_frame()`, contract section 1.1): 100% seen, beats as displayed 79. **The owner
+  tried the installation the same day and reported that everything looks good** (no detail on which inputs and
+  modes). Read `research/scoreboard/runs/live_path/LIVE_PATH.md` (result and
+  fixes A and B) and `work_history/2026-11-27_live_sound_path_runs_analyzer_at_half_rate.md`. The owner uses
+  Spotify, aux and MP3 files.
 - Four fixes from a research pass are in the choreography lab: perceived brightness, 60 fps timing, a flash-safety
   count, false-flash counts and a wrong-on-purpose control version.
 - **Next**: the owner watches and chooses; then tune the mode, the kick or the measure according to the
