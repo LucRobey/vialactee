@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "choreography-clips",
+      "runtimeExecutable": "research/analyzer_trials/.venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "research.choreography.clip_server"],
+      "port": 8768
+    },
+    {
       "name": "truth-review",
       "runtimeExecutable": "research/analyzer_trials/.venv/Scripts/python.exe",
       "runtimeArgs": ["-m", "research.truth.review_server"],

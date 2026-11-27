@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choreography clips</title>
+<style>
+  :root { --bg:#0b0d11; --panel:#151920; --line:#2a303a; --text:#e6e9ee; --dim:#8b94a3; --hot:#ffd166; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui,"Segoe UI",sans-serif; }
+  main { max-width:1500px; margin:0 auto; padding:14px 16px 40px; }
+  h1 { font-size:16px; margin:0 0 10px; font-weight:600; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; margin-bottom:10px; }
+  select, button { font:inherit; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 10px; }
+  button { cursor:pointer; } button:disabled { opacity:.5; cursor:default; }
+  button#play { min-width:86px; font-weight:600; }
+  label { color:var(--dim); display:inline-flex; align-items:center; gap:6px; }
+  #info { color:var(--dim); margin:0 0 10px; }
+  .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px; }
+  .card.best { border-color:var(--hot); }
+  .card h2 { font-size:15px; margin:0 0 6px; display:flex; justify-content:space-between; gap:8px; }
+  .card h2 small { color:var(--dim); font-weight:400; font-size:12px; }
+  canvas { display:block; width:100%; background:#000; border-radius:6px; }
+  .pick { width:100%; margin-top:8px; font-weight:600; }
+  .what { color:var(--dim); font-size:12px; min-height:3.2em; margin-top:6px; }
+  #scrub { width:100%; margin:10px 0 2px; }
+  #verdict { margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  #said { color:var(--hot); }
+  .note { color:var(--dim); margin-top:14px; }
+  @media (max-width: 900px) { .grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Choreography clips: the same passage, the same mode, three ways of hearing the music</h1>
+  <div class="bar">
+    <select id="clip" aria-label="Clip"></select>
+    <button id="play" disabled>Play</button>
+    <label><input type="checkbox" id="loop" checked> loop</label>
+    <label><input type="checkbox" id="hide" checked> hide which is which until I choose</label>
+    <span id="time" style="font-variant-numeric:tabular-nums"></span>
+  </div>
+  <p id="info">Loading…</p>
+  <div class="grid" id="grid"></div>
+  <input id="scrub" type="range" min="0" max="1" step="0.001" value="0">
+  <div id="verdict">
+    <button id="nodiff">No real difference</button>
+    <span id="said"></span>
+  </div>
+  <p class="note">
+    <b>Space</b> plays and pauses. Watch the three versions, then press the button under the one that looks best with the music.
+    Your choice is saved; after choosing you are told which version was which, with its numbers.
+    This is a drawing of the installation on a screen: brightness, colours and the room are not the real thing.
+  </p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const NAMES = ['A', 'B', 'C'];
+let ctx, gain, buffer = null, source = null, playing = false, startCtx = 0, startOffset = 0;
+let layout = null, clips = [], clip = null, order = [], frames = {}, revealed = false, loadToken = 0, cards = [];
+
+function ensureCtx() { if (!ctx) { ctx = new AudioContext(); gain = ctx.createGain(); gain.connect(ctx.destination); } }
+function now() { if (!playing) return startOffset; return Math.min(buffer.duration, startOffset + (ctx.currentTime - startCtx)); }
+function start() {
+  source = ctx.createBufferSource(); source.buffer = buffer; source.connect(gain);
+  const mine = source;
+  source.onended = () => { if (source !== mine || !playing) return; playing = false; startOffset = 0; if ($('loop').checked) start(); else $('play').textContent = 'Play'; };
+  startCtx = ctx.currentTime + 0.05; source.start(startCtx, startOffset); playing = true; $('play').textContent = 'Pause';
+}
+function stop() { if (!playing) return; startOffset = now(); playing = false; try { source.stop(); } catch (e) {} $('play').textContent = 'Play'; }
+async function toggle() { if (!buffer) return; if (playing) stop(); else { await ctx.resume(); if (startOffset >= buffer.duration - 0.05) startOffset = 0; start(); } }
+function seek(t) { const was = playing; if (was) stop(); startOffset = Math.max(0, Math.min(buffer.duration - 0.01, t)); if (was) start(); }
+
+function shuffle(a) { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; }
+function fit(c) { const w = c.clientWidth, h = Math.round(w * 250 / 440), r = window.devicePixelRatio || 1; c.width = Math.round(w * r); c.height = Math.round(h * r); c.style.height = h + 'px'; const g = c.getContext('2d'); g.setTransform(r, 0, 0, r, 0, 0); return [g, w, h]; }
+
+function buildCards() {
+  const grid = $('grid'); grid.innerHTML = ''; cards = [];
+  order.forEach((key, i) => {
+    const feed = clip.feeds.find(f => f.key === key), d = document.createElement('div'); d.className = 'card';
+    d.innerHTML = `<h2><span class="title"></span><small class="num"></small></h2><canvas></canvas><div class="what"></div><button class="pick"></button>`;
+    grid.appendChild(d);
+    const canvas = d.querySelector('canvas'); const [g, w, h] = fit(canvas);
+    d.querySelector('.pick').onclick = () => choose(NAMES[i], key);
+    cards.push({ el: d, key, feed, g, w, h });
+  });
+  $('nodiff').disabled = false;
+  labelCards();
+}
+function labelCards() {
+  const hidden = $('hide').checked && !revealed;
+  cards.forEach((c, i) => {
+    c.el.querySelector('.title').textContent = hidden ? 'Version ' + NAMES[i] : NAMES[i] + ' · ' + c.feed.label;
+    const kp = c.feed.measures.kick_punch;
+    c.el.querySelector('.num').textContent = hidden || kp.contrast == null ? '' : 'kick punch ' + Math.round(100 * kp.contrast);
+    c.el.querySelector('.what').textContent = hidden ? '' : c.feed.text + '.';
+    c.el.querySelector('.pick').textContent = NAMES[i] + ' looks best';
+  });
+}
+async function choose(name, key) {
+  const hidden = $('hide').checked && !revealed;
+  const body = { clip: clip.id, choice: name, order, chosen_feed: key, labels_hidden: hidden };
+  try {
+    const r = await fetch('/api/verdict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(r.status);
+    revealed = true; labelCards();
+    cards.forEach(c => c.el.classList.toggle('best', c.key === key));
+    $('said').textContent = name === 'none' ? 'Saved: no real difference.' : `Saved: you chose ${name}, which was "${clip.feeds.find(f => f.key === key).label}".`;
+  } catch (e) { $('said').textContent = 'NOT SAVED (' + e.message + ')'; }
+}
+
+async function loadClip(id) {
+  const token = ++loadToken; if (playing) stop();
+  $('play').disabled = true; buffer = null; revealed = false; $('said').textContent = ''; startOffset = 0;
+  clip = clips.find(c => c.id === id); order = shuffle(clip.feeds.map(f => f.key)); frames = {};
+  $('info').textContent = 'Loading…'; ensureCtx();
+  const loads = clip.feeds.map(f => fetch(`/clips/${clip.id}/${f.file}`).then(r => r.arrayBuffer()).then(b => { frames[f.key] = new Uint8Array(b); }));
+  const audio = fetch(`/clips/${clip.id}/audio.wav`).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b));
+  const [buf] = await Promise.all([audio, ...loads]);
+  if (token !== loadToken) return;
+  buffer = buf;
+  const s = clip.start_s, m = Math.floor(s / 60);
+  $('info').textContent = `${clip.track.file.replace(/\.mp3$/, '')} · from ${m}:${String(Math.floor(s - m * 60)).padStart(2, '0')}, ${clip.duration_s} s · mode ${clip.mode} · built ${clip.built}`;
+  buildCards(); $('play').disabled = false;
+}
+
+function draw() {
+  requestAnimationFrame(draw);
+  if (!buffer || !clip || !layout) return;
+  const t = Math.max(0, now() - (playing ? (ctx.outputLatency || 0) : 0)), xy = layout.xy, n = clip.leds;
+  for (const c of cards) {
+    const data = frames[c.key]; if (!data) continue;
+    const f = Math.min(c.feed.frames - 1, Math.floor(t * clip.fps)), base = f * n * 3, g = c.g, sx = c.w / 440, sy = c.h / 250;
+    g.fillStyle = '#000'; g.fillRect(0, 0, c.w, c.h);
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < n; i++) {
+      const r = data[base + i * 3], gr = data[base + i * 3 + 1], b = data[base + i * 3 + 2];
+      if (r + gr + b < 6) continue;
+      g.fillStyle = `rgb(${r},${gr},${b})`;
+      g.fillRect(4 + xy[i][0] * sx - 1.6, 2 + xy[i][1] * sy - 1.6, 3.2, 3.2);
+    }
+    g.globalCompositeOperation = 'source-over';
+  }
+  $('time').textContent = t.toFixed(1) + ' / ' + buffer.duration.toFixed(0) + ' s';
+  if (document.activeElement !== $('scrub')) $('scrub').value = t / buffer.duration;
+}
+
+$('play').onclick = e => { e.target.blur(); toggle(); };
+$('clip').onchange = e => { e.target.blur(); loadClip(e.target.value); };
+$('hide').onchange = () => labelCards();
+$('nodiff').onclick = () => choose('none', null);
+$('scrub').oninput = e => { if (buffer) seek(+e.target.value * buffer.duration); };
+addEventListener('keydown', e => { if (e.code === 'Space' && document.activeElement.tagName !== 'SELECT') { e.preventDefault(); toggle(); } });
+addEventListener('resize', () => { if (clip) cards.forEach(c => { [c.g, c.w, c.h] = fit(c.el.querySelector('canvas')); }); });
+
+(async () => {
+  [layout, clips] = await Promise.all([fetch('/api/layout').then(r => r.json()), fetch('/api/clips').then(r => r.json())]);
+  if (!clips.length) { $('info').textContent = 'No clip yet. Build some with build_clips.py.'; return; }
+  for (const c of clips) { const o = document.createElement('option'); o.value = c.id; const m = Math.floor(c.start_s / 60);
+    o.textContent = `${c.track.file.replace(/\.mp3$/, '').slice(0, 40)} · ${m}:${String(Math.floor(c.start_s - m * 60)).padStart(2, '0')} · ${c.mode}`; $('clip').appendChild(o); }
+  requestAnimationFrame(draw); loadClip(clips[0].id);
+})();
+</script>
+</body>
+</html>
