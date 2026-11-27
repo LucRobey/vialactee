@@ -67,8 +67,10 @@ were the raw material for P1/P2.
   (numbers, sentences, and stills it can open). Read `output/profiles/<clip>/PROFILE.md` after building clips.
 - **FAULT FOUND AND FIX A APPLIED (2026-11-27):** on live sound (Spotify, aux) the display loop ticked the
   analyzer at 30 instead of 60: beats 77 to 22 on the 20 tracks in an offline replay. `connectors/Local_Microphone.py`
-  now ticks it by the audio (80 through the real connector). Still open, waiting for the owner: fix B, because a
-  30 FPS reader sees only half of the one-frame beat flags, on every input. Read `research/scoreboard/runs/live_path/LIVE_PATH.md` (result and
+  now ticks it by the audio (80 through the real connector). **Fix B also applied:** a 30 FPS reader saw only half of
+  the one-frame signals, on every input; the `Listener` now holds them and `core/Mode_master.py` collects them once
+  per frame (`listener.begin_display_frame()`, contract section 1.1): 100% seen, beats as displayed 79. The owner
+  still has to check both by ear on the installation. Read `research/scoreboard/runs/live_path/LIVE_PATH.md` (result and
   fixes A and B) and `work_history/2026-11-27_live_sound_path_runs_analyzer_at_half_rate.md`. Not verified
   on the installation; the owner uses Spotify, aux and MP3 files.
 - Four fixes from a research pass are in the choreography lab: perceived brightness, 60 fps timing, a flash-safety

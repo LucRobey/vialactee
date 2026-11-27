@@ -4,7 +4,7 @@
 > **Session ID:** `71d81268-3807-434b-a0b6-70555148b388`  
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Check whether the analyzer behaves on live sound (Spotify, aux) as it does on audio files, after noticing that the display loop runs at 30 and every lab tool steps the analyzer at 60.  
-> **Status:** COMPLETED (fault measured offline on 20 tracks; fix A applied with the owner's approval and measured offline; not verified on the installation; fix B not applied)  
+> **Status:** COMPLETED (fault measured offline on 20 tracks; fixes A and B applied with the owner's approval and measured offline; not verified on the installation)  
 > **Commits:** `97676ee` (fix A), `4d6f024` (replay) (pushed: no)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-dsp-engine`: states that the analyzer ticks at 60 Hz without saying who ticks it; nothing warns that the live connector leaves this to a 30 FPS loop.
@@ -29,14 +29,22 @@
 * **[MODIFY]** [`docs/architecture/audio_pipeline.md`](../docs/architecture/audio_pipeline.md) (section 1.1, who advances the analyzer) and the `vialactee-dsp-engine` skill (one rule).
 * **[MODIFY]** `research/scoreboard/live_path.py`: a `connector` road that drives the real `Local_Microphone` class.
 
-No change to `music/` or `core/`.
+### Fix B, applied after the owner's approval
+* **[MODIFY]** [`music/MusicSignals.py`](../music/MusicSignals.py): `EVENTS`, `FLAGS` and `DisplayHold`, which remembers after each tick the one-frame signals that fired and publishes them once per display frame.
+* **[MODIFY]** [`music/Listener.py`](../music/Listener.py): `begin_display_frame()`; `_tick(name)` (the value on the current tick) and `_flag(name)` (held value once the display runs); the seven one-frame properties and `signals` go through them; `_bridge_signals` reads tick values. 433 to 465 lines.
+* **[MODIFY]** [`music/MusicalContextEngine.py`](../music/MusicalContextEngine.py): its per-tick logic reads the tick value (`_now`); `is_real_beat` and `is_drop_impact` are held the same way.
+* **[MODIFY]** [`core/Mode_master.py`](../core/Mode_master.py): calls `listener.begin_display_frame()` once per frame, after the listener block and before the modes draw.
+* **[MODIFY]** [`docs/contracts/music_analyzer_contract.md`](../docs/contracts/music_analyzer_contract.md): section 1.1, door 3 and the attribute table.
+* **[NEW]** [`tests/test_listener_display_hold.py`](../tests/test_listener_display_hold.py) (9 tests) and [`tests/test_mode_master_display_frame.py`](../tests/test_mode_master_display_frame.py) (2 tests).
+
+Until the display loop calls `begin_display_frame()` once, every property shows the tick value: benchmarks, studios and tests that read after each tick are unchanged.
 
 ---
 
 ## 3. Verification & Testing
 
 * **Command**: `python -m pytest -q`
-  * **Result**: 707 passed, 5 deselected, 406 subtests passed (701 before fix A).
+  * **Result**: 718 passed, 5 deselected, 409 subtests passed (701 before fix A, 707 before fix B).
 * **Replay, 20 tracks, production analyzer** (0 to 100):
 
 | Road | Beats | Tempo | One-frame flags seen at 30 fps | Beats as the display sees them |
@@ -44,7 +52,8 @@ No change to `music/` or `core/`.
 | Audio file, and every lab tool | 77 | 67 | 48% | 51 |
 | Spotify or aux, as written | 22 | 58 | 100% | 22 |
 | Spotify or aux, loop at 60 | 79 | 68 | 100% | 79 |
-| **Spotify or aux through the real connector after fix A** | **80** | **67** | 50% | 55 |
+| Spotify or aux through the real connector after fix A | 80 | 67 | 50% | 55 |
+| **The same with the display loop collecting (fix B): the installation now** | **80** | **67** | **100%** | **79** |
 | Analyzer ticked by the audio (replay of the idea) | 78 | 67 | 49% | 52 |
 | The same, flags held until read | 78 | 67 | 100% | 78 |
 
@@ -70,6 +79,7 @@ No change to `music/` or `core/`.
 
 ## 6. Open Items & Next Steps
 
-* [ ] Owner: check fix A by ear on the installation (Spotify or aux against an MP3 of the same song).
-* [ ] Owner: decide on fix B (hold one-frame signals for the display loop; touches `music/Listener.py` and `core/Mode_master.py`); then make the scoreboard and the choreography lab read signals the way the display will.
+* [ ] Owner: check both fixes by ear on the installation (Spotify or aux against an MP3 of the same song; modes that flash on the beat).
+* [ ] Make the scoreboard and the choreography lab read signals the way the display does (30 frames a second, `begin_display_frame`); today they read every tick.
+* [ ] A test caught that the bridged slots of `listener.signals` were built from held values and arrived one frame late; fixed, keep the test.
 * [ ] Count the modes that depend on one-frame flags.
