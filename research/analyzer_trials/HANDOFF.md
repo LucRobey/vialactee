@@ -49,8 +49,18 @@ were the raw material for P1/P2.
   `listener.signals` (`music/MusicSignals.py`, 36 slots, `None` until produced, 8 bridged from existing signals),
   the list in `config/music_signals.json`, section 6 of `docs/contracts/music_analyzer_contract.md`, and parity
   tests. Log: `work_history/2026-11-25_truth_mirrored_signal_contract.md`.
-- **Next (agreed with the owner)**: the scoreboard. Run the production `Listener` with the 5 s look-ahead on the
-  20 tracks and grade every slot of `listener.signals` against its truth value; mark provisional lines.
+- **The scoreboard exists**: `research/scoreboard/` (`SCOREBOARD.md`, log
+  `work_history/2026-11-25_first_scoreboard_against_truth.md`). Production model: beat 77, tempo 67 (double 25%
+  of the time), silence 98, loudness 66, brightness 20, section change never fires (the verse / chorus branch of
+  `music/StructuralNoveltyDetector.py` is unreachable). Cheap candidates: the four bands, kick from the low band.
+- 2026-11-27, pilot research cycle (log `work_history/2026-11-27_music_lab_pilot_cycle_bands_and_kick.md`):
+  candidate `research/experiments/models/BandKickSlotsAudioAnalyzer.py` fills `band_bass` / `band_mid` /
+  `band_high` (83 / 89 / 93), `kick` (80) and `kick_present` (85); gate passed; run folder
+  `research/scoreboard/runs/2026-11-27_bands_kick/` with `PROPOSAL.md` for the owner. Nothing promoted to `music/`.
+  The scoreboard now runs any candidate (`--model NAME --out runs/<run>`), and `research/scoreboard/compare.py`
+  writes the before/after and the gate.
+- **Next**: the owner reads the proposal. Recommended: the thin slice of the choreography lab, so the owner sees
+  the kick drive a light before any trust level is set. Lab gaps found by the pilot are listed in that log.
 - **In parallel**: the owner reviews tracks in the tool. Then techno tracks to add to the 20 (the owner was asked to
   pick some), SongFormer for sections, and a rule for drops and build-ups.
 
