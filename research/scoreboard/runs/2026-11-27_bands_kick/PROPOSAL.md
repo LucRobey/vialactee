@@ -1,5 +1,10 @@
 # Proposal to the owner: five new signals (pilot cycle of the music lab, 2026-11-27)
 
+> **Decision, 2026-11-27: approved by the owner.** The five signals were moved into the production analyzer
+> (`music/BandKickSignals.py`, called by `DyadicMetricalAudioAnalyzer`); the scores of the production model are
+> now exactly those of the candidate below. Still open from this page: no mode has shown them to the owner, they
+> are not rated, and the cost on the Raspberry Pi is not measured.
+
 ## What is proposed
 
 A candidate analyzer, `BandKickSlotsAudioAnalyzer` (`research/experiments/models/`), that is the production

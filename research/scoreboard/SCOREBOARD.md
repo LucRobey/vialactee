@@ -1,6 +1,6 @@
 # Scoreboard: the live analyzer against the source of truth
 
-Built 2026-11-25 by `research/scoreboard/scoreboard.py`. 20 tracks, each played through the production `Listener` with the 5 s look-ahead. Every signal is read at speaker time from `listener.signals` and compared with the truth value it mirrors (`config/music_signals.json`).
+Built 2026-11-27 by `research/scoreboard/scoreboard.py`. 20 tracks, each played through the production `Listener` with the 5 s look-ahead. Every signal is read at speaker time from `listener.signals` and compared with the truth value it mirrors (`config/music_signals.json`).
 
 How to read the numbers (all from 0 to 100, averaged over the tracks):
 
@@ -15,22 +15,27 @@ How to read the numbers (all from 0 to 100, averaged over the tracks):
 
 *the model running on the installation*
 
-### The 8 signals it produces today
+### The 13 signals it produces today
 
 | Signal | On checked truth | tracks | On all truth | tracks | What happens |
 |---|---|---|---|---|---|
 | beat | 77 | 20 | 77 | 20 | finds 86% of them; 72% of what it reports is real; typically 17 ms early |
 | bpm | 67 | 20 | 67 | 20 | double tempo 25% of the time, half tempo 1% |
+| kick | 80 | 20 | 81 | 20 | finds 85% of them; 79% of what it reports is real; typically 21 ms late |
+| kick_present | 85 | 19 | 85 | 20 | right 99% of the time while it is on, 71% while it is off; edges 0.2 s early |
 | drop | - | 0 | 5 | 6 | finds 8% of them; 1% of what it reports is real; typically 350 ms early |
 | section_change | - | 0 | 0 | 20 | it never fires on these tracks |
 | buildup | - | 0 | - | 0 | the truth has none on these tracks; the signal is on 8% of the time |
 | silence | 98 | 19 | 98 | 19 | right 99% of the time while it is on, 97% while it is off; edges 1.4 s early |
 | loudness | 66 | 20 | 66 | 20 | 25 ms early |
+| band_bass | 83 | 20 | 83 | 20 | 0 ms early |
+| band_mid | 89 | 20 | 89 | 20 | 0 ms early |
+| band_high | 93 | 20 | 93 | 20 | 0 ms early |
 | brightness | 20 | 20 | 20 | 20 | 100 ms early |
 
-### The 28 empty slots
+### The 23 empty slots
 
-Nothing produces these yet, so there is nothing to grade: `no_beat`, `bar_position`, `beats_per_bar`, `beat_strength`, `kick`, `snare`, `hat`, `tom`, `cymbal`, `kick_present`, `kick_level`, `breakdown`, `riser`, `bass_present`, `drums_present`, `vocal_present`, `other_present`, `bass_level`, `drums_level`, `vocal_level`, `other_level`, `layers`, `band_sub`, `band_bass`, `band_mid`, `band_high`, `fullness`, `chord`.
+Nothing produces these yet, so there is nothing to grade: `no_beat`, `bar_position`, `beats_per_bar`, `beat_strength`, `snare`, `hat`, `tom`, `cymbal`, `kick_level`, `breakdown`, `riser`, `bass_present`, `drums_present`, `vocal_present`, `other_present`, `bass_level`, `drums_level`, `vocal_level`, `other_level`, `layers`, `band_sub`, `fullness`, `chord`.
 
 ### Existing signals tried as candidates for an empty slot
 

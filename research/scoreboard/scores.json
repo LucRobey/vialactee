@@ -1,5 +1,5 @@
 {
- "built": "2026-11-25",
+ "built": "2026-11-27",
  "lookahead_s": 5.0,
  "models": {
   "DyadicMetricalAudioAnalyzer": {
@@ -51,10 +51,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9311,
+      "all": 0.9296,
+      "detail": {
+       "found": 0.914,
+       "right": 0.9456,
+       "offset_ms": 16.6667,
+       "n_truth": 628,
+       "n_est": 607
+      }
      },
      "snare": {
       "produced": false,
@@ -81,10 +87,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8076,
+      "all": 0.8076,
+      "detail": {
+       "balanced": 0.8076,
+       "when_on": 0.999,
+       "when_off": 0.6162,
+       "share_on_truth": 0.8813,
+       "edge_delay_s": -0.1583,
+       "edges_found": 2
+      }
      },
      "kick_level": {
       "produced": false,
@@ -224,22 +237,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7091,
+      "all": 0.7091,
+      "detail": {
+       "corr": 0.7091,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7871,
+      "all": 0.7871,
+      "detail": {
+       "corr": 0.7871,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8665,
+      "all": 0.8665,
+      "detail": {
+       "corr": 0.8665,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -386,7 +408,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5877
    },
    "02": {
     "signals": {
@@ -436,10 +459,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7885,
+      "all": 0.7504,
+      "detail": {
+       "found": 0.8281,
+       "right": 0.686,
+       "offset_ms": 20.0,
+       "n_truth": 285,
+       "n_est": 344
+      }
      },
      "snare": {
       "produced": false,
@@ -466,10 +495,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8809,
+      "all": 0.8809,
+      "detail": {
+       "balanced": 0.8809,
+       "when_on": 0.9961,
+       "when_off": 0.7658,
+       "share_on_truth": 0.7729,
+       "edge_delay_s": -0.1417,
+       "edges_found": 4
+      }
      },
      "kick_level": {
       "produced": false,
@@ -609,22 +645,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8196,
+      "all": 0.8196,
+      "detail": {
+       "corr": 0.8196,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7176,
+      "all": 0.7176,
+      "detail": {
+       "corr": 0.7176,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8178,
+      "all": 0.8178,
+      "detail": {
+       "corr": 0.8178,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -771,7 +816,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5804
    },
    "03": {
     "signals": {
@@ -821,10 +867,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6595,
+      "all": 0.6477,
+      "detail": {
+       "found": 0.7443,
+       "right": 0.5733,
+       "offset_ms": 20.0,
+       "n_truth": 352,
+       "n_est": 457
+      }
      },
      "snare": {
       "produced": false,
@@ -851,10 +903,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
+      "produced": true,
       "checked": null,
-      "all": null,
-      "detail": {}
+      "all": 0.8355,
+      "detail": {
+       "balanced": 0.8355,
+       "when_on": 0.9958,
+       "when_off": 0.6752,
+       "share_on_truth": 0.9352,
+       "edge_delay_s": -0.325,
+       "edges_found": 4
+      }
      },
      "kick_level": {
       "produced": false,
@@ -994,22 +1053,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9461,
+      "all": 0.9461,
+      "detail": {
+       "corr": 0.9461,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.917,
+      "all": 0.917,
+      "detail": {
+       "corr": 0.917,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.964,
+      "all": 0.964,
+      "detail": {
+       "corr": 0.964,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -1156,7 +1224,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5845
    },
    "04": {
     "signals": {
@@ -1206,10 +1275,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9479,
+      "all": 0.9479,
+      "detail": {
+       "found": 1.0,
+       "right": 0.901,
+       "offset_ms": 13.3333,
+       "n_truth": 264,
+       "n_est": 293
+      }
      },
      "snare": {
       "produced": false,
@@ -1236,10 +1311,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8546,
+      "all": 0.8546,
+      "detail": {
+       "balanced": 0.8546,
+       "when_on": 0.9937,
+       "when_off": 0.7155,
+       "share_on_truth": 0.8146,
+       "edge_delay_s": -0.2833,
+       "edges_found": 7
+      }
      },
      "kick_level": {
       "produced": false,
@@ -1379,22 +1461,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.799,
+      "all": 0.799,
+      "detail": {
+       "corr": 0.799,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8779,
+      "all": 0.8779,
+      "detail": {
+       "corr": 0.8779,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9256,
+      "all": 0.9256,
+      "detail": {
+       "corr": 0.9256,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -1541,7 +1632,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.581
    },
    "05": {
     "signals": {
@@ -1591,10 +1683,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9512,
+      "all": 0.9526,
+      "detail": {
+       "found": 0.9273,
+       "right": 0.9793,
+       "offset_ms": 16.6667,
+       "n_truth": 715,
+       "n_est": 677
+      }
      },
      "snare": {
       "produced": false,
@@ -1621,10 +1719,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6374,
+      "all": 0.6374,
+      "detail": {
+       "balanced": 0.6374,
+       "when_on": 1.0,
+       "when_off": 0.2748,
+       "share_on_truth": 0.9428,
+       "edge_delay_s": 0.0,
+       "edges_found": 1
+      }
      },
      "kick_level": {
       "produced": false,
@@ -1764,22 +1869,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9144,
+      "all": 0.9144,
+      "detail": {
+       "corr": 0.9144,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8748,
+      "all": 0.8748,
+      "detail": {
+       "corr": 0.8748,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9443,
+      "all": 0.9443,
+      "detail": {
+       "corr": 0.9443,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -1926,7 +2040,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5853
    },
    "06": {
     "signals": {
@@ -1976,10 +2091,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6923,
+      "all": 0.7075,
+      "detail": {
+       "found": 0.8254,
+       "right": 0.619,
+       "offset_ms": 16.6667,
+       "n_truth": 252,
+       "n_est": 336
+      }
      },
      "snare": {
       "produced": false,
@@ -2006,10 +2127,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9191,
+      "all": 0.9191,
+      "detail": {
+       "balanced": 0.9191,
+       "when_on": 0.9813,
+       "when_off": 0.8568,
+       "share_on_truth": 0.523,
+       "edge_delay_s": -0.3667,
+       "edges_found": 11
+      }
      },
      "kick_level": {
       "produced": false,
@@ -2149,22 +2277,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7869,
+      "all": 0.7869,
+      "detail": {
+       "corr": 0.7869,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8781,
+      "all": 0.8781,
+      "detail": {
+       "corr": 0.8781,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9033,
+      "all": 0.9033,
+      "detail": {
+       "corr": 0.9033,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -2311,7 +2448,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.6123
    },
    "07": {
     "signals": {
@@ -2361,10 +2499,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6289,
+      "all": 0.5898,
+      "detail": {
+       "found": 0.45,
+       "right": 0.8555,
+       "offset_ms": 16.6667,
+       "n_truth": 500,
+       "n_est": 263
+      }
      },
      "snare": {
       "produced": false,
@@ -2391,10 +2535,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7247,
+      "all": 0.7247,
+      "detail": {
+       "balanced": 0.7247,
+       "when_on": 0.8702,
+       "when_off": 0.5791,
+       "share_on_truth": 0.8718,
+       "edge_delay_s": -0.2833,
+       "edges_found": 9
+      }
      },
      "kick_level": {
       "produced": false,
@@ -2534,22 +2685,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8791,
+      "all": 0.8791,
+      "detail": {
+       "corr": 0.8791,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8592,
+      "all": 0.8592,
+      "detail": {
+       "corr": 0.8592,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8776,
+      "all": 0.8776,
+      "detail": {
+       "corr": 0.8776,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -2696,7 +2856,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.6004
    },
    "08": {
     "signals": {
@@ -2746,10 +2907,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6587,
+      "all": 0.7184,
+      "detail": {
+       "found": 0.6942,
+       "right": 0.7443,
+       "offset_ms": 26.6667,
+       "n_truth": 520,
+       "n_est": 485
+      }
      },
      "snare": {
       "produced": false,
@@ -2776,10 +2943,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6317,
+      "all": 0.6317,
+      "detail": {
+       "balanced": 0.6317,
+       "when_on": 0.9957,
+       "when_off": 0.2676,
+       "share_on_truth": 0.9259,
+       "edge_delay_s": -0.325,
+       "edges_found": 4
+      }
      },
      "kick_level": {
       "produced": false,
@@ -2919,22 +3093,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9709,
+      "all": 0.9709,
+      "detail": {
+       "corr": 0.9709,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.921,
+      "all": 0.921,
+      "detail": {
+       "corr": 0.921,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9702,
+      "all": 0.9702,
+      "detail": {
+       "corr": 0.9702,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -3081,7 +3264,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.6189
    },
    "09": {
     "signals": {
@@ -3131,10 +3315,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7645,
+      "all": 0.7539,
+      "detail": {
+       "found": 0.7424,
+       "right": 0.7658,
+       "offset_ms": 23.3333,
+       "n_truth": 458,
+       "n_est": 444
+      }
      },
      "snare": {
       "produced": false,
@@ -3161,10 +3351,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9268,
+      "all": 0.9268,
+      "detail": {
+       "balanced": 0.9268,
+       "when_on": 0.9971,
+       "when_off": 0.8566,
+       "share_on_truth": 0.9303,
+       "edge_delay_s": -0.3167,
+       "edges_found": 4
+      }
      },
      "kick_level": {
       "produced": false,
@@ -3304,22 +3501,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9537,
+      "all": 0.9537,
+      "detail": {
+       "corr": 0.9537,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9419,
+      "all": 0.9419,
+      "detail": {
+       "corr": 0.9419,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9364,
+      "all": 0.9364,
+      "detail": {
+       "corr": 0.9364,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -3466,7 +3672,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.6186
    },
    "10": {
     "signals": {
@@ -3516,10 +3723,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6219,
+      "all": 0.7009,
+      "detail": {
+       "found": 0.6972,
+       "right": 0.7046,
+       "offset_ms": 30.0,
+       "n_truth": 284,
+       "n_est": 281
+      }
      },
      "snare": {
       "produced": false,
@@ -3546,10 +3759,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.917,
+      "all": 0.917,
+      "detail": {
+       "balanced": 0.917,
+       "when_on": 0.9951,
+       "when_off": 0.839,
+       "share_on_truth": 0.6352,
+       "edge_delay_s": -0.0083,
+       "edges_found": 10
+      }
      },
      "kick_level": {
       "produced": false,
@@ -3689,22 +3909,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8616,
+      "all": 0.8616,
+      "detail": {
+       "corr": 0.8616,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7859,
+      "all": 0.7859,
+      "detail": {
+       "corr": 0.7859,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9547,
+      "all": 0.9547,
+      "detail": {
+       "corr": 0.9547,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -3851,7 +4080,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.6228
    },
    "11": {
     "signals": {
@@ -3901,10 +4131,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7824,
+      "all": 0.7896,
+      "detail": {
+       "found": 0.9441,
+       "right": 0.6786,
+       "offset_ms": 23.3333,
+       "n_truth": 161,
+       "n_est": 224
+      }
      },
      "snare": {
       "produced": false,
@@ -3931,10 +4167,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7568,
+      "all": 0.7568,
+      "detail": {
+       "balanced": 0.7568,
+       "when_on": 0.9884,
+       "when_off": 0.5253,
+       "share_on_truth": 0.584,
+       "edge_delay_s": -0.3333,
+       "edges_found": 9
+      }
      },
      "kick_level": {
       "produced": false,
@@ -4074,22 +4317,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6066,
+      "all": 0.6066,
+      "detail": {
+       "corr": 0.6066,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8689,
+      "all": 0.8689,
+      "detail": {
+       "corr": 0.8689,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9306,
+      "all": 0.9306,
+      "detail": {
+       "corr": 0.9306,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -4236,7 +4488,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5735
    },
    "12": {
     "signals": {
@@ -4286,10 +4539,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9979,
+      "all": 0.9886,
+      "detail": {
+       "found": 0.9794,
+       "right": 0.9979,
+       "offset_ms": 20.0,
+       "n_truth": 486,
+       "n_est": 477
+      }
      },
      "snare": {
       "produced": false,
@@ -4316,10 +4575,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9986,
+      "all": 0.9986,
+      "detail": {
+       "balanced": 0.9986,
+       "when_on": 0.9989,
+       "when_off": 0.9982,
+       "share_on_truth": 0.9674,
+       "edge_delay_s": -0.1583,
+       "edges_found": 2
+      }
      },
      "kick_level": {
       "produced": false,
@@ -4459,22 +4725,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9744,
+      "all": 0.9744,
+      "detail": {
+       "corr": 0.9744,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9136,
+      "all": 0.9136,
+      "detail": {
+       "corr": 0.9136,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9718,
+      "all": 0.9718,
+      "detail": {
+       "corr": 0.9718,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -4621,7 +4896,8 @@
        "lag_ms": 600.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5498
    },
    "13": {
     "signals": {
@@ -4671,10 +4947,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7744,
+      "all": 0.787,
+      "detail": {
+       "found": 0.9054,
+       "right": 0.696,
+       "offset_ms": 20.0,
+       "n_truth": 349,
+       "n_est": 454
+      }
      },
      "snare": {
       "produced": false,
@@ -4701,10 +4983,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9647,
+      "all": 0.9647,
+      "detail": {
+       "balanced": 0.9647,
+       "when_on": 0.9935,
+       "when_off": 0.9358,
+       "share_on_truth": 0.9383,
+       "edge_delay_s": -0.575,
+       "edges_found": 4
+      }
      },
      "kick_level": {
       "produced": false,
@@ -4844,22 +5133,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9866,
+      "all": 0.9866,
+      "detail": {
+       "corr": 0.9866,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9817,
+      "all": 0.9817,
+      "detail": {
+       "corr": 0.9817,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9675,
+      "all": 0.9675,
+      "detail": {
+       "corr": 0.9675,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -5006,7 +5304,8 @@
        "lag_ms": 550.0
       }
      }
-    }
+    },
+    "frame_ms": 0.571
    },
    "14": {
     "signals": {
@@ -5056,10 +5355,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9565,
+      "all": 0.9618,
+      "detail": {
+       "found": 0.9798,
+       "right": 0.9444,
+       "offset_ms": 20.0,
+       "n_truth": 347,
+       "n_est": 360
+      }
      },
      "snare": {
       "produced": false,
@@ -5086,10 +5391,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9704,
+      "all": 0.9704,
+      "detail": {
+       "balanced": 0.9704,
+       "when_on": 1.0,
+       "when_off": 0.9408,
+       "share_on_truth": 0.9324,
+       "edge_delay_s": 0.4833,
+       "edges_found": 2
+      }
      },
      "kick_level": {
       "produced": false,
@@ -5229,22 +5541,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.357,
+      "all": 0.357,
+      "detail": {
+       "corr": 0.357,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9062,
+      "all": 0.9062,
+      "detail": {
+       "corr": 0.9062,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9616,
+      "all": 0.9616,
+      "detail": {
+       "corr": 0.9616,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -5391,7 +5712,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5517
    },
    "15": {
     "signals": {
@@ -5441,10 +5763,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.6012,
+      "all": 0.7938,
+      "detail": {
+       "found": 0.9333,
+       "right": 0.6906,
+       "offset_ms": 26.6667,
+       "n_truth": 165,
+       "n_est": 223
+      }
      },
      "snare": {
       "produced": false,
@@ -5471,10 +5799,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7825,
+      "all": 0.7825,
+      "detail": {
+       "balanced": 0.7825,
+       "when_on": 0.9944,
+       "when_off": 0.5705,
+       "share_on_truth": 0.5688,
+       "edge_delay_s": -0.3583,
+       "edges_found": 2
+      }
      },
      "kick_level": {
       "produced": false,
@@ -5614,22 +5949,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.4819,
+      "all": 0.4819,
+      "detail": {
+       "corr": 0.4819,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8134,
+      "all": 0.8134,
+      "detail": {
+       "corr": 0.8134,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8839,
+      "all": 0.8839,
+      "detail": {
+       "corr": 0.8839,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -5776,7 +6120,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5519
    },
    "16": {
     "signals": {
@@ -5826,10 +6171,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9098,
+      "all": 0.9105,
+      "detail": {
+       "found": 0.9401,
+       "right": 0.8826,
+       "offset_ms": 23.3333,
+       "n_truth": 384,
+       "n_est": 409
+      }
      },
      "snare": {
       "produced": false,
@@ -5856,10 +6207,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9025,
+      "all": 0.9025,
+      "detail": {
+       "balanced": 0.9025,
+       "when_on": 0.9918,
+       "when_off": 0.8132,
+       "share_on_truth": 0.7985,
+       "edge_delay_s": -0.3083,
+       "edges_found": 8
+      }
      },
      "kick_level": {
       "produced": false,
@@ -5999,22 +6357,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9601,
+      "all": 0.9601,
+      "detail": {
+       "corr": 0.9601,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9202,
+      "all": 0.9202,
+      "detail": {
+       "corr": 0.9202,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9632,
+      "all": 0.9632,
+      "detail": {
+       "corr": 0.9632,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -6161,7 +6528,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5534
    },
    "17": {
     "signals": {
@@ -6211,10 +6579,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.4928,
+      "all": 0.5263,
+      "detail": {
+       "found": 0.7821,
+       "right": 0.3966,
+       "offset_ms": 20.0,
+       "n_truth": 179,
+       "n_est": 353
+      }
      },
      "snare": {
       "produced": false,
@@ -6241,10 +6615,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8026,
+      "all": 0.8026,
+      "detail": {
+       "balanced": 0.8026,
+       "when_on": 0.9831,
+       "when_off": 0.6221,
+       "share_on_truth": 0.7025,
+       "edge_delay_s": -0.1917,
+       "edges_found": 6
+      }
      },
      "kick_level": {
       "produced": false,
@@ -6384,22 +6765,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9288,
+      "all": 0.9288,
+      "detail": {
+       "corr": 0.9288,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9023,
+      "all": 0.9023,
+      "detail": {
+       "corr": 0.9023,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9313,
+      "all": 0.9313,
+      "detail": {
+       "corr": 0.9313,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -6546,7 +6936,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5587
    },
    "18": {
     "signals": {
@@ -6596,10 +6987,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9993,
+      "all": 0.9924,
+      "detail": {
+       "found": 0.9862,
+       "right": 0.9986,
+       "offset_ms": 23.3333,
+       "n_truth": 726,
+       "n_est": 717
+      }
      },
      "snare": {
       "produced": false,
@@ -6626,10 +7023,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9931,
+      "all": 0.9931,
+      "detail": {
+       "balanced": 0.9931,
+       "when_on": 0.9991,
+       "when_off": 0.987,
+       "share_on_truth": 0.9725,
+       "edge_delay_s": -0.225,
+       "edges_found": 2
+      }
      },
      "kick_level": {
       "produced": false,
@@ -6769,22 +7173,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.958,
+      "all": 0.958,
+      "detail": {
+       "corr": 0.958,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9682,
+      "all": 0.9682,
+      "detail": {
+       "corr": 0.9682,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9818,
+      "all": 0.9818,
+      "detail": {
+       "corr": 0.9818,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -6931,7 +7344,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5448
    },
    "19": {
     "signals": {
@@ -6981,10 +7395,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9334,
+      "all": 0.8952,
+      "detail": {
+       "found": 0.8598,
+       "right": 0.9335,
+       "offset_ms": 16.6667,
+       "n_truth": 849,
+       "n_est": 782
+      }
      },
      "snare": {
       "produced": false,
@@ -7011,10 +7431,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8595,
+      "all": 0.8595,
+      "detail": {
+       "balanced": 0.8595,
+       "when_on": 0.9894,
+       "when_off": 0.7297,
+       "share_on_truth": 0.8317,
+       "edge_delay_s": -0.425,
+       "edges_found": 8
+      }
      },
      "kick_level": {
       "produced": false,
@@ -7154,22 +7581,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7799,
+      "all": 0.7799,
+      "detail": {
+       "corr": 0.7799,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.953,
+      "all": 0.953,
+      "detail": {
+       "corr": 0.953,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9562,
+      "all": 0.9562,
+      "detail": {
+       "corr": 0.9562,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -7316,7 +7752,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5567
    },
    "20": {
     "signals": {
@@ -7366,10 +7803,16 @@
       "detail": {}
      },
      "kick": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8952,
+      "all": 0.9083,
+      "detail": {
+       "found": 0.9458,
+       "right": 0.8736,
+       "offset_ms": 23.3333,
+       "n_truth": 424,
+       "n_est": 459
+      }
      },
      "snare": {
       "produced": false,
@@ -7396,10 +7839,17 @@
       "detail": {}
      },
      "kick_present": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8396,
+      "all": 0.8396,
+      "detail": {
+       "balanced": 0.8396,
+       "when_on": 0.9953,
+       "when_off": 0.6839,
+       "share_on_truth": 0.7873,
+       "edge_delay_s": -0.0167,
+       "edges_found": 9
+      }
      },
      "kick_level": {
       "produced": false,
@@ -7539,22 +7989,31 @@
       "detail": {}
      },
      "band_bass": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.893,
+      "all": 0.893,
+      "detail": {
+       "corr": 0.893,
+       "lag_ms": 0.0
+      }
      },
      "band_mid": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9353,
+      "all": 0.9353,
+      "detail": {
+       "corr": 0.9353,
+       "lag_ms": 0.0
+      }
      },
      "band_high": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.975,
+      "all": 0.975,
+      "detail": {
+       "corr": 0.975,
+       "lag_ms": 0.0
+      }
      },
      "brightness": {
       "produced": true,
@@ -7701,7 +8160,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5454
    }
   },
   "MultiBandOnsetAudioAnalyzer": {
@@ -8088,7 +8548,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4835
    },
    "02": {
     "signals": {
@@ -8473,7 +8934,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4698
    },
    "03": {
     "signals": {
@@ -8858,7 +9320,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4857
    },
    "04": {
     "signals": {
@@ -9243,7 +9706,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4697
    },
    "05": {
     "signals": {
@@ -9628,7 +10092,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4351
    },
    "06": {
     "signals": {
@@ -10013,7 +10478,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4734
    },
    "07": {
     "signals": {
@@ -10398,7 +10864,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.446
    },
    "08": {
     "signals": {
@@ -10783,7 +11250,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4902
    },
    "09": {
     "signals": {
@@ -11168,7 +11636,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4834
    },
    "10": {
     "signals": {
@@ -11553,7 +12022,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5407
    },
    "11": {
     "signals": {
@@ -11938,7 +12408,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5304
    },
    "12": {
     "signals": {
@@ -12323,7 +12794,8 @@
        "lag_ms": 600.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5048
    },
    "13": {
     "signals": {
@@ -12708,7 +13180,8 @@
        "lag_ms": 550.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5263
    },
    "14": {
     "signals": {
@@ -13093,7 +13566,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5256
    },
    "15": {
     "signals": {
@@ -13478,7 +13952,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5163
    },
    "16": {
     "signals": {
@@ -13863,7 +14338,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5085
    },
    "17": {
     "signals": {
@@ -14248,7 +14724,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5132
    },
    "18": {
     "signals": {
@@ -14633,7 +15110,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.4967
    },
    "19": {
     "signals": {
@@ -15018,7 +15496,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5202
    },
    "20": {
     "signals": {
@@ -15403,7 +15882,8 @@
        "lag_ms": 0.0
       }
      }
-    }
+    },
+    "frame_ms": 0.5135
    }
   }
  },
