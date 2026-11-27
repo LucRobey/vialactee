@@ -9,7 +9,7 @@ from music.AudioAnalyzer import AudioAnalyzer
 from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
 from music.MusicalContextEngine import MusicalContextEngine
-from music.MusicSignals import DisplayHold, MusicSignals
+from music.MusicSignals import DisplayHold, MusicSignals, BRIDGED
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,9 @@ class Listener:
         if self._tick_signals is None:
             self._tick_signals = MusicSignals()
             self.analyzer.signals = self._tick_signals
+        # Bridged slots a research analyzer writes itself (BaseAudioAnalyzer.claimed_slots): the bridge leaves them alone.
+        self._claimed = tuple(n for n in getattr(self.analyzer, 'claimed_slots', ()) if n in BRIDGED)
+        self._claimed_values = [None] * len(self._claimed)
         # One-frame signals held for the display loop (begin_display_frame); inactive until the display uses it.
         self._hold = DisplayHold()
 
@@ -258,7 +261,9 @@ class Listener:
 
     def _bridge_signals(self) -> None:
         """Fills the truth-mirrored slots that an existing speaker-time signal already expresses (MusicSignals.BRIDGED)."""
-        s, ctx = self._tick_signals, self.context
+        s, ctx, claimed, kept = self._tick_signals, self.context, self._claimed, self._claimed_values
+        for i in range(len(claimed)):               # empty on the installation
+            kept[i] = getattr(s, claimed[i])
         s.beat = self._tick('is_beat')              # the tick's own value: the display's held view is built from this record
         s.bpm = self.bpm
         s.section_change = self._delayed_is_verse_chorus_change
@@ -267,6 +272,8 @@ class Listener:
         s.drop = ctx._is_drop_impact
         s.buildup = ctx.is_buildup
         s.brightness = ctx.vertical_center
+        for i in range(len(claimed)):
+            setattr(s, claimed[i], kept[i])
 
     def _update_ring_buffers(self, current_time: float) -> None:
         """Writes current audio and analysis metrics into pre-allocated circular ring arrays."""

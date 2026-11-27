@@ -50,6 +50,9 @@ class BaseAudioAnalyzer(ABC):
         # 0. Truth-mirrored signal record: one slot per signal of config/music_signals.json, all None until a
         #    model writes self.signals.<name> (value at speaker time) in its update().
         self.signals: MusicSignals = MusicSignals()
+        # Bridged slots (MusicSignals.BRIDGED) this model writes itself instead of letting Listener copy the
+        # existing signal. Empty in production; a research candidate sets it to replace e.g. `brightness`.
+        self.claimed_slots: tuple = getattr(self, 'claimed_slots', ())
 
         # 1. Rhythmic & Metronome State Defaults
         self.bpm: float = 120.0
