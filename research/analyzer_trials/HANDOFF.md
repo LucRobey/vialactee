@@ -65,6 +65,14 @@ were the raw material for P1/P2.
   `tests/governance/test_lab_isolation.py` keeps the labs apart. **The owner has not watched the clips yet.**
 - Same day: `research/choreography/profile.py`, `pictures.py`, `profile_clip.py` let an agent "see" a mode
   (numbers, sentences, and stills it can open). Read `output/profiles/<clip>/PROFILE.md` after building clips.
+- **FAULT FOUND AND FIX A APPLIED (2026-11-27):** on live sound (Spotify, aux) the display loop ticked the
+  analyzer at 30 instead of 60: beats 77 to 22 on the 20 tracks in an offline replay. `connectors/Local_Microphone.py`
+  now ticks it by the audio (80 through the real connector). Still open, waiting for the owner: fix B, because a
+  30 FPS reader sees only half of the one-frame beat flags, on every input. Read `research/scoreboard/runs/live_path/LIVE_PATH.md` (result and
+  fixes A and B) and `work_history/2026-11-27_live_sound_path_runs_analyzer_at_half_rate.md`. Not verified
+  on the installation; the owner uses Spotify, aux and MP3 files.
+- Four fixes from a research pass are in the choreography lab: perceived brightness, 60 fps timing, a flash-safety
+  count, false-flash counts and a wrong-on-purpose control version.
 - **Next**: the owner watches and chooses; then tune the mode, the kick or the measure according to the
   verdicts. Still open: the owner's reading of the pilot proposal, papers P2 to P4, the held-out list.
 - **In parallel**: the owner reviews tracks in the tool. Then techno tracks to add to the 20 (the owner was asked to

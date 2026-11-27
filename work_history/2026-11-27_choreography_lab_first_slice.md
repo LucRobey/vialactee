@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Start the choreography lab with a slice the owner can look at: one lab mode, three passages, each drawn three times (truth, candidate analyzer, today's analyzer), on a page where the owner chooses.  
 > **Status:** COMPLETED (lab folder, feeds, renderer, first mode, first measures, clip page, isolation test; the owner has not watched the clips yet)  
-> **Commits:** `09acb4a` (lab), `a71bbf8` (mode profile) (pushed: yes)  
+> **Commits:** `09acb4a` (lab), `a71bbf8` (mode profile), `e95393b` (four fixes) (pushed: yes, except `e95393b`)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-mode-creator`: written for registered modes in `modes/`; says nothing of a lab candidate, of reading `listener.signals`, or of naming a fallback per signal.
 
@@ -36,6 +36,13 @@
 * **[MODIFY]** `feeds.py`: a held value (bar position, beat strength, tempo) is now read half a frame late, so the frame a beat falls on carries that beat's value; before, bars were found one beat off and irregular.
 * **[NEW]** [`research/tests/test_choreography_profile.py`](../research/tests/test_choreography_profile.py): 7 tests on a made-up show.
 
+### Four fixes after a research pass (same day)
+A sub agent surveyed how lighting research and practice evaluate shows; four of its points were checked against the code and applied.
+* **[MODIFY]** `render.py`: `perceived` (CIE lightness of a share of full light), `screen_values` (drive values re-coded for a screen), `brightness` now perceived; every frame is kept (`KEEP_EVERY = 1`, clips at 60 fps).
+* **[MODIFY]** `profile.py`: all brightness numbers are perceived; `reaction` reports `half_rise_ms`, read between frames; `flashes_per_second` and `safety` (WCAG 2.3.1 general flash, worst of the whole installation and three height zones); `seen_flashes` and `match_flashes` (hits that get a flash, flashes that have a hit, false flashes, flashes per second in breaks).
+* **[MODIFY]** `feeds.py`: `Feed.shifted` (every moment moved later); `build_clips.py` renders a fourth, hidden version `control` (truth shifted by half a beat).
+* **[MODIFY]** `pictures.py` and `clips.html`: values shown as the LEDs would look; the page has a switch for raw values, hides the control, locks the buttons after a choice, and no longer adds neighbouring LEDs up to white.
+
 ### Tests
 * **[NEW]** [`tests/governance/test_lab_isolation.py`](../tests/governance/test_lab_isolation.py): the choreography lab imports neither the music lab, nor the truth builders, nor the inside of `music/`; the music side does not import the choreography lab; the check is itself checked.
 * **[NEW]** [`research/tests/test_choreography_lab.py`](../research/tests/test_choreography_lab.py): layout, feed semantics, measures, and a clip rendered on a made-up song (shape, light, punch on the kicks it is fed, same input gives same frames).
@@ -50,7 +57,7 @@ No change to `modes/`, `music/` or `mood/`.
 ## 3. Verification & Testing
 
 * **Command**: `python -m pytest -q`
-  * **Result**: 689 passed, 5 deselected, 406 subtests passed (682 before the profile was added).
+  * **Result**: 696 passed, 5 deselected, 406 subtests passed (682 before the profile, 689 before the four fixes).
 * **Clips built** (`build_clips --defaults`), kick punch contrast (0 = the light ignores the kicks; share of full brightness):
 
 | Passage | Truth | Candidate analyzer | Today's analyzer |
@@ -76,6 +83,21 @@ No change to `modes/`, `music/` or `mood/`.
   * The pictures were read by the agent. On today's analyzer the time strip shows regular kick and snare flashes all through the break, where the truth has none, and after the kick returns the flashes are spaced at the analyzer's wrong tempo; the drop is missing. The candidate removes most of the fake kicks in the break but keeps the fake snares (it has no snare signal, so the mode falls back on today's beat tag).
   * The mode itself has a fault the profile caught: on Plastic People the bottom does not follow the bass even on truth (0.15), because the kick flash swamps the bass glow there.
 
+* **After the four fixes**, Plastic People from 3:28 (brightness as the eye sees it):
+
+| | Truth | Candidate | Today | Wrong on purpose |
+| :--- | ---: | ---: | ---: | ---: |
+| Jump on a kick | 12% | 7% | 8% | -5% |
+| Light halfway up after the kick | -7 ms | 14 ms | 7 ms | - |
+| Real hits that get a flash | 62% | 48% | 50% | 16% |
+| Flashes that fall on a real hit | 80% | 48% | 41% | 23% |
+| Flashes per second in breaks | 0.4 | 1.4 | 2.4 | 0.3 |
+| Most large flashes in one second (limit 3) | 3.5 | 3.0 | 3.5 | 3.5 |
+
+  * Seen as the eye sees it, the mode is brighter on average (59% against 31% in drive values) and its kick punch is weaker (12% against 19%): the resting glow eats the contrast.
+  * The control collapses as it should (kick jump -5%, 23% of flashes on a real hit): the mode is tied to its feed.
+  * `Kick_bands_mode` goes over the flash limit when fed by the truth on all three clips (3.5, 5.0 and 7.0 large flashes in the worst second).
+
 ---
 
 ## 4. Architecture Decisions & Trade-offs
@@ -96,8 +118,12 @@ No change to `modes/`, `music/` or `mood/`.
 
 ---
 
+* **The installation may not run the analyzer at the rate every lab tool assumes.** `core/Mode_master.py` paces its loop at `target_fps` 30 and calls `listener.update()` once per loop (unless the audio-file connector clocks the listener itself), while the analyzers hard-code `odf_fps = 60.0` and the scoreboard, the probe and this lab step the `Listener` at 60 Hz. A quick test on Stayin' Alive (scratch script, not kept): stepped at 60 Hz the production analyzer scores beat F1 99; stepped at 30 Hz it reports the right tempo and the right number of beats, but F1 falls to 10, because the beats are out of phase with the music. Not verified on the installation itself, and not fixed.
+
 ## 6. Open Items & Next Steps
 
+* [ ] **Check the 30 against 60 updates per second question on the real installation** (see section 5). If confirmed it outweighs everything else here: every score we have was measured at 60.
+* [ ] `Kick_bands_mode`: lower the resting glow (weak punch as the eye sees it) and bring its flashes under three per second.
 * [ ] Owner: watch the three clips on http://127.0.0.1:8768 and choose; say what is wrong with the mode itself.
 * [ ] According to the verdicts and the profile: tune the mode (bass glow swamped by the kick flash), the kick, or the measures.
 * [ ] Profile: thresholds, the mute test on real music, and a check of each number against the owner's choices.
