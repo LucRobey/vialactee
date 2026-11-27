@@ -270,7 +270,7 @@ The source of truth (`research/truth/`, one file per track, built offline) says 
 1. **Speaker time.** Every slot describes what is being heard right now ($T_{\text{speaker}}$). The analyzer hears the music `lookahead_seconds` earlier and may use that future to decide.
 2. **Empty is `None`.** A slot that nothing produces holds `None`, which is falsy: a reader sees "no hit", "not present", "nothing". `None` never means "false"; it means "the analyzer does not know".
 3. **Three kinds.** An *event* is true (or a strength above 0) on the single frame where the thing happens. A *state* holds for as long as the thing lasts. A *value* changes continuously.
-4. **Who fills a slot.** `Listener` fills the 8 🔗 BRIDGED slots from signals the sector already produces (`MusicSignals.BRIDGED`). Any other slot is filled by a rhythm analyzer writing `self.signals.<name>` once per tick, with the value at speaker time. `BaseAudioAnalyzer` creates the record, so a model only writes the slots it works on, and `Listener` shares the same object.
+4. **Who fills a slot.** `Listener` fills the 8 🔗 BRIDGED slots from signals the sector already produces (`MusicSignals.BRIDGED`). The production analyzer (`DyadicMetricalAudioAnalyzer`) writes the 5 🟢 PRODUCED slots itself, through [`music/BandKickSignals.py`](../../music/BandKickSignals.py) (`MusicSignals.PRODUCED`: `kick`, `kick_present`, `band_bass`, `band_mid`, `band_high`; promoted from the music lab on 2026-11-27 with the owner's approval). They stay `None` until the first audio has reached the speakers (`lookahead_seconds` after the start or a reset), and the other production models leave them empty. Any other slot is filled by a rhythm analyzer writing `self.signals.<name>` once per tick, with the value at speaker time. `BaseAudioAnalyzer` creates the record, so a model only writes the slots it works on, and `Listener` shares the same object.
 5. **No allocation.** Writing a slot stores a reference (AXIOM-02). `as_dict()` allocates and is for studios, telemetry and the benchmark only.
 6. **Not rated, not for modes yet.** No slot has a trust level. A 🔗 BRIDGED slot is only as good as the signal it copies (see its row in §2 or §3), and that quality has not been measured against the truth. `listener.signals` is not part of `ListenerProtocol`; a mode reads a slot only after the owner has rated it in this section.
 7. **One list, four places.** The slots of `MusicSignals`, the entries of `config/music_signals.json`, the rows below, and the values of the truth files are kept identical by `tests/governance/test_music_signals_contract.py` and `research/tests/test_truth_contract_parity.py`. To add a signal, add it to the truth first.
@@ -290,12 +290,12 @@ The source of truth (`research/truth/`, one file per track, built offline) says 
 
 | Slot | Kind | Type & Range | Meaning | Truth it is graded against | Status |
 | :--- | :-: | :--- | :--- | :--- | :--- |
-| `signals.kick` | event | `float`, 0 to 1, 0 = no hit | A kick drum hit on this frame, with its strength. | `drums.pieces.kick`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
+| `signals.kick` | event | `float`, 0 to 1, 0 = no hit | A kick drum hit on this frame, with its strength. | `drums.pieces.kick`: found within 50 ms: hits, misses, false alarms (F1) | 🟢 PRODUCED by `BandKickSignals.update` |
 | `signals.snare` | event | `float`, 0 to 1, 0 = no hit | A snare or clap hit on this frame, with its strength. | `drums.pieces.snare`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
 | `signals.hat` | event | `float`, 0 to 1, 0 = no hit | A hi-hat hit on this frame, with its strength. | `drums.pieces.hat`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
 | `signals.tom` | event | `float`, 0 to 1, 0 = no hit | A tom hit on this frame, with its strength. | `drums.pieces.tom`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
 | `signals.cymbal` | event | `float`, 0 to 1, 0 = no hit | A crash or ride cymbal hit on this frame, with its strength. | `drums.pieces.cymbal`: found within 50 ms: hits, misses, false alarms (F1) | ⚪ EMPTY |
-| `signals.kick_present` | state | `bool`, true / false | The kick drum keeps coming, whatever its pattern. | `regions.kick_present`: share of the time correct; delay at each edge | ⚪ EMPTY |
+| `signals.kick_present` | state | `bool`, true / false | The kick drum keeps coming, whatever its pattern. | `regions.kick_present`: share of the time correct; delay at each edge | 🟢 PRODUCED by `BandKickSignals.update` |
 | `signals.kick_level` | value | `float`, 0 to 1 | Level of the low thump of the drums. | `curves.kick_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
 
 ### 6.4 Moments and structure
@@ -329,9 +329,9 @@ The source of truth (`research/truth/`, one file per track, built offline) says 
 | :--- | :-: | :--- | :--- | :--- | :--- |
 | `signals.loudness` | value | `float`, 0 to 1 | How loud the whole music is. | `curves.loud_db`: follows the truth curve (correlation) and its delay | 🔗 BRIDGED from `Listener.asserved_total_power` |
 | `signals.band_sub` | value | `float`, 0 to 1 | Level of the deepest sounds, under 60 Hz. | `curves.sub_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
-| `signals.band_bass` | value | `float`, 0 to 1 | Level of the bass range, 60 to 250 Hz. | `curves.bass_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
-| `signals.band_mid` | value | `float`, 0 to 1 | Level of the middle range, 250 Hz to 4 kHz. | `curves.mid_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
-| `signals.band_high` | value | `float`, 0 to 1 | Level of the treble, above 4 kHz. | `curves.high_db`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
+| `signals.band_bass` | value | `float`, 0 to 1 | Level of the bass range, 60 to 250 Hz. | `curves.bass_db`: follows the truth curve (correlation) and its delay | 🟢 PRODUCED by `BandKickSignals.update` |
+| `signals.band_mid` | value | `float`, 0 to 1 | Level of the middle range, 250 Hz to 4 kHz. | `curves.mid_db`: follows the truth curve (correlation) and its delay | 🟢 PRODUCED by `BandKickSignals.update` |
+| `signals.band_high` | value | `float`, 0 to 1 | Level of the treble, above 4 kHz. | `curves.high_db`: follows the truth curve (correlation) and its delay | 🟢 PRODUCED by `BandKickSignals.update` |
 | `signals.brightness` | value | `float`, 0 to 1 | Whether the sound is dark (0) or bright (1). | `curves.bright_oct`: follows the truth curve (correlation) and its delay | 🔗 BRIDGED from `MusicalContextEngine.vertical_center` |
 | `signals.fullness` | value | `float`, 0 to 1 | How much of the frequency range is busy: low when the music is sparse, high when everything plays. | `curves.fullness`: follows the truth curve (correlation) and its delay | ⚪ EMPTY |
 

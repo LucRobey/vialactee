@@ -79,6 +79,7 @@ Implemented in `music/Listener.py`:
 | [`music/BaseAudioAnalyzer.py`](../../music/BaseAudioAnalyzer.py) | Abstract base contract for all rhythm analyzers. |
 | [`music/MusicSignals.py`](../../music/MusicSignals.py) | Truth-mirrored signal record (`listener.signals`): one slot per value of the source of truth, `None` until produced. |
 | [`music/DyadicMetricalAudioAnalyzer.py`](../../music/DyadicMetricalAudioAnalyzer.py) | **Production default** (`DEFAULT_ANALYZER_MODEL`): dyadic metrical hierarchy + causal sub-pulse arbiter on top of the 32-band engine. |
+| [`music/BandKickSignals.py`](../../music/BandKickSignals.py) | Band levels (`band_bass`, `band_mid`, `band_high`), `kick` and `kick_present` of `listener.signals`, measured when the audio arrives and written at speaker time; called once per tick by `DyadicMetricalAudioAnalyzer` (contract §6). |
 | [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py) | 32-band 4-stream onset engine (`kick`, `snare`, `hat`, `mid`) + Anticipation Flywheel (stable fallback / parent engine). |
 | [`music/AudioAnalyzer.py`](../../music/AudioAnalyzer.py) | Legacy single-ODF baseline analyzer. |
 | [`music/comb_kernels.py`](../../music/comb_kernels.py) | Compiled NumPy pulse-template bank for Pearson tempo correlation. |

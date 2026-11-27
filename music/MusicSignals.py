@@ -14,6 +14,7 @@ Who fills what:
 - A rhythm analyzer fills any other slot by writing to `self.signals.<name>` once per tick, with the value at
   speaker time (it has the look-ahead seconds of future audio to decide). `BaseAudioAnalyzer` creates the
   record, so a model only writes the slots it works on.
+- The production analyzer writes the slots listed in PRODUCED.
 
 Writing a slot stores a reference: no allocation on the hot path (AXIOM-02).
 
@@ -47,6 +48,10 @@ FIELDS: Tuple[str, ...] = (
 BRIDGED: Tuple[str, ...] = (
     "beat", "bpm", "drop", "section_change", "buildup", "silence", "loudness", "brightness",
 )
+
+# Slots that the production analyzer writes itself (music/BandKickSignals.py, called by
+# DyadicMetricalAudioAnalyzer). They stay None until the first audio has reached the speakers.
+PRODUCED: Tuple[str, ...] = ("kick", "kick_present", "band_bass", "band_mid", "band_high")
 
 
 # Event slots: true (or a strength above 0) on one tick only. Same list as kind == "event" in the signal list.

@@ -8,7 +8,8 @@ The truth-mirrored signal contract: one list, kept identical in three places.
 
 (The fourth place, the truth files themselves, is checked in research/tests/test_truth_contract_parity.py.)
 Also checks the behaviour the contract promises: empty slots are None, Listener fills only the bridged slots,
-and an analyzer that writes a slot is seen through the Listener.
+the production analyzer fills the produced slots once the music reaches the speakers, and an analyzer that
+writes a slot is seen through the Listener.
 """
 import json
 import os
@@ -16,15 +17,17 @@ import re
 import unittest
 
 from music.api import ANALYZER_REGISTRY, Listener, MusicalContextEngine, MusicSignals
-from music.MusicSignals import BRIDGED, FIELDS
+from music.BandKickSignals import BandKickSignals
+from music.MusicSignals import BRIDGED, FIELDS, PRODUCED
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SPEC_PATH = os.path.join(REPO_ROOT, "config", "music_signals.json")
 DOC_PATH = os.path.join(REPO_ROOT, "docs", "contracts", "music_analyzer_contract.md")
 KINDS = {"event", "state", "value"}
 TYPES = {"bool", "int", "float", "str"}
-STATUS_MARK = {"bridged": "BRIDGED", "empty": "EMPTY"}
-OWNERS = {"Listener": Listener, "MusicalContextEngine": MusicalContextEngine}
+STATUS_MARK = {"bridged": "BRIDGED", "produced": "PRODUCED", "empty": "EMPTY"}
+OWNERS = {"Listener": Listener, "MusicalContextEngine": MusicalContextEngine, "BandKickSignals": BandKickSignals}
+PRODUCING_MODEL = "DyadicMetricalAudioAnalyzer"
 
 
 class TestMusicSignalsContract(unittest.TestCase):
@@ -57,6 +60,10 @@ class TestMusicSignalsContract(unittest.TestCase):
         bridged = tuple(s["name"] for s in self.signals if s["status"] == "bridged")
         self.assertEqual(bridged, tuple(f for f in FIELDS if f in BRIDGED),
                          "the bridged slots of config/music_signals.json must equal MusicSignals.BRIDGED")
+        produced = tuple(s["name"] for s in self.signals if s["status"] == "produced")
+        self.assertEqual(produced, tuple(f for f in FIELDS if f in PRODUCED),
+                         "the produced slots of config/music_signals.json must equal MusicSignals.PRODUCED")
+        self.assertFalse(set(BRIDGED) & set(PRODUCED), "a slot is bridged or produced, not both")
         for s in self.signals:
             with self.subTest(signal=s["name"]):
                 if s["status"] == "empty":
@@ -101,18 +108,41 @@ class TestMusicSignalsContract(unittest.TestCase):
                 for name in FIELDS:
                     if name in BRIDGED:
                         self.assertIsNotNone(values[name], f"bridged slot '{name}' is still empty")
+                    elif name in PRODUCED and model == PRODUCING_MODEL:
+                        self.assertIsNone(values[name], f"'{name}' must wait until the music reaches the speakers")
                     else:
                         self.assertIsNone(values[name], f"slot '{name}' should be empty: nothing produces it yet")
                 listener.reset()
                 self.assertTrue(all(v is None for v in listener.signals.as_dict().values()))
 
+    def test_the_production_analyzer_fills_the_produced_slots_at_speaker_time(self):
+        self.assertIs(ANALYZER_REGISTRY[PRODUCING_MODEL], Listener({"useMicrophone": False}).analyzer.__class__,
+                      "the model that produces these slots must be the default one")
+        for model in sorted(ANALYZER_REGISTRY):
+            with self.subTest(model=model):
+                listener = Listener({"useMicrophone": False, "analyzer_model": model, "fakeDelay": 0.0})
+                for _ in range(8):                        # no look-ahead: the audio reaches the speakers at once
+                    listener.update(1.0 / 60.0)
+                values = listener.signals.as_dict()
+                for name in FIELDS:
+                    if name in BRIDGED or (name in PRODUCED and model == PRODUCING_MODEL):
+                        self.assertIsNotNone(values[name], f"slot '{name}' is still empty")
+                    else:
+                        self.assertIsNone(values[name], f"slot '{name}' should be empty: nothing produces it yet")
+                if model == PRODUCING_MODEL:
+                    self.assertIsInstance(values["kick_present"], bool)
+                    for name in ("kick", "band_bass", "band_mid", "band_high"):
+                        self.assertTrue(0.0 <= values[name] <= 1.0, name)
+                listener.reset()
+                self.assertTrue(all(v is None for v in listener.signals.as_dict().values()))
+
     def test_a_slot_written_by_the_analyzer_is_seen_through_the_listener(self):
         listener = Listener({"useMicrophone": False})
-        listener.analyzer.signals.kick = 0.7
-        listener.analyzer.signals.kick_present = True
+        listener.analyzer.signals.snare = 0.7              # two slots that nothing produces yet
+        listener.analyzer.signals.vocal_present = True
         listener.update(1.0 / 60.0)
-        self.assertEqual(listener.signals.kick, 0.7)
-        self.assertIs(listener.signals.kick_present, True)
+        self.assertEqual(listener.signals.snare, 0.7)
+        self.assertIs(listener.signals.vocal_present, True)
 
 
 if __name__ == "__main__":
