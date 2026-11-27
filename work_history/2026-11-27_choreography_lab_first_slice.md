@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Start the choreography lab with a slice the owner can look at: one lab mode, three passages, each drawn three times (truth, candidate analyzer, today's analyzer), on a page where the owner chooses.  
 > **Status:** COMPLETED (lab folder, feeds, renderer, first mode, first measures, clip page, isolation test; the owner has not watched the clips yet)  
-> **Commits:** `09acb4a` (lab), `a71bbf8` (mode profile), `e95393b` (four fixes) (pushed: yes, except `e95393b`)  
+> **Commits:** `09acb4a` (lab), `a71bbf8` (mode profile), `e95393b` (four fixes) (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-mode-creator`: written for registered modes in `modes/`; says nothing of a lab candidate, of reading `listener.signals`, or of naming a fallback per signal.
 

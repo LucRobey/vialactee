@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Check whether the analyzer behaves on live sound (Spotify, aux) as it does on audio files, after noticing that the display loop runs at 30 and every lab tool steps the analyzer at 60.  
 > **Status:** COMPLETED (fault measured offline on 20 tracks; fixes A and B applied with the owner's approval and measured offline; not verified on the installation)  
-> **Commits:** `97676ee` (fix A), `4d6f024` (replay) (pushed: no)  
+> **Commits:** `97676ee` (fix A), `4d6f024` (replay), `34bc82f` (fix B), `0a525b5` (replay with the display loop collecting) (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-dsp-engine`: states that the analyzer ticks at 60 Hz without saying who ticks it; nothing warns that the live connector leaves this to a 30 FPS loop.
 
