@@ -19,6 +19,10 @@ from modes.Architectural_vu_equalizer_mode import Architectural_vu_equalizer_mod
 from modes.Concentric_radial_ripple_mode import Concentric_radial_ripple_mode
 from modes.Horizon_scanning_blade_mode import Horizon_scanning_blade_mode
 from modes.Spectral_avalanche_mode import Spectral_avalanche_mode
+from modes.Beat_blast_kick_mode import Beat_blast_kick_mode
+from modes.Ripple_kick_mode import Ripple_kick_mode
+from modes.Band_vu_mode import Band_vu_mode
+from modes.Avalanche_bands_mode import Avalanche_bands_mode
 from tests.test_all_modes_musical_context import MockListener
 from tools.choreography_matrix import measure_mode_choreography, MATRIX_CONFIG, DEFAULT_NB_BANDS
 
@@ -28,6 +32,12 @@ GLOBAL_MODE_SPECS = [
     ("Concentric Radial Ripple", Concentric_radial_ripple_mode, "Concentric_radial_ripple_mode.py", "beat"),
     ("Horizon Scanning Blade", Horizon_scanning_blade_mode, "Horizon_scanning_blade_mode.py", "beat"),
     ("Spectral Avalanche", Spectral_avalanche_mode, "Spectral_avalanche_mode.py", "spectrum"),
+    # promoted from the choreography lab on 2026-11-27 (they read listener.signals; MockListener has none, so
+    # these tests exercise their fallbacks)
+    ("Beat Blast Kick", Beat_blast_kick_mode, "Beat_blast_kick_mode.py", "transient"),
+    ("Ripple Kick", Ripple_kick_mode, "Ripple_kick_mode.py", "transient"),
+    ("Band VU", Band_vu_mode, "Band_vu_mode.py", "spectrum"),
+    ("Avalanche Bands", Avalanche_bands_mode, "Avalanche_bands_mode.py", "transient"),
 ]
 
 
@@ -186,7 +196,7 @@ class TestGlobalModes(unittest.TestCase):
         v4_seg = mm._find_segment_by_name("v4")
         v1_seg = mm._find_segment_by_name("v1")
         self.assertEqual(v4_seg.get_current_mode(), "Power Bar")
-        self.assertEqual(v1_seg.get_current_mode(), "Spectral Avalanche")
+        self.assertEqual(v1_seg.get_current_mode(), GLOBAL_MODE_SPECS[-1][0])
 
         # WebSocket CommandRouter topology/select_segment_mode also activates global mode across all segments
         res = asyncio.run(mm.process_instruction({

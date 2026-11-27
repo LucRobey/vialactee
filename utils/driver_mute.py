@@ -117,6 +117,37 @@ class ContextMuteProxy:
         return sorted(base)
 
 
+class SignalsMuteProxy:
+    """Wraps listener.signals (`MusicSignals`) so each signal of the contract is muted with its driver.
+
+    transient: the hits (kick, snare, hat, tom, cymbal, beat, drop, section_change) read as no hit.
+    spectrum:  the band levels and the brightness read as their mid value (0.5).
+    level:     loudness and the instrument levels read as their mid value (0.5).
+    States (kick_present, no_beat, silence...) and bpm pass through. A listener without `signals` gives None
+    for every slot, so a mode falls back as it does on an empty slot.
+    """
+
+    _TRANSIENT = frozenset(("kick", "snare", "hat", "tom", "cymbal", "beat", "drop", "section_change"))
+    _SPECTRUM = frozenset(("band_sub", "band_bass", "band_mid", "band_high", "brightness", "fullness"))
+    _LEVEL = frozenset(("loudness", "kick_level", "bass_level", "drums_level", "vocal_level", "other_level"))
+
+    def __init__(self, parent: "DriverMuteProxy") -> None:
+        self._parent = parent
+
+    def __getattr__(self, name: str) -> Any:
+        real = getattr(getattr(self._parent._listener, "signals", None), name, None)
+        if real is None:
+            return None
+        muted = self._parent._muted
+        if "transient" in muted and name in self._TRANSIENT:
+            return False if isinstance(real, bool) else 0.0
+        if "spectrum" in muted and name in self._SPECTRUM:
+            return 0.5
+        if "level" in muted and name in self._LEVEL:
+            return 0.5
+        return real
+
+
 class DriverMuteProxy:
     """
     Wraps a `Listener` (and its `.context`) to selectively mute any of the 4 audio drivers
@@ -129,6 +160,7 @@ class DriverMuteProxy:
         self._listener = listener
         self._muted: Set[str] = set()
         self._ctx_proxy = ContextMuteProxy(self)
+        self._signals_proxy = SignalsMuteProxy(self)
 
         nb_bands = int(getattr(listener, "nb_of_fft_band", 16)) if listener is not None else 16
         self._nb_bands: int = max(1, nb_bands)
@@ -248,6 +280,10 @@ class DriverMuteProxy:
         if getattr(self._listener, "context", None) is None:
             return None
         return self._ctx_proxy
+
+    @property
+    def signals(self) -> SignalsMuteProxy:
+        return self._signals_proxy
 
     @property
     def beat_phase(self) -> float:

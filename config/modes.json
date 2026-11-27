@@ -184,6 +184,80 @@
       "class": "Stalagmites_mode",
       "dna": { "energy": 0.75, "punch": 0.90, "rhythm": 0.80, "complexity": 0.45 },
       "tags": ["lead:transient", "axis:vertical", "form:bar", "origin:global", "color:own-hue", "layer:pulse"]
+    },
+    {
+      "name": "Beat Blast Kick",
+      "module": "Beat_blast_kick_mode",
+      "class": "Beat_blast_kick_mode",
+      "dna": {
+        "energy": 0.85,
+        "punch": 0.95,
+        "rhythm": 0.90,
+        "complexity": 0.30
+      },
+      "tags": [
+        "lead:transient",
+        "form:wave",
+        "origin:center",
+        "color:palette",
+        "layer:pulse"
+      ]
+    },
+    {
+      "name": "Ripple Kick",
+      "module": "Ripple_kick_mode",
+      "class": "Ripple_kick_mode",
+      "dna": {
+        "energy": 0.75,
+        "punch": 0.85,
+        "rhythm": 0.90,
+        "complexity": 0.30
+      },
+      "tags": [
+        "lead:transient",
+        "form:wave",
+        "origin:center",
+        "color:own-hue",
+        "layer:pulse"
+      ]
+    },
+    {
+      "name": "Band VU",
+      "module": "Band_vu_mode",
+      "class": "Band_vu_mode",
+      "dna": {
+        "energy": 0.70,
+        "punch": 0.80,
+        "rhythm": 0.70,
+        "complexity": 0.35
+      },
+      "tags": [
+        "lead:spectrum",
+        "axis:vertical",
+        "form:bar",
+        "origin:bottom",
+        "color:own-hue",
+        "layer:meter"
+      ]
+    },
+    {
+      "name": "Avalanche Bands",
+      "module": "Avalanche_bands_mode",
+      "class": "Avalanche_bands_mode",
+      "dna": {
+        "energy": 0.70,
+        "punch": 0.75,
+        "rhythm": 0.70,
+        "complexity": 0.35
+      },
+      "tags": [
+        "lead:transient",
+        "axis:vertical",
+        "form:wave",
+        "origin:global",
+        "color:palette",
+        "layer:meter"
+      ]
     }
   ]
 }
