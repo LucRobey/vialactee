@@ -21,9 +21,12 @@ GATE_MARGIN: float = 0.01      # one point out of 100: proposal, to be replaced 
 TRACK_DROP: float = 0.05       # a single track losing more than five points is listed even when the average holds
 
 
+SPLIT = json.loads((Path(__file__).resolve().parent / "split.json").read_text(encoding="utf-8"))
+
+
 def is_open(track_id: str) -> bool:
-    """Provisional split of the pilot: odd ids are open (tuning allowed), even ids are the check set."""
-    return int(track_id) % 2 == 1
+    """Open tracks may be tuned on; the others are the check set. The list is split.json (provisional, the owner's to fix)."""
+    return track_id in SPLIT["open"]
 
 
 def _score(cell: dict) -> Optional[float]:

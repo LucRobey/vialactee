@@ -1,0 +1,6 @@
+{
+ "status": "provisional",
+ "about": "Which truth tracks a researcher may tune on (open) and which are kept to check that a result is not an accident of the tuning (check). Provisional split of the pilot cycle (odd and even numbers; each half has rock, pop and electronic tracks). The held-out list is the owner's decision: change this file only on the owner's word.",
+ "open": ["01", "03", "05", "07", "09", "11", "13", "15", "17", "19"],
+ "check": ["02", "04", "06", "08", "10", "12", "14", "16", "18", "20"]
+}
