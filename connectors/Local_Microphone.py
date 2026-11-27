@@ -12,6 +12,9 @@ except ImportError:
     sd = None
 
 class Local_Microphone:
+    MAX_TICKS_PER_CALL = 6    # analyzer ticks made in one go when the task comes late (0.1 s of audio)
+    MAX_BACKLOG_TICKS = 12    # further behind than this, the missed audio is skipped instead of replayed
+
     def __init__(self, listener, infos):
         self.listener = listener
         self.useMicrophone          = infos.get("useMicrophone", True)
@@ -23,9 +26,17 @@ class Local_Microphone:
         self.sample_rate = 44100
         self.chunk_size = 1024  # Size of the microphone chunk callbacks
         self.buffer_size = 4096 # Size of the sliding FFT window
-        self.audio_data = np.zeros(self.buffer_size)
+        # The analyzer counts time in ticks of 1/60 s. It is advanced here, one tick per 735 samples of audio
+        # received (as connectors/Local_AudioFile.py does), not by the display loop, which runs at another rate.
+        self.hop_samples = int(round(self.sample_rate / 60.0))
+        self.ring_size = 4 * self.buffer_size  # audio kept, so a task that comes late can still cut the windows it missed
+        self.audio_data = np.zeros(self.ring_size)
         self.audio_lock = threading.Lock()
         self._audio_write_pos = 0
+        self._total_written = 0      # samples received since the stream started
+        self._processed = 0          # sample position of the last analyzer tick
+        self._windows = np.zeros((self.MAX_TICKS_PER_CALL, self.buffer_size))
+        self._window_ends = [0] * self.MAX_TICKS_PER_CALL
         self._newest_sample_time = None
         self.stream = None
 
@@ -101,13 +112,14 @@ class Local_Microphone:
         with self.audio_lock:
             pos = self._audio_write_pos
             end = pos + m
-            if end <= self.buffer_size:
+            if end <= self.ring_size:
                 self.audio_data[pos:end] = incoming
             else:
-                chunk1 = self.buffer_size - pos
+                chunk1 = self.ring_size - pos
                 self.audio_data[pos:] = incoming[:chunk1]
                 self.audio_data[:m - chunk1] = incoming[chunk1:]
-            self._audio_write_pos = end % self.buffer_size
+            self._audio_write_pos = end % self.ring_size
+            self._total_written += m
             self._newest_sample_time = time.time() - os_latency
 
     async def listen_forever(self):
@@ -156,45 +168,85 @@ class Local_Microphone:
                     )
                 self.listener.audio_stream_state = "running"
                 self.listener.audio_stream_error = None
+                # From here the analyzer is ticked by the audio (step_analyzer); Mode_master must not tick it too.
+                self.listener.is_externally_clocked = True
                 logger.info("(Local_mic) Microphone started correctly.")
                 with self.stream:
                     retry_delay = 1
                     while True:
                         if not self.stream.active:
                             self.listener.audio_stream_state = "disconnected"
+                            self.listener.is_externally_clocked = False
                             logger.warning("(Local_mic) Audio stream became inactive (device disconnected?)")
                             break
                         await self.listen()
-                        # Limit the update loop slightly to match a smooth 60fps
+                        # Come back often enough to never be more than a tick or two behind the audio
                         await asyncio.sleep(1/60)
             except asyncio.CancelledError:
                 self.listener.audio_stream_state = "stopped"
+                self.listener.is_externally_clocked = False
                 logger.info("(Local_mic) Audio stream task cancelled.")
                 raise
             except Exception as e:
+                self.listener.is_externally_clocked = False
                 self.listener.audio_stream_state = "error"
                 self.listener.audio_stream_error = str(e)
                 logger.error(f"(Local_mic) Stream Error: {e}")
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(60, retry_delay * 2)
 
-    async def listen(self):
-        with self.audio_lock:
-            newest_sample_time = self._newest_sample_time
-            # Linearize the circular buffer into a contiguous array
-            pos = self._audio_write_pos
-            if pos == 0:
-                audio_copy = self.audio_data.copy()
-            else:
-                audio_copy = np.concatenate((self.audio_data[pos:], self.audio_data[:pos]))
+    def _copy_window(self, end: int, out: np.ndarray) -> None:
+        """Copy the buffer_size samples ending at sample position `end` into `out` (zeros before the stream started)."""
+        start = end - self.buffer_size
+        if start < 0:
+            out[:-end if end > 0 else None].fill(0.0)
+            if end > 0:
+                out[-end:] = self.audio_data[:end]
+            return
+        a = start % self.ring_size
+        if a + self.buffer_size <= self.ring_size:
+            out[:] = self.audio_data[a:a + self.buffer_size]
+        else:
+            first = self.ring_size - a
+            out[:first] = self.audio_data[a:]
+            out[first:] = self.audio_data[:self.buffer_size - first]
 
-        if newest_sample_time is not None:
-            # The center of the Hanning window is delayed by exactly half the buffer size
-            algorithmic_delay = (self.buffer_size / 2.0) / self.sample_rate
-            # The async polling drift + OS audio latency
-            time_since_newest = time.time() - newest_sample_time
-            self.listener.dynamic_audio_latency = time_since_newest + algorithmic_delay
-            
-        self.listener.process_raw_audio(audio_copy)
-                
+    def step_analyzer(self) -> int:
+        """
+        Advance the analyzer by the audio received: one tick (spectrum + listener.update at 1/60 s) per
+        hop_samples of new audio. Returns the number of ticks made.
+
+        The analyzer counts time in ticks of 1/60 s, so it must get exactly 60 per second of music whatever the
+        pace of this task or of the display loop. A task that comes late makes several ticks at once; one that
+        comes very late skips the audio it missed.
+        """
+        hop = self.hop_samples
+        with self.audio_lock:
+            total = self._total_written
+            newest_sample_time = self._newest_sample_time
+            if newest_sample_time is None:
+                return 0
+            if (total - self._processed) // hop > self.MAX_BACKLOG_TICKS:
+                self._processed = total - 2 * hop
+            ticks = min(self.MAX_TICKS_PER_CALL, (total - self._processed) // hop)
+            for k in range(ticks):
+                self._processed += hop
+                self._window_ends[k] = self._processed
+                self._copy_window(self._processed, self._windows[k])
+
+        if ticks == 0:
+            return 0
+        # Age of the centre of each window: time since the newest sample was captured, plus the samples
+        # received after the window's end, plus half the Hanning window.
+        age_of_newest = time.time() - newest_sample_time
+        half_window = (self.buffer_size / 2.0) / self.sample_rate
+        for k in range(ticks):
+            behind = (total - self._window_ends[k]) / self.sample_rate
+            self.listener.dynamic_audio_latency = age_of_newest + behind + half_window
+            self.listener.process_raw_audio(self._windows[k])
+            self.listener.update(fixed_dt=1.0 / 60.0)
+        return ticks
+
+    async def listen(self):
+        self.step_analyzer()
         logger.debug(f"(Local_mic) Bands: {list(self.listener.fft_band_values)}")

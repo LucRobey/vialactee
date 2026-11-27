@@ -23,6 +23,7 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 ### 3. Dynamic Latency Calibration
 * Do not introduce static latency numbers. Always preserve the dynamic latency equation linking `sounddevice`'s `time_info.inputBufferAdcTime` to the 4096-sample Hanning window center.
 * Synchronize capture timestamps strictly within `audio_lock` in `Local_Microphone` to prevent phase jitter race conditions.
+* The analyzer is ticked by the audio (one `listener.update(fixed_dt=1/60)` per 735 samples, in `Local_Microphone.step_analyzer` and `Local_AudioFile.advance_ingest_frame`), never by the 30 FPS display loop.
 
 ### 4. Multi-Band Separation, Oracle Flywheel & Phase Projection
 * Production beat tracking (`DyadicMetricalAudioAnalyzer.py`, built on the `MultiBandOnsetAudioAnalyzer.py` parent engine) separates 32-band onset derivatives into 4 instrument streams: Kick ($y_{\text{kick}}$), Snare ($y_{\text{snare}}$), Hi-hat ($y_{\text{hat}}$), and Mid-melodic ($y_{\text{mid}}$).

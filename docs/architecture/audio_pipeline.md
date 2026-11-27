@@ -24,6 +24,18 @@ graph LR
     Bands32 --> MultiBand["DyadicMetricalAudioAnalyzer (extends MultiBandOnsetAudioAnalyzer)"]
 ```
 
+### 1.1 Who Advances the Analyzer: the Audio, Never the Display Loop
+
+The rhythm analyzers count time in ticks of 1/60 s (`odf_fps = 60.0`): their memory of the last seconds, their tempo templates and the place of each beat assume exactly 60 ticks per second of music. The display loop ([`core/Mode_master.py`](../../core/Mode_master.py)) runs at `target_fps` (30) and must not be what ticks them.
+
+* **Audio file** ([`connectors/Local_AudioFile.py`](../../connectors/Local_AudioFile.py)): `advance_ingest_frame` makes one tick (`process_raw_audio` + `listener.update(fixed_dt=1/60)`) per 735 samples of playback.
+* **Live sound: Spotify, aux, microphone** ([`connectors/Local_Microphone.py`](../../connectors/Local_Microphone.py)): `step_analyzer` makes one tick per 735 samples received from the sound card, on the window ending at that sample, and adds the audio received after the window to `dynamic_audio_latency`.
+* Both set `listener.is_externally_clocked = True`, which tells `Mode_master` not to call `listener.update()` itself. When no connector clocks the listener (no audio device), `Mode_master` ticks it once per loop.
+
+Until 2026-11-27 the live connector left the ticking to the display loop; measured offline on 20 tracks, beats scored 22 instead of 77 (`research/scoreboard/runs/live_path/LIVE_PATH.md`). Guarded by `tests/test_local_microphone_clock.py`.
+
+One-frame signals (`is_beat`, `is_real_beat`, `is_dropped_beat`) are raised for a single 1/60 s tick: a 30 FPS reader sees about half of them. Prefer the continuous `beat_phase` / `beat_count`, or expect misses, until such signals are held for the display loop.
+
 ---
 
 ## 2. Ingestion & Dual-Resolution Mel Filterbanks
