@@ -24,7 +24,7 @@
     {"name": "no_beat", "group": "pulse", "kind": "state", "type": "bool", "range": "true / false",
      "meaning": "There is no pulse to follow right now: free intro, talking, a passage out of time.",
      "truth": "regions.no_beat", "graded": "share of the time correct; delay at each edge",
-     "status": "empty", "source": null},
+     "status": "produced", "source": "BandKickSignals.update"},
     {"name": "bar_position", "group": "pulse", "kind": "state", "type": "int", "range": "1 to beats_per_bar, 0 = unknown",
      "meaning": "Position in the bar of the latest beat. 1 is the first beat of the bar.",
      "truth": "beats.bar_pos", "graded": "share of the beats carrying the right number",

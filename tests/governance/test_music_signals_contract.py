@@ -144,6 +144,23 @@ class TestMusicSignalsContract(unittest.TestCase):
         self.assertEqual(listener.signals.snare, 0.7)
         self.assertIs(listener.signals.vocal_present, True)
 
+    def test_a_model_can_claim_a_bridged_slot(self):
+        base = ANALYZER_REGISTRY[PRODUCING_MODEL]
+        self.assertEqual(Listener({"useMicrophone": False}).analyzer.claimed_slots, (), "no production model claims a slot")
+
+        class Claims(base):
+            claimed_slots = ("brightness", "kick")           # kick is not bridged: naming it changes nothing
+
+            def detect_band_peaks(self, current_time, dt, fps_ratio):
+                super().detect_band_peaks(current_time, dt, fps_ratio)
+                self.signals.brightness = 0.123
+
+        listener = Listener({"useMicrophone": False}, analyzer_class=Claims)
+        for _ in range(4):
+            listener.update(1.0 / 60.0)
+        self.assertEqual(listener.signals.brightness, 0.123)             # the model's value, not the copied one
+        self.assertIsNotNone(listener.signals.loudness)                  # the other bridged slots are still copied
+
 
 if __name__ == "__main__":
     unittest.main()

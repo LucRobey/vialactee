@@ -110,7 +110,8 @@ class DyadicMetricalAudioAnalyzer(MultiBandOnsetAudioAnalyzer):
         bands = getattr(self.ingestion, 'multiband_fft_values', None)
         if bands is None or len(bands) == 0:
             bands = self.ingestion.fft_band_values
-        self._band_kick.update(current_time, dt, bands, float(self.kick_odf_buffer[-1]), float(self.dE[0]), self.signals)
+        self._band_kick.update(current_time, dt, bands, float(self.kick_odf_buffer[-1]), float(self.dE[0]), self.signals,
+                               float(self.confidence_score))
 
     def _reset_subpulse_state(self) -> None:
         self.subpulse_active = False

@@ -1,0 +1,44 @@
+{
+ "run": "2026-11-27_no_beat",
+ "started": "2026-11-27",
+ "signals": [
+  "no_beat"
+ ],
+ "idea": "M01",
+ "candidate": "NoBeatSlotAudioAnalyzer",
+ "baseline": "DyadicMetricalAudioAnalyzer",
+ "state": "decided",
+ "grades": [
+  {
+   "date": "2026-11-27",
+   "candidate": "NoBeatSlotAudioAnalyzer",
+   "open": {
+    "no_beat": 0.8887333333333333
+   },
+   "gate_passed": true
+  }
+ ],
+ "check": {
+  "date": "2026-11-27",
+  "candidate": "NoBeatSlotAudioAnalyzer",
+  "signals": {
+   "no_beat": {
+    "production": null,
+    "candidate": 0.8660166666666665,
+    "open": 0.8887333333333333
+   }
+  },
+  "gate_passed": true,
+  "target_ok": true
+ },
+ "verdict": {
+  "date": "2026-11-27",
+  "verdict": "propose",
+  "summary": "no_beat filled: no kick around and the tempo judge unsure; 89 on the tracks tuned on, 87 on the tracks not looked at, against 75 to 80 for the cheap stand-ins"
+ },
+ "decision": {
+  "date": "2026-11-27",
+  "decision": "approved",
+  "note": "Owner: 'yes, we need that'. Promoted the same day into music/BandKickSignals.py."
+ }
+}
