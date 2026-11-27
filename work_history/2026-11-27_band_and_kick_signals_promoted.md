@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Carry out the owner's approval of the pilot proposal: put the five new signals (`band_bass`, `band_mid`, `band_high`, `kick`, `kick_present`) into the analyzer that runs on the installation.  
 > **Status:** COMPLETED (promoted, scores identical to the candidate's, tests pass; not rated by the owner, no mode reads them, cost on the Raspberry Pi not measured)  
-> **Commits:** see `git log` for this date (pushed: no)  
+> **Commits:** `da6832f` (promotion), `6e76a8f` (alias and scoreboard), `a4c2e19` (logs) (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-researcher` / `vialactee-research-manager`: describe promotion as replacing `music/AudioAnalyzer.py` after a beat-F1 run; nothing covers "a candidate that adds slots is promoted as a helper file, the list of produced slots is updated in four places, and the candidate becomes an alias".
 

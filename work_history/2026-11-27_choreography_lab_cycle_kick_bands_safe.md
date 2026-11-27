@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** First cycle of the choreography lab run by an agent alone: take line C01 of the work list and make a flash-safe lab mode from `Kick_bands_mode`.  
 > **Status:** COMPLETED (mode written, gate passed on round 5 of 6, nominated for the owner; nothing promoted, nothing committed)  
-> **Commits:** none (pushed: no)  
+> **Commits:** `73345f7`, committed by the supervisor (pushed: yes)  
 > **Skills Used:** `light-cycle`, `vialactee-choreographer`, `vialactee-mode-creator`  
 > **Skill Friction:** `vialactee-choreographer`: see section 5 (the guard fails on another agent's file; nominating against the mode one improves is refused; the gate cannot show that a mode is safe on fast music).
 

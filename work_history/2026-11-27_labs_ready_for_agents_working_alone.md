@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2 (with three helper agents: one built the choreography tooling, two ran the trial cycles)  
 > **Primary Goal:** The owner's stated goal: "build the labs now so I can start launching agents on their own". Give each lab what an unattended agent needs, and prove it with a fresh agent in each lab.  
 > **Status:** COMPLETED (both trial agents ran a full cycle from the launch command alone; their feedback was applied; the applied fixes were not tried by a second pair of fresh agents)  
-> **Commits:** see `git log` for this date (pushed: no)  
+> **Commits:** `bf8b5ed` (music lab tools), `a95f643` (choreography lab tools), `5a4bb09` (claimed slots), `909f04a` (skills), `b69ce6a` (logs) (pushed: yes)  
 > **Skills Used:** none (three were written or rewritten here)  
 > **Skill Friction:** the two old research skills described a beat-only loop on another bench; replaced.
 

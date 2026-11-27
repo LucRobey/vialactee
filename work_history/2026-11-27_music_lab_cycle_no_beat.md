@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Run one research cycle of the music lab alone, on the first open line of the work list (M01, `no_beat`).  
 > **Status:** COMPLETED (candidate built, graded once on the open tracks, checked once, proposal waiting for the owner; nothing promoted, nothing committed)  
-> **Commits:** none (the launch message did not ask for a commit)  
+> **Commits:** `d4990e8`, committed by the supervisor together with the promotion (pushed: yes)  
 > **Skills Used:** `music-cycle`, `vialactee-researcher`  
 > **Skill Friction:** `vialactee-researcher`: `research.guard check music` blamed me for `research/scoreboard/README.md`, which somebody else changed at 09:40 while the cycle was running; the tuning stop rule ("two grades in a row") does not say what to do when the tuning is done offline and one grade is enough; the score of `no_beat` skips the tracks without a no-beat stretch and the procedure does not warn about it. Full list in the final report of the session.
 

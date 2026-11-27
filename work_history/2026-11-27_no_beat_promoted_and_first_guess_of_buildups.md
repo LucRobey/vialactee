@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Carry out three answers of the owner: approve `no_beat` ("yes, we need that"), "build a first version and I will use the tool to correct it" (the lanes no tool settles), and clear up "I thought we had 20" (the tracks kept aside).  
 > **Status:** COMPLETED (promotion proven by identical scores; the first guess is in the truth files at level W; the owner has not corrected anything yet)  
-> **Commits:** see `git log` for this date (pushed: no)  
+> **Commits:** `d4990e8` (promotion), `054ff84` (truth: owner's corrections and first guess), `b69ce6a` (logs) (pushed: yes)  
 > **Skills Used:** `vialactee-research-manager` (section 5, written the same day)  
 > **Skill Friction:** `vialactee-research-manager`: step 3 of a promotion ("turn the candidate into an empty subclass") destroys the graded code when the candidate was never committed, which is the normal case since lab agents do not commit. Keep a copy in the run folder first.
 
