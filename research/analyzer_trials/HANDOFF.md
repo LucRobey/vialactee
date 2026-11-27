@@ -79,6 +79,29 @@ were the raw material for P1/P2.
   modes). Read `research/scoreboard/runs/live_path/LIVE_PATH.md` (result and
   fixes A and B) and `work_history/2026-11-27_live_sound_path_runs_analyzer_at_half_rate.md`. The owner uses
   Spotify, aux and MP3 files.
+- **THE LABS ARE READY FOR AGENTS WORKING ALONE (2026-11-27, chapter 8 of the plan).** Launch: `/music-cycle` or
+  `/light-cycle` in a new Claude Code session (`.claude/skills/`), which point at the procedures
+  `.agents/skills/vialactee-researcher` and `vialactee-choreographer`; supervising is `vialactee-research-manager`.
+  Music lab: `research/scoreboard/cycle.py` (start, grade on the open tracks, check once on the check tracks,
+  close, decide), `split.json`, `STATUS.md`, `BACKLOG.md`. Choreography lab: `check_mode.py` (the gate),
+  `nominate.py` (the owner's queue), mode against mode, `STATUS.md`, `BACKLOG.md`. Shared: `research/guard.py`
+  (what a lab may change) and `research/INBOX.md` (what waits for the owner; `OWNER_QUESTIONS.md` by hand).
+  A fresh agent ran a full cycle in each lab from the launch command alone: `no_beat` proposed (run
+  `2026-11-27_no_beat`, 87 on the check tracks) and `Kick_bands_safe_mode` nominated (3 clips waiting). Lab agents
+  do not commit; one agent per lab at a time. Log: `work_history/2026-11-27_labs_ready_for_agents_working_alone.md`.
+- Later the same day: the owner approved `no_beat`; it is promoted into `music/BandKickSignals.py` (`_no_beat`,
+  `MusicSignals.PRODUCED` now has six slots), scores identical to the candidate's on all 20 tracks. The owner also
+  made the three choices on `Kick_bands_safe_mode` (true signals twice, today's analyzer once on Nobody Rules the
+  Streets). And the truth now carries a weak first guess (level W, never graded) of build-ups (11) and possible
+  drops (29): `research/truth/buildups.py`; `research/truth/REVIEW_LIST.md` tells the owner what to check in the
+  review tool. **The owner corrected the no-beat lane on 8 songs the same day** (`research/truth/labels/`: 04, 05,
+  06, 11, 14, 15, 19, 20; intros without drums count as "no beat"); truth and scoreboard rebuilt: `no_beat` 82
+  on the 8 songs checked by ear (86 on all 14 graded), weakest on Sucker for Pain (52). Then the owner validated the
+  lane as drawn on the 12 other songs (said in conversation; label files written on that word): the no-beat lane is
+  now checked on all 20 songs, score 86 on checked truth. Drops, build-ups and
+  section changes are not corrected yet. After any correction: `python -m research.truth.build_truth`, then the
+  scoreboard. Log:
+  `work_history/2026-11-27_no_beat_promoted_and_first_guess_of_buildups.md`.
 - Four fixes from a research pass are in the choreography lab: perceived brightness, 60 fps timing, a flash-safety
   count, false-flash counts and a wrong-on-purpose control version.
 - **Next**: the owner watches and chooses; then tune the mode, the kick or the measure according to the
