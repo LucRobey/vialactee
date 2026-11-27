@@ -59,8 +59,14 @@ were the raw material for P1/P2.
   `research/scoreboard/runs/2026-11-27_bands_kick/` with `PROPOSAL.md` for the owner. Nothing promoted to `music/`.
   The scoreboard now runs any candidate (`--model NAME --out runs/<run>`), and `research/scoreboard/compare.py`
   writes the before/after and the gate.
-- **Next**: the owner reads the proposal. Recommended: the thin slice of the choreography lab, so the owner sees
-  the kick drive a light before any trust level is set. Lab gaps found by the pilot are listed in that log.
+- 2026-11-27, the choreography lab exists as a first slice (`research/choreography/`, its `README.md`, log
+  `work_history/2026-11-27_choreography_lab_first_slice.md`): feeds, renderer, lab mode `Kick_bands_mode`,
+  three clips, clip page on port 8768 (launch name `choreography-clips`) where the owner chooses blind;
+  `tests/governance/test_lab_isolation.py` keeps the labs apart. **The owner has not watched the clips yet.**
+- Same day: `research/choreography/profile.py`, `pictures.py`, `profile_clip.py` let an agent "see" a mode
+  (numbers, sentences, and stills it can open). Read `output/profiles/<clip>/PROFILE.md` after building clips.
+- **Next**: the owner watches and chooses; then tune the mode, the kick or the measure according to the
+  verdicts. Still open: the owner's reading of the pilot proposal, papers P2 to P4, the held-out list.
 - **In parallel**: the owner reviews tracks in the tool. Then techno tracks to add to the 20 (the owner was asked to
   pick some), SongFormer for sections, and a rule for drops and build-ups.
 
