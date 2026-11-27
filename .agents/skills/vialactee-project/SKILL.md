@@ -89,8 +89,9 @@ For specialized development domains, refer to the dedicated workspace skills:
 |---|---|---|
 | **Visual Modes** | `vialactee-mode-creator` | [`.agents/skills/vialactee-mode-creator/SKILL.md`](../vialactee-mode-creator/SKILL.md) — Vectorized rendering, `Mode` subclassing, 30 FPS budget, dynamic settings schemas. |
 | **DSP & Beat Tracking** | `vialactee-dsp-engine` | [`.agents/skills/vialactee-dsp-engine/SKILL.md`](../vialactee-dsp-engine/SKILL.md) — Mel/chroma matrices, Anticipation Flywheel ("Oracle"), 60 Hz tick budget, 3-tier Musical Context Engine. |
-| **Strategic Research Director** | `vialactee-research-manager` | [`.agents/skills/vialactee-research-manager/SKILL.md`](../vialactee-research-manager/SKILL.md) — Cross-domain ideation, living idea tree, anti-incremental gate, research briefings. |
-| **Tactical Research Worker** | `vialactee-researcher` | [`.agents/skills/vialactee-researcher/SKILL.md`](../vialactee-researcher/SKILL.md) — Model implementation, 10-track `neural-core` benchmarks, ablation, failure diagnostics. |
+| **Lab Supervisor** | `vialactee-research-manager` | [`.agents/skills/vialactee-research-manager/SKILL.md`](../vialactee-research-manager/SKILL.md) — Where the two labs stand, launching and checking lab agents, the owner's decisions, promotion. |
+| **Music Lab** | `vialactee-researcher` | [`.agents/skills/vialactee-researcher/SKILL.md`](../vialactee-researcher/SKILL.md) — One research cycle on a signal of the analyzer: candidate, open tracks, check tracks, proposal. |
+| **Choreography Lab** | `vialactee-choreographer` | [`.agents/skills/vialactee-choreographer/SKILL.md`](../vialactee-choreographer/SKILL.md) — One cycle on a light show: lab mode, gate, profile, the owner's queue. |
 
 For subsystems governed directly by canonical documentation and unit tests:
 * **Music Analyzer & DSP (Sealed Room):** [`docs/contracts/music_analyzer_contract.md`](../../../docs/contracts/music_analyzer_contract.md) and [`music/api.py`](../../../music/api.py) (verified by `tests/governance/test_music_isolation.py` and `tests/governance/test_docs_parity.py`).

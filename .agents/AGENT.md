@@ -28,7 +28,9 @@ Vialactée is an asynchronous Python server (Raspberry Pi 4) that drives a 1,304
 | Orchestration, cross-domain work, onboarding | `vialactee-project` |
 | Visual modes (`modes/`) | `vialactee-mode-creator` |
 | Audio ingestion, beat tracking, Oracle flywheel | `vialactee-dsp-engine` |
-| Offline MIR experiments in `research/` | `vialactee-researcher` (worker), `vialactee-research-manager` (director) |
+| One cycle of the music lab (a signal of the analyzer against the source of truth) | `vialactee-researcher` |
+| One cycle of the choreography lab (a lab mode, the gate, the owner's queue) | `vialactee-choreographer` |
+| Supervising the labs: launching, checking, the owner's decisions, promotion | `vialactee-research-manager` |
 
 ## Session checklist
 

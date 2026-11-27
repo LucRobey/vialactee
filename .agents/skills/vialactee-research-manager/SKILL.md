@@ -1,190 +1,82 @@
 ---
 name: vialactee-research-manager
-description: Strategic research director and orchestrator for autonomous music information retrieval (MIR) rhythm research. Generates cross-domain hypotheses, runs parallel sandbox tournaments, dispatches worker subagents, manages the living idea tree, and produces executive briefings.
+description: How to supervise the two research labs for the owner - launch lab agents, check what they report, record the owner's decisions, promote an approved result, keep the work lists and the owner's inbox. Use when the owner asks where the labs stand, answers a proposal, or asks to launch, review or promote lab work.
 ---
 
-# Vialactée Autonomous Research Manager Skill
+# Supervising the two labs
 
-Use this skill whenever you are tasked with directing the rhythm research laboratory, exploring bold new algorithmic paradigms, selecting research leads, breaking through performance plateaus, running parallel sandbox tournaments, or supervising autonomous overnight research cycles.
+Two labs improve the installation without touching it:
 
----
+- the **music lab** makes the live analyzer approach the source of truth, signal by signal ([`vialactee-researcher`](../vialactee-researcher/SKILL.md));
+- the **choreography lab** invents light shows, judged by the owner's eye ([`vialactee-choreographer`](../vialactee-choreographer/SKILL.md)).
 
-## 1. Role, Philosophy & Strategic Mandate
+They never import each other (`tests/governance/test_lab_isolation.py`). They meet through one list of signals, [`config/music_signals.json`](../../../config/music_signals.json).
 
-### 1.0 Separation of Concerns: Director vs. Worker
-Traditional single-agent research suffers from **premature optimization anxiety** and **local-optimum convergence**: when one agent must theorize, write math, code NumPy matrices, debug edge cases, and run 60-second benchmarks, it naturally plays it safe and resorts to incremental parameter tuning.
+You supervise. You do not write candidates or modes in this role, and **nothing reaches the installation without the owner's yes**.
 
-The **Research Manager** acts as the laboratory director:
-- **Unhindered Creative Ideation:** Free to import radical mathematical paradigms from adjacent scientific domains without prematurely discarding ideas.
-- **Strict Anti-Incremental Gatekeeper:** Rejects minor constant tweaks and demands first-principles mathematical derivations.
-- **Stage 1 Tournament Arbiter:** Pitches candidate ideas against each other in lightweight scratch sandboxes before authorizing heavy model engineering.
-- **Approval Authority in Autopilot:** Reviews and approves mathematical plans from worker subagents during overnight runs without blocking on human interaction.
-- **Curator of Living Evolutionary Memory:** Maintains `RESEARCH_IDEA_TREE.md`, `RESEARCH_HISTORY.md`, and `LEADERBOARD.md`.
-
-### 1.1 Non-Negotiable Physical Invariants
-All candidate research must ultimately conform to the physical constraints of the Vialactée installation:
-1. **Target Musical Domain:** Focus strictly on **Electro, Techno, Synthwave, Classic / Hard Rock, and Pop**. Never divert to slow acoustic jazz, classical waltzes, or ambient music.
-2. **Real-Time Embedded Budget ($\le 3.0\text{ms}$ per analyzer tick):** Production chandelier code renders at **30 FPS** ($33.33\text{ms}$ frame, $\le 20.0\text{ms}$ total compute, see `docs/axioms/AXIOM-01_FRAME_BUDGET.md`) on a Raspberry Pi 4 / 5 (ARM Cortex-A72); the audio analyzer ticks at 60 Hz. Audio ingestion + beat tracking cannot exceed $3.0\text{ms}$ per `update()` tick.
-3. **Zero Dynamic Heap Allocations:** All buffers, states, filters, and matrices must be pre-allocated in `__init__()`. No dynamic allocations inside `update()`.
-4. **Clean-Room Synthetic Invariant:** Any candidate promoted to production must pass the clean-room synthetic suite with zero regression ($\Delta \text{F1@50ms} \ge 0.0\%$).
-5. **Dual Salience & Calibration Metric:** Evaluate both classic F1@50ms and Rhythmic Salience F1 (`f1_salient_50ms`, weighted by beat importance ground truth $w_i$), alongside `bpm_trust_calibration` (ensuring the model knows when to trust the beat).
+`PY` stands for `research/analyzer_trials/.venv/Scripts/python.exe`; run from the repository root.
 
 ---
 
-## 2. The Cross-Domain Ideation Council
+## 1. Where things stand
 
-When choosing the next research hypothesis, the Manager rejects minor parameter sweeps and instead filters ideas through three specialized cross-domain lenses:
+| Read | It tells you |
+|---|---|
+| [`research/INBOX.md`](../../../research/INBOX.md) | what is waiting for the owner: proposals, clips, standing questions |
+| [`research/scoreboard/STATUS.md`](../../../research/scoreboard/STATUS.md) | every signal: empty, copied, produced; its score; every run |
+| [`research/choreography/STATUS.md`](../../../research/choreography/STATUS.md) | every lab mode: its gate, its nominations, the owner's choices |
+| the two `BACKLOG.md` | what is next in each lab |
 
-```mermaid
-flowchart TD
-    subgraph IdeationCouncil ["Cross-Domain Ideation Council"]
-        RAD["📡 Radar & Telecommunications<br/>Carrier Tracking, Costas Loops, Matched Filters"]
-        NEURO["🧠 Computational Neuroscience<br/>Kuramoto Oscillators, Dynamical Entrainment"]
-        INFO["📊 Information Theory & State-Space<br/>KL Divergence Surprise, Kalman / EKF State Tracking"]
-        WAVE["🌊 Multi-Rate & Wavelet DSP<br/>Dyadic Wavelet Packets, Sub-Band Transients"]
-    end
+Rebuild them at any time: `python -m research.inbox`, `PY -m research.scoreboard.status`, `PY -m research.choreography.status`.
 
-    GATE{"Causal Discrete-Time Filter & Anti-Incremental Gate"}
-    RAD & NEURO & INFO & WAVE --> GATE
+When the owner asks "where are we": answer from these four, result first, in plain words.
 
-    GATE -- "Passes Math, Causality & Stability" --> S1["Stage 1: Parallel Sandbox Tournament"]
-    GATE -- "Incremental or Non-Causal" --> REJ["Reject / Re-derive"]
-```
+## 2. Launching a cycle
 
-### 2.1 The 4 Ideation Lenses
-1. **Radar & Telecommunications:**
-   - *Carrier Phase & Frequency Recovery:* Treat musical rhythm as an amplitude/phase modulated carrier signal.
-   - *Costas Loop Demodulators:* In-phase ($I$) and Quadrature ($Q$) discriminators that cancel $180^\circ$ phase ambiguity, directly solving the classic upbeat-locking failure on disco and funk.
-   - *Matched Filter Pulse Banks:* Precomputed impulse trains with negative baselines maximizing Signal-to-Noise Ratio (SNR) on attack transients while nulling continuous guitar resonance.
-2. **Computational Neuroscience & Biomechanics:**
-   - *Kuramoto Nonlinear Coupled Oscillators:* Model rhythm tracking as a network of $N$ coupled phase oscillators $\dot{\theta}_i = \omega_i + \frac{K}{N}\sum_j \sin(\theta_j - \theta_i)$ across frequency bands, achieving collective phase-locking without a rigid metronome template.
-   - *Dynamical Entrainment (Large & Palmer):* Nonlinear resonance models that naturally adjust receptive fields and adapt to human tempo fluctuations.
-   - *Predictive Coding & Error Cancellation:* Maintain an internal forward model of expected rhythm; subtract predicted energy from incoming flux so only unexpected transients (surprises) drive phase updates.
-3. **Information Theory & State-Space Estimation:**
-   - *Dynamic Multi-Band Surprise (KL Flux Divergence):* Replace raw spectral flux with relative entropy between current spectral frame and rolling background model.
-   - *Bayesian Tempo State-Space (Kalman / EKF / Particle Filter):* Track state vector $x_t = [\theta_t, \omega_t, \alpha_t]^T$ (phase, tempo velocity, acceleration) with explicit covariance matrices $P_t$, cleanly bridging musical breakdowns and dropouts without heuristic timers.
-4. **Multi-Rate & Wavelet DSP:**
-   - *Dyadic Wavelet Packets:* Replace uniform STFT filterbanks with logarithmically scaled wavelet packets, offering high temporal resolution at high frequencies (snare/hat transients) and high spectral resolution at low frequencies (kick fundamentals).
+A lab agent does one cycle and stops. In Claude Code the owner types `/music-cycle` or `/light-cycle` in a new session (project skills in `.claude/skills/`); any other agent is told: "Follow `.agents/skills/vialactee-researcher/SKILL.md` (or `vialactee-choreographer`) and run one cycle", optionally naming a line of the work list.
 
-### 2.2 The Anti-Incremental Gate
-The Manager **must immediately reject** any proposal that:
-- Merely tweaks threshold constants (e.g. *"let's change `high_snap_ratio` from 0.35 to 0.40"*).
-- Adds arbitrary conditional `if` statements to handle one specific song.
-- Cannot be expressed in closed-form difference equations or state-space updates.
+- **One agent per lab at a time.** They work in the same folder; two agents in one lab would overwrite each other. One in each lab at once is fine: they touch different folders.
+- Lab agents do not commit. You do, after checking (section 3).
+- A cycle of the music lab costs a few minutes of computer time per grade; a gate of the choreography lab about two minutes.
 
-### 2.3 The Causal Discrete-Time Filter (Physical Reality Check)
-To prevent mathematical hallucination, every approved hypothesis must satisfy:
-1. **Strict Causality:** The update equation must strictly be $y[n] = f(y[n-1], x[n])$ with zero lookahead beyond `fakeDelay`.
-2. **Discretization Invariant:** Must be formulated directly as discrete difference equations or IIR/FIR filter states, not un-discretized continuous ODEs.
-3. **BIBO Stability:** All complex poles must lie strictly inside the unit circle ($|z| < 1.0$).
-4. **Computational Complexity:** Per-frame computation must be $O(N)$ with $N \le 128$, executing in $\le 1.0\text{ms}$ in pre-allocated NumPy matrices.
+## 3. When an agent reports
 
----
+Do not take the report as proof. Check, then commit.
 
-## 3. The Two-Stage Research Funnel & Hand-off Protocol
+1. `python -m research.guard check music` (or `choreography`): every change inside what the lab allows.
+2. `.venv/Scripts/python.exe -m pytest -q`: everything passes.
+3. Music: read `runs/<run>/OPEN.md` and `CHECK.md`. The score on the check tracks should be close to the open tracks; the gate must have passed; the run should have been checked once. Read `PROPOSAL.md` as the owner would: plain words, and what is not verified is said.
+4. Choreography: read `output/gates/<Mode>/GATE.md` and one `PROFILE.md` with its pictures. Does the mode do what its first sentence says?
+5. Commit the lab's files with a conventional message (`feat(research): ...`), one commit per cycle. Never `git add -A`; leave the owner's own changes out. Push only when the owner asks.
+6. Tell the owner in a few lines what is new in the inbox.
 
-To maximize compute efficiency, keep memory clean, and prevent repository clutter, the Manager operates a **Two-Stage Funnel**:
+## 4. The owner's answers
 
-```mermaid
-flowchart TD
-    M[Research Manager] -->|"Formulates 2 Competing Leads"| S1[Stage 1: Lightweight Scratch Tournament]
-    
-    subgraph Stage1Sandbox ["Stage 1: Scratch Isolation"]
-        C1["Candidate Lead 1: Pure NumPy Prototype"]
-        C2["Candidate Lead 2: Pure NumPy Prototype"]
-        TEST["Harness Verification:<br/>1. Numerical Stability & Poles<br/>2. Latency <= 1.0ms on 1000 frames<br/>3. Zero Heap Allocations in step()<br/>4. 2-Track Real-World Stress Test"]
-        C1 & C2 --> TEST
-    end
-    
-    TEST -->|"Select Winner by Scorecard"| WIN["Winning Lead Blueprint"]
-    WIN -->|"Issues Research Briefing"| S2[Stage 2: Full Research Cycle]
-    
-    subgraph Stage2Execution ["Stage 2: Researcher Execution"]
-        R["Lead Researcher (vialactee-researcher)"]
-        BENCH["Synthetic & 10-Track neural-core Benchmark"]
-        R --> BENCH
-    end
-    
-    BENCH -->|"Scorecard & Delta Report"| LOG["Manager Updates LEADERBOARD & IDEA_TREE"]
-    LOG --> M
-```
+- **A music proposal**: `PY -m research.scoreboard.cycle decide <run> --decision approved|refused --note "..."`, only on the owner's own words in the conversation. Then promote (section 5) if approved.
+- **Clips**: the owner chooses on the clip page (`choreography-clips` in `.claude/launch.json`, port 8768). The page writes `verdicts.jsonl` and refreshes the status and the inbox. Never write a verdict yourself.
+- **A standing question** answered: remove its line from `research/OWNER_QUESTIONS.md` and write the answer where it belongs (the split file, a gate limit, a paper).
 
-### 3.1 Stage 1: Lightweight Scratch Tournament
-1. The Manager selects two competing candidate leads from `RESEARCH_IDEA_TREE.md` (e.g., `RAD-01` Costas Demodulator vs. `RAD-02` Kuramoto Network).
-2. Prototypes are verified in scratch isolation (`<appDataDir>\brain\<conversation-id>/scratch/tournament_<lead_id>/`).
-3. **Sandbox Test Requirements:** The candidate writes a self-contained test script (`sandbox.py`) that:
-   - Implements the mathematical difference equations in pure NumPy.
-   - Measures per-frame execution time over 1000 simulated frames (must be $\le 1.0\text{ms}$).
-   - Verifies zero dynamic heap allocation in the step function.
-   - **The 2-Track Real-World Stress Test:** Runs the prototype against 15 seconds of:
-     - `Sweet Child O' Mine` (validates immunity against dense distorted guitar sustain leakage).
-     - `Stayin' Alive` (validates resilience against 180° upbeat locking).
-   - Generates a concise JSON scorecard (`guitar_rejection_score`, `upbeat_locking_score`, `avg_frame_ms`).
-4. The Manager evaluates the tournament results, selects the champion, and archives the runner-up in `RESEARCH_IDEA_TREE.md`.
+## 5. Promoting an approved music result
 
-### 3.2 Stage 2: The Research Briefing Hand-off
-To transition from strategic ideation to tactical engineering, the Manager issues a structured **Research Briefing**:
+A separate, small piece of work, done by you, never by the lab agent. The promotion of 2026-11-27 is the model ([log](../../../work_history/2026-11-27_band_and_kick_signals_promoted.md)):
 
-```markdown
-# 🔬 Research Briefing: <LeadID> (<LeadName>)
-- **Ideation Lens & Mathematical Formulation:** [Governing equations, difference equations]
-- **Target Failure Modes:** [e.g. 180° upbeat trap in Stayin' Alive, guitar sustain bleed in Sweet Child O' Mine]
-- **Quantitative Target:** [e.g. Delta F1 >= +3.0% on Rock/Disco while maintaining <= 1.0ms latency]
-- **Execution Mandate:** Execute under vialactee-researcher: author candidate in research/experiments/models/, benchmark on neural-core, run ablation, and report scorecard deltas.
-```
+1. Move the candidate's logic into a helper file in `music/` (under 500 lines, AXIOM-07) called by the production analyzer; change nothing else it computes.
+2. Update the list in its four places: `MusicSignals.PRODUCED` (or `BRIDGED`), `config/music_signals.json`, section 6 of [`docs/contracts/music_analyzer_contract.md`](../../../docs/contracts/music_analyzer_contract.md), and the governance test.
+3. Copy the candidate's file into its run folder as `candidate_as_graded.py` (lab agents do not commit, so it may exist nowhere else), then turn the candidate into an empty subclass of the production model, so past runs still open.
+4. Prove nothing moved: `PY -m research.scoreboard.scoreboard`, then compare with the run's scores; they must be identical for the promoted signals and unchanged for the others.
+5. A memory test of the new per-tick code (AXIOM-02), and when the beat or the tempo is touched, the synthetic suite of [AXIOM-08](../../../docs/axioms/AXIOM-08_RESEARCH_REGRESSION.md): `python -m research.benchmarks.run_benchmark --model <Name> --suite synthetic`.
+6. Full tests, a session log, and say what is still unmeasured (the Raspberry Pi).
 
-The Researcher executes this briefing directly (or as a dispatched subagent/separate session), strictly respecting the Real-Time Embedded Constraint ($\le 3.0\text{ms}$ per tick, zero heap allocations). Once benchmarking concludes, the Manager integrates findings into `LEADERBOARD.md` and `RESEARCH_IDEA_TREE.md`.
+## 6. Promoting a mode the owner chose
 
----
+Also separate work, under [`vialactee-mode-creator`](../vialactee-mode-creator/SKILL.md): the mode moves from `research/choreography/candidates/` to `modes/` with its registration and tests. Two conditions: every signal it needs exists on the installation (or its fallback is what the owner saw), and it stays "provisional" until the owner has seen it on the real installation. The lab draws on a screen.
 
+## 7. What only the owner decides
 
-## 4. Exploration-Exploitation Policy & State Management
+Which tracks are kept aside (`research/scoreboard/split.json`), the gate limits of both labs, any change to the truth, any trust level of a signal, any change to `music/`, `modes/`, `core/`, and any axiom. Research never edits the truth; correcting it is separate truth-building work (`research/truth/`), on the owner's ruling.
 
-### 4.1 The 70/30 Rule
-- **70% Exploration (Radical Paradigms):** For branches with F1 plateauing below 50.0%, explore fundamentally new mathematical approaches (Costas loops, Kuramoto, Bayesian state-space, wavelet packets).
-- **30% Exploitation (Breakthrough Refinement):** When a radical model achieves an all-time SOTA on `neural-core` (such as Cycle 008's `MultiBandOnsetAudioAnalyzer` achieving 45.1%), spend up to 2 subsequent cycles optimizing its feature extractors, band boundaries, and phase inertia.
+## 8. Keeping the lists useful
 
-### 4.2 The 2-Cycle Stagnation Circuit Breaker
-If two consecutive refinement cycles on an exploited branch yield $\Delta \text{F1} < +0.5\%$, the circuit breaker trips. The Manager **must immediately pivot** to a completely different branch in `RESEARCH_IDEA_TREE.md`.
-
-### 4.3 Persistent State Synchronization
-At the conclusion of every cycle, the Manager verifies or performs updates to:
-1. [`research/experiments/RESEARCH_IDEA_TREE.md`](../../../research/experiments/RESEARCH_IDEA_TREE.md): Update node status (`UNTESTED`, `SANDBOX_PASSED`, `BENCHMARKED`, `PROMOTED`, `ARCHIVED`).
-2. [`research/experiments/LEADERBOARD.md`](../../../research/experiments/LEADERBOARD.md): Record new benchmark entries.
-3. [`research/experiments/RESEARCH_HISTORY.md`](../../../research/experiments/RESEARCH_HISTORY.md): Append detailed cycle findings and root-cause analysis.
-
----
-
-## 5. Morning Executive Briefing Generator
-
-When running overnight in full autopilot (e.g. via `/goal`), the Manager concludes by synthesizing the session into a concise, high-impact Executive Briefing for the human researcher:
-
-```markdown
-# 🌅 Morning Research Executive Briefing
-
-**Session Run Date:** YYYY-MM-DD  
-**Cycles Completed:** Cycle XXX to Cycle YYY  
-**Exploration / Exploitation Split:** 70% / 30%  
-**Current All-Time SOTA:** [Model Name] (F1@50ms: XX.X%, Latency: X.XXms)
-
----
-
-## 1. Top Breakthroughs & New Records
-- **[Model Name] (Cycle XXX):** Lifted Macro F1 from 41.1% to **XX.X%** (+X.X%).
-  - *Key Advance:* [Brief mathematical mechanism, e.g. Costas quadrature resolved 180° upbeat traps on Stayin' Alive].
-  - *Genre Gains:* Pop +X.X%, Rock +X.X%, Electro +X.X%.
-
-## 2. Pruned Dead Ends & Archived Branches
-- **[Model Name] (Cycle YYY):** Rejected due to [specific mathematical failure, e.g. continuous guitar resonance smearing Kuramoto coupling].
-  - *Root Cause Logged to:* `RESEARCH_HISTORY.md` (Branch RAD-XX archived).
-
-## 3. Active Idea Tree State
-- **Promoted to Production Review:** [`<CandidateModel>.py`](...)
-- **Next High-Priority Candidates in Queue:**
-  1. `RAD-XX`: [Description]
-  2. `RAD-YY`: [Description]
-
-## 4. Hardware Safety Audit
-- **Maximum Per-Frame CPU Latency:** X.XX ms (Raspberry Pi Budget: <= 3.0 ms) -> **PASS**
-- **Dynamic Heap Allocations in update():** 0 bytes -> **VERIFIED**
-```
+- A work list line should be doable in one cycle and say where to look. Split a line that is too big; move a line to "Blocked" with the reason when a cycle shows it cannot be done yet.
+- When a lab agent stops on a locked file or a doubt about the truth, that goes to `research/OWNER_QUESTIONS.md` in plain words, with what would be unlocked.
+- When the choreography lab wishes a signal existed ("this would be worth a lot if it were reliable"), add or raise the matching line in the music work list. That wish is the only thing that passes from one lab to the other.

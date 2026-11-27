@@ -40,6 +40,7 @@ class TestSkillsGovernance(unittest.TestCase):
         self.repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         self.skills_dir = os.path.join(self.repo_root, ".agents", "skills")
         self.expected_skills = [
+            "vialactee-choreographer",
             "vialactee-dsp-engine",
             "vialactee-mode-creator",
             "vialactee-project",

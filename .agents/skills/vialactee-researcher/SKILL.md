@@ -1,203 +1,122 @@
 ---
 name: vialactee-researcher
-description: Rules, scientific methodology, real-time safety constraints, and benchmark execution protocols for autonomous AI agents acting as rhythm data scientists, musicologists, or DSP researchers in the /research/ laboratory.
+description: Step-by-step procedure for an agent working alone in the music lab (research/scoreboard, research/experiments/models). Use when asked to run a cycle of the music lab, to improve or fill a signal of the analyzer, or to work on a line of the music work list.
 ---
 
-# Vialactée Autonomous Research Agent Skill
+# Music lab: one research cycle, alone
 
-Use this skill whenever you are tasked with conducting Music Information Retrieval (MIR) research, evaluating or tuning beat tracking algorithms, creating candidate models, investigating failure episodes, or benchmarking against the neural ground-truth suite in `/research/`.
+You make the live analyzer of the installation better at one signal, and you prove it against the source of truth. You never change the installation itself: you build a **candidate**, the lab grades it, and a proposal goes to the owner. The owner decides.
 
----
+One launch = one cycle = one line of the work list. Then you stop and report.
 
-## 1. Core Principles & Safety Invariants
-
-### 1.0 Musical Scope & Domain Focus (Electro, Techno, Rock, Pop)
-- **Target Genres Only:** The Vialactée chandelier is designed for dynamic nightlife, immersive visual shows, and high-energy music listening. Research and algorithmic tuning must **strictly focus on Electro, Techno, Synthwave, Rock, and Pop** songs.
-- **Do Not Divert:** Never divert research effort onto acoustic chanson, slow jazz waltzes, or obscure complex polyrhythmic acoustic music.
-- **The Curated 10-Track `neural-core` Suite:** The standard real-world evaluation suite is composed exclusively of representative tracks across these core genres:
-  - **Electro / Techno / Synthwave:** `Genesis` (Justice), `Nightcall` (Kavinsky), `Roadgame` (Kavinsky)
-  - **Rock / Hard Rock:** `Bohemian Rhapsody - Remastered 2011`, `Roxanne - Remastered 2003`, `Sweet Child O' Mine`, `Under Pressure - Remastered 2011`
-  - **Pop / Pop-Rock:** `Pumped Up Kicks`, `Where Is My Mind_`, `Stayin' Alive - From _Saturday Night Fever_ Soundtrack`
-
-### 1.1 The Real-Time Embedded Constraint ($\le 3.0\text{ms}$)
-- **Canonical authority:** [`docs/axioms/AXIOM-01_FRAME_BUDGET.md`](../../../docs/axioms/README.md). The chandelier **renders at 30 FPS** ($33.33\text{ms}$ frame, $\le 20.0\text{ms}$ total compute) on a **Raspberry Pi 4 / 5**. Never describe production as "60 FPS".
-- The audio onset/analyzer layer is decoupled and **ticks at 60 Hz** ($16.67\text{ms}$ hop, 735 samples @ 44.1 kHz). Benchmarks call `update()` once per 60 Hz tick, and `avg_frame_time_ms` in the scorecard is **per tick**.
-- Research gate: audio ingestion + Beat Tracking + Novelty Detection must stay $\le 3.0\text{ms}$ **per `update()` tick** on ARM Cortex-A72 (a conservative gate: AXIOM-01 allots $\le 3.5\text{ms}$ of audio DSP per 30 FPS render frame, and current models run well under $1\text{ms}$ per tick).
-- **Zero Dynamic Heap Allocation:** Never allocate new arrays or resize buffers in per-frame `update()`. All arrays must be pre-allocated NumPy buffers initialized in `__init__()`.
-- **Pure Vectorization:** Use compiled NumPy matrix math (`np.dot`, `np.convolve`, slicing). Never write Python `for` loops over raw audio sample buffers.
-
-### 1.2 The Zero-Regression Policy
-- Any candidate model proposed for promotion to production (`music/AudioAnalyzer.py`) must pass the **clean-room synthetic suite** (`--suite synthetic`) with **$\Delta \text{F1@50ms} \ge 0.0\%$**.
-- A candidate that improves complex syncopated tracks but causes double-trigger chatter or phase lag on steady click tracks will be rejected.
-
-### 1.3 Agent Execution & Workflow Guardrails
-- **No Background Polling Loop:** Benchmark suites take ~15s (`synthetic`) to ~45s (`neural-core`). Always launch benchmarks with `WaitMsBeforeAsync=10000`. If a task is sent to the background, **DO NOT poll with `manage_task(Action='status')` or set short timers with `schedule` in a loop**. Simply end your turn and let the system deliver the reactive task completion notification.
-- **Subagents: Pure Reactive Wakeup (No Timers or Polling):** When you spawn subagents with `invoke_subagent`, the system resumes your execution **automatically** as soon as a subagent finishes or sends a message. **NEVER call `schedule` to set a check-in timer, and NEVER call `manage_subagents(Action='list')` to check if a subagent is done.** Simply end your turn or proceed with other independent work; the platform will deliver the subagent's response directly to your inbox.
-- **Windows / PowerShell, scorecard keys, benchmark exit codes:** see [`references/scorecard_and_guardrails.md`](references/scorecard_and_guardrails.md) (read before parsing `scorecard.json` or running `compare_runs.py`; exit code 1 = regression signal, not a crash).
-
-### 1.4 The Living Research Artifact Invariant (`research_log.md`)
-- For **every** research cycle, the agent **MUST** initialize and maintain a living user-facing markdown artifact:
-  `<appDataDir>\brain\<conversation-id>/research_log.md` (ArtifactMetadata: `UserFacing: true`, `RequestFeedback: false`).
-- **Incremental Chronological Updates:** The artifact must NOT be created only at the end. Update it progressively as each phase finishes:
-  1. **Phase 1 (Orientation):** Append literature review, baseline scorecard, inspected failure episodes, and target musical styles.
-  2. **Phase 2 (Hypothesis):** Append mathematical rationale, target equations, and failure modes to resolve.
-  3. **Phase 3 (Architecture):** Append candidate buffer design, vectorized update rules, and $\le 3.0\text{ms}$ budget verification.
-  4. **Phase 4 (Model Card):** Reference the newly authored `research/docs/models/<CandidateName>.md`.
-  5. **Phase 5 (Benchmarks):** Append synthetic scorecard table (zero-regression check) and real-world (`neural-core`) scorecard table.
-  6. **Phase 6 (Diagnostics & Decision):** Append single-track comparisons, ablation tables, final decision (Promote vs Reject), and lessons learned.
-- Refer to [`research/docs/templates/RESEARCH_CYCLE_ARTIFACT_TEMPLATE.md`](../../../research/docs/templates/RESEARCH_CYCLE_ARTIFACT_TEMPLATE.md) for the standard structure.
+`PY` below stands for `research/analyzer_trials/.venv/Scripts/python.exe`. Run everything from the repository root. Tests use the project environment: `.venv/Scripts/python.exe -m pytest -q`.
 
 ---
 
-## 2. The 6-Step Autonomous Scientific Loop
+## 1. Before anything
 
-```mermaid
-flowchart TD
-    A["1. Inspect Baseline & Failure Episodes"] -->|"Init research_log.md"| B["2. Formulate Math, Goals & Implementation Plan"]
-    B -->|"Request Feedback"| C{"User Approves Plan?"}
-    C -- "Yes / Proceed" --> D["3. Author Candidate Model in /models/"]
-    C -- "No / Revisions" --> B
-    D -->|"Link model card"| E["4. Author Model Spec in /docs/models/"]
-    E -->|"Run synthetic & core"| F["5. Run Benchmark Suites"]
-    F --> G["6. Diff with compare_runs.py --json"]
-    G --> H{"Delta F1 >= 0 & Synth Pass?"}
-    H -- "Yes" --> I["Promote to LEADERBOARD & Update HISTORY"]
-    H -- "No" --> J["Ablate, Update HISTORY & Plan Next Cycle"]
-```
+1. `git status`, then `.venv/Scripts/python.exe -m research.guard snapshot music` (it remembers what was already changed, so it is not blamed on you).
+2. Read [`research/scoreboard/STATUS.md`](../../../research/scoreboard/STATUS.md) (where every signal stands, every run made) and [`research/scoreboard/BACKLOG.md`](../../../research/scoreboard/BACKLOG.md) (the work list).
+3. Take the first line whose state is `open`, unless the launch message names one. Lines under "Blocked" are not yours to take.
+4. Read what the signal means and how it is graded: its entry in [`config/music_signals.json`](../../../config/music_signals.json), and [`research/scoreboard/README.md`](../../../research/scoreboard/README.md) ("Rules of the grading").
 
-### Step 1: Literature & Diagnostic Inspection
-1. Read the latest entries in [`research/experiments/RESEARCH_HISTORY.md`](../../../research/experiments/RESEARCH_HISTORY.md) to understand current state of the art and past dead ends.
-2. Read the baseline scorecard in [`research/experiments/runs/`](../../../research/experiments/runs/) and inspect `failure_episodes.json` to identify active error types (`PHASE_INVERSION_UPBEAT`, `GHOST_BEAT_BURST`, `HIGH_PHASE_JITTER`).
-3. Check [`research/benchmarks/ground_truth/music_catalog.json`](../../../research/benchmarks/ground_truth/music_catalog.json) to correlate failures with musical style (e.g. 180° upbeat traps in Disco/Funk vs 3/4 drift in Chanson).
-4. **Inspect target tracks directly with diagnostic tools:**
-   ```bash
-   # Quick diagnostic of a single failing track:
-   python -m research.benchmarks.diagnose_track --track "Stayin' Alive"
-   
-   # Visual 4-tier plot of waveform, flux, phase sawtooth, and failure zones:
-   python -m research.benchmarks.plot_diagnostics --audio "research/benchmarks/audio/Stayin' Alive.mp3" --beats "research/benchmarks/ground_truth/neural/Stayin' Alive - From _Saturday Night Fever_ Soundtrack.beats.txt" --output "research/experiments/diagnostics_stayin_alive.png"
-   ```
-5. **Initialize Living Artifact:** Create `<appDataDir>\brain\<conversation-id>/research_log.md` (ArtifactMetadata: `UserFacing: true`, `RequestFeedback: false`) with the Section 1 Orientation summary.
+## 2. What you may change
 
-### Step 2: Formulate Math, Goals & Create Implementation Plan (Dual-Mode Approval Gate)
-1. **Mathematical Formulation & Goals:** Formulate a rigorous mathematical hypothesis and concrete goals:
-   - State the governing equations in LaTeX (e.g. difference equations, resonator matrix geometry, Hilbert quadrature).
-   - Define exact quantitative goals (e.g. *"Lift Rock F1 from 41.1% to $\ge 60.0\%$ on Sweet Child O' Mine while preserving 0.20ms CPU latency"*).
-   - If needed, delegate mathematical prototyping to a subagent (`invoke_subagent`) to verify equations in `<appDataDir>/brain/<conversation-id>/scratch/` before drafting the plan.
-2. **Author the Implementation Plan Artifact:**
-   Create `<appDataDir>\brain\<conversation-id>/implementation_plan.md`:
-   - Detailed sections:
-     - **Problem & Baseline Failure Modes**
-     - **Mathematical Formulations & DSP Equations** (in rigorous LaTeX)
-     - **Quantitative Goals & Success Criteria**
-     - **Proposed Code Changes** (Model file, Model Card, Configs)
-     - **Verification Plan** (Synthetic clean-room zero-regression gate, `neural-core` 10 tracks)
-3. **APPROVAL GATE (Dual-Mode Operation):**
-   - **Mode A: Interactive Standalone Mode (Human-Driven):**
-     - Set `ArtifactMetadata: RequestFeedback: true, UserFacing: true`.
-     - **STOP calling tools and yield the turn.**
-     - Ask the user to review and approve the implementation plan before writing any model code or running heavy benchmarks.
-     - **Do NOT proceed to Step 3 until the user explicitly approves the plan** (e.g. clicks "Proceed" or gives confirmation).
-   - **Mode B: Autopilot Worker Mode (Supervised by Research Manager or `/goal`):**
-     - Set `ArtifactMetadata: RequestFeedback: false, UserFacing: true` (ensures the IDE UI modal does not block).
-     - Send the mathematical implementation plan directly to the parent Research Manager via `send_message`.
-     - Upon receiving the confirmation message (`"APPROVED: Proceed..."`), proceed immediately to Step 3 without halting.
-4. **Update Artifact:** Append the approved hypothesis and mathematical equations to `research_log.md`.
-
-### Step 3: Implement Candidate Model
-1. Create a new model file: `research/experiments/models/<CandidateName>.py`.
-2. Must inherit from `BaseAudioAnalyzer` and implement the standard constructor:
-   ```python
-   from typing import Dict, Any, Optional
-   from music.BaseAudioAnalyzer import BaseAudioAnalyzer
-   from music.RhythmConfig import RhythmConfig
-
-   class CandidateModel(BaseAudioAnalyzer):
-       def __init__(
-           self,
-           ingestion: Any = None,
-           infos: Optional[Dict[str, Any]] = None,
-           config: Optional[RhythmConfig] = None
-       ) -> None:
-           super().__init__(ingestion=ingestion, infos=infos, config=config)
-           self.config = config or RhythmConfig()
-   ```
-3. Implement `reset()`, `update(current_time, dt, fps_ratio)`, and `capture_frame_telemetry()`.
-4. **Update Artifact:** Append model architecture notes and buffer pre-allocation details to `research_log.md`.
-
-### Step 4: Write Model Documentation
-1. Copy [`research/docs/models/MODEL_CARD_TEMPLATE.md`](../../../research/docs/models/MODEL_CARD_TEMPLATE.md) to `research/docs/models/<CandidateName>.md` and document the mathematical equations ($ODF$, phase flywheel, template scoring), hyperparameters, and target failure modes.
-2. **Update Artifact:** Link model documentation card in `research_log.md`.
-
-### Step 5: Benchmark Execution
-Use the curated `neural-core` suite for rapid iteration, and `synthetic` for regression verification:
-
-```bash
-# Rapid test on neural-core (~30-45 seconds)
-python -m research.benchmarks.run_benchmark --model <CandidateName> --suite neural-core --save-run --name test_attempt_1
-
-# Clean-room synthetic zero-regression check (~15 seconds)
-python -m research.benchmarks.run_benchmark --model <CandidateName> --suite synthetic --save-run --name test_attempt_1_synth
-```
-
-Targeted single-track and category tests (never write custom evaluation loops):
-```bash
-# Test a single track by name:
-python -m research.benchmarks.run_benchmark --model <CandidateName> --suite neural-core --track "Stayin' Alive"
-
-# Test specific genres:
-python -m research.benchmarks.run_benchmark --model <CandidateName> --suite neural-core --genre funk
-
-# Test specific meters (e.g. 3/4 or 4/4):
-python -m research.benchmarks.run_benchmark --model <CandidateName> --suite neural-core --meter 3/4
-
-# Parameter sweeps without editing code:
-python -m research.benchmarks.run_benchmark --model <CandidateName> --suite neural-core --param high_snap_ratio=0.40 --param human_prior_center=120.0
-```
-**Update Artifact:** Append both synthetic and real-world benchmark scorecards to `research_log.md`.
-
-### Step 6: Automated Comparison, Ablation & Logging
-Run `compare_runs.py` to get machine-readable deltas and exit codes:
-```bash
-python -m research.benchmarks.compare_runs research/experiments/runs/<BASELINE_RUN> research/experiments/runs/<CANDIDATE_RUN> --json
-```
-- **If improved ($\Delta \text{F1} > 0$ and synthetic passes):**
-  - Record entry in [`research/experiments/RESEARCH_HISTORY.md`](../../../research/experiments/RESEARCH_HISTORY.md).
-  - Update [`research/experiments/LEADERBOARD.md`](../../../research/experiments/LEADERBOARD.md).
-  - Recommend promotion to production.
-  - **Update Artifact:** Append final positive verdict to `research_log.md`.
-- **If regressed or dead end:**
-  - **Run automated ablation before guessing:** Use `run_ablation.py` to isolate which component caused the regression:
-    ```bash
-    python -m research.benchmarks.run_ablation --track "Nightcall" --models AudioAnalyzer,<CandidateName>
-    ```
-  - Log failure rationale in `RESEARCH_HISTORY.md` so future agents do not repeat the attempt.
-  - **Update Artifact:** Append ablation findings, failure rationale, and lessons learned to `research_log.md`.
-
----
-
-## 3. The Researcher Toolbelt Quick Reference
-
-| Tool | Command | Description |
-| :--- | :--- | :--- |
-| **Suite Benchmark** | `python -m research.benchmarks.run_benchmark --suite <suite> --model <Model>` | Runs complete benchmark suite with episode extraction and scorecard |
-| **Single-Track Diagnosis** | `python -m research.benchmarks.diagnose_track --track "<name>" [--baseline <M1> --candidate <M2>]` | Deep dive into a single track: F1, CMLt, ASCII beat-grid visualizer, upbeat/downbeat energy distribution, phase jumps |
-| **Automated Ablation** | `python -m research.benchmarks.run_ablation --track "<name>" --models <M1>,<M2> [--params k1=v1,k2=v2]` | Rapid side-by-side ablation table isolating components |
-| **Run Diffing** | `python -m research.benchmarks.compare_runs <RUN_A> <RUN_B> [--json] [--allow-regression]` | Compares two full experiment runs with macro and genre breakdowns |
-| **Visual Waveform Plot** | `python -m research.benchmarks.plot_diagnostics --audio <path> --beats <path> --output <png>` | 4-tier diagnostic plot showing waveform, predicted beats, phase sawtooth, and failure zones |
-| **DSP Kernel Generator** | `from research.dsp.comb_kernels import build_sparse_impulse_comb_bank, build_fourier_comb_bank` | Precomputed matrix banks ($W_I, W_Q \in \mathbb{R}^{K \times M}$) with negative baseline and Hilbert quadrature ($\le 0.22\text{ms}$ BLAS evaluation) |
-
----
-
----
-
-## 4. Deep-Dive References (read on demand)
-
-| When you need... | Read |
+| You may | You may not |
 |---|---|
-| To abandon incremental tuning and redesign the math (candidate paradigms, invariants, Cycle 005/008 lessons) | [`references/redesign_playbook.md`](references/redesign_playbook.md) |
-| To delegate to subagents (red-team checklist, prototyper briefs, no-polling rules) | [`references/subagent_delegation.md`](references/subagent_delegation.md) |
-| To write the final cycle report (**mandatory format**) | [`references/executive_report_template.md`](references/executive_report_template.md) |
-| Scorecard keys, exit codes, PowerShell pitfalls | [`references/scorecard_and_guardrails.md`](references/scorecard_and_guardrails.md) |
+| add a candidate in `research/experiments/models/` | touch `music/`, `modes/`, `core/`, `config/`, `docs/`, `tests/` |
+| write in your run folder `research/scoreboard/runs/<run>/` | edit the truth (`research/truth/`) or the track split (`split.json`) |
+| update your line of `BACKLOG.md` | edit the grading tools (`research/scoreboard/*.py`) |
+| add `research/tests/test_candidate_<name>.py` | edit another candidate, or the choreography lab |
+| add a session log in `work_history/`, a question in `research/OWNER_QUESTIONS.md` | commit or push, unless the launch message says so |
 
-> **Non-negotiable even when you skip the references:** subclass `music.BaseAudioAnalyzer.BaseAudioAnalyzer`, respect the real-time budget (Section 1.1), zero heap allocation in `update()`, and zero clean-room regression.
+`.venv/Scripts/python.exe -m research.guard check music` tells you if you stepped outside. If the work truly needs a locked file, **stop and say so in your report**: that is a finding, not a failure. Someone else may be working in the repository at the same time: a file the guard names that you did not touch is not yours to undo, name it in your report.
+
+## 3. The cycle
+
+### Step 1. Open the run
+
+    PY -m research.scoreboard.cycle start <short_name> --signal <signal> --idea <M0x>
+
+It creates `research/scoreboard/runs/<date>_<short_name>/` with `PLAN.md`. Fill in the plan (four short answers) **before writing the candidate**; the tool refuses to grade while it still contains `TODO`. Looking first is fine and makes the plan honest: read the scores, open the truth files, record a capture. Mark your line of `BACKLOG.md` as `taken by <run>`.
+
+Know what the score will rest on before you plan. Open two or three truth files (`research/truth/tracks/<id>.json`) and look at the level of the values your signal is graded against: `H` and `A` are the owner's ear, `M2` two tools agreeing, `X` an exact measurement, and these may grade; `M1` is one tool alone and is only indicative ([`research/truth/README.md`](../../../research/truth/README.md)). `SCOREBOARD.md` gives production's score on every track, check tracks included: that is public. What stays hidden is how *your candidate* does on each check track.
+
+### Step 2. Write the candidate
+
+One file, `research/experiments/models/<ClassName>.py`, file name = class name. Start from this:
+
+```python
+from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+
+class NoBeatSlotAudioAnalyzer(DyadicMetricalAudioAnalyzer):
+    """Production model plus the `no_beat` slot."""
+
+    def detect_band_peaks(self, current_time, dt, fps_ratio):
+        super().detect_band_peaks(current_time, dt, fps_ratio)   # everything production does, unchanged
+        self.signals.no_beat = ...                                # your value, AT SPEAKER TIME
+```
+
+Rules that decide whether the score means anything:
+
+- **Speaker time.** The analyzer hears the music `self.lookahead_seconds` (5 s) before the speakers play it. A slot must say what is being heard *now*. So measure when the audio arrives, keep the value in a delay line, and write it when the speakers reach it. [`music/BandKickSignals.py`](../../../music/BandKickSignals.py) is the working example (`_measure`, `_write_slots`). The 5 s of future are an advantage: a state signal may look both ways.
+- **`None` until you know.** Leave the slot `None` until the first audio has reached the speakers. `None` means "does not know"; never write a guess.
+- **No new array per tick.** Create arrays in `__init__`, use plain numbers in the update (AXIOM-02). The installation is a Raspberry Pi.
+- **Subclass and add.** Call `super()` first and do not change what it computed, unless changing an existing signal is the idea (then say so in the plan: the gate will watch every other signal).
+- **A slot the listener copies.** `beat`, `bpm`, `drop`, `section_change`, `buildup`, `silence`, `loudness`, `brightness` are copied by the `Listener` from older signals after your code runs, so writing them does nothing, unless your class says `claimed_slots = ("brightness",)`. For `beat` and `bpm` it is usually better to change what they are copied from (`is_beat`, `effective_bpm`).
+- **Arrival time and speaker time.** What the analyzer computes on a tick describes the audio that just arrived, 5 s ahead of the speakers: its `confidence_score`, its streams, its kick detection. What the `Listener` and the context show (`beat_trust`, `context.is_locked`) are the same things delayed to speaker time. A stand-in that is "2 s late" in the scoreboard is often a delayed value used without the future it could have had.
+- **Private fields of production code.** A candidate may read them when nothing public gives the value at arrival time (for instance the kick times inside `self._band_kick`). Say it in the proposal: at promotion that reading becomes a proper hand-over.
+- What the analyzer already has to build on: the 32 bands (`self.ingestion.multiband_fft_values`), their rise this tick (`self.dE`), the kick, snare and hat streams (`kick_odf_buffer`, `snare_odf_buffer`, `hat_odf_buffer`), the beat phase and trust. Read `music/MultiBandOnsetAudioAnalyzer.py` and `music/DyadicMetricalAudioAnalyzer.py`; do not edit them.
+
+### Step 3. Grade on the open tracks, as often as you need
+
+    PY -m research.scoreboard.cycle grade <run> --candidate <ClassName>
+
+About a minute. Read `runs/<run>/OPEN.md`: your signal against production and against the scoreboard's stand-ins, track by track, on how many tracks it is graded and how many of those have checked truth, and the gate on every other signal. You may tune on these ten tracks. To try many settings quickly, record once and replay the rule offline, as [`runs/2026-11-27_bands_kick/tune_kick.py`](../../../research/scoreboard/runs/2026-11-27_bands_kick/tune_kick.py) does; keep such scripts in your run folder and their recordings under `research/scoreboard/output/` (not committed).
+
+A stretch signal (no beat, kick present, silence) is graded only on tracks where the truth has such a stretch; elsewhere a wrong "on" costs nothing. Measure that yourself on the open tracks and put the numbers in the proposal.
+
+Stop tuning when a new grade moves the score by less than a point, or after eight grades. If you tuned offline, one grade that matches your replay is enough. A candidate that fails the gate is not ready, whatever its target score.
+
+### Step 4. Check, once
+
+    PY -m research.scoreboard.cycle check <run> --candidate <ClassName>
+
+It plays the ten tracks nobody tuned on and gives **one number per signal**. The run is then frozen: no more grading. If the score holds, the result is real. If it falls by much more than the spread between open tracks, you fitted the open tracks: say so. Never look for the track detail of the check set, and never start a second run with the same candidate to "check again".
+
+### Step 5. Close
+
+Proposal, when the check passed and the gain is worth the owner's time:
+
+    PY -m research.scoreboard.cycle close <run> --verdict propose --summary "one sentence, plain words"
+
+The first call only writes the skeleton of `PROPOSAL.md` with the numbers; replace every `TODO`, then call it again to close. Otherwise:
+
+    PY -m research.scoreboard.cycle close <run> --verdict archive --summary "what was tried and why it is dropped"
+
+A dropped idea with a clear reason is a good result. Then update your line of `BACKLOG.md` (`proposed (<run>): ...` when a proposal waits for the owner, `done (<run>): ...` when dropped, or `open` again with what was learned), and add ideas you had at the end of the list.
+
+### Step 6. Leave the place clean
+
+1. A test file `research/tests/test_candidate_<name>.py` for a proposed candidate: at least "the slot is `None` before the music reaches the speakers" and "values stay in range". [`research/tests/test_scoreboard_compare.py`](../../../research/tests/test_scoreboard_compare.py) shows how to run a candidate on a made-up song.
+2. `.venv/Scripts/python.exe -m pytest -q research/tests tests/governance` must pass.
+3. `.venv/Scripts/python.exe -m research.guard check music` must print OK, or name only files you did not touch.
+4. `.venv/Scripts/python.exe -m research.inbox`, so the owner's page shows your proposal and your questions.
+5. A session log in `work_history/` from [`work_history/TEMPLATE.md`](../../../work_history/TEMPLATE.md), with its row in `work_history/README.md`. Write "Commits: none (the supervisor commits)"; if you do not know your session id, write "lab agent".
+
+## 4. Writing for the owner
+
+The owner is not a signal-processing specialist and reads the proposal, not the code. Result first. Short sentences. Everyday words: "finds 85% of the kicks, and 79% of what it reports is a real kick", not "recall 0.85, precision 0.79". Say plainly what is **not** verified: the cost on the Raspberry Pi, truth that comes from one tool only, tracks where it is weak. Never write that something works because a score went up: nobody has seen it drive a light yet.
+
+## 5. When to stop and ask
+
+A doubt that touches a few seconds of one track is not a reason to stop: add a line at the end of `research/OWNER_QUESTIONS.md`, say it in the proposal, and finish the cycle. Stop the cycle, close the run as archived with the reason, and report, only when the doubt makes the result meaningless:
+
+- the truth looks wrong on a track (say where, in seconds, and why you think so; do not correct it);
+- the idea needs a locked file;
+- the grading seems to punish a correct answer;
+- you would need a new tool or library.
+
+## 6. Your final report
+
+Five lines at most before any detail: the signal, the score before and after on the open and the check tracks, gate passed or failed, proposed or dropped, and what is not verified. Then the paths of what you wrote.
