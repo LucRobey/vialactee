@@ -3,7 +3,11 @@
 The song is played from its start through the production Listener (music.api) with the 5 s look-ahead, so the
 analyzer is in the state it would be in on the installation. On every tick the chosen feed lays its signals
 over listener.signals (feeds.py), the mood service is updated, and one instance of the mode per segment draws
-its LEDs. Frames inside the passage are kept, at 30 per second, as one array for the whole installation.
+its LEDs. Every frame inside the passage is kept (60 per second), as one array for the whole installation.
+
+Brightness: the installation sends these values to its LEDs unchanged, and an LED's light is proportional to
+the value. The eye is not: a tenth of the light looks more than a third as bright. `perceived` converts a
+drive value to how bright it looks; every number the lab reports about brightness goes through it.
 """
 from __future__ import annotations
 
@@ -17,7 +21,7 @@ from research.choreography.layout import Layout
 
 LOOKAHEAD_S: float = 5.0
 SETTLE_S: float = 3.0          # the mode starts drawing this long before the passage, so its smoothing has settled
-KEEP_EVERY: int = 2            # 60 ticks per second in, 30 frames per second out
+KEEP_EVERY: int = 1            # every tick is kept: timing is measured to 17 ms, and fast flashes are visible
 CLIP_FPS: float = FPS / KEEP_EVERY
 
 
@@ -77,9 +81,22 @@ def render_clip(mode_cls: Any, mono: np.ndarray, layout: Layout, feed: Optional[
     return out
 
 
+def perceived(light: np.ndarray) -> np.ndarray:
+    """How bright a share of full light (0..1) looks, 0..1: the CIE lightness curve."""
+    x = np.clip(light, 0.0, 1.0)
+    return np.where(x > 0.008856, 1.16 * np.cbrt(x) - 0.16, 9.033 * x)
+
+
+def screen_values(frames: np.ndarray) -> np.ndarray:
+    """LED drive values re-coded so that a screen shows them as bright as the LEDs would look (sRGB-like curve)."""
+    lut = np.round(255.0 * (np.arange(256) / 255.0) ** (1.0 / 2.2)).astype(np.uint8)
+    return lut[frames]
+
+
 def brightness(frames: np.ndarray) -> np.ndarray:
-    """How bright the whole installation is on each frame, 0..1 (mean over LEDs of the strongest colour channel)."""
-    return frames.max(axis=2).mean(axis=1) / 255.0
+    """How bright the whole installation looks on each frame, 0..1 (mean over LEDs of the perceived strongest channel)."""
+    lut = perceived(np.arange(256) / 255.0).astype(np.float32)
+    return lut[frames.max(axis=2)].mean(axis=1)
 
 
 def cut_audio(mono: np.ndarray, start_s: float, duration_s: float, sr: int = 44100) -> np.ndarray:

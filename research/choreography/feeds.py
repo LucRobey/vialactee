@@ -26,6 +26,7 @@ RECORDINGS_DIR = REPO / "research" / "scoreboard" / "output"     # <model>/<trac
 SIGNALS = json.loads((REPO / "config" / "music_signals.json").read_text(encoding="utf-8"))["signals"]
 SLOTS: List[str] = [s["name"] for s in SIGNALS]
 TYPES: Dict[str, str] = {s["name"]: s["type"] for s in SIGNALS}
+KINDS: Dict[str, str] = {s["name"]: s["kind"] for s in SIGNALS}
 LEVEL_RANGE_DB: float = 50.0       # a truth level of 0 is this far under the track's loud level
 BRIGHT_LOW_OCT, BRIGHT_HIGH_OCT = 7.0, 12.5
 
@@ -39,6 +40,22 @@ class Feed:
         self.chords = chords
         self.n = min(len(c) for c in columns.values()) if columns else 0
         self._names = [n for n in SLOTS if n in columns]
+
+    def shifted(self, seconds: float, name: str = "control") -> "Feed":
+        """The same feed with every moment (hits, beats, drops) moved later by `seconds`: a deliberately wrong feed.
+
+        A mode that really follows its signals looks clearly worse on it; a mode whose numbers barely change was
+        never tied to the music.
+        """
+        k = int(round(seconds * FPS))
+        cols = dict(self.columns)
+        for slot in SLOTS:
+            if KINDS.get(slot) == "event" and slot in cols:
+                moved = np.zeros_like(cols[slot])
+                if 0 < k < len(moved):
+                    moved[k:] = cols[slot][:-k]
+                cols[slot] = moved
+        return Feed(name, cols, self.chords)
 
     def provides(self) -> List[str]:
         return [n for n in self._names if np.isfinite(self.columns[n]).any()] + (["chord"] if self.chords is not None else [])

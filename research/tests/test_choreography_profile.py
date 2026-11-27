@@ -9,7 +9,9 @@ import numpy as np
 from research.choreography import pictures
 from research.choreography.feeds import _held
 from research.choreography.layout import load_layout
-from research.choreography.profile import describe, profile, reaction
+from research.choreography.feeds import Feed
+from research.choreography.profile import describe, flashes_per_second, match_flashes, profile, reaction, seen_flashes
+from research.choreography.render import perceived, screen_values
 
 FPS = 30.0
 
@@ -89,6 +91,15 @@ class TestProfile(unittest.TestCase):
         self.assertLess(self.p["colour"]["white_share"], 0.05)
         self.assertIn("The bottom follows the bass, the top follows the treble.", self.words)
 
+    def test_flash_matching_and_safety_are_reported(self):
+        fl = self.p["flashes"]
+        self.assertGreater(fl["hits_with_a_flash"], 0.8)
+        self.assertGreater(fl["flashes_with_a_hit"], 0.8)
+        self.assertLess(fl["per_second_in_breaks"] or 0.0, 0.3)
+        self.assertLessEqual(self.p["safety"]["flashes_per_second_max"], 3.0)      # two kicks a second
+        self.assertTrue(self.p["safety"]["passes"])
+        self.assertIn("Flash safety", self.words)
+
     def test_light_comfort_and_variety(self):
         self.assertGreater(self.p["light"]["high"], self.p["light"]["low"])
         self.assertLess(self.p["comfort"]["flicker"], 0.3)
@@ -108,6 +119,81 @@ class TestProfile(unittest.TestCase):
             self.assertTrue(any(l.startswith("on a kick") for l in labels))
             self.assertTrue(any(l.startswith("in the break") for l in labels))
             self.assertTrue(any(l.startswith("on the drop") for l in labels))
+
+
+class TestBrightnessAsTheEyeSeesIt(unittest.TestCase):
+    def test_a_tenth_of_the_light_looks_more_than_a_third_as_bright(self):
+        self.assertAlmostEqual(float(perceived(np.array(0.1))), 0.378, places=2)
+        self.assertAlmostEqual(float(perceived(np.array(0.18))), 0.495, places=2)       # mid grey
+        self.assertEqual(float(perceived(np.array(0.0))), 0.0)
+        self.assertAlmostEqual(float(perceived(np.array(1.0))), 1.0, places=6)
+        x = perceived(np.linspace(0, 1, 50))
+        self.assertTrue(np.all(np.diff(x) > 0))
+
+    def test_screen_values_lift_the_dark_end_only(self):
+        out = screen_values(np.array([[[0, 26, 255]]], dtype=np.uint8))
+        self.assertEqual(int(out[0, 0, 0]), 0)
+        self.assertGreater(int(out[0, 0, 1]), 80)          # 10% drive is shown near a third of the screen range
+        self.assertEqual(int(out[0, 0, 2]), 255)
+
+
+class TestTimingBetweenFrames(unittest.TestCase):
+    def test_half_rise_is_read_between_frames_and_can_be_before_the_sound(self):
+        fps = 60.0
+        t = np.arange(int(20 * fps)) / fps
+        kicks = np.arange(1.0, 19.0, 0.5)
+        for lead_ms in (-25.0, 0.0, 40.0):                 # the light starts 25 ms early, on time, 40 ms late
+            bright = np.full(len(t), 0.1)
+            for k in kicks:
+                start = k + lead_ms / 1000.0
+                bright += 0.4 * np.clip((t - start) / 0.02, 0, 1) * np.exp(-np.clip(t - start - 0.02, 0, None) / 0.1)
+            r = reaction(bright, fps, kicks)
+            self.assertAlmostEqual(r["half_rise_ms"], lead_ms + 10.0, delta=9.0)
+
+
+class TestFlashes(unittest.TestCase):
+    def _train(self, per_second, fps=60.0, seconds=6.0, depth=0.4):
+        t = np.arange(int(seconds * fps)) / fps
+        return 0.2 + depth * (np.sin(2 * np.pi * per_second * t) > 0.6), fps
+
+    def test_flash_rate_and_the_limit_of_three(self):
+        slow, fps = self._train(2.0)
+        fast, _ = self._train(5.0)
+        faint, _ = self._train(5.0, depth=0.05)
+        self.assertAlmostEqual(flashes_per_second(slow, fps), 2.0, delta=0.5)
+        self.assertGreater(flashes_per_second(fast, fps), 3.0)
+        self.assertEqual(flashes_per_second(faint, fps), 0.0)           # swings under 10% of full light are not flashes
+        self.assertEqual(flashes_per_second(np.full(600, 0.5), fps), 0.0)
+
+    def test_flashes_are_matched_to_hits(self):
+        fps = 60.0
+        t = np.arange(int(12 * fps)) / fps
+        hits = np.arange(1.0, 9.0, 0.5)
+        flash_at = list(hits[::2]) + [9.6, 10.2, 10.8]                    # every other hit, then three with no hit
+        bright = np.full(len(t), 0.2)
+        for f in flash_at:
+            bright += 0.3 * np.exp(-np.clip(t - f, 0, None) / 0.08) * (t >= f)
+        found = seen_flashes(bright, fps)
+        self.assertEqual(len(found), len(flash_at))
+        res = match_flashes(found, hits)
+        self.assertAlmostEqual(res["hits_with_a_flash"], 0.5, delta=0.01)
+        self.assertEqual(res["false_flashes"], 3)
+        self.assertAlmostEqual(res["flashes_with_a_hit"], 8 / 11, delta=0.01)
+
+
+class TestShiftedControl(unittest.TestCase):
+    def test_moments_move_and_everything_else_stays(self):
+        n = 120
+        kick = np.zeros(n, dtype=np.float32)
+        kick[30] = 0.8
+        present = np.ones(n, dtype=np.float32)
+        feed = Feed("truth", {"kick": kick, "kick_present": present, "band_bass": np.full(n, 0.5, dtype=np.float32)})
+        wrong = feed.shifted(0.25)
+        self.assertEqual(int(np.flatnonzero(wrong.columns["kick"])[0]), 45)       # 0.25 s later at 60 frames per second
+        self.assertEqual(float(wrong.columns["kick"][30]), 0.0)
+        np.testing.assert_array_equal(wrong.columns["kick_present"], present)     # a stretch is not a moment
+        np.testing.assert_array_equal(wrong.columns["band_bass"], feed.columns["band_bass"])
+        self.assertEqual(int(np.flatnonzero(feed.columns["kick"])[0]), 30)        # the original is untouched
 
 
 class TestHeldValues(unittest.TestCase):

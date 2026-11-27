@@ -39,6 +39,7 @@
     <button id="play" disabled>Play</button>
     <label><input type="checkbox" id="loop" checked> loop</label>
     <label><input type="checkbox" id="hide" checked> hide which is which until I choose</label>
+    <label title="LEDs look much brighter at low values than a screen shows. On: the screen is corrected to look like the LEDs."><input type="checkbox" id="eye" checked> brightness as on the LEDs</label>
     <span id="time" style="font-variant-numeric:tabular-nums"></span>
   </div>
   <p id="info">Loading…</p>
@@ -59,6 +60,8 @@ const $ = id => document.getElementById(id);
 const NAMES = ['A', 'B', 'C'];
 let ctx, gain, buffer = null, source = null, playing = false, startCtx = 0, startOffset = 0;
 let layout = null, clips = [], clip = null, order = [], frames = {}, revealed = false, loadToken = 0, cards = [];
+const EYE = new Uint8Array(256); for (let i = 0; i < 256; i++) EYE[i] = Math.round(255 * Math.pow(i / 255, 1 / 2.2));
+const shown = c => c.feeds.filter(f => !f.hidden);
 
 function ensureCtx() { if (!ctx) { ctx = new AudioContext(); gain = ctx.createGain(); gain.connect(ctx.destination); } }
 function now() { if (!playing) return startOffset; return Math.min(buffer.duration, startOffset + (ctx.currentTime - startCtx)); }
@@ -105,7 +108,8 @@ async function choose(name, key) {
     const r = await fetch('/api/verdict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error(r.status);
     revealed = true; labelCards();
-    cards.forEach(c => c.el.classList.toggle('best', c.key === key));
+    cards.forEach(c => { c.el.classList.toggle('best', c.key === key); c.el.querySelector('.pick').disabled = true; });
+    $('nodiff').disabled = true;
     $('said').textContent = name === 'none' ? 'Saved: no real difference.' : `Saved: you chose ${name}, which was "${clip.feeds.find(f => f.key === key).label}".`;
   } catch (e) { $('said').textContent = 'NOT SAVED (' + e.message + ')'; }
 }
@@ -113,9 +117,9 @@ async function choose(name, key) {
 async function loadClip(id) {
   const token = ++loadToken; if (playing) stop();
   $('play').disabled = true; buffer = null; revealed = false; $('said').textContent = ''; startOffset = 0;
-  clip = clips.find(c => c.id === id); order = shuffle(clip.feeds.map(f => f.key)); frames = {};
+  clip = clips.find(c => c.id === id); order = shuffle(shown(clip).map(f => f.key)); frames = {};
   $('info').textContent = 'Loading…'; ensureCtx();
-  const loads = clip.feeds.map(f => fetch(`/clips/${clip.id}/${f.file}`).then(r => r.arrayBuffer()).then(b => { frames[f.key] = new Uint8Array(b); }));
+  const loads = shown(clip).map(f => fetch(`/clips/${clip.id}/${f.file}`).then(r => r.arrayBuffer()).then(b => { frames[f.key] = new Uint8Array(b); }));
   const audio = fetch(`/clips/${clip.id}/audio.wav`).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b));
   const [buf] = await Promise.all([audio, ...loads]);
   if (token !== loadToken) return;
@@ -131,16 +135,15 @@ function draw() {
   const t = Math.max(0, now() - (playing ? (ctx.outputLatency || 0) : 0)), xy = layout.xy, n = clip.leds;
   for (const c of cards) {
     const data = frames[c.key]; if (!data) continue;
-    const f = Math.min(c.feed.frames - 1, Math.floor(t * clip.fps)), base = f * n * 3, g = c.g, sx = c.w / 440, sy = c.h / 250;
+    const f = Math.min(c.feed.frames - 1, Math.floor(t * clip.fps)), base = f * n * 3, g = c.g, sx = c.w / 440, sy = c.h / 250, eye = $('eye').checked;
     g.fillStyle = '#000'; g.fillRect(0, 0, c.w, c.h);
-    g.globalCompositeOperation = 'lighter';
     for (let i = 0; i < n; i++) {
-      const r = data[base + i * 3], gr = data[base + i * 3 + 1], b = data[base + i * 3 + 2];
-      if (r + gr + b < 6) continue;
+      let r = data[base + i * 3], gr = data[base + i * 3 + 1], b = data[base + i * 3 + 2];
+      if (r + gr + b < 3) continue;
+      if (eye) { r = EYE[r]; gr = EYE[gr]; b = EYE[b]; }
       g.fillStyle = `rgb(${r},${gr},${b})`;
       g.fillRect(4 + xy[i][0] * sx - 1.6, 2 + xy[i][1] * sy - 1.6, 3.2, 3.2);
     }
-    g.globalCompositeOperation = 'source-over';
   }
   $('time').textContent = t.toFixed(1) + ' / ' + buffer.duration.toFixed(0) + ' s';
   if (document.activeElement !== $('scrub')) $('scrub').value = t / buffer.duration;

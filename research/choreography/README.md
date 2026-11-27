@@ -43,18 +43,36 @@ version, and three pictures per version. Open the pictures: the time strip (time
 bottom, truth marks above) shows in one look whether flashes fall on the kicks, whether a break is calm, and
 whether anything travels. The profile says what a show does, never whether it is good.
 
-## The three feeds
+## The feeds
 
-The same mode is drawn three times on the same passage:
+The same mode is drawn on the same passage once per feed:
 
 | Feed | The mode hears | It shows |
 |---|---|---|
 | truth | every signal of the contract, from the truth file | the best the idea can look |
 | candidate | the signals a research analyzer produced on that song (the music lab's recording) | what the installation could do |
 | today | the production analyzer as it is; empty slots fall back inside the mode | what the installation does now |
+| control | the truth with every hit moved half a beat late | a version that is wrong on purpose. Not shown to the owner. A mode tied to the music must come out clearly worse on it |
 
 Everything else the mode reads (energy, beat phase, mood colours) comes from the production `Listener` in
 all three cases, so the versions differ only by the signals under test.
+
+## Brightness, timing and safety
+
+- **Brightness is what the eye sees.** The installation sends values to the LEDs unchanged (no gamma anywhere
+  in `hardware/`), and an LED's light is proportional to the value, so a tenth of the value already looks more
+  than a third as bright. `render.perceived` (CIE lightness) is applied to every brightness number of the
+  profile, and the clip page and the pictures re-code the values so a screen shows them as the LEDs would
+  look (`render.screen_values`; the page has a switch to see the raw values).
+- **Timing is read at 60 frames per second**, and the profile reports when the light is halfway up, read
+  between two frames. A light is noticed as late from about 45 ms after the sound, and tolerated up to about
+  125 ms before it (ITU-R BT.1359, measured on television picture and sound, not on light flashes).
+- **Flash safety** follows the general-flash rule of WCAG 2.3.1: a flash is a pair of opposing changes of 10%
+  or more of full light, and there may be no more than three in any second. The profile counts them on the
+  whole installation and on each third of its height and reports the worst. Saturated red flashes are not
+  checked. It is reported, not yet enforced.
+- **False flashes are counted.** The profile finds the visible flashes in the light itself and says how many
+  fall on a real kick, snare or drop, how many real hits get one, and how often it flashes during a break.
 
 ## Rules
 
@@ -70,7 +88,9 @@ all three cases, so the versions differ only by the signals under test.
 ## Not built yet
 
 - the "realistic" feed (truth degraded by a measured error profile);
-- thresholds on the profile's numbers (none is set: they describe, they do not judge yet);
+- thresholds on the profile's numbers (none is set: they describe, they do not judge yet), flash safety included;
+- the lab steps the `Listener` 60 times a second and draws the mode on every step, while `core/Mode_master.py`
+  updates and draws 30 times a second (see the session log of 2026-11-27): the lab is not yet faithful on this;
 - "what drives it": the profile under the mute test (beat, level, spectrum, hits muted in turn);
 - passages drawn at random on held-out tracks, hidden references, repeated pairs;
 - comparing two different modes (the page compares feeds of one mode);

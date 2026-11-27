@@ -6,6 +6,9 @@ in a break, where the light sits, which colours, how much flicker, how much it r
 the same in plain sentences.
 
 It says what a show does, not whether it is beautiful: that stays the owner's choice between clips.
+
+Brightness is always the brightness the eye sees (render.perceived), except for flash safety, which the
+standard defines on the light itself.
 """
 from __future__ import annotations
 
@@ -15,12 +18,18 @@ import numpy as np
 
 from research.choreography.feeds import FPS as FEED_FPS, truth_feed
 from research.choreography.layout import Layout
+from research.choreography.render import perceived
 
 HUES = ("red", "orange", "yellow", "lime", "green", "teal", "cyan", "azure", "blue", "violet", "magenta", "rose")
 DARK: float = 0.02
 EVENTS = ("kick", "snare", "beat", "drop", "section_change")
 WIDE = {"drop": (1.0, 2.0), "section_change": (1.0, 2.0)}      # (seconds before, after); others: 0.3 and 0.6
 ROOM_HEIGHT: float = 245.0
+FLASH_SWING: float = 0.10          # W3C WCAG 2.3.1: a flash is a pair of opposing changes of 10% or more of full light
+FLASH_DARK_BELOW: float = 0.80     # ...where the darker state is under 80% of full light
+FLASH_LIMIT: int = 3               # no more than three flashes within any one second
+SEEN_RISE: float = 0.05            # a rise of perceived brightness this large within 0.1 s is a flash the eye notices
+MATCH_EARLY_S, MATCH_LATE_S = 0.08, 0.12     # a flash belongs to a hit if it starts this close before or after it
 
 
 def passage_truth(track_id: str, start_s: float, duration_s: float, fps: float) -> Dict[str, Any]:
@@ -37,8 +46,74 @@ def passage_truth(track_id: str, start_s: float, duration_s: float, fps: float) 
 
 
 def luminance(frames: np.ndarray) -> np.ndarray:
-    """Brightness of every LED on every frame, 0..1 (its strongest colour channel)."""
-    return frames.max(axis=2).astype(np.float32) / 255.0
+    """How bright every LED looks on every frame, 0..1 (perceived brightness of its strongest colour channel)."""
+    lut = perceived(np.arange(256) / 255.0).astype(np.float32)
+    return lut[frames.max(axis=2)]
+
+
+def light(frames: np.ndarray) -> np.ndarray:
+    """Light given off by every LED on every frame, 0..1 (relative luminance of the drive values, not perception)."""
+    f = frames.astype(np.float32)
+    return (0.2126 * f[..., 0] + 0.7152 * f[..., 1] + 0.0722 * f[..., 2]) / 255.0
+
+
+def flashes_per_second(curve: np.ndarray, fps: float) -> float:
+    """Largest number of flashes in any one second: opposing swings of FLASH_SWING or more, counted in pairs."""
+    turns: List[int] = []
+    lo = hi = float(curve[0])
+    direction = 0
+    for i, v in enumerate(curve):
+        v = float(v)
+        if direction >= 0 and v <= hi - FLASH_SWING and v < FLASH_DARK_BELOW:        # was rising or flat, now fell
+            turns.append(i)
+            direction, lo = -1, v
+        elif direction <= 0 and v >= lo + FLASH_SWING and lo < FLASH_DARK_BELOW:     # was falling or flat, now rose
+            turns.append(i)
+            direction, hi = 1, v
+        if direction >= 0:
+            hi = max(hi, v)
+        if direction <= 0:
+            lo = min(lo, v)
+    if not turns:
+        return 0.0
+    t = np.array(turns) / fps
+    most = max(int(np.searchsorted(t, x + 1.0, side="left") - k) for k, x in enumerate(t))
+    return most / 2.0
+
+
+def seen_flashes(bright: np.ndarray, fps: float) -> np.ndarray:
+    """Instants where the installation visibly jumps brighter: starts of rises of SEEN_RISE or more within 0.1 s."""
+    w = max(1, int(round(0.1 * fps)))
+    rise = np.zeros(len(bright))
+    rise[:-w] = bright[w:] - bright[:-w]
+    out: List[float] = []
+    i = 0
+    while i < len(rise):
+        if rise[i] >= SEEN_RISE:
+            j = i
+            while j + 1 < len(rise) and rise[j + 1] >= SEEN_RISE:
+                j += 1
+            out.append((i + int(np.argmax(np.diff(bright[i : j + w + 1])) if j + w + 1 - i > 1 else 0)) / fps)
+            i = j + w
+        else:
+            i += 1
+    return np.array(out)
+
+
+def match_flashes(flashes: np.ndarray, hits: np.ndarray) -> Dict[str, float]:
+    """How the flashes line up with the true hits: hits that get a flash, flashes that have a hit."""
+    hits = np.sort(np.asarray(hits, dtype=float))
+    used = np.zeros(len(flashes), dtype=bool)
+    served = 0
+    for h in hits:
+        cand = np.flatnonzero((flashes >= h - MATCH_EARLY_S) & (flashes <= h + MATCH_LATE_S) & ~used)
+        if len(cand):
+            used[cand[np.argmin(np.abs(flashes[cand] - h))]] = True
+            served += 1
+    return {"flashes": int(len(flashes)), "hits": int(len(hits)),
+            "hits_with_a_flash": served / len(hits) if len(hits) else float("nan"),
+            "flashes_with_a_hit": float(used.mean()) if len(flashes) else float("nan"),
+            "false_flashes": int((~used).sum())}
 
 
 def reaction(bright: np.ndarray, fps: float, times: Sequence[float], before: float = 0.3, after: float = 0.6,
@@ -62,8 +137,15 @@ def reaction(bright: np.ndarray, fps: float, times: Sequence[float], before: flo
     if jump > 0.01:
         below = np.flatnonzero(curve[pre + k :] < base + jump / 2.0)
         half = float(below[0] / fps * 1000.0) if len(below) else None
-    return {"events": len(rows), "jump": jump, "base": base, "peak": peak, "delay_ms": 1000.0 * k / fps, "half_life_ms": half,
-            "before_s": before, "curve": [round(float(x), 4) for x in curve]}
+    rise = None
+    if jump > 0.01:                      # when the light is halfway up: read between two frames, may be before the sound
+        level = base + jump / 2.0
+        for i in range(pre + k, 0, -1):
+            if curve[i - 1] < level <= curve[i]:
+                rise = float(((i - 1) + (level - curve[i - 1]) / (curve[i] - curve[i - 1]) - pre) / fps * 1000.0)
+                break
+    return {"events": len(rows), "jump": jump, "base": base, "peak": peak, "delay_ms": 1000.0 * k / fps, "half_rise_ms": rise,
+            "half_life_ms": half, "before_s": before, "curve": [round(float(x), 4) for x in curve]}
 
 
 def _corr(a: np.ndarray, b: np.ndarray) -> float:
@@ -150,6 +232,15 @@ def profile(frames: np.ndarray, fps: float, layout: Layout, truth: Dict[str, Any
     out["reactions"] = reactions
     out["kick_contrast"] = (reactions["kick"]["jump"] - off["jump"]) if reactions["kick"] and off else float("nan")
 
+    flashes = seen_flashes(bright, fps)
+    hits = np.concatenate([truth["events"][k] for k in ("kick", "snare", "drop")])
+    out["flashes"] = match_flashes(flashes, hits)
+    quiet = truth["masks"]["breakdown"][:n] | truth["masks"]["no_beat"][:n]
+    in_quiet = quiet[np.clip(np.round(flashes * fps).astype(int), 0, n - 1)] if len(flashes) else np.zeros(0, dtype=bool)
+    out["flashes"]["per_second_in_breaks"] = float(in_quiet.sum() / (quiet.sum() / fps)) if quiet.sum() > fps else None
+
+    emitted = light(frames)
+    zones_light = {"whole installation": emitted.mean(axis=1)}
     out["stretches"] = {name: _stretch(bright, pulse, truth["masks"][name]) for name in ("breakdown", "no_beat")}
     out["in_silence"] = float(bright[silence].mean()) if silence.any() else None
 
@@ -157,6 +248,12 @@ def profile(frames: np.ndarray, fps: float, layout: Layout, truth: Dict[str, Any
     low, top = alt < 1.0 / 3.0, alt > 2.0 / 3.0
     mid = ~low & ~top
     zone = {"low": lum[:, low].mean(axis=1), "mid": lum[:, mid].mean(axis=1), "top": lum[:, top].mean(axis=1)}
+    zones_light.update({"the bottom third": emitted[:, low].mean(axis=1), "the middle third": emitted[:, mid].mean(axis=1),
+                        "the top third": emitted[:, top].mean(axis=1)})
+    worst = max(zones_light, key=lambda k: flashes_per_second(zones_light[k], fps))
+    most = flashes_per_second(zones_light[worst], fps)
+    out["safety"] = {"flashes_per_second_max": most, "where": worst, "limit": FLASH_LIMIT, "passes": bool(most <= FLASH_LIMIT),
+                     "note": "general flashes only (WCAG 2.3.1); saturated red flashes are not checked"}
     total = max(1e-9, float(lum.sum()))
     roles = {"pillars": [s for s in layout.segments if s.seg_id.startswith("v")],
              "canopy": [s for s in layout.segments if "tier:canopy" in s.tags],
@@ -203,7 +300,10 @@ def _hit_sentence(name: str, r: Optional[Dict[str, Any]]) -> str:
         return f"Does not react to the {name} (brightness moves {_pct(max(0.0, r['jump']))} of full)."
     how = "Punches on" if r["jump"] >= 0.08 else "Reacts weakly to"
     fade = f", half gone after {r['half_life_ms']:.0f} ms" if r["half_life_ms"] is not None else ", and stays up"
-    return f"{how} the {name}: +{_pct(r['jump'])} of full brightness, peak {r['delay_ms']:.0f} ms after the sound{fade}."
+    rise = r.get("half_rise_ms")
+    when = (f"halfway up {abs(rise):.0f} ms {'after' if rise >= 0 else 'before'} the sound" if rise is not None
+            else f"peak {r['delay_ms']:.0f} ms after the sound")
+    return f"{how} the {name}: +{_pct(r['jump'])} of full brightness, {when}{fade}."
 
 
 def describe(p: Dict[str, Any]) -> List[str]:
@@ -223,6 +323,12 @@ def describe(p: Dict[str, Any]) -> List[str]:
     if r["kick"] and r["between_kicks"] and r["kick"]["jump"] >= 0.03 and r["between_kicks"]["jump"] > 0.6 * r["kick"]["jump"]:
         s.append(f"But it jumps almost as much between two kicks (+{_pct(r['between_kicks']['jump'])}): the punch is not tied to the kick.")
     s.append(_hit_sentence("snare", r["snare"]))
+    fl = p["flashes"]
+    if fl["flashes"] and fl["hits"]:
+        s.append(f"Of its {fl['flashes']} visible flashes, {_pct(fl['flashes_with_a_hit'])} fall on a real kick, snare or drop "
+                 f"({fl['false_flashes']} do not); {_pct(fl['hits_with_a_flash'])} of the real hits get a flash.")
+    if fl.get("per_second_in_breaks"):
+        s.append(f"Flashes {fl['per_second_in_breaks']:.1f} times a second during breaks, where nothing hits.")
     if r["drop"]:
         s.append(f"On a drop: {'+' if r['drop']['jump'] >= 0 else ''}{_pct(r['drop']['jump'])} of full brightness." if abs(r["drop"]["jump"]) >= 0.03
                  else "Does nothing special on a drop.")
@@ -253,6 +359,9 @@ def describe(p: Dict[str, Any]) -> List[str]:
         s.append(f"Colours: {', '.join(col['dominant'])}" + (f"; washed out to white {_pct(col['white_share'])} of the light." if col["white_share"] > 0.25 else "."))
     elif col["white_share"] == col["white_share"]:
         s.append("Mostly white or grey: no clear colour.")
+    sf = p["safety"]
+    s.append(f"Flash safety: at most {sf['flashes_per_second_max']:.1f} large flashes in any second ({sf['where']}); "
+             + ("within the limit of 3." if sf["passes"] else "OVER THE LIMIT OF 3."))
     f = p["comfort"]["flicker"]
     s.append("Flickers fast (uncomfortable)." if f > 0.3 else "Some fast flicker." if f > 0.12 else "No fast flicker.")
     v = p["variety"]["bar_to_bar_likeness"]

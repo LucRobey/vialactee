@@ -31,7 +31,11 @@ SIDE_BY_SIDE = (                                     # (label, path into the pro
     ("Average brightness", ("light", "mean"), "pct"),
     ("Jump on a kick", ("reactions", "kick", "jump"), "pct"),
     ("Jump between two kicks", ("reactions", "between_kicks", "jump"), "pct"),
-    ("Kick peak after the sound", ("reactions", "kick", "delay_ms"), "ms"),
+    ("Light halfway up after the kick (minus = before)", ("reactions", "kick", "half_rise_ms"), "ms"),
+    ("Real hits that get a flash", ("flashes", "hits_with_a_flash"), "pct"),
+    ("Flashes that fall on a real hit", ("flashes", "flashes_with_a_hit"), "pct"),
+    ("Flashes per second in breaks", ("flashes", "per_second_in_breaks"), "num"),
+    ("Most large flashes in one second (limit 3)", ("safety", "flashes_per_second_max"), "num"),
     ("Jump on a snare", ("reactions", "snare", "jump"), "pct"),
     ("Jump on a drop", ("reactions", "drop", "jump"), "pct"),
     ("Movement in a break, against normal", ("stretches", "breakdown", "movement_ratio"), "pct"),
@@ -54,7 +58,7 @@ def _get(d: Any, path: tuple) -> Any:
 def _fmt(v: Any, kind: str) -> str:
     if v is None or (isinstance(v, float) and v != v):
         return "-"
-    return f"{100 * v:.0f}%" if kind == "pct" else f"{v:.0f} ms" if kind == "ms" else f"{v:.2f}"
+    return f"{100 * v:.0f}%" if kind == "pct" else f"{v:.0f} ms" if kind == "ms" else f"{v:.1f}" if kind == "num" else f"{v:.2f}"
 
 
 def _clean(obj: Any) -> Any:
@@ -91,7 +95,8 @@ def profile_clip(clip_id: str) -> Path:
     lines: List[str] = [
         f"# Profile: `{meta['mode']}` on {song}, from {meta['start_s']:.0f} s for {meta['duration_s']:.0f} s", "",
         "What the light does on this passage, from the rendered frames and the truth of the passage. It says what the show",
-        "does, not whether it is good. Percentages are shares of full brightness.", "",
+        "does, not whether it is good. Percentages are shares of full brightness as the eye sees it. \"Wrong on purpose\"",
+        "is a control: the truth with every hit moved half a beat late. A mode tied to the music must look clearly worse on it.", "",
         "## Side by side", "",
         "| | " + " | ".join(f["label"] for f in meta["feeds"]) + " |", "|---|" + "---|" * len(meta["feeds"]),
     ]

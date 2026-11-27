@@ -15,6 +15,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from research.choreography.layout import Layout
+from research.choreography.render import brightness, screen_values
 
 GUTTER, PX_PER_FRAME, LANE = 70, 2, 9
 LANES = (("kick", (229, 72, 77)), ("snare", (245, 217, 10)), ("drop", (255, 255, 255)), ("section_change", (179, 136, 255)))
@@ -37,11 +38,14 @@ def _display_order(layout: Layout) -> List[Tuple[str, np.ndarray]]:
 
 
 def time_strip(frames: np.ndarray, layout: Layout, truth: Dict[str, Any], fps: float, path: Path, title: str = "") -> None:
-    n = frames.shape[0]
+    n_all = frames.shape[0]
+    step = max(1, int(round(fps / 30.0)))                           # the strip is drawn at about 30 columns per second
+    shown = screen_values(frames[::step])
+    n, col_fps = shown.shape[0], fps / step
     width = GUTTER + n * PX_PER_FRAME + 6
     blocks, labels, y = [], [], 0
     for seg_id, idx in _display_order(layout):
-        rows = frames[:, idx[::2]].transpose(1, 0, 2)               # (LED rows, frames, 3)
+        rows = shown[:, idx[::2]].transpose(1, 0, 2)                # (LED rows, columns, 3)
         blocks.append(rows)
         labels.append((seg_id, y + rows.shape[0] // 2))
         y += rows.shape[0] + 2
@@ -58,18 +62,18 @@ def time_strip(frames: np.ndarray, layout: Layout, truth: Dict[str, Any], fps: f
     lane_labels = []
     for name, colour in LANES:
         for t in truth["events"][name]:
-            x = GUTTER + int(round(t * fps)) * PX_PER_FRAME
+            x = GUTTER + int(round(t * col_fps)) * PX_PER_FRAME
             if GUTTER <= x < width - 2:
                 img[lane_y : lane_y + LANE - 2, x : x + 2] = colour
         lane_labels.append((name.replace("_", " "), lane_y, colour))
         lane_y += LANE
     for name, colour in BANDS:
-        mask = truth["masks"][name][:n]
+        mask = truth["masks"][name][:n_all][::step][:n]
         on = np.repeat(mask, PX_PER_FRAME)
         img[lane_y + 1 : lane_y + LANE - 2, GUTTER : GUTTER + len(on)][:, on] = colour
         lane_labels.append((name.replace("_", " "), lane_y, colour))
         lane_y += LANE
-    bright = frames.max(axis=2).mean(axis=1) / 255.0
+    bright = brightness(frames)[::step][:n]
     base = top + y + curve_h
     for i, b in enumerate(bright):
         h = int(round(b * (curve_h - 4)))
@@ -84,8 +88,8 @@ def time_strip(frames: np.ndarray, layout: Layout, truth: Dict[str, Any], fps: f
     for seg_id, ly in labels:
         d.text((GUTTER - 30, top + ly - 5), seg_id, fill=DIM)
     d.text((2, base - curve_h + 2), "brightness", fill=DIM)
-    for sec in range(0, int(n / fps) + 1):
-        x = GUTTER + int(sec * fps) * PX_PER_FRAME
+    for sec in range(0, int(n / col_fps) + 1):
+        x = GUTTER + int(sec * col_fps) * PX_PER_FRAME
         d.line([(x, base + 2), (x, base + (7 if sec % 2 == 0 else 4))], fill=DIM)
         if sec % 2 == 0:
             d.text((x - 3, base + 8), str(sec), fill=DIM)
@@ -95,6 +99,7 @@ def time_strip(frames: np.ndarray, layout: Layout, truth: Dict[str, Any], fps: f
 
 def _draw_installation(frame: np.ndarray, layout: Layout, w: int = 446, h: int = 256) -> np.ndarray:
     tile = np.zeros((h, w, 3), dtype=np.uint8)
+    frame = screen_values(frame)
     xs = (4 + layout.xy[:, 0] * (w - 10) / 431.0).astype(int)
     ys = (4 + layout.xy[:, 1] * (h - 10) / 245.0).astype(int)
     for dx in range(3):
@@ -106,20 +111,20 @@ def _draw_installation(frame: np.ndarray, layout: Layout, w: int = 446, h: int =
 def choose_instants(frames: np.ndarray, truth: Dict[str, Any], fps: float) -> List[Tuple[str, int]]:
     """Frames worth looking at: a kick, the gap after it, a snare, the drop, the break, the brightest and dimmest moments."""
     n = frames.shape[0]
-    bright = frames.max(axis=2).mean(axis=1)
+    bright = brightness(frames)
     out: List[Tuple[str, int]] = []
     drops = list(truth["events"]["drop"])
     kicks = [k for k in truth["events"]["kick"] if 0.3 <= k < n / fps - 0.6 and all(abs(k - d) > 2.0 for d in drops)]
     if kicks:
         k = kicks[(2 * len(kicks)) // 3]          # a kick well inside a kick stretch, away from any drop
         later = [x for x in truth["events"]["kick"] if x > k + 0.2]
-        out.append((f"on a kick ({k:.2f} s)", int(round(k * fps)) + 1))
+        out.append((f"on a kick ({k:.2f} s)", int(round((k + 0.04) * fps))))
         if later:
             out.append((f"between two kicks ({(k + later[0]) / 2:.2f} s)", int(round((k + later[0]) / 2 * fps))))
     for name, label in (("snare", "on a snare"), ("drop", "on the drop")):
         ev = [t for t in truth["events"][name] if 0.2 <= t < n / fps - 0.3]
         if ev:
-            out.append((f"{label} ({ev[len(ev) // 2 if name == 'snare' else 0]:.2f} s)", int(round(ev[len(ev) // 2 if name == "snare" else 0] * fps)) + 1))
+            out.append((f"{label} ({ev[len(ev) // 2 if name == 'snare' else 0]:.2f} s)", int(round((ev[len(ev) // 2 if name == "snare" else 0] + 0.04) * fps))))
     brk = np.flatnonzero(truth["masks"]["breakdown"][:n])
     if len(brk):
         out.append((f"in the break ({brk[len(brk) // 2] / fps:.2f} s)", int(brk[len(brk) // 2])))

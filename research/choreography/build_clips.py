@@ -36,6 +36,7 @@ FEED_TEXT = {
     "truth": ("Truth", "the mode hears the source of truth: the best this idea can look"),
     "candidate": ("Candidate analyzer", "the mode hears the research candidate: what the installation could do"),
     "today": ("Today's analyzer", "the mode hears the production analyzer as it is, through its fallbacks"),
+    "control": ("Wrong on purpose", "the mode hears the truth with every hit moved half a beat late: a control, not shown to the owner"),
 }
 
 
@@ -64,6 +65,9 @@ def build_clip(mode_name: str, track_id: str, start_s: float, duration_s: float,
     if (RECORDINGS_DIR / candidate / f"{track_id}.npz").exists():
         feeds["candidate"] = recording_feed(candidate, track_id)
     feeds["today"] = None
+    in_passage = [b["bpm"] for b in truth["beats"] if b["main"] and b["bpm"] > 0 and start_s <= b["t"] < start_s + duration_s]
+    half_beat = 30.0 / float(np.median(in_passage)) if in_passage else 0.25
+    feeds["control"] = feeds["truth"].shifted(half_beat)
 
     clip_id = f"{track_id}_{int(start_s):04d}_{mode_name}"
     dest = CLIPS / clip_id
@@ -81,6 +85,7 @@ def build_clip(mode_name: str, track_id: str, start_s: float, duration_s: float,
         label, text = FEED_TEXT[key]
         feed_meta.append({
             "key": key, "label": label, "text": text, "file": f"{key}.bin", "frames": int(frames.shape[0]),
+            "hidden": key == "control",
             "source": candidate if key == "candidate" else key,
             "provides": [] if feed is None else feed.provides(),
             "measures": {"kick_punch": measures.kick_punch(bright, CLIP_FPS, kicks), "alive": measures.alive(bright, silent)},
@@ -93,7 +98,7 @@ def build_clip(mode_name: str, track_id: str, start_s: float, duration_s: float,
         "id": clip_id, "built": datetime.date.today().isoformat(), "mode": mode_name,
         "track": {"id": track_id, "file": track["file"], "group": track.get("group")},
         "start_s": start_s, "duration_s": duration_s, "fps": CLIP_FPS, "leds": layout.total, "feeds": feed_meta,
-        "kicks": [round(k, 3) for k in kicks],
+        "kicks": [round(k, 3) for k in kicks], "control_shift_s": round(half_beat, 3),
         "note": "Simulated on screen from the segment layout. Not the real installation: brightness, colour and the room differ.",
     }
     (dest / "meta.json").write_text(json.dumps(_clean(meta), indent=1), encoding="utf-8")
