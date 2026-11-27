@@ -81,23 +81,29 @@ def profile_clip(clip_id: str) -> Path:
     dest = PROFILES / clip_id
     dest.mkdir(parents=True, exist_ok=True)
     song = meta["track"]["file"].rsplit(".", 1)[0]
+    versus = meta.get("kind") == "modes"                 # two modes on one feed, instead of one mode on several feeds
     profiles: Dict[str, dict] = {}
     for feed in meta["feeds"]:
         frames = np.fromfile(CLIPS / clip_id / feed["file"], dtype=np.uint8).reshape(feed["frames"], meta["leds"], 3)
         p = profile(frames, fps, layout, truth)
         p["words"] = describe(p)
         profiles[feed["key"]] = p
-        title = f"{meta['mode']} · {song[:40]} from {meta['start_s']:.0f} s · {feed['label']}"
+        title = f"{feed.get('mode', meta['mode'])} · {song[:40]} from {meta['start_s']:.0f} s · {feed['label'] if not versus else 'hearing ' + str(meta.get('feed'))}"
         pictures.time_strip(frames, layout, truth, fps, dest / f"{feed['key']}_strip.png", title)
         pictures.contact_sheet(frames, layout, pictures.choose_instants(frames, truth, fps), dest / f"{feed['key']}_sheet.png", title)
         pictures.reaction_plot(p["reactions"], fps, dest / f"{feed['key']}_reactions.png", title)
 
+    what = f"`{meta['mode']}` against `{meta.get('against')}` (both hearing: {meta.get('feed')})" if versus else f"`{meta['mode']}`"
     lines: List[str] = [
-        f"# Profile: `{meta['mode']}` on {song}, from {meta['start_s']:.0f} s for {meta['duration_s']:.0f} s", "",
+        f"# Profile: {what} on {song}, from {meta['start_s']:.0f} s for {meta['duration_s']:.0f} s", "",
         "What the light does on this passage, from the rendered frames and the truth of the passage. It says what the show",
-        "does, not whether it is good. Percentages are shares of full brightness as the eye sees it. \"Wrong on purpose\"",
-        "is a control: the truth with every hit moved half a beat late. A mode tied to the music must look clearly worse on it.", "",
-        "## Side by side", "",
+        "does, not whether it is good. Percentages are shares of full brightness as the eye sees it.",
+    ]
+    if not versus:
+        lines += ["\"Wrong on purpose\" is a control: the truth with every hit moved half a beat late. A mode tied to the music must",
+                  "look clearly worse on it."]
+    lines += [
+        "", "## Side by side", "",
         "| | " + " | ".join(f["label"] for f in meta["feeds"]) + " |", "|---|" + "---|" * len(meta["feeds"]),
     ]
     for label, path, kind in SIDE_BY_SIDE:

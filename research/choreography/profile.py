@@ -214,7 +214,10 @@ def profile(frames: np.ndarray, fps: float, layout: Layout, truth: Dict[str, Any
     pulse = np.abs(bright - _smooth(bright, int(0.5 * fps)))
 
     out: Dict[str, Any] = {"seconds": n / fps}
+    led_low, led_high = np.percentile(lum[::2], (5, 95), axis=0)        # each LED's own dim and bright moments
     out["light"] = {
+        # how far a typical LED travels: a show that moves in space at a constant total light still counts as moving
+        "led_swing": float(np.mean(led_high - led_low)),
         "mean": float(bright.mean()), "low": float(np.percentile(bright, 5)), "high": float(np.percentile(bright, 95)),
         "dark_share": float(np.mean(bright[heard] < DARK)) if heard.any() else float("nan"),
         "full_share": float(np.mean(bright > 0.85)),

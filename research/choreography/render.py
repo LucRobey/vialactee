@@ -12,6 +12,7 @@ drive value to how bright it looks; every number the lab reports about brightnes
 from __future__ import annotations
 
 import random
+import time
 from typing import Any, Optional, Sequence
 
 import numpy as np
@@ -26,8 +27,12 @@ CLIP_FPS: float = FPS / KEEP_EVERY
 
 
 def render_clip(mode_cls: Any, mono: np.ndarray, layout: Layout, feed: Optional[Feed], start_s: float, duration_s: float,
-                infos: Optional[dict] = None) -> np.ndarray:
-    """Frames of `mode_cls` over [start_s, start_s + duration_s], shape (frames, total LEDs, 3), uint8."""
+                infos: Optional[dict] = None, timing: Optional[dict] = None) -> np.ndarray:
+    """Frames of `mode_cls` over [start_s, start_s + duration_s], shape (frames, total LEDs, 3), uint8.
+
+    When `timing` is given it receives what drawing cost on this computer: "draw_ms" is the mean time to draw
+    one frame of the whole installation (all the segments), "draw_ms_max" the slowest frame, "frames" how many.
+    """
     from modes.Mode import Mode
     from mood.api import create_mood_service
     from music.api import Listener
@@ -43,6 +48,7 @@ def render_clip(mode_cls: Any, mono: np.ndarray, layout: Layout, feed: Optional[
     out = np.zeros((count // KEEP_EVERY, layout.total, 3), dtype=np.uint8)
     cfg = build_listener_infos()
     cfg["fakeDelay"] = LOOKAHEAD_S
+    drawn, draw_total, draw_max = 0, 0.0, 0.0
 
     with OfflineClock() as clock:
         listener = Listener(cfg)
@@ -68,8 +74,13 @@ def render_clip(mode_cls: Any, mono: np.ndarray, layout: Layout, feed: Optional[
                 Mode.bind_mood_modifiers(mood.modifiers())
                 if i < settle_from:
                     continue
+                t0 = time.perf_counter()                       # the real clock: OfflineClock only replaces time.time
                 for mode, rgb in zip(modes, buffers):
                     mode.render(buffer=rgb)
+                spent = time.perf_counter() - t0
+                drawn += 1
+                draw_total += spent
+                draw_max = max(draw_max, spent)
                 j = i - first
                 if 0 <= j < count and j % KEEP_EVERY == 0 and j // KEEP_EVERY < len(out):
                     for seg, rgb in zip(layout.segments, buffers):
@@ -78,6 +89,8 @@ def render_clip(mode_cls: Any, mono: np.ndarray, layout: Layout, feed: Optional[
         finally:
             Mode.reset_mood_colors()
             Mode.reset_mood_modifiers()
+    if timing is not None:
+        timing.update({"draw_ms": 1000.0 * draw_total / max(1, drawn), "draw_ms_max": 1000.0 * draw_max, "frames": drawn})
     return out
 
 

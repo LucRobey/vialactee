@@ -16,6 +16,9 @@
   button#play { min-width:86px; font-weight:600; }
   label { color:var(--dim); display:inline-flex; align-items:center; gap:6px; }
   #info { color:var(--dim); margin:0 0 10px; }
+  #queue { margin:0 0 10px; padding:7px 10px; border:1px solid var(--hot); border-radius:6px; color:var(--hot); display:none; }
+  #queue small { color:var(--dim); display:block; }
+  .badge { color:#000; background:var(--hot); border-radius:4px; padding:1px 6px; font-weight:600; margin-right:6px; }
   .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px; }
   .card.best { border-color:var(--hot); }
@@ -33,7 +36,8 @@
 </head>
 <body>
 <main>
-  <h1>Choreography clips: the same passage, the same mode, three ways of hearing the music</h1>
+  <h1>Choreography clips: the same passage in several versions. Which looks best with the music?</h1>
+  <p id="queue"></p>
   <div class="bar">
     <select id="clip" aria-label="Clip"></select>
     <button id="play" disabled>Play</button>
@@ -50,7 +54,8 @@
     <span id="said"></span>
   </div>
   <p class="note">
-    <b>Space</b> plays and pauses. Watch the three versions, then press the button under the one that looks best with the music.
+    <b>Space</b> plays and pauses. Watch the versions, then press the button under the one that looks best with the music.
+    The versions are either one mode hearing the music in several ways, or two different modes hearing it the same way.
     Your choice is saved; after choosing you are told which version was which, with its numbers.
     This is a drawing of the installation on a screen: brightness, colours and the room are not the real thing.
   </p>
@@ -103,7 +108,7 @@ function labelCards() {
 }
 async function choose(name, key) {
   const hidden = $('hide').checked && !revealed;
-  const body = { clip: clip.id, choice: name, order, chosen_feed: key, labels_hidden: hidden };
+  const body = { clip: clip.id, choice: name, order, chosen_version: key, labels_hidden: hidden };
   try {
     const r = await fetch('/api/verdict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error(r.status);
@@ -111,7 +116,40 @@ async function choose(name, key) {
     cards.forEach(c => { c.el.classList.toggle('best', c.key === key); c.el.querySelector('.pick').disabled = true; });
     $('nodiff').disabled = true;
     $('said').textContent = name === 'none' ? 'Saved: no real difference.' : `Saved: you chose ${name}, which was "${clip.feeds.find(f => f.key === key).label}".`;
+    if (clip.waiting) { clip.waiting = false; fillClips(clip.id); showInfo(); showQueue(); }
   } catch (e) { $('said').textContent = 'NOT SAVED (' + e.message + ')'; }
+}
+
+const songOf = c => c.track.file.replace(/\.mp3$/, '');
+const clock = s => { const m = Math.floor(s / 60); return `${m}:${String(Math.floor(s - m * 60)).padStart(2, '0')}`; };
+// What a clip compares, without saying which version is which.
+const whatOf = c => c.kind === 'modes' ? `${c.mode} against ${c.against} (both hearing: ${c.feed})` : `${c.mode}, heard in several ways`;
+function fillClips(selected) {
+  const sel = $('clip'); sel.innerHTML = '';
+  for (const [title, list] of [['Waiting for you', clips.filter(c => c.waiting)], ['Other clips', clips.filter(c => !c.waiting)]]) {
+    if (!list.length) continue;
+    const g = document.createElement('optgroup'); g.label = `${title} (${list.length})`;
+    for (const c of list) { const o = document.createElement('option'); o.value = c.id;
+      o.textContent = `${c.waiting ? 'WAITING · ' : ''}${songOf(c).slice(0, 34)} · ${clock(c.start_s)} · ${whatOf(c)}`; g.appendChild(o); }
+    sel.appendChild(g);
+  }
+  if (selected) sel.value = selected;
+}
+function showInfo() {
+  const note = clip.queue && clip.queue.note ? ` · note: ${clip.queue.note}` : '';
+  $('info').innerHTML = (clip.waiting ? '<span class="badge">waiting for you</span>' : '') + '<span></span>';
+  $('info').lastChild.textContent = `${songOf(clip)} · from ${clock(clip.start_s)}, ${clip.duration_s} s · ${whatOf(clip)} · built ${clip.built}${clip.waiting ? note : ''}`;
+}
+async function showQueue() {
+  const box = $('queue');
+  try {
+    const q = (await fetch('/api/queue').then(r => r.json())).waiting, missing = q.filter(e => !e.built);
+    box.style.display = q.length ? 'block' : 'none';
+    box.textContent = (q.length === 1 ? '1 comparison is waiting for you.' : `${q.length} comparisons are waiting for you.`)
+      + (missing.length < q.length ? ' Waiting clips are first in the list, marked WAITING.' : '');
+    if (missing.length) { const s = document.createElement('small');
+      s.textContent = `${missing.length} of them not built on this computer (run: python -m research.choreography.nominate --rebuild): ${missing.map(e => e.clip).join(', ')}`; box.appendChild(s); }
+  } catch (e) { box.style.display = 'none'; }
 }
 
 async function loadClip(id) {
@@ -124,8 +162,7 @@ async function loadClip(id) {
   const [buf] = await Promise.all([audio, ...loads]);
   if (token !== loadToken) return;
   buffer = buf;
-  const s = clip.start_s, m = Math.floor(s / 60);
-  $('info').textContent = `${clip.track.file.replace(/\.mp3$/, '')} · from ${m}:${String(Math.floor(s - m * 60)).padStart(2, '0')}, ${clip.duration_s} s · mode ${clip.mode} · built ${clip.built}`;
+  showInfo();
   buildCards(); $('play').disabled = false;
 }
 
@@ -159,9 +196,9 @@ addEventListener('resize', () => { if (clip) cards.forEach(c => { [c.g, c.w, c.h
 
 (async () => {
   [layout, clips] = await Promise.all([fetch('/api/layout').then(r => r.json()), fetch('/api/clips').then(r => r.json())]);
+  showQueue();
   if (!clips.length) { $('info').textContent = 'No clip yet. Build some with build_clips.py.'; return; }
-  for (const c of clips) { const o = document.createElement('option'); o.value = c.id; const m = Math.floor(c.start_s / 60);
-    o.textContent = `${c.track.file.replace(/\.mp3$/, '').slice(0, 40)} · ${m}:${String(Math.floor(c.start_s - m * 60)).padStart(2, '0')} · ${c.mode}`; $('clip').appendChild(o); }
+  fillClips();
   requestAnimationFrame(draw); loadClip(clips[0].id);
 })();
 </script>
