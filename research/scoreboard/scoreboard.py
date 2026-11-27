@@ -125,7 +125,7 @@ def grade_signal(sig: dict, est: np.ndarray, truth: dict, curves: Dict[str, np.n
                            "n_truth": every["n_truth"], "n_est": every["n_est"]})
     elif ref.startswith("regions."):
         name = ref.split(".", 1)[1]
-        regions = truth["regions"].get(name, [])
+        regions = [r for r in truth["regions"].get(name, []) if r.get("level") != "W"]      # weak truth never grades
         mask = grade.regions_to_mask([(r["start"], r["end"]) for r in regions], n, fps)
         res = grade.state_score(np.nan_to_num(est) > 0, mask, fps)
         out.update(checked=res["balanced"] if _span_grade(regions, name) else NAN, all=res["balanced"], detail=res)

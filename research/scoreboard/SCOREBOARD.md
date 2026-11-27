@@ -15,15 +15,16 @@ How to read the numbers (all from 0 to 100, averaged over the tracks):
 
 *the model running on the installation*
 
-### The 13 signals it produces today
+### The 14 signals it produces today
 
 | Signal | On checked truth | tracks | On all truth | tracks | What happens |
 |---|---|---|---|---|---|
-| beat | 77 | 20 | 77 | 20 | finds 86% of them; 72% of what it reports is real; typically 17 ms early |
-| bpm | 67 | 20 | 67 | 20 | double tempo 25% of the time, half tempo 1% |
+| beat | 78 | 20 | 78 | 20 | finds 87% of them; 73% of what it reports is real; typically 17 ms early |
+| bpm | 67 | 20 | 67 | 20 | double tempo 26% of the time, half tempo 0% |
+| no_beat | 86 | 14 | 86 | 14 | right 78% of the time while it is on, 93% while it is off; edges 0.3 s late |
 | kick | 80 | 20 | 81 | 20 | finds 85% of them; 79% of what it reports is real; typically 21 ms late |
 | kick_present | 85 | 19 | 85 | 20 | right 99% of the time while it is on, 71% while it is off; edges 0.2 s early |
-| drop | - | 0 | 5 | 6 | finds 8% of them; 1% of what it reports is real; typically 350 ms early |
+| drop | - | 0 | 5 | 6 | finds 8% of them; 1% of what it reports is real; typically 17 ms early |
 | section_change | - | 0 | 0 | 20 | it never fires on these tracks |
 | buildup | - | 0 | - | 0 | the truth has none on these tracks; the signal is on 8% of the time |
 | silence | 98 | 19 | 98 | 19 | right 99% of the time while it is on, 97% while it is off; edges 1.4 s early |
@@ -33,9 +34,9 @@ How to read the numbers (all from 0 to 100, averaged over the tracks):
 | band_high | 93 | 20 | 93 | 20 | 0 ms early |
 | brightness | 20 | 20 | 20 | 20 | 100 ms early |
 
-### The 23 empty slots
+### The 22 empty slots
 
-Nothing produces these yet, so there is nothing to grade: `no_beat`, `bar_position`, `beats_per_bar`, `beat_strength`, `snare`, `hat`, `tom`, `cymbal`, `kick_level`, `breakdown`, `riser`, `bass_present`, `drums_present`, `vocal_present`, `other_present`, `bass_level`, `drums_level`, `vocal_level`, `other_level`, `layers`, `band_sub`, `fullness`, `chord`.
+Nothing produces these yet, so there is nothing to grade: `bar_position`, `beats_per_bar`, `beat_strength`, `snare`, `hat`, `tom`, `cymbal`, `kick_level`, `breakdown`, `riser`, `bass_present`, `drums_present`, `vocal_present`, `other_present`, `bass_level`, `drums_level`, `vocal_level`, `other_level`, `layers`, `band_sub`, `fullness`, `chord`.
 
 ### Existing signals tried as candidates for an empty slot
 
@@ -48,8 +49,8 @@ Each line takes a signal the analyzer already has and grades it as if it filled 
 | hat <- beat tag | - | 0 | 0 | 20 | finds 0% of them; 22% of what it reports is real; typically 8 ms early |
 | kick <- sudden rise of the lowest band | 72 | 20 | 75 | 20 | finds 93% of them; 64% of what it reports is real; typically 17 ms late |
 | section_change <- the 'song change' flag | - | 0 | 28 | 20 | finds 25% of them; 36% of what it reports is real; typically 803 ms late |
-| no_beat <- not locked | 63 | 2 | 74 | 12 | right 80% of the time while it is on, 69% while it is off; edges 2.3 s late |
-| no_beat <- beat trust under 0.35 | 57 | 2 | 73 | 12 | right 64% of the time while it is on, 85% while it is off; edges 1.6 s late |
+| no_beat <- not locked | 71 | 14 | 71 | 14 | right 70% of the time while it is on, 70% while it is off; edges 2.5 s late |
+| no_beat <- beat trust under 0.35 | 71 | 14 | 71 | 14 | right 55% of the time while it is on, 86% while it is off; edges 1.5 s late |
 | band_bass <- 1 of the 16 bands | 84 | 20 | 84 | 20 | 8 ms late |
 | band_mid <- 8 of the 16 bands | 85 | 20 | 85 | 20 | 15 ms late |
 | band_high <- 7 of the 16 bands | 74 | 20 | 74 | 20 | 50 ms early |
@@ -63,9 +64,9 @@ Each line takes a signal the analyzer already has and grades it as if it filled 
 
 | Signal | On checked truth | tracks | On all truth | tracks | What happens |
 |---|---|---|---|---|---|
-| beat | 80 | 20 | 80 | 20 | finds 86% of them; 76% of what it reports is real; typically 17 ms early |
-| bpm | 74 | 20 | 75 | 20 | double tempo 18% of the time, half tempo 1% |
-| drop | - | 0 | 5 | 6 | finds 8% of them; 1% of what it reports is real; typically 350 ms early |
+| beat | 81 | 20 | 81 | 20 | finds 87% of them; 77% of what it reports is real; typically 17 ms early |
+| bpm | 75 | 20 | 75 | 20 | double tempo 18% of the time, half tempo 0% |
+| drop | - | 0 | 5 | 6 | finds 8% of them; 1% of what it reports is real; typically 17 ms early |
 | section_change | - | 0 | 0 | 20 | it never fires on these tracks |
 | buildup | - | 0 | - | 0 | the truth has none on these tracks; the signal is on 8% of the time |
 | silence | 98 | 19 | 98 | 19 | right 99% of the time while it is on, 97% while it is off; edges 1.4 s early |
@@ -87,8 +88,8 @@ Each line takes a signal the analyzer already has and grades it as if it filled 
 | hat <- beat tag | - | 0 | 0 | 20 | finds 0% of them; 25% of what it reports is real; typically 8 ms early |
 | kick <- sudden rise of the lowest band | 72 | 20 | 75 | 20 | finds 93% of them; 64% of what it reports is real; typically 17 ms late |
 | section_change <- the 'song change' flag | - | 0 | 28 | 20 | finds 25% of them; 36% of what it reports is real; typically 803 ms late |
-| no_beat <- not locked | 63 | 2 | 74 | 12 | right 80% of the time while it is on, 69% while it is off; edges 2.3 s late |
-| no_beat <- beat trust under 0.35 | 57 | 2 | 73 | 12 | right 64% of the time while it is on, 85% while it is off; edges 1.6 s late |
+| no_beat <- not locked | 71 | 14 | 71 | 14 | right 70% of the time while it is on, 70% while it is off; edges 2.5 s late |
+| no_beat <- beat trust under 0.35 | 71 | 14 | 71 | 14 | right 55% of the time while it is on, 86% while it is off; edges 1.5 s late |
 | band_bass <- 1 of the 16 bands | 84 | 20 | 84 | 20 | 8 ms late |
 | band_mid <- 8 of the 16 bands | 85 | 20 | 85 | 20 | 15 ms late |
 | band_high <- 7 of the 16 bands | 74 | 20 | 74 | 20 | 50 ms early |
@@ -101,23 +102,23 @@ Each line takes a signal the analyzer already has and grades it as if it filled 
 | 01 | Sweet Child O' Mine | rock | 79 | 83 | 82 | 97 |
 | 02 | Hotel California - 2013 Remaster | rock | 64 | 23 | 64 | 24 |
 | 03 | Come Together - Remastered | rock | 65 | 23 | 66 | 24 |
-| 04 | Where Is My Mind_ | rock | 53 | 2 | 53 | 2 |
-| 05 | Message In A Bottle - Remastered 2 | rock | 89 | 100 | 89 | 100 |
-| 06 | Bohemian Rhapsody - Remastered 201 | rock | 67 | 59 | 67 | 59 |
+| 04 | Where Is My Mind_ | rock | 53 | 2 | 54 | 2 |
+| 05 | Message In A Bottle - Remastered 2 | rock | 89 | 100 | 90 | 100 |
+| 06 | Bohemian Rhapsody - Remastered 201 | rock | 69 | 60 | 68 | 60 |
 | 07 | Piece of My Heart - Live at The Gr | rock | 65 | 68 | 65 | 68 |
 | 08 | Pumped Up Kicks | pop | 73 | 34 | 94 | 99 |
 | 09 | You Know I'm No Good | pop | 65 | 98 | 62 | 98 |
 | 10 | Sugar (feat. Francesco Yates) | pop | 77 | 97 | 77 | 97 |
-| 11 | Sucker for Pain (with Wiz Khalifa, | pop | 68 | 13 | 68 | 13 |
+| 11 | Sucker for Pain (with Wiz Khalifa, | pop | 65 | 0 | 65 | 0 |
 | 12 | Stayin' Alive - From _Saturday Nig | pop | 100 | 100 | 100 | 100 |
 | 13 | Another One Bites The Dust - Remas | pop | 96 | 99 | 96 | 99 |
-| 14 | Nightcall | electro | 73 | 29 | 98 | 100 |
-| 15 | Roadgame | electro | 81 | 81 | 81 | 81 |
+| 14 | Nightcall | electro | 74 | 29 | 99 | 100 |
+| 15 | Roadgame | electro | 96 | 98 | 96 | 98 |
 | 16 | Flashback | electro | 96 | 98 | 96 | 98 |
 | 17 | Genesis | electro | 81 | 83 | 82 | 84 |
 | 18 | Palladium | electro | 99 | 100 | 99 | 100 |
-| 19 | 01-Plastic-People | electro | 60 | 46 | 60 | 46 |
-| 20 | Nobody Rules the Streets | electro | 97 | 99 | 97 | 99 |
+| 19 | 01-Plastic-People | electro | 60 | 45 | 60 | 45 |
+| 20 | Nobody Rules the Streets | electro | 98 | 100 | 98 | 100 |
 
 ## What each signal is graded against
 

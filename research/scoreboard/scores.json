@@ -27,10 +27,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.895,
+      "all": 0.895,
+      "detail": {
+       "balanced": 0.895,
+       "when_on": 0.8241,
+       "when_off": 0.9659,
+       "share_on_truth": 0.0524,
+       "edge_delay_s": 3.2667,
+       "edges_found": 1
+      }
      },
      "bar_position": {
       "produced": false,
@@ -348,7 +355,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.7202,
       "all": 0.7202,
       "detail": {
        "balanced": 0.7202,
@@ -361,7 +368,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.821,
       "all": 0.821,
       "detail": {
        "balanced": 0.821,
@@ -409,7 +416,7 @@
       }
      }
     },
-    "frame_ms": 0.5877
+    "frame_ms": 0.3101
    },
    "02": {
     "signals": {
@@ -435,10 +442,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
+      "produced": true,
       "checked": null,
       "all": null,
-      "detail": {}
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.7966,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
      },
      "bar_position": {
       "produced": false,
@@ -520,7 +534,7 @@
       "detail": {
        "found": null,
        "right": 0.0,
-       "offset_ms": null,
+       "offset_ms": 166.6667,
        "n_truth": 0,
        "n_est": 5
       }
@@ -817,7 +831,7 @@
       }
      }
     },
-    "frame_ms": 0.5804
+    "frame_ms": 0.3129
    },
    "03": {
     "signals": {
@@ -843,10 +857,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
+      "produced": true,
       "checked": null,
       "all": null,
-      "detail": {}
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9689,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
      },
      "bar_position": {
       "produced": false,
@@ -1225,36 +1246,43 @@
       }
      }
     },
-    "frame_ms": 0.5845
+    "frame_ms": 0.3228
    },
    "04": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.5319,
-      "all": 0.5353,
+      "checked": 0.5347,
+      "all": 0.5381,
       "detail": {
-       "found": 0.7807,
-       "right": 0.4073,
-       "offset_ms": -25.1333,
-       "n_truth": 301,
-       "n_est": 577
+       "found": 0.7845,
+       "right": 0.4095,
+       "offset_ms": -25.1667,
+       "n_truth": 297,
+       "n_est": 569
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.0174,
-      "all": 0.0234,
+      "checked": 0.0176,
+      "all": 0.0237,
       "detail": {
-       "double": 0.8896,
+       "double": 0.8915,
        "half": 0.0
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9676,
+      "all": 0.9676,
+      "detail": {
+       "balanced": 0.9676,
+       "when_on": 0.9993,
+       "when_off": 0.936,
+       "share_on_truth": 0.1013,
+       "edge_delay_s": 2.3417,
+       "edges_found": 2
+      }
      },
      "bar_position": {
       "produced": false,
@@ -1572,28 +1600,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": 0.8282,
+      "checked": 0.8474,
+      "all": 0.8474,
       "detail": {
-       "balanced": 0.8282,
-       "when_on": 0.8331,
-       "when_off": 0.8233,
-       "share_on_truth": 0.0864,
-       "edge_delay_s": 3.4167,
-       "edges_found": 1
+       "balanced": 0.8474,
+       "when_on": 0.8577,
+       "when_off": 0.8371,
+       "share_on_truth": 0.1013,
+       "edge_delay_s": 3.8667,
+       "edges_found": 2
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": 0.8497,
+      "checked": 0.8692,
+      "all": 0.8692,
       "detail": {
-       "balanced": 0.8497,
-       "when_on": 0.8331,
-       "when_off": 0.8663,
-       "share_on_truth": 0.0864,
-       "edge_delay_s": 3.4167,
-       "edges_found": 1
+       "balanced": 0.8692,
+       "when_on": 0.8577,
+       "when_off": 0.8807,
+       "share_on_truth": 0.1013,
+       "edge_delay_s": 3.6167,
+       "edges_found": 2
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -1633,36 +1661,43 @@
       }
      }
     },
-    "frame_ms": 0.581
+    "frame_ms": 0.308
    },
    "05": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.8889,
-      "all": 0.8889,
+      "checked": 0.8931,
+      "all": 0.8931,
       "detail": {
-       "found": 0.8883,
-       "right": 0.8895,
+       "found": 0.8906,
+       "right": 0.8955,
        "offset_ms": -27.1,
-       "n_truth": 725,
-       "n_est": 724
+       "n_truth": 722,
+       "n_est": 718
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.9959,
-      "all": 0.9959,
+      "checked": 1.0,
+      "all": 1.0,
       "detail": {
        "double": 0.0,
        "half": 0.0
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9371,
+      "all": 0.9371,
+      "detail": {
+       "balanced": 0.9371,
+       "when_on": 0.8744,
+       "when_off": 0.9998,
+       "share_on_truth": 0.0123,
+       "edge_delay_s": 0.45,
+       "edges_found": 1
+      }
      },
      "bar_position": {
       "produced": false,
@@ -1980,26 +2015,26 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": null,
+      "checked": 0.4885,
+      "all": 0.4885,
       "detail": {
-       "balanced": null,
-       "when_on": null,
-       "when_off": 0.9774,
-       "share_on_truth": 0.0,
+       "balanced": 0.4885,
+       "when_on": 0.0,
+       "when_off": 0.9771,
+       "share_on_truth": 0.0123,
        "edge_delay_s": null,
        "edges_found": 0
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": null,
+      "checked": 0.4941,
+      "all": 0.4941,
       "detail": {
-       "balanced": null,
-       "when_on": null,
-       "when_off": 0.9883,
-       "share_on_truth": 0.0,
+       "balanced": 0.4941,
+       "when_on": 0.0,
+       "when_off": 0.9881,
+       "share_on_truth": 0.0123,
        "edge_delay_s": null,
        "edges_found": 0
       }
@@ -2041,36 +2076,43 @@
       }
      }
     },
-    "frame_ms": 0.5853
+    "frame_ms": 0.3175
    },
    "06": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.6723,
-      "all": 0.6689,
+      "checked": 0.686,
+      "all": 0.6852,
       "detail": {
-       "found": 0.7802,
-       "right": 0.5854,
-       "offset_ms": -25.2,
-       "n_truth": 514,
-       "n_est": 685
+       "found": 0.7976,
+       "right": 0.6006,
+       "offset_ms": -25.4,
+       "n_truth": 494,
+       "n_est": 656
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.5947,
-      "all": 0.5992,
+      "checked": 0.5971,
+      "all": 0.6004,
       "detail": {
-       "double": 0.3135,
+       "double": 0.3238,
        "half": 0.0
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7699,
+      "all": 0.7699,
+      "detail": {
+       "balanced": 0.7699,
+       "when_on": 0.8149,
+       "when_off": 0.7248,
+       "share_on_truth": 0.2196,
+       "edge_delay_s": -0.8833,
+       "edges_found": 3
+      }
      },
      "bar_position": {
       "produced": false,
@@ -2388,26 +2430,26 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": 0.7111,
-      "all": 0.7111,
+      "checked": 0.7365,
+      "all": 0.7365,
       "detail": {
-       "balanced": 0.7111,
-       "when_on": 0.8359,
-       "when_off": 0.5864,
-       "share_on_truth": 0.1857,
-       "edge_delay_s": 1.25,
-       "edges_found": 5
+       "balanced": 0.7365,
+       "when_on": 0.8612,
+       "when_off": 0.6118,
+       "share_on_truth": 0.2196,
+       "edge_delay_s": 1.65,
+       "edges_found": 6
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": 0.7533,
-      "all": 0.7533,
+      "checked": 0.758,
+      "all": 0.758,
       "detail": {
-       "balanced": 0.7533,
-       "when_on": 0.6373,
-       "when_off": 0.8693,
-       "share_on_truth": 0.1857,
+       "balanced": 0.758,
+       "when_on": 0.6275,
+       "when_off": 0.8885,
+       "share_on_truth": 0.2196,
        "edge_delay_s": -0.0333,
        "edges_found": 7
       }
@@ -2449,7 +2491,7 @@
       }
      }
     },
-    "frame_ms": 0.6123
+    "frame_ms": 0.32
    },
    "07": {
     "signals": {
@@ -2475,10 +2517,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9792,
+      "all": 0.9792,
+      "detail": {
+       "balanced": 0.9792,
+       "when_on": 1.0,
+       "when_off": 0.9584,
+       "share_on_truth": 0.0555,
+       "edge_delay_s": -0.45,
+       "edges_found": 1
+      }
      },
      "bar_position": {
       "produced": false,
@@ -2796,7 +2845,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.7502,
       "all": 0.7502,
       "detail": {
        "balanced": 0.7502,
@@ -2809,7 +2858,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.8217,
       "all": 0.8217,
       "detail": {
        "balanced": 0.8217,
@@ -2857,7 +2906,7 @@
       }
      }
     },
-    "frame_ms": 0.6004
+    "frame_ms": 0.3156
    },
    "08": {
     "signals": {
@@ -2883,10 +2932,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
+      "produced": true,
       "checked": null,
       "all": null,
-      "detail": {}
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9878,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
      },
      "bar_position": {
       "produced": false,
@@ -2968,7 +3024,7 @@
       "detail": {
        "found": null,
        "right": 0.0,
-       "offset_ms": null,
+       "offset_ms": 133.3333,
        "n_truth": 0,
        "n_est": 6
       }
@@ -3265,7 +3321,7 @@
       }
      }
     },
-    "frame_ms": 0.6189
+    "frame_ms": 0.3198
    },
    "09": {
     "signals": {
@@ -3291,10 +3347,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
+      "produced": true,
       "checked": null,
       "all": null,
-      "detail": {}
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9379,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
      },
      "bar_position": {
       "produced": false,
@@ -3376,7 +3439,7 @@
       "detail": {
        "found": null,
        "right": 0.0,
-       "offset_ms": null,
+       "offset_ms": -16.6667,
        "n_truth": 0,
        "n_est": 10
       }
@@ -3673,7 +3736,7 @@
       }
      }
     },
-    "frame_ms": 0.6186
+    "frame_ms": 0.3396
    },
    "10": {
     "signals": {
@@ -3699,10 +3762,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
+      "produced": true,
       "checked": null,
       "all": null,
-      "detail": {}
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.7012,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
      },
      "bar_position": {
       "produced": false,
@@ -4081,36 +4151,43 @@
       }
      }
     },
-    "frame_ms": 0.6228
+    "frame_ms": 0.3335
    },
    "11": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.6756,
-      "all": 0.6756,
+      "checked": 0.6478,
+      "all": 0.6478,
       "detail": {
-       "found": 0.9617,
-       "right": 0.5207,
-       "offset_ms": -13.0333,
-       "n_truth": 366,
-       "n_est": 676
+       "found": 0.9613,
+       "right": 0.4885,
+       "offset_ms": -15.3167,
+       "n_truth": 310,
+       "n_est": 610
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.1326,
-      "all": 0.1319,
+      "checked": 0.0,
+      "all": 0.0,
       "detail": {
-       "double": 0.8434,
+       "double": 0.9774,
        "half": 0.0
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.5244,
+      "all": 0.5244,
+      "detail": {
+       "balanced": 0.5244,
+       "when_on": 0.1389,
+       "when_off": 0.9099,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": 0.4,
+       "edges_found": 1
+      }
      },
      "bar_position": {
       "produced": false,
@@ -4428,28 +4505,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": null,
+      "checked": 0.454,
+      "all": 0.454,
       "detail": {
-       "balanced": null,
-       "when_on": null,
-       "when_off": 0.7455,
-       "share_on_truth": 0.0,
+       "balanced": 0.454,
+       "when_on": 0.1714,
+       "when_off": 0.7366,
+       "share_on_truth": 0.0971,
        "edge_delay_s": null,
        "edges_found": 0
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": null,
+      "checked": 0.5074,
+      "all": 0.5074,
       "detail": {
-       "balanced": null,
-       "when_on": null,
-       "when_off": 0.9472,
-       "share_on_truth": 0.0,
-       "edge_delay_s": null,
-       "edges_found": 0
+       "balanced": 0.5074,
+       "when_on": 0.0663,
+       "when_off": 0.9486,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": 1.4333,
+       "edges_found": 1
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -4489,7 +4566,7 @@
       }
      }
     },
-    "frame_ms": 0.5735
+    "frame_ms": 0.3615
    },
    "12": {
     "signals": {
@@ -4515,10 +4592,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.829,
+      "all": 0.829,
+      "detail": {
+       "balanced": 0.829,
+       "when_on": 0.658,
+       "when_off": 1.0,
+       "share_on_truth": 0.0225,
+       "edge_delay_s": 2.2,
+       "edges_found": 1
+      }
      },
      "bar_position": {
       "produced": false,
@@ -4836,7 +4920,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.5101,
       "all": 0.5101,
       "detail": {
        "balanced": 0.5101,
@@ -4849,7 +4933,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.513,
       "all": 0.513,
       "detail": {
        "balanced": 0.513,
@@ -4897,7 +4981,7 @@
       }
      }
     },
-    "frame_ms": 0.5498
+    "frame_ms": 0.3375
    },
    "13": {
     "signals": {
@@ -4923,10 +5007,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9447,
+      "all": 0.9447,
+      "detail": {
+       "balanced": 0.9447,
+       "when_on": 0.8969,
+       "when_off": 0.9925,
+       "share_on_truth": 0.0633,
+       "edge_delay_s": -0.2667,
+       "edges_found": 3
+      }
      },
      "bar_position": {
       "produced": false,
@@ -5244,7 +5335,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.9145,
       "all": 0.9145,
       "detail": {
        "balanced": 0.9145,
@@ -5257,7 +5348,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.8295,
       "all": 0.8295,
       "detail": {
        "balanced": 0.8295,
@@ -5305,36 +5396,43 @@
       }
      }
     },
-    "frame_ms": 0.571
+    "frame_ms": 0.3421
    },
    "14": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.7285,
-      "all": 0.7285,
+      "checked": 0.7368,
+      "all": 0.7368,
       "detail": {
-       "found": 0.979,
-       "right": 0.5801,
+       "found": 0.9946,
+       "right": 0.5852,
        "offset_ms": -21.4667,
-       "n_truth": 381,
-       "n_est": 643
+       "n_truth": 373,
+       "n_est": 634
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.2887,
-      "all": 0.2887,
+      "checked": 0.2869,
+      "all": 0.2869,
       "detail": {
-       "double": 0.7087,
+       "double": 0.7131,
        "half": 0.0
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9965,
+      "all": 0.9965,
+      "detail": {
+       "balanced": 0.9965,
+       "when_on": 0.9986,
+       "when_off": 0.9944,
+       "share_on_truth": 0.0447,
+       "edge_delay_s": 0.3,
+       "edges_found": 1
+      }
      },
      "bar_position": {
       "produced": false,
@@ -5652,28 +5750,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": 0.9828,
+      "checked": 0.9934,
+      "all": 0.9934,
       "detail": {
-       "balanced": 0.9828,
+       "balanced": 0.9934,
        "when_on": 1.0,
-       "when_off": 0.9655,
-       "share_on_truth": 0.0237,
-       "edge_delay_s": null,
-       "edges_found": 0
+       "when_off": 0.9868,
+       "share_on_truth": 0.0447,
+       "edge_delay_s": 3.2667,
+       "edges_found": 1
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": 0.9855,
+      "checked": 0.9962,
+      "all": 0.9962,
       "detail": {
-       "balanced": 0.9855,
+       "balanced": 0.9962,
        "when_on": 1.0,
-       "when_off": 0.971,
-       "share_on_truth": 0.0237,
-       "edge_delay_s": null,
-       "edges_found": 0
+       "when_off": 0.9924,
+       "share_on_truth": 0.0447,
+       "edge_delay_s": 0.55,
+       "edges_found": 1
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -5713,36 +5811,43 @@
       }
      }
     },
-    "frame_ms": 0.5517
+    "frame_ms": 0.3336
    },
    "15": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.8065,
-      "all": 0.8078,
+      "checked": 0.9615,
+      "all": 0.9578,
       "detail": {
-       "found": 0.7812,
-       "right": 0.8363,
-       "offset_ms": -16.6667,
-       "n_truth": 425,
-       "n_est": 397
+       "found": 0.9562,
+       "right": 0.9595,
+       "offset_ms": -20.6333,
+       "n_truth": 297,
+       "n_est": 296
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.8137,
-      "all": 0.819,
+      "checked": 0.9754,
+      "all": 0.9764,
       "detail": {
        "double": 0.0,
-       "half": 0.1048
+       "half": 0.0
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8374,
+      "all": 0.8374,
+      "detail": {
+       "balanced": 0.8374,
+       "when_on": 0.7152,
+       "when_off": 0.9596,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": -1.2167,
+       "edges_found": 3
+      }
      },
      "bar_position": {
       "produced": false,
@@ -6060,28 +6165,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": 0.6477,
+      "checked": 0.7872,
+      "all": 0.7872,
       "detail": {
-       "balanced": 0.6477,
-       "when_on": 0.8285,
-       "when_off": 0.4669,
-       "share_on_truth": 0.1074,
-       "edge_delay_s": 2.0667,
-       "edges_found": 2
+       "balanced": 0.7872,
+       "when_on": 0.9454,
+       "when_off": 0.6291,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": 2.1667,
+       "edges_found": 3
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": 0.7544,
+      "checked": 0.8225,
+      "all": 0.8225,
       "detail": {
-       "balanced": 0.7544,
-       "when_on": 0.8285,
-       "when_off": 0.6802,
-       "share_on_truth": 0.1074,
-       "edge_delay_s": 2.0667,
-       "edges_found": 2
+       "balanced": 0.8225,
+       "when_on": 0.8017,
+       "when_off": 0.8432,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": 1.8,
+       "edges_found": 3
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -6121,7 +6226,7 @@
       }
      }
     },
-    "frame_ms": 0.5519
+    "frame_ms": 0.3372
    },
    "16": {
     "signals": {
@@ -6147,10 +6252,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.9444,
+      "all": 0.9444,
+      "detail": {
+       "balanced": 0.9444,
+       "when_on": 1.0,
+       "when_off": 0.8887,
+       "share_on_truth": 0.0473,
+       "edge_delay_s": -2.55,
+       "edges_found": 1
+      }
      },
      "bar_position": {
       "produced": false,
@@ -6468,7 +6580,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.9116,
       "all": 0.9116,
       "detail": {
        "balanced": 0.9116,
@@ -6481,7 +6593,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.818,
       "all": 0.818,
       "detail": {
        "balanced": 0.818,
@@ -6529,7 +6641,7 @@
       }
      }
     },
-    "frame_ms": 0.5534
+    "frame_ms": 0.352
    },
    "17": {
     "signals": {
@@ -6555,10 +6667,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.8361,
+      "all": 0.8361,
+      "detail": {
+       "balanced": 0.8361,
+       "when_on": 0.7777,
+       "when_off": 0.8945,
+       "share_on_truth": 0.2189,
+       "edge_delay_s": 0.0167,
+       "edges_found": 3
+      }
      },
      "bar_position": {
       "produced": false,
@@ -6876,7 +6995,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.5389,
       "all": 0.5389,
       "detail": {
        "balanced": 0.5389,
@@ -6889,7 +7008,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.7169,
       "all": 0.7169,
       "detail": {
        "balanced": 0.7169,
@@ -6937,7 +7056,7 @@
       }
      }
     },
-    "frame_ms": 0.5587
+    "frame_ms": 0.353
    },
    "18": {
     "signals": {
@@ -6963,10 +7082,17 @@
       }
      },
      "no_beat": {
-      "produced": false,
+      "produced": true,
       "checked": null,
       "all": null,
-      "detail": {}
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9906,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
      },
      "bar_position": {
       "produced": false,
@@ -7345,36 +7471,43 @@
       }
      }
     },
-    "frame_ms": 0.5448
+    "frame_ms": 0.3505
    },
    "19": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.5968,
-      "all": 0.5968,
+      "checked": 0.5958,
+      "all": 0.5958,
       "detail": {
-       "found": 0.6442,
-       "right": 0.5559,
+       "found": 0.6432,
+       "right": 0.5549,
        "offset_ms": -9.9,
-       "n_truth": 756,
-       "n_est": 876
+       "n_truth": 754,
+       "n_est": 874
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.455,
-      "all": 0.455,
+      "checked": 0.4536,
+      "all": 0.4536,
       "detail": {
        "double": 0.0,
        "half": 0.0
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7678,
+      "all": 0.7678,
+      "detail": {
+       "balanced": 0.7678,
+       "when_on": 0.572,
+       "when_off": 0.9637,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 0.25,
+       "edges_found": 3
+      }
      },
      "bar_position": {
       "produced": false,
@@ -7692,27 +7825,27 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": 0.5441,
-      "all": 0.5441,
+      "checked": 0.5408,
+      "all": 0.5408,
       "detail": {
-       "balanced": 0.5441,
-       "when_on": 0.6851,
-       "when_off": 0.4031,
-       "share_on_truth": 0.1425,
-       "edge_delay_s": 3.05,
+       "balanced": 0.5408,
+       "when_on": 0.6792,
+       "when_off": 0.4023,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 2.4167,
        "edges_found": 3
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": 0.3793,
-      "all": 0.3793,
+      "checked": 0.3785,
+      "all": 0.3785,
       "detail": {
-       "balanced": 0.3793,
-       "when_on": 0.3363,
-       "when_off": 0.4222,
-       "share_on_truth": 0.1425,
-       "edge_delay_s": 2.575,
+       "balanced": 0.3785,
+       "when_on": 0.3355,
+       "when_off": 0.4215,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 2.125,
        "edges_found": 4
       }
      },
@@ -7753,36 +7886,43 @@
       }
      }
     },
-    "frame_ms": 0.5567
+    "frame_ms": 0.3528
    },
    "20": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.9671,
-      "all": 0.9662,
+      "checked": 0.979,
+      "all": 0.9781,
       "detail": {
-       "found": 0.9633,
-       "right": 0.9692,
+       "found": 0.977,
+       "right": 0.9791,
        "offset_ms": -27.8667,
-       "n_truth": 490,
-       "n_est": 487
+       "n_truth": 479,
+       "n_est": 478
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.9898,
-      "all": 0.9898,
+      "checked": 0.9979,
+      "all": 0.9979,
       "detail": {
        "double": 0.0,
        "half": 0.0
       }
      },
      "no_beat": {
-      "produced": false,
-      "checked": null,
-      "all": null,
-      "detail": {}
+      "produced": true,
+      "checked": 0.7753,
+      "all": 0.7753,
+      "detail": {
+       "balanced": 0.7753,
+       "when_on": 0.5806,
+       "when_off": 0.97,
+       "share_on_truth": 0.1604,
+       "edge_delay_s": -0.1333,
+       "edges_found": 2
+      }
      },
      "bar_position": {
       "produced": false,
@@ -8100,28 +8240,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": 0.8241,
+      "checked": 0.7944,
+      "all": 0.7944,
       "detail": {
-       "balanced": 0.8241,
-       "when_on": 0.8271,
-       "when_off": 0.821,
-       "share_on_truth": 0.1402,
-       "edge_delay_s": 2.35,
-       "edges_found": 1
+       "balanced": 0.7944,
+       "when_on": 0.7643,
+       "when_off": 0.8246,
+       "share_on_truth": 0.1604,
+       "edge_delay_s": 2.9917,
+       "edges_found": 2
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": 0.5706,
+      "checked": 0.5801,
+      "all": 0.5801,
       "detail": {
-       "balanced": 0.5706,
-       "when_on": 0.2258,
-       "when_off": 0.9154,
-       "share_on_truth": 0.1402,
-       "edge_delay_s": 0.125,
-       "edges_found": 2
+       "balanced": 0.5801,
+       "when_on": 0.2388,
+       "when_off": 0.9213,
+       "share_on_truth": 0.1604,
+       "edge_delay_s": 0.4833,
+       "edges_found": 3
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -8161,7 +8301,7 @@
       }
      }
     },
-    "frame_ms": 0.5454
+    "frame_ms": 0.3521
    }
   },
   "MultiBandOnsetAudioAnalyzer": {
@@ -8488,7 +8628,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.7202,
       "all": 0.7202,
       "detail": {
        "balanced": 0.7202,
@@ -8501,7 +8641,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.821,
       "all": 0.821,
       "detail": {
        "balanced": 0.821,
@@ -8549,7 +8689,7 @@
       }
      }
     },
-    "frame_ms": 0.4835
+    "frame_ms": 0.2989
    },
    "02": {
     "signals": {
@@ -8647,7 +8787,7 @@
       "detail": {
        "found": null,
        "right": 0.0,
-       "offset_ms": null,
+       "offset_ms": 166.6667,
        "n_truth": 0,
        "n_est": 5
       }
@@ -8935,7 +9075,7 @@
       }
      }
     },
-    "frame_ms": 0.4698
+    "frame_ms": 0.3017
    },
    "03": {
     "signals": {
@@ -9321,28 +9461,28 @@
       }
      }
     },
-    "frame_ms": 0.4857
+    "frame_ms": 0.2962
    },
    "04": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.5343,
-      "all": 0.5376,
+      "checked": 0.5371,
+      "all": 0.5404,
       "detail": {
-       "found": 0.7841,
-       "right": 0.409,
-       "offset_ms": -25.1167,
-       "n_truth": 301,
-       "n_est": 577
+       "found": 0.7879,
+       "right": 0.4112,
+       "offset_ms": -25.15,
+       "n_truth": 297,
+       "n_est": 569
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.0174,
-      "all": 0.0234,
+      "checked": 0.0176,
+      "all": 0.0237,
       "detail": {
-       "double": 0.8896,
+       "double": 0.8915,
        "half": 0.0
       }
      },
@@ -9646,28 +9786,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": 0.8282,
+      "checked": 0.8474,
+      "all": 0.8474,
       "detail": {
-       "balanced": 0.8282,
-       "when_on": 0.8331,
-       "when_off": 0.8233,
-       "share_on_truth": 0.0864,
-       "edge_delay_s": 3.4167,
-       "edges_found": 1
+       "balanced": 0.8474,
+       "when_on": 0.8577,
+       "when_off": 0.8371,
+       "share_on_truth": 0.1013,
+       "edge_delay_s": 3.8667,
+       "edges_found": 2
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": 0.8497,
+      "checked": 0.8692,
+      "all": 0.8692,
       "detail": {
-       "balanced": 0.8497,
-       "when_on": 0.8331,
-       "when_off": 0.8663,
-       "share_on_truth": 0.0864,
-       "edge_delay_s": 3.4167,
-       "edges_found": 1
+       "balanced": 0.8692,
+       "when_on": 0.8577,
+       "when_off": 0.8807,
+       "share_on_truth": 0.1013,
+       "edge_delay_s": 3.6167,
+       "edges_found": 2
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -9707,26 +9847,26 @@
       }
      }
     },
-    "frame_ms": 0.4697
+    "frame_ms": 0.2854
    },
    "05": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.8916,
-      "all": 0.8916,
+      "checked": 0.8958,
+      "all": 0.8958,
       "detail": {
-       "found": 0.891,
-       "right": 0.8923,
+       "found": 0.8934,
+       "right": 0.8983,
        "offset_ms": -27.2,
-       "n_truth": 725,
-       "n_est": 724
+       "n_truth": 722,
+       "n_est": 718
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.9959,
-      "all": 0.9959,
+      "checked": 1.0,
+      "all": 1.0,
       "detail": {
        "double": 0.0,
        "half": 0.0
@@ -10032,26 +10172,26 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": null,
+      "checked": 0.4885,
+      "all": 0.4885,
       "detail": {
-       "balanced": null,
-       "when_on": null,
-       "when_off": 0.9774,
-       "share_on_truth": 0.0,
+       "balanced": 0.4885,
+       "when_on": 0.0,
+       "when_off": 0.9771,
+       "share_on_truth": 0.0123,
        "edge_delay_s": null,
        "edges_found": 0
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": null,
+      "checked": 0.4941,
+      "all": 0.4941,
       "detail": {
-       "balanced": null,
-       "when_on": null,
-       "when_off": 0.9883,
-       "share_on_truth": 0.0,
+       "balanced": 0.4941,
+       "when_on": 0.0,
+       "when_off": 0.9881,
+       "share_on_truth": 0.0123,
        "edge_delay_s": null,
        "edges_found": 0
       }
@@ -10093,28 +10233,28 @@
       }
      }
     },
-    "frame_ms": 0.4351
+    "frame_ms": 0.286
    },
    "06": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.6706,
-      "all": 0.6672,
+      "checked": 0.6843,
+      "all": 0.6835,
       "detail": {
-       "found": 0.7782,
-       "right": 0.5839,
-       "offset_ms": -25.1667,
-       "n_truth": 514,
-       "n_est": 685
+       "found": 0.7955,
+       "right": 0.5991,
+       "offset_ms": -25.2667,
+       "n_truth": 494,
+       "n_est": 656
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.5947,
-      "all": 0.5992,
+      "checked": 0.5971,
+      "all": 0.6004,
       "detail": {
-       "double": 0.3135,
+       "double": 0.3238,
        "half": 0.0
       }
      },
@@ -10418,26 +10558,26 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": 0.7111,
-      "all": 0.7111,
+      "checked": 0.7365,
+      "all": 0.7365,
       "detail": {
-       "balanced": 0.7111,
-       "when_on": 0.8359,
-       "when_off": 0.5864,
-       "share_on_truth": 0.1857,
-       "edge_delay_s": 1.25,
-       "edges_found": 5
+       "balanced": 0.7365,
+       "when_on": 0.8612,
+       "when_off": 0.6118,
+       "share_on_truth": 0.2196,
+       "edge_delay_s": 1.65,
+       "edges_found": 6
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": 0.7533,
-      "all": 0.7533,
+      "checked": 0.758,
+      "all": 0.758,
       "detail": {
-       "balanced": 0.7533,
-       "when_on": 0.6373,
-       "when_off": 0.8693,
-       "share_on_truth": 0.1857,
+       "balanced": 0.758,
+       "when_on": 0.6275,
+       "when_off": 0.8885,
+       "share_on_truth": 0.2196,
        "edge_delay_s": -0.0333,
        "edges_found": 7
       }
@@ -10479,7 +10619,7 @@
       }
      }
     },
-    "frame_ms": 0.4734
+    "frame_ms": 0.2891
    },
    "07": {
     "signals": {
@@ -10804,7 +10944,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.7502,
       "all": 0.7502,
       "detail": {
        "balanced": 0.7502,
@@ -10817,7 +10957,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.8217,
       "all": 0.8217,
       "detail": {
        "balanced": 0.8217,
@@ -10865,7 +11005,7 @@
       }
      }
     },
-    "frame_ms": 0.446
+    "frame_ms": 0.2872
    },
    "08": {
     "signals": {
@@ -10963,7 +11103,7 @@
       "detail": {
        "found": null,
        "right": 0.0,
-       "offset_ms": null,
+       "offset_ms": 133.3333,
        "n_truth": 0,
        "n_est": 6
       }
@@ -11251,7 +11391,7 @@
       }
      }
     },
-    "frame_ms": 0.4902
+    "frame_ms": 0.2958
    },
    "09": {
     "signals": {
@@ -11349,7 +11489,7 @@
       "detail": {
        "found": null,
        "right": 0.0,
-       "offset_ms": null,
+       "offset_ms": -16.6667,
        "n_truth": 0,
        "n_est": 10
       }
@@ -11637,7 +11777,7 @@
       }
      }
     },
-    "frame_ms": 0.4834
+    "frame_ms": 0.293
    },
    "10": {
     "signals": {
@@ -12023,28 +12163,28 @@
       }
      }
     },
-    "frame_ms": 0.5407
+    "frame_ms": 0.2948
    },
    "11": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.6756,
-      "all": 0.6756,
+      "checked": 0.6478,
+      "all": 0.6478,
       "detail": {
-       "found": 0.9617,
-       "right": 0.5207,
-       "offset_ms": -13.0333,
-       "n_truth": 366,
-       "n_est": 676
+       "found": 0.9613,
+       "right": 0.4885,
+       "offset_ms": -15.3167,
+       "n_truth": 310,
+       "n_est": 610
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.1326,
-      "all": 0.1319,
+      "checked": 0.0,
+      "all": 0.0,
       "detail": {
-       "double": 0.8434,
+       "double": 0.9774,
        "half": 0.0
       }
      },
@@ -12348,28 +12488,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": null,
+      "checked": 0.454,
+      "all": 0.454,
       "detail": {
-       "balanced": null,
-       "when_on": null,
-       "when_off": 0.7455,
-       "share_on_truth": 0.0,
+       "balanced": 0.454,
+       "when_on": 0.1714,
+       "when_off": 0.7366,
+       "share_on_truth": 0.0971,
        "edge_delay_s": null,
        "edges_found": 0
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": null,
+      "checked": 0.5074,
+      "all": 0.5074,
       "detail": {
-       "balanced": null,
-       "when_on": null,
-       "when_off": 0.9472,
-       "share_on_truth": 0.0,
-       "edge_delay_s": null,
-       "edges_found": 0
+       "balanced": 0.5074,
+       "when_on": 0.0663,
+       "when_off": 0.9486,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": 1.4333,
+       "edges_found": 1
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -12409,7 +12549,7 @@
       }
      }
     },
-    "frame_ms": 0.5304
+    "frame_ms": 0.3076
    },
    "12": {
     "signals": {
@@ -12734,7 +12874,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.5101,
       "all": 0.5101,
       "detail": {
        "balanced": 0.5101,
@@ -12747,7 +12887,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.513,
       "all": 0.513,
       "detail": {
        "balanced": 0.513,
@@ -12795,7 +12935,7 @@
       }
      }
     },
-    "frame_ms": 0.5048
+    "frame_ms": 0.3285
    },
    "13": {
     "signals": {
@@ -13120,7 +13260,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.9145,
       "all": 0.9145,
       "detail": {
        "balanced": 0.9145,
@@ -13133,7 +13273,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.8295,
       "all": 0.8295,
       "detail": {
        "balanced": 0.8295,
@@ -13181,26 +13321,26 @@
       }
      }
     },
-    "frame_ms": 0.5263
+    "frame_ms": 0.3208
    },
    "14": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.9777,
-      "all": 0.9777,
+      "checked": 0.9946,
+      "all": 0.9946,
       "detail": {
-       "found": 0.979,
-       "right": 0.9764,
+       "found": 0.9946,
+       "right": 0.9946,
        "offset_ms": -21.4667,
-       "n_truth": 381,
-       "n_est": 382
+       "n_truth": 373,
+       "n_est": 373
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.9974,
-      "all": 0.9974,
+      "checked": 1.0,
+      "all": 1.0,
       "detail": {
        "double": 0.0,
        "half": 0.0
@@ -13506,28 +13646,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": 0.9828,
+      "checked": 0.9934,
+      "all": 0.9934,
       "detail": {
-       "balanced": 0.9828,
+       "balanced": 0.9934,
        "when_on": 1.0,
-       "when_off": 0.9655,
-       "share_on_truth": 0.0237,
-       "edge_delay_s": null,
-       "edges_found": 0
+       "when_off": 0.9868,
+       "share_on_truth": 0.0447,
+       "edge_delay_s": 3.2667,
+       "edges_found": 1
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": 0.9855,
+      "checked": 0.9962,
+      "all": 0.9962,
       "detail": {
-       "balanced": 0.9855,
+       "balanced": 0.9962,
        "when_on": 1.0,
-       "when_off": 0.971,
-       "share_on_truth": 0.0237,
-       "edge_delay_s": null,
-       "edges_found": 0
+       "when_off": 0.9924,
+       "share_on_truth": 0.0447,
+       "edge_delay_s": 0.55,
+       "edges_found": 1
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -13567,29 +13707,29 @@
       }
      }
     },
-    "frame_ms": 0.5256
+    "frame_ms": 0.3648
    },
    "15": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.814,
-      "all": 0.8151,
+      "checked": 0.9615,
+      "all": 0.9578,
       "detail": {
-       "found": 0.7882,
-       "right": 0.8438,
-       "offset_ms": -16.6667,
-       "n_truth": 425,
-       "n_est": 397
+       "found": 0.9562,
+       "right": 0.9595,
+       "offset_ms": -20.6333,
+       "n_truth": 297,
+       "n_est": 296
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.8137,
-      "all": 0.819,
+      "checked": 0.9754,
+      "all": 0.9764,
       "detail": {
        "double": 0.0,
-       "half": 0.1048
+       "half": 0.0
       }
      },
      "no_beat": {
@@ -13892,28 +14032,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": 0.6477,
+      "checked": 0.7872,
+      "all": 0.7872,
       "detail": {
-       "balanced": 0.6477,
-       "when_on": 0.8285,
-       "when_off": 0.4669,
-       "share_on_truth": 0.1074,
-       "edge_delay_s": 2.0667,
-       "edges_found": 2
+       "balanced": 0.7872,
+       "when_on": 0.9454,
+       "when_off": 0.6291,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": 2.1667,
+       "edges_found": 3
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": 0.7544,
+      "checked": 0.8225,
+      "all": 0.8225,
       "detail": {
-       "balanced": 0.7544,
-       "when_on": 0.8285,
-       "when_off": 0.6802,
-       "share_on_truth": 0.1074,
-       "edge_delay_s": 2.0667,
-       "edges_found": 2
+       "balanced": 0.8225,
+       "when_on": 0.8017,
+       "when_off": 0.8432,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": 1.8,
+       "edges_found": 3
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -13953,7 +14093,7 @@
       }
      }
     },
-    "frame_ms": 0.5163
+    "frame_ms": 0.3791
    },
    "16": {
     "signals": {
@@ -14278,7 +14418,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.9116,
       "all": 0.9116,
       "detail": {
        "balanced": 0.9116,
@@ -14291,7 +14431,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.818,
       "all": 0.818,
       "detail": {
        "balanced": 0.818,
@@ -14339,7 +14479,7 @@
       }
      }
     },
-    "frame_ms": 0.5085
+    "frame_ms": 0.3752
    },
    "17": {
     "signals": {
@@ -14664,7 +14804,7 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
+      "checked": 0.5389,
       "all": 0.5389,
       "detail": {
        "balanced": 0.5389,
@@ -14677,7 +14817,7 @@
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
+      "checked": 0.7169,
       "all": 0.7169,
       "detail": {
        "balanced": 0.7169,
@@ -14725,7 +14865,7 @@
       }
      }
     },
-    "frame_ms": 0.5132
+    "frame_ms": 0.3799
    },
    "18": {
     "signals": {
@@ -15111,26 +15251,26 @@
       }
      }
     },
-    "frame_ms": 0.4967
+    "frame_ms": 0.3101
    },
    "19": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.5968,
-      "all": 0.5968,
+      "checked": 0.5958,
+      "all": 0.5958,
       "detail": {
-       "found": 0.6442,
-       "right": 0.5559,
+       "found": 0.6432,
+       "right": 0.5549,
        "offset_ms": -9.9,
-       "n_truth": 756,
-       "n_est": 876
+       "n_truth": 754,
+       "n_est": 874
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.455,
-      "all": 0.455,
+      "checked": 0.4536,
+      "all": 0.4536,
       "detail": {
        "double": 0.0,
        "half": 0.0
@@ -15436,27 +15576,27 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": 0.5441,
-      "all": 0.5441,
+      "checked": 0.5408,
+      "all": 0.5408,
       "detail": {
-       "balanced": 0.5441,
-       "when_on": 0.6851,
-       "when_off": 0.4031,
-       "share_on_truth": 0.1425,
-       "edge_delay_s": 3.05,
+       "balanced": 0.5408,
+       "when_on": 0.6792,
+       "when_off": 0.4023,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 2.4167,
        "edges_found": 3
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": 0.3793,
-      "all": 0.3793,
+      "checked": 0.3785,
+      "all": 0.3785,
       "detail": {
-       "balanced": 0.3793,
-       "when_on": 0.3363,
-       "when_off": 0.4222,
-       "share_on_truth": 0.1425,
-       "edge_delay_s": 2.575,
+       "balanced": 0.3785,
+       "when_on": 0.3355,
+       "when_off": 0.4215,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 2.125,
        "edges_found": 4
       }
      },
@@ -15497,26 +15637,26 @@
       }
      }
     },
-    "frame_ms": 0.5202
+    "frame_ms": 0.2933
    },
    "20": {
     "signals": {
      "beat": {
       "produced": true,
-      "checked": 0.9671,
-      "all": 0.9662,
+      "checked": 0.979,
+      "all": 0.9781,
       "detail": {
-       "found": 0.9633,
-       "right": 0.9692,
+       "found": 0.977,
+       "right": 0.9791,
        "offset_ms": -27.8667,
-       "n_truth": 490,
-       "n_est": 487
+       "n_truth": 479,
+       "n_est": 478
       }
      },
      "bpm": {
       "produced": true,
-      "checked": 0.9898,
-      "all": 0.9898,
+      "checked": 0.9979,
+      "all": 0.9979,
       "detail": {
        "double": 0.0,
        "half": 0.0
@@ -15822,28 +15962,28 @@
      },
      "no_beat <- not locked": {
       "produced": true,
-      "checked": null,
-      "all": 0.8241,
+      "checked": 0.7944,
+      "all": 0.7944,
       "detail": {
-       "balanced": 0.8241,
-       "when_on": 0.8271,
-       "when_off": 0.821,
-       "share_on_truth": 0.1402,
-       "edge_delay_s": 2.35,
-       "edges_found": 1
+       "balanced": 0.7944,
+       "when_on": 0.7643,
+       "when_off": 0.8246,
+       "share_on_truth": 0.1604,
+       "edge_delay_s": 2.9917,
+       "edges_found": 2
       }
      },
      "no_beat <- beat trust under 0.35": {
       "produced": true,
-      "checked": null,
-      "all": 0.5706,
+      "checked": 0.5801,
+      "all": 0.5801,
       "detail": {
-       "balanced": 0.5706,
-       "when_on": 0.2258,
-       "when_off": 0.9154,
-       "share_on_truth": 0.1402,
-       "edge_delay_s": 0.125,
-       "edges_found": 2
+       "balanced": 0.5801,
+       "when_on": 0.2388,
+       "when_off": 0.9213,
+       "share_on_truth": 0.1604,
+       "edge_delay_s": 0.4833,
+       "edges_found": 3
       }
      },
      "band_bass <- 1 of the 16 bands": {
@@ -15883,7 +16023,7 @@
       }
      }
     },
-    "frame_ms": 0.5135
+    "frame_ms": 0.2994
    }
   }
  },

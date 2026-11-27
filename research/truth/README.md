@@ -21,6 +21,8 @@ and `REPORT.md`. Tests: `python -m pytest research/tests/test_truth_pipeline.py`
 | `measures.py` | direct measurements on the mix and the stems: levels, bands, brightness, silence, kick stretches, breakdowns, risers, layers |
 | `meter.py` | main beats against half-beats, tempo, position in the bar from two trackers' downbeats |
 | `sections.py` | section changes: bar lines where the music after differs from the music before (a family of instruments in or out, a step in loudness or brightness), put on the exact beat, with the reason in words |
+| `buildups.py` | a weak first guess (level W) of the build-ups and of possible drops, for the owner to correct: tension rising (brighter, louder, a drum roll) before the kick or the full sound comes back |
+| `review_list.py` -> `REVIEW_LIST.md` | song by song, what the owner's ear should check in the review tool (drop, build-up, no beat, section change) |
 | `labels.py` | lays the owner's corrections (`labels/<id>.json`) over the draft: owner-placed items become H, a lane ticked "checked whole" becomes A |
 | `review_server.py`, `review.html` | the review tool (below) |
 | `report.py` | `REPORT.md`: one line per track and the list of what most needs a human ear |

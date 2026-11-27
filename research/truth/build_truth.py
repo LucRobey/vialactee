@@ -29,7 +29,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from research.truth import measures, meter
+from research.truth import buildups, measures, meter
 from research.truth.labels import apply_labels, finalize
 from research.truth.report import write_report
 from research.truth.sections import section_changes
@@ -243,7 +243,11 @@ def build_track(track: dict, hand_all: dict) -> Optional[dict]:
     changes = section_changes(beats, curves, measures.CURVE_HZ, info["duration"])
     truth["sections"]["items"] = [{**c, "level": "M1"} for c in changes]
     truth["sections"]["boundaries"] = [c["t"] for c in changes]
-    truth["regions"]["buildup"] = []      # no tool finds build-ups: the owner draws them in the review tool
+    # No tool finds build-ups or drops. A weak first guess (level W, never used to grade) saves the owner's time
+    # in the review tool: research/truth/buildups.py.
+    releases = buildups.release_points(truth["moments"], truth["sections"]["items"], curves["loud_db"], measures.CURVE_HZ)
+    truth["regions"]["buildup"] = buildups.buildups(releases, beats, curves, truth["drums"]["pieces"], kick_regs, measures.CURVE_HZ)
+    truth["drops"] = sorted(truth["drops"] + buildups.possible_drops(releases, truth["drops"]), key=lambda d: d["t"])
     finalize(apply_labels(truth, _load(LABELS_DIR / f"{tid}.json")))
     TRACKS_DIR.mkdir(parents=True, exist_ok=True)
     (TRACKS_DIR / f"{tid}.json").write_text(json.dumps(truth, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
