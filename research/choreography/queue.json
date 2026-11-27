@@ -1,0 +1,35 @@
+[
+ {
+  "clip": "19_0208_Kick_bands_safe_mode_n1",
+  "mode": "Kick_bands_safe_mode",
+  "against": null,
+  "feed": null,
+  "track": "19",
+  "start_s": 208.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "C01, Kick_bands_mode made safe: a full flash at most every 0.46 s. Does the kick still punch? Look at the hits between two flashes (a thin line, a sparkle) and at the zones, much dimmer than before."
+ },
+ {
+  "clip": "13_0030_Kick_bands_safe_mode_n1",
+  "mode": "Kick_bands_safe_mode",
+  "against": null,
+  "feed": null,
+  "track": "13",
+  "start_s": 30.0,
+  "duration_s": 20.0,
+  "nominated": "2026-11-27",
+  "note": "C01, Kick_bands_mode made safe: a full flash at most every 0.46 s. Does the kick still punch? Look at the hits between two flashes (a thin line, a sparkle) and at the zones, much dimmer than before."
+ },
+ {
+  "clip": "20_0160_Kick_bands_safe_mode_n1",
+  "mode": "Kick_bands_safe_mode",
+  "against": null,
+  "feed": null,
+  "track": "20",
+  "start_s": 160.0,
+  "duration_s": 24.0,
+  "nominated": "2026-11-27",
+  "note": "C01, Kick_bands_mode made safe: a full flash at most every 0.46 s. Does the kick still punch? Look at the hits between two flashes (a thin line, a sparkle) and at the zones, much dimmer than before."
+ }
+]

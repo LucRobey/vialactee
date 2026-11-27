@@ -1,0 +1,52 @@
+{
+ "Kick_bands_mode": {
+  "date": "2026-11-27",
+  "passed": false,
+  "failed_rules": [
+   3
+  ],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "fail",
+   "4": "pass",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 12,
+   "renders": 12,
+   "today_dark_share_max": 0.0,
+   "today_movement_min": 0.3114,
+   "flashes_per_second_max": 7.0,
+   "tied_gap_min": 0.5692,
+   "draw_ms": 1.218
+  },
+  "source": "candidates",
+  "source_sha": "df402bb37835",
+  "thresholds_provisional": true
+ },
+ "Kick_bands_safe_mode": {
+  "date": "2026-11-27",
+  "passed": true,
+  "failed_rules": [],
+  "rules": {
+   "1": "pass",
+   "2": "pass",
+   "3": "pass",
+   "4": "pass",
+   "5": "pass"
+  },
+  "numbers": {
+   "renders_ok": 12,
+   "renders": 12,
+   "today_dark_share_max": 0.0,
+   "today_movement_min": 0.548,
+   "flashes_per_second_max": 2.5,
+   "tied_gap_min": 0.75,
+   "draw_ms": 0.769
+  },
+  "source": "candidates",
+  "source_sha": "7290fbea55ac",
+  "thresholds_provisional": true
+ }
+}
