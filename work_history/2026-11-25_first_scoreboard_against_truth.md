@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Measure, signal by signal, how far the production analyzer is from the source of truth, through the real path (production `Listener`, 5 s look-ahead).  
 > **Status:** COMPLETED (first scoreboard for the two registered rhythm models on the 20 truth tracks)  
-> **Commits:** `dbb65c2` (pushed: no)  
+> **Commits:** `dbb65c2` (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-researcher`: its benchmark commands grade beat F1 on a mock ingestion without look-ahead; nothing points to a per-signal measurement.
 

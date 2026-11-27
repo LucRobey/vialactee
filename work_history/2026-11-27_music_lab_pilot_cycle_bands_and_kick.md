@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** Run one research cycle of the music lab by hand, end to end, to find out what the lab still lacks, and fill the cheap slots the scoreboard pointed at.  
 > **Status:** COMPLETED (candidate built, tuned on half the tracks, scored on all 20, gate passed, proposal written; nothing promoted)  
-> **Commits:** `b516564` (pushed: no)  
+> **Commits:** `b516564` (pushed: yes)  
 > **Skills Used:** none  
 > **Skill Friction:** `vialactee-researcher`: describes a six-step loop that ends on beat F1 in the old benchmark; none of this cycle's steps (fill a slot, tune on open tracks, per-signal gate, proposal) is in it.
 
