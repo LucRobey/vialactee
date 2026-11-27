@@ -15,7 +15,10 @@ actually sees, since a flag raised and cleared between two reads is lost.
 Paths:
     file          60 ticks a second on the audio position (audio file, and every lab tool)
     live          the live road as it was written until 2026-11-27, display loop at 30
-    connector     the live road through the real connectors/Local_Microphone.py as it is now (fix A applied)
+    connector     the live road through the real connectors/Local_Microphone.py (fix A), read by a display loop
+                  that does not collect one-frame signals
+    connector_held   the same, with the display loop calling listener.begin_display_frame() as core/Mode_master.py
+                  does since 2026-11-27 (fix B): the installation as it is now
     live_60       the live road if the display loop ran at 60
     audio_clock   proposed: the live road, with the analyzer ticked by the audio received (735 samples per tick)
     audio_clock_held   the same, and a beat flag stays up until the display loop has read it once
@@ -42,7 +45,7 @@ TRUTH = REPO / "research" / "truth" / "tracks"
 TRACKS = json.loads((REPO / "research" / "analyzer_trials" / "tracks.json").read_text(encoding="utf-8"))
 SR, CHUNK, WINDOW, HOP = 44100, 1024, 4096, 735
 LOOKAHEAD = 5.0
-PATHS = ("file", "live", "connector", "live_60", "audio_clock", "audio_clock_held")
+PATHS = ("file", "live", "connector", "connector_held", "live_60", "audio_clock", "audio_clock_held")
 DISPLAY_FPS = 30.0
 
 
@@ -101,7 +104,7 @@ def replay(mono: np.ndarray, path: str) -> Dict[str, np.ndarray]:
             bpm_t.append(now - LOOKAHEAD)
             bpm_v.append(float(listener.bpm))
 
-        if path == "connector":
+        if path in ("connector", "connector_held"):
             import types
 
             from connectors.Local_Microphone import Local_Microphone
@@ -125,8 +128,11 @@ def replay(mono: np.ndarray, path: str) -> Dict[str, np.ndarray]:
                     emitted.append(now - LOOKAHEAD)
                 bpm_t.append(now - LOOKAHEAD)
                 bpm_v.append(float(listener.bpm))
-                if j % 2 == 0 and listener.is_beat:                                 # the display loop reads at 30
-                    seen.append(now - LOOKAHEAD)
+                if j % 2 == 0:                                                      # the display loop reads at 30
+                    if path == "connector_held":
+                        listener.begin_display_frame()
+                    if listener.is_beat:
+                        seen.append(now - LOOKAHEAD)
         elif path == "file":
             listener.dynamic_audio_latency = 0.0
             n = int(total * 60)

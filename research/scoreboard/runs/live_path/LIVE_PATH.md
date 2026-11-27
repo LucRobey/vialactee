@@ -10,7 +10,8 @@ grades beats and tempo exactly as the scoreboard does. Production analyzer (`Dya
 |---|---|---|---|---|
 | Audio file (MP3), and every lab tool | 77 | 67 | 48% | 51 |
 | **Spotify or aux, as the code was until 2026-11-27** | **22** | **58** | 100% | **22** |
-| **Spotify or aux, through the real connector after fix A** | **80** | **67** | 50% | 55 |
+| Spotify or aux, through the real connector after fix A only | 80 | 67 | 50% | 55 |
+| **Spotify or aux, the installation as it is now (fix A and fix B)** | **80** | **67** | **100%** | **79** |
 | Spotify or aux, if the display loop ran at 60 | 79 | 68 | 100% | 79 |
 | Proposed: analyzer ticked by the audio | 78 | 67 | 49% | 52 |
 | Proposed, and flags held until read | 78 | 67 | 100% | 78 |
@@ -42,7 +43,9 @@ The choreography lab does not have this problem (it draws on every tick), so it 
 
 ## The fix
 
-**Fix A was applied on 2026-11-27, with the owner's approval** (`connectors/Local_Microphone.py`, `step_analyzer`; tests in `tests/test_local_microphone_clock.py`). The table's third line is the real connector code replayed on the 20 tracks. Fix B is not applied: half of the one-frame flags are still missed by the display loop, on live sound as on audio files.
+**Fix A was applied on 2026-11-27, with the owner's approval** (`connectors/Local_Microphone.py`, `step_analyzer`; tests in `tests/test_local_microphone_clock.py`). The table's third line is the real connector code replayed on the 20 tracks.
+
+**Fix B was applied the same day, with the owner's approval** (`music/MusicSignals.py` `DisplayHold`, `music/Listener.py` `begin_display_frame`, `music/MusicalContextEngine.py`, `core/Mode_master.py`; tests in `tests/test_listener_display_hold.py` and `tests/test_mode_master_display_frame.py`). The display loop now collects the one-frame signals once per frame: all are seen, and the beats as the display sees them score 79. The same mechanism serves audio files, since it sits in the `Listener` and the display loop, not in a connector; that road was not replayed again through the real file player.
 
 **A. Tick the analyzer by the audio, for live sound too.** In `connectors/Local_Microphone.py`, for every 735
 new samples received, compute the spectrum of the window ending there and call `listener.update(fixed_dt=1/60)`,
