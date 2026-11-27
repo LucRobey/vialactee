@@ -48,3 +48,4 @@
 | 2026-10-05 | `RUN_20261005_222426_DyadicWaveletAudioAnalyzer_cycle013_synth_final` | `synthetic` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **95.8%** | 95.8% | 95.8% | 0.00 | 10.5ms | 0.90ms |
 | 2026-10-05 | `RUN_20261005_222723_DyadicWaveletAudioAnalyzer_cycle013_synth_canonical` | `synthetic` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **96.0%** | 95.8% | 95.8% | 0.00 | 9.9ms | 0.83ms |
 | 2026-10-05 | `RUN_20261005_223000_DyadicWaveletAudioAnalyzer_cycle013_candidate` | `neural-core` | **DyadicWaveletAudioAnalyzer** | `8ad5fc5` | **79.2%** | 72.4% | 72.4% | 0.00 | 34.2ms | 0.65ms |
+| 2026-11-27 | `RUN_20261127_005526_BandKickSlotsAudioAnalyzer_pilot_bands_kick_synth` | `synthetic` | **BandKickSlotsAudioAnalyzer** | `5d0af94` | **96.2%** | 95.4% | 95.4% | 0.00 | 12.3ms | 0.22ms |
