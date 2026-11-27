@@ -14,6 +14,7 @@ About 2 minutes for 2 models on 20 tracks (5 workers). Writes `SCOREBOARD.md` (r
 | `grade.py` | the grading of each kind of signal: moments (hits, misses, false alarms), stretches (right while on, right while off, delay at the edges), levels (how well the curve is followed, and how late), tempo (right level, double, half) |
 | `scoreboard.py` | runs the tracks, grades each signal of `config/music_signals.json` against the truth value it mirrors, grades the candidates |
 | `report.py` | writes `SCOREBOARD.md` |
+| `live_path.py` | replays the road live sound takes (Spotify, aux) next to the audio-file road, and what a 30 FPS display loop sees of the one-frame flags; see `runs/live_path/LIVE_PATH.md` |
 | `compare.py` | before and after of two models of one run: the gate, the new signals on open and check tracks, the cost per tick |
 
 ## A research run
