@@ -21,7 +21,7 @@ graph LR
     Bands16 --> ADSR["Vectorized ADSR Envelopes<br/>(Attack/Decay Smoothing)"]
     ADSR --> DelayQueue["5.0s Lookahead Delay Queue<br/>(Listener Facade)"]
     DelayQueue --> VisualModes["Visual Modes (Segment.rgb_list)"]
-    Bands32 --> MultiBand["DyadicMetricalAudioAnalyzer (extends MultiBandOnsetAudioAnalyzer)"]
+    Bands32 --> MultiBand["MultiBandOnsetAudioAnalyzer (main analyzer)"]
 ```
 
 ### 1.1 Who Advances the Analyzer: the Audio, Never the Display Loop
@@ -46,7 +46,7 @@ Implemented in `music/AudioIngestion.py`:
    - Vectorized matrix multiplications map power spectrum bins into Mel frequency bins.
 2. **Dual-Resolution Mel Filterbanks:**
    - **16 Bands (`fft_band_values`):** Default visual Mel filterbank fed into lighting modes in `modes/` (Sub-bass through Air).
-   - **32 Bands (`multiband_fft_values`):** Fed into `DyadicMetricalAudioAnalyzer` (via its `MultiBandOnsetAudioAnalyzer` parent) to isolate fine-grained transients:
+   - **32 Bands (`multiband_fft_values`):** Fed into `MultiBandOnsetAudioAnalyzer` (the main analyzer) to isolate fine-grained transients:
      - Sub-bass: 20–80 Hz
      - Kick fundamental: 60–120 Hz
      - Snare body and crack: 200–4000 Hz
@@ -78,9 +78,9 @@ Implemented in `music/Listener.py`:
 | [`music/AudioIngestion.py`](../../music/AudioIngestion.py) | Vectorized 4096-pt rFFT, 16-band & 32-band Mel filterbanks, 12-bin chromagram, ADSR & GM/LM normalization. |
 | [`music/BaseAudioAnalyzer.py`](../../music/BaseAudioAnalyzer.py) | Abstract base contract for all rhythm analyzers. |
 | [`music/MusicSignals.py`](../../music/MusicSignals.py) | Truth-mirrored signal record (`listener.signals`): one slot per value of the source of truth, `None` until produced. |
-| [`music/DyadicMetricalAudioAnalyzer.py`](../../music/DyadicMetricalAudioAnalyzer.py) | **Production default** (`DEFAULT_ANALYZER_MODEL`): dyadic metrical hierarchy + causal sub-pulse arbiter on top of the 32-band engine. |
-| [`music/BandKickSignals.py`](../../music/BandKickSignals.py) | Band levels (`band_bass`, `band_mid`, `band_high`), `kick`, `kick_present` and `no_beat` of `listener.signals`, measured when the audio arrives and written at speaker time; called once per tick by `DyadicMetricalAudioAnalyzer` (contract §6). |
-| [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py) | 32-band 4-stream onset engine (`kick`, `snare`, `hat`, `mid`) + Anticipation Flywheel (stable fallback / parent engine). |
+| [`music/DyadicMetricalAudioAnalyzer.py`](../../music/DyadicMetricalAudioAnalyzer.py) | Selectable, the default until 2026-11-27: `MultiBandOnsetAudioAnalyzer` plus a dyadic metrical hierarchy + causal sub-pulse arbiter on top of the 32-band engine. |
+| [`music/BandKickSignals.py`](../../music/BandKickSignals.py) | Band levels (`band_bass`, `band_mid`, `band_high`), `kick`, `kick_present` and `no_beat` of `listener.signals`, measured when the audio arrives and written at speaker time; called once per tick by `MultiBandOnsetAudioAnalyzer` and the models built on it (contract §6). |
+| [`music/MultiBandOnsetAudioAnalyzer.py`](../../music/MultiBandOnsetAudioAnalyzer.py) | **Main analyzer** (`DEFAULT_ANALYZER_MODEL` since 2026-11-27). 32-band 4-stream onset engine (`kick`, `snare`, `hat`, `mid`) + Anticipation Flywheel (stable fallback / parent engine). |
 | [`music/AudioAnalyzer.py`](../../music/AudioAnalyzer.py) | Legacy single-ODF baseline analyzer. |
 | [`music/comb_kernels.py`](../../music/comb_kernels.py) | Compiled NumPy pulse-template bank for Pearson tempo correlation. |
 | [`music/StructuralNoveltyDetector.py`](../../music/StructuralNoveltyDetector.py) | STM/LTM structural novelty, verse/chorus change, and song-cut detection. |

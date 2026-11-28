@@ -10,7 +10,7 @@
 
 The **Anticipation Flywheel ("Oracle")** rhythm tracking engine is a predictive, real-time algorithmic pipeline designed to achieve zero-lag, jitter-free beat synchronization for the Vialactée chandelier. Rather than running a reactive beat tracker and delaying its triggers, it uses the 5-second look-ahead audio buffer to predict incoming tempo and phase, back-projects the phase to the physical speaker time ($T_{\text{speaker}}$), and drives a continuous mechanical flywheel with breakdown coasting, anti-phase disambiguation, and real-beat gating.
 
-The production engine is `music/DyadicMetricalAudioAnalyzer.py` (Cycle 012), a subclass of the stable parent engine `music/MultiBandOnsetAudioAnalyzer.py` (Cycle 008, still selectable as a fallback), backed by standalone compiled `music/comb_kernels.py`. Sections A-D describe the parent engine; section E describes what the Dyadic layer adds.
+Since 2026-11-27 the production engine is `music/MultiBandOnsetAudioAnalyzer.py` (Cycle 008): on the scoreboard against the corrected truth it follows beat and tempo better than its subclass `music/DyadicMetricalAudioAnalyzer.py` (Cycle 012, the default until then, still selectable), whose sub-pulse layer described in section E inserts half-beats, backed by standalone compiled `music/comb_kernels.py`. Sections A-D describe the parent engine; section E describes what the Dyadic layer adds.
 
 ---
 

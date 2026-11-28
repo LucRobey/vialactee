@@ -30,7 +30,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 RUNS = HERE / "runs"
 HIDDEN = HERE / "output" / "check"            # track detail of the check set: not committed, not for researchers
-BASELINE = "DyadicMetricalAudioAnalyzer"
+BASELINE = "MultiBandOnsetAudioAnalyzer"        # the main analyzer of the installation
 SPLIT = json.loads((HERE / "split.json").read_text(encoding="utf-8"))
 SPEC = json.loads((REPO / "config" / "music_signals.json").read_text(encoding="utf-8"))
 SIGNAL_NAMES = [s["name"] for s in SPEC["signals"]]
@@ -281,7 +281,7 @@ def cmd_close(args: argparse.Namespace) -> None:
             sys.exit("a proposal needs a check that passed (cycle check). Archive the run, or start a new one.")
         prop = d / "PROPOSAL.md"
         if not prop.exists():
-            table = ["| Signal | Production today | Candidate, tracks tuned on | Candidate, tracks not looked at |", "|---|---|---|---|"]
+            table = ["| Signal | Production, tracks not looked at | Candidate, tracks tuned on | Candidate, tracks not looked at |", "|---|---|---|---|"]
             table += [f"| `{s}` | {_p(v['production'])} | {_p(v['open'])} | {_p(v['candidate'])} |" for s, v in chk["signals"].items()]
             prop.write_text(PROPOSAL.format(signals=", ".join(f"`{s}`" for s in state["signals"]), run=args.run, date=_today(), todo=TODO,
                                             table="\n".join(table),

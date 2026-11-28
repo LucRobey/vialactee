@@ -144,7 +144,7 @@ def parse_arguments(args: Optional[List[str]] = None) -> argparse.Namespace:
         "--model",
         type=str,
         default=None,
-        help="Rhythm analyzer model class override (e.g. DyadicMetricalAudioAnalyzer (default), MultiBandOnsetAudioAnalyzer (fallback), AudioAnalyzer)"
+        help="Rhythm analyzer model class override (e.g. MultiBandOnsetAudioAnalyzer (default), DyadicMetricalAudioAnalyzer (the same plus half-beats), AudioAnalyzer)"
     )
     parser.add_argument(
         "--server",

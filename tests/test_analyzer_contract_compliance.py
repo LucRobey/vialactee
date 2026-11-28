@@ -3,7 +3,7 @@ tests/test_analyzer_contract_compliance.py
 
 Executable version of docs/contracts/music_analyzer_contract.md (Group A rhythm core, Group C structure,
 interface & runtime). The same checklist runs against every production rhythm analyzer
-(MultiBandOnsetAudioAnalyzer = stable fallback, DyadicMetricalAudioAnalyzer = production default),
+(MultiBandOnsetAudioAnalyzer = main analyzer, DyadicMetricalAudioAnalyzer = the same plus the half-beat sub-pulse),
 and Dyadic-specific metrical sub-pulse invariants are checked on top.
 """
 
@@ -242,9 +242,10 @@ class TestSharedAnalyzerContract(unittest.TestCase):
 class TestListenerContractWiring(unittest.TestCase):
     """Facade-level contract: model selection, 16-band band_flux, metrical bpm."""
 
-    def test_default_model_is_dyadic(self):
-        self.assertEqual(DEFAULT_ANALYZER_MODEL, "DyadicMetricalAudioAnalyzer")
-        self.assertIsInstance(make_listener().analyzer, DyadicMetricalAudioAnalyzer)
+    def test_default_model_is_multiband_onset(self):
+        # the main analyzer since 2026-11-27 (owner's decision): the model without the half-beat sub-pulse
+        self.assertEqual(DEFAULT_ANALYZER_MODEL, "MultiBandOnsetAudioAnalyzer")
+        self.assertIs(type(make_listener().analyzer), MultiBandOnsetAudioAnalyzer)
 
     def test_registry_selects_each_model(self):
         for name, cls in ANALYZER_REGISTRY.items():
@@ -256,7 +257,7 @@ class TestListenerContractWiring(unittest.TestCase):
         with self.assertLogs("music.Listener", level=logging.WARNING) as logs:
             listener = make_listener("NoSuchAnalyzer")
         self.assertTrue(any("NoSuchAnalyzer" in line for line in logs.output))
-        self.assertIsInstance(listener.analyzer, DyadicMetricalAudioAnalyzer)
+        self.assertIs(type(listener.analyzer), MultiBandOnsetAudioAnalyzer)
 
     def test_band_flux_is_16_band_mel_flux(self):
         """Contract: band_flux = max(0, E_b[t]-E_b[t-1]) over the 16 Mel bands (not the 16 lowest fine bands)."""

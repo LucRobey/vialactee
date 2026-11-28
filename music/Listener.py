@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 # Production analyzers selectable through infos["analyzer_model"] (config/app_config.json or --model).
 ANALYZER_REGISTRY = {
     "AudioAnalyzer": AudioAnalyzer,
-    "MultiBandOnsetAudioAnalyzer": MultiBandOnsetAudioAnalyzer,  # stable fallback / parent engine
-    "DyadicMetricalAudioAnalyzer": DyadicMetricalAudioAnalyzer,  # production default (Cycle 012)
+    "MultiBandOnsetAudioAnalyzer": MultiBandOnsetAudioAnalyzer,  # main analyzer since 2026-11-27 (owner's decision)
+    "DyadicMetricalAudioAnalyzer": DyadicMetricalAudioAnalyzer,  # the same plus the half-beat "sub-pulse" (main until 2026-11-27)
 }
-DEFAULT_ANALYZER_MODEL = "DyadicMetricalAudioAnalyzer"
+DEFAULT_ANALYZER_MODEL = "MultiBandOnsetAudioAnalyzer"
 
 # Where each live one-frame flag lives on the analyzer (the speaker-time ones are the Listener's own delayed flags).
 _TICK_ATTR = {"is_beat": "is_beat", "is_real_beat": "is_real_beat", "is_dropped_beat": "is_dropped_beat",

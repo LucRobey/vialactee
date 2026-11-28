@@ -33,7 +33,7 @@ flowchart LR
     SEG -->|"RGB frames"| HW["hardware/\nNeoPixels / UDP / Pygame"]
 ```
 
-1. **Audio Ingestion & Lookahead Alignment (`music/`):** Raw PCM audio enters `Listener.process_raw_audio()`. `Listener.update()` advances the 5-second lookahead rhythm analyzer (`DyadicMetricalAudioAnalyzer` by default), writes spectral/novelty/rhythm frames into a zero-allocation circular ring buffer, pops speaker-aligned ($T_{\text{speaker}}$) features, and updates `listener.context` (`MusicalContextEngine`).
+1. **Audio Ingestion & Lookahead Alignment (`music/`):** Raw PCM audio enters `Listener.process_raw_audio()`. `Listener.update()` advances the 5-second lookahead rhythm analyzer (`MultiBandOnsetAudioAnalyzer` by default), writes spectral/novelty/rhythm frames into a zero-allocation circular ring buffer, pops speaker-aligned ($T_{\text{speaker}}$) features, and updates `listener.context` (`MusicalContextEngine`).
 2. **Hardware Show (`hardware/`):** `Mode_master.update()` flushes the previous frame's RGB buffers to physical LEDs or the simulator.
 3. **Mode Rendering (`modes/` & `core/Segment.py`):** Each `Segment` renders its active mode (and outgoing mode during `TRANSITION_DUAL`) into pre-allocated buffers and blends them in place via `TransitionService.blend()`.
 4. **Mood Shock Absorber (`mood/`):** `TransitionBridge.build_music_snapshot(listener)` freezes the current frame's music state. `mood.update(dt, music.scene)` debounces (`0.30 s`) and cosine-crossfades (`2.5 s`) the `scene` heuristic into 🟢 `mood.modifiers()` (`[pace, sharpness, trail, accent_mix]`) and (`4.0 s` dwell, `3.0 s` crossfade) `mood.colors()`.

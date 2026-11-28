@@ -136,7 +136,7 @@ def write_comparison(result: dict, baseline: str, candidate: str, out_path: Path
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("run_dir")
-    p.add_argument("--baseline", default="DyadicMetricalAudioAnalyzer")
+    p.add_argument("--baseline", default="MultiBandOnsetAudioAnalyzer")
     p.add_argument("--candidate", required=True)
     args = p.parse_args()
     run = Path(args.run_dir)

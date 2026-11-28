@@ -47,9 +47,9 @@ Know what the score will rest on before you plan. Open two or three truth files 
 One file, `research/experiments/models/<ClassName>.py`, file name = class name. Start from this:
 
 ```python
-from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
+from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 
-class NoBeatSlotAudioAnalyzer(DyadicMetricalAudioAnalyzer):
+class NoBeatSlotAudioAnalyzer(MultiBandOnsetAudioAnalyzer):      # the main analyzer
     """Production model plus the `no_beat` slot."""
 
     def detect_band_peaks(self, current_time, dt, fps_ratio):
@@ -66,7 +66,7 @@ Rules that decide whether the score means anything:
 - **A slot the listener copies.** `beat`, `bpm`, `drop`, `section_change`, `buildup`, `silence`, `loudness`, `brightness` are copied by the `Listener` from older signals after your code runs, so writing them does nothing, unless your class says `claimed_slots = ("brightness",)`. For `beat` and `bpm` it is usually better to change what they are copied from (`is_beat`, `effective_bpm`).
 - **Arrival time and speaker time.** What the analyzer computes on a tick describes the audio that just arrived, 5 s ahead of the speakers: its `confidence_score`, its streams, its kick detection. What the `Listener` and the context show (`beat_trust`, `context.is_locked`) are the same things delayed to speaker time. A stand-in that is "2 s late" in the scoreboard is often a delayed value used without the future it could have had.
 - **Private fields of production code.** A candidate may read them when nothing public gives the value at arrival time (for instance the kick times inside `self._band_kick`). Say it in the proposal: at promotion that reading becomes a proper hand-over.
-- What the analyzer already has to build on: the 32 bands (`self.ingestion.multiband_fft_values`), their rise this tick (`self.dE`), the kick, snare and hat streams (`kick_odf_buffer`, `snare_odf_buffer`, `hat_odf_buffer`), the beat phase and trust. Read `music/MultiBandOnsetAudioAnalyzer.py` and `music/DyadicMetricalAudioAnalyzer.py`; do not edit them.
+- What the analyzer already has to build on: the 32 bands (`self.ingestion.multiband_fft_values`), their rise this tick (`self.dE`), the kick stream (`kick_odf_buffer`; the snare and hat streams, `snare_odf_buffer` and `hat_odf_buffer`, exist only in `DyadicMetricalAudioAnalyzer`), the beat phase and trust. Read `music/MultiBandOnsetAudioAnalyzer.py` (the main analyzer; `music/DyadicMetricalAudioAnalyzer.py` is the same plus half-beats, with snare and hat streams of its own); do not edit them.
 
 ### Step 3. Grade on the open tracks, as often as you need
 

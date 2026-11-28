@@ -25,6 +25,7 @@ from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
 
 from music.BaseAudioAnalyzer import BaseAudioAnalyzer
+from music.BandKickSignals import BandKickSignals
 from music.RhythmConfig import RhythmConfig
 from music.StructuralNoveltyDetector import StructuralNoveltyDetector
 from music.comb_kernels import build_dense_phase_bank
@@ -105,6 +106,7 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         self.band_flux_buffer: np.ndarray = np.zeros((self.odf_buffer_size, self.nb_bands), dtype=np.float64)
         self.band_flux_write_idx: int = 0
         self.rolling_flux_baseline: float = 0.0
+        self._band_kick: BandKickSignals = BandKickSignals(self.nb_bands, self.lookahead_seconds)   # MusicSignals.PRODUCED
 
         # Causal exponential decay curve (applied ONCE to lookahead buffer)
         m_idx = np.arange(self.M, dtype=np.float64)
@@ -189,6 +191,7 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
         for buf in (self.prev_fft_band_values, self.diff_buffer, self.dE, self.band_flux, self.smoothed_flux, self.peak_times, self.band_flux_history, self.odf_buffer, self.kick_odf_buffer, self.band_flux_buffer, self._drum_flux_history, self._real_beat_history):
             buf.fill(0.0)
         self.peak_sensitivity.fill(1.8)
+        self._band_kick.reset()
         self.dynamic_squelch.fill(1.0)
         self.h_idx = self.h_count = self.band_flux_write_idx = self._drum_flux_idx = self._real_beat_idx = self._frames_processed = 0
         self.rolling_flux_baseline = self._live_rhythm_salience = self.phi_drum = 0.0
@@ -250,6 +253,7 @@ class MultiBandOnsetAudioAnalyzer(BaseAudioAnalyzer):
 
         # 4. Real-time Rhythmic Salience Computation
         self._compute_rhythm_salience(fps_ratio)
+        self._band_kick.update_from(self, current_time, dt)      # band levels, kick, kick_present, no_beat at speaker time
 
     def update(self, current_time: float, dt: float, fps_ratio: float) -> None:
         """Primary per-frame 60 FPS processing step with zero dynamic heap allocations."""

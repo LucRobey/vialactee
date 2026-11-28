@@ -1,7 +1,7 @@
 {
     "startServer": false,
     "useMicrophone": true,
-    "analyzer_model": "DyadicMetricalAudioAnalyzer",
+    "analyzer_model": "MultiBandOnsetAudioAnalyzer",
     "audio_preset": "spotify",
     "printCpuFpsInfo": true,
     "HARDWARE_MODE": "simulation",

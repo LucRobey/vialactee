@@ -44,10 +44,10 @@ def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAn
     """
     if model_name in ("AudioAnalyzer", "baseline"):
         return AudioAnalyzer
-    if model_name == "MultiBandOnsetAudioAnalyzer":
+    if model_name in ("MultiBandOnsetAudioAnalyzer", "production", "default"):
         from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
         return MultiBandOnsetAudioAnalyzer
-    if model_name in ("DyadicMetricalAudioAnalyzer", "production", "default"):
+    if model_name == "DyadicMetricalAudioAnalyzer":
         from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
         return DyadicMetricalAudioAnalyzer
 
@@ -311,7 +311,7 @@ class MusicStudioApp:
     CHROMA_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     BAND_NAMES = ["Sub-Bass", "Bass", "Low-Mid", "Mid", "High-Mid", "Presence", "Brilliance", "Air"]
 
-    def __init__(self, song_path: str, nb_leds: int = 80, model_name: str = "DyadicMetricalAudioAnalyzer"):
+    def __init__(self, song_path: str, nb_leds: int = 80, model_name: str = "MultiBandOnsetAudioAnalyzer"):
         pygame.init()
         pygame.font.init()
 
@@ -1828,8 +1828,8 @@ def main():
     parser.add_argument(
         "--model", "-m",
         type=str,
-        default="DyadicMetricalAudioAnalyzer",
-        help="Rhythm analyzer model class (e.g. DyadicMetricalAudioAnalyzer (default), MultiBandOnsetAudioAnalyzer (fallback), AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
+        default="MultiBandOnsetAudioAnalyzer",
+        help="Rhythm analyzer model class (e.g. MultiBandOnsetAudioAnalyzer (default), DyadicMetricalAudioAnalyzer (half-beack), AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
     )
     args = parser.parse_args()
 

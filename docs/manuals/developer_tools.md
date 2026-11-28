@@ -46,7 +46,7 @@ python tools/mode_studio.py -s 2 -m "Chromatic Chaser" --leds 120 --bands 16 --m
 | `--mode`, `-m` | First mode in `config/modes.json` | Mode name or substring (e.g. `"shockwave"`, `"chaser"`). |
 | `--leds`, `-l` | `80` | Number of simulated LEDs on the virtual strip. |
 | `--bands` | `8` (`{8, 16}`) | Visual FFT band count (`listener.nb_of_fft_band`) exposed to modes (`asserved_fft_band` and coarse Mel `band_flux`). Defaults to `8` to match `Main.py` production; the beat tracker always uses its internal 32-band log-Mel filterbank (`[visual FFT 8 · analyzer 32]`). |
-| `--model` | `DyadicMetricalAudioAnalyzer` | Audio analyzer model (`DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `AudioAnalyzer`). |
+| `--model` | `MultiBandOnsetAudioAnalyzer` | Audio analyzer model (`MultiBandOnsetAudioAnalyzer`, `DyadicMetricalAudioAnalyzer`, `AudioAnalyzer`). |
 
 ### 2.2 HUD Layout (`1480 × 940`)
 
@@ -97,7 +97,7 @@ python tools/music_studio.py --song "losing" --model DyadicMetricalAudioAnalyzer
 | :--- | :--- | :--- |
 | `--song`, `-s` | First track in `songs/` | Song filename substring, 1-based index (`1-9`), or path to an audio file. |
 | `--leds`, `-l` | `80` | Number of LEDs simulated inside the internal `Listener`. |
-| `--model`, `-m` | `DyadicMetricalAudioAnalyzer` | Initial analyzer model (`DyadicMetricalAudioAnalyzer`, `MultiBandOnsetAudioAnalyzer`, `AudioAnalyzer`). |
+| `--model`, `-m` | `MultiBandOnsetAudioAnalyzer` | Initial analyzer model (`MultiBandOnsetAudioAnalyzer`, `DyadicMetricalAudioAnalyzer`, `AudioAnalyzer`). |
 
 ### 3.2 Analytical Panels (`1600 × 980`)
 

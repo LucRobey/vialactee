@@ -50,7 +50,7 @@ BRIDGED: Tuple[str, ...] = (
 )
 
 # Slots that the production analyzer writes itself (music/BandKickSignals.py, called by
-# DyadicMetricalAudioAnalyzer). They stay None until the first audio has reached the speakers.
+# MultiBandOnsetAudioAnalyzer and every model built on it). They stay None until the first audio has reached the speakers.
 PRODUCED: Tuple[str, ...] = ("no_beat", "kick", "kick_present", "band_bass", "band_mid", "band_high")
 
 

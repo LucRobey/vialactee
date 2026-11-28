@@ -32,7 +32,6 @@ from typing import Dict, Any, Optional
 import numpy as np
 
 from music.RhythmConfig import RhythmConfig
-from music.BandKickSignals import BandKickSignals
 from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
 
 logger = logging.getLogger(__name__)
@@ -64,9 +63,6 @@ class DyadicMetricalAudioAnalyzer(MultiBandOnsetAudioAnalyzer):
         self.intermediate_beat_count: int = 0
         # Beats emitted at the tactus only (drives the "locked" criterion; sub-pulses excluded)
         self._tactus_beats: int = 0
-
-        # Truth-mirrored slots written by this analyzer: band levels and kick (MusicSignals.PRODUCED)
-        self._band_kick: BandKickSignals = BandKickSignals(self.nb_bands, self.lookahead_seconds)
 
     # ==========================================
     # METRICAL FACADES (what Listener / modes see)
@@ -102,16 +98,6 @@ class DyadicMetricalAudioAnalyzer(MultiBandOnsetAudioAnalyzer):
         self.hat_odf_buffer.fill(0.0)
         self.scratch_M.fill(0.0)
         self._reset_subpulse_state()
-        self._band_kick.reset()
-
-    def detect_band_peaks(self, current_time: float, dt: float, fps_ratio: float) -> None:
-        """Parent rhythm step, then the band levels and the kick for the truth-mirrored record."""
-        super().detect_band_peaks(current_time, dt, fps_ratio)
-        bands = getattr(self.ingestion, 'multiband_fft_values', None)
-        if bands is None or len(bands) == 0:
-            bands = self.ingestion.fft_band_values
-        self._band_kick.update(current_time, dt, bands, float(self.kick_odf_buffer[-1]), float(self.dE[0]), self.signals,
-                               float(self.confidence_score))
 
     def _reset_subpulse_state(self) -> None:
         self.subpulse_active = False

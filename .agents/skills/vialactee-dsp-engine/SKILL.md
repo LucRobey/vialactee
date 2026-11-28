@@ -26,7 +26,7 @@ Use this skill whenever modifying audio analysis algorithms, FFT filtering, temp
 * The analyzer is ticked by the audio (one `listener.update(fixed_dt=1/60)` per 735 samples, in `Local_Microphone.step_analyzer` and `Local_AudioFile.advance_ingest_frame`), never by the 30 FPS display loop.
 
 ### 4. Multi-Band Separation, Oracle Flywheel & Phase Projection
-* Production beat tracking (`DyadicMetricalAudioAnalyzer.py`, built on the `MultiBandOnsetAudioAnalyzer.py` parent engine) separates 32-band onset derivatives into 4 instrument streams: Kick ($y_{\text{kick}}$), Snare ($y_{\text{snare}}$), Hi-hat ($y_{\text{hat}}$), and Mid-melodic ($y_{\text{mid}}$).
+* Production beat tracking (`MultiBandOnsetAudioAnalyzer.py`, the main analyzer since 2026-11-27; `DyadicMetricalAudioAnalyzer.py` adds a half-beat sub-pulse on top and stays selectable) separates 32-band onset derivatives into 4 instrument streams: Kick ($y_{\text{kick}}$), Snare ($y_{\text{snare}}$), Hi-hat ($y_{\text{hat}}$), and Mid-melodic ($y_{\text{mid}}$).
 * Kick-conditioned anti-phase disambiguation ($K_{\text{anti}} > 1.25 \cdot K_1$) prevents 180° upbeat phase locking on synth-heavy tracks.
 * Standalone compiled `music/comb_kernels.py` builds the dense pulse template bank for sub-millisecond class correlation without external dependencies.
 * Phase estimation is back-projected to speaker time ($T_{\text{speaker}}$).

@@ -11,7 +11,7 @@ MEANING = {
     "state": "100 = always right; 50 = no better than a signal stuck on one answer",
     "value": "100 = follows the truth exactly; 0 = unrelated",
 }
-ROLE = {"DyadicMetricalAudioAnalyzer": "the model running on the installation", "MultiBandOnsetAudioAnalyzer": "its parent model, selectable"}
+ROLE = {"MultiBandOnsetAudioAnalyzer": "the model running on the installation (main analyzer since 2026-11-27)", "DyadicMetricalAudioAnalyzer": "the same model plus the half-beat sub-pulse (main until 2026-11-27), selectable"}
 
 
 def _mean(values: List[Optional[float]]) -> float:

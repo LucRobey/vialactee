@@ -27,7 +27,8 @@ KINDS = {"event", "state", "value"}
 TYPES = {"bool", "int", "float", "str"}
 STATUS_MARK = {"bridged": "BRIDGED", "produced": "PRODUCED", "empty": "EMPTY"}
 OWNERS = {"Listener": Listener, "MusicalContextEngine": MusicalContextEngine, "BandKickSignals": BandKickSignals}
-PRODUCING_MODEL = "DyadicMetricalAudioAnalyzer"
+PRODUCING_MODEL = "MultiBandOnsetAudioAnalyzer"                                   # the main analyzer
+PRODUCING_MODELS = ("MultiBandOnsetAudioAnalyzer", "DyadicMetricalAudioAnalyzer")  # and the model built on it
 
 
 class TestMusicSignalsContract(unittest.TestCase):
@@ -108,7 +109,7 @@ class TestMusicSignalsContract(unittest.TestCase):
                 for name in FIELDS:
                     if name in BRIDGED:
                         self.assertIsNotNone(values[name], f"bridged slot '{name}' is still empty")
-                    elif name in PRODUCED and model == PRODUCING_MODEL:
+                    elif name in PRODUCED and model in PRODUCING_MODELS:
                         self.assertIsNone(values[name], f"'{name}' must wait until the music reaches the speakers")
                     else:
                         self.assertIsNone(values[name], f"slot '{name}' should be empty: nothing produces it yet")
@@ -125,11 +126,11 @@ class TestMusicSignalsContract(unittest.TestCase):
                     listener.update(1.0 / 60.0)
                 values = listener.signals.as_dict()
                 for name in FIELDS:
-                    if name in BRIDGED or (name in PRODUCED and model == PRODUCING_MODEL):
+                    if name in BRIDGED or (name in PRODUCED and model in PRODUCING_MODELS):
                         self.assertIsNotNone(values[name], f"slot '{name}' is still empty")
                     else:
                         self.assertIsNone(values[name], f"slot '{name}' should be empty: nothing produces it yet")
-                if model == PRODUCING_MODEL:
+                if model in PRODUCING_MODELS:
                     self.assertIsInstance(values["kick_present"], bool)
                     for name in ("kick", "band_bass", "band_mid", "band_high"):
                         self.assertTrue(0.0 <= values[name] <= 1.0, name)

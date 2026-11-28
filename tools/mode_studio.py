@@ -49,10 +49,10 @@ def load_studio_model_class(model_name: str, repo_root: str) -> Type[BaseAudioAn
     """
     if model_name in ("AudioAnalyzer", "baseline"):
         return AudioAnalyzer
-    if model_name == "MultiBandOnsetAudioAnalyzer":
+    if model_name in ("MultiBandOnsetAudioAnalyzer", "production", "default"):
         from music.MultiBandOnsetAudioAnalyzer import MultiBandOnsetAudioAnalyzer
         return MultiBandOnsetAudioAnalyzer
-    if model_name in ("DyadicMetricalAudioAnalyzer", "production", "default"):
+    if model_name == "DyadicMetricalAudioAnalyzer":
         from music.DyadicMetricalAudioAnalyzer import DyadicMetricalAudioAnalyzer
         return DyadicMetricalAudioAnalyzer
 
@@ -494,7 +494,7 @@ class StudioApp:
         song_path: str,
         initial_mode_name: Optional[str] = None,
         nb_leds: int = 80,
-        model_name: str = "DyadicMetricalAudioAnalyzer",
+        model_name: str = "MultiBandOnsetAudioAnalyzer",
         nb_fft_bands: int = PRODUCTION_VISUAL_FFT_BANDS,
     ):
         pygame.init()
@@ -1895,8 +1895,8 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="DyadicMetricalAudioAnalyzer",
-        help="Rhythm analyzer model class (e.g. DyadicMetricalAudioAnalyzer (default), MultiBandOnsetAudioAnalyzer (fallback), AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
+        default="MultiBandOnsetAudioAnalyzer",
+        help="Rhythm analyzer model class (e.g. MultiBandOnsetAudioAnalyzer (default), DyadicMetricalAudioAnalyzer (half-beack), AudioAnalyzer, CostasLoopAudioAnalyzer, DualFlywheelAudioAnalyzer)"
     )
     parser.add_argument(
         "--bands", "-b",

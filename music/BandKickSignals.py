@@ -2,8 +2,9 @@
 music/BandKickSignals.py - Six truth-mirrored signals: band_bass, band_mid, band_high, kick, kick_present, no_beat.
 
 Promoted from the music lab on 2026-11-27 with the owner's approval (pilot cycle,
-research/scoreboard/runs/2026-11-27_bands_kick/PROPOSAL.md). Used by DyadicMetricalAudioAnalyzer, which calls
-`update()` once per tick after its own work; nothing the analyzer already computes is changed.
+research/scoreboard/runs/2026-11-27_bands_kick/PROPOSAL.md). Used by MultiBandOnsetAudioAnalyzer (the main
+analyzer since 2026-11-27) and by every model built on it, which call `update_from()` once per tick after their own
+work; nothing the analyzer already computes is changed.
 
     band_bass, band_mid, band_high   level of three frequency ranges, 0..1
     kick                             strength of a kick drum hit on this tick, 0.0 when there is none
@@ -112,6 +113,14 @@ class BandKickSignals:
         if signals is not None:
             self._write_slots(now, signals)
         self._no_beat(now, confidence, signals)
+
+    def update_from(self, analyzer: Any, now: float, dt: float) -> None:
+        """One tick, reading the values from a MultiBandOnsetAudioAnalyzer (or a model built on it)."""
+        bands = getattr(analyzer.ingestion, 'multiband_fft_values', None)
+        if bands is None or len(bands) == 0:
+            bands = analyzer.ingestion.fft_band_values
+        self.update(now, dt, bands, float(analyzer.kick_odf_buffer[-1]), float(analyzer.dE[0]), analyzer.signals,
+                    float(analyzer.confidence_score))
 
     def _no_beat(self, now: float, confidence: float, sig: Any) -> None:
         """Raw answer for the instant half a look-ahead ago; the slot is the majority over the last look-ahead seconds."""

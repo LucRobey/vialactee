@@ -34,7 +34,7 @@ TRUTH = REPO / "research" / "truth" / "tracks"
 OUT = HERE / "output"
 SPEC = json.loads((REPO / "config" / "music_signals.json").read_text(encoding="utf-8"))
 TRACKS = json.loads((REPO / "research" / "analyzer_trials" / "tracks.json").read_text(encoding="utf-8"))
-DEFAULT_MODELS = ("DyadicMetricalAudioAnalyzer", "MultiBandOnsetAudioAnalyzer")
+DEFAULT_MODELS = ("MultiBandOnsetAudioAnalyzer", "DyadicMetricalAudioAnalyzer")
 EVENT_TOL = {"drops": 0.5, "sections.items": 2.0}      # seconds; every other event: 50 ms
 HIT_TOL = 0.05
 EXACT_CURVES = {"loud_db", "sub_db", "bass_db", "mid_db", "high_db", "bright_oct", "fullness"}

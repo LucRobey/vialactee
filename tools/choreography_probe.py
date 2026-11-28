@@ -81,7 +81,7 @@ def load_audio_mono(path: str) -> np.ndarray:
 
 def make_listener(
     nb_bands: int = PRODUCTION_VISUAL_FFT_BANDS,
-    analyzer_class: Any = DyadicMetricalAudioAnalyzer,
+    analyzer_class: Any = None,      # None: the main analyzer (music.api DEFAULT_ANALYZER_MODEL)
 ) -> Listener:
     """Create a production Listener with zero artificial ADC buffer delay."""
     listener = Listener(build_listener_infos(nb_bands), analyzer_class=analyzer_class)

@@ -17,7 +17,7 @@ from research.scoreboard import compare
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 RUNS = HERE / "runs"
-BASELINE = "DyadicMetricalAudioAnalyzer"
+BASELINE = "MultiBandOnsetAudioAnalyzer"        # the main analyzer of the installation
 STATE_TEXT = {"open": "in progress", "checked": "checked, not closed", "proposed": "**waiting for the owner**",
               "archived": "dropped", "decided": "decided"}
 
