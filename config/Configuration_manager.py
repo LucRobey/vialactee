@@ -115,13 +115,29 @@ def resolve_audio_config(infos: dict) -> dict:
                 return idx, dev["name"]
         return None, None
 
+    def windows_default_output():
+        """The output Windows is set to use (e.g. a Bluetooth speaker), unless it is the virtual cable."""
+        try:
+            idx = int(default_out)
+            dev = devices[idx]
+        except (TypeError, ValueError, IndexError, KeyError):
+            return None, None
+        if idx < 0 or dev["max_output_channels"] <= 0:
+            return None, None
+        name = dev["name"]
+        if any(ex in name.lower() for ex in ("cable", "vb-audio")):
+            return None, None
+        return idx, name
+
     if preset == "spotify":
         idx_in, name_in = find_device(["cable output", "vb-audio", "virtual audio cable", "virtual cable", "cable-a", "cable-b"], kind="input")
-        idx_out, name_out = find_device(
-            ["speakers", "haut-parleur"],
-            kind="output",
-            exclude_patterns=["cable", "vb-audio"]
-        )
+        idx_out, name_out = windows_default_output()
+        if idx_out is None:
+            idx_out, name_out = find_device(
+                ["speakers", "haut-parleur"],
+                kind="output",
+                exclude_patterns=["cable", "vb-audio"]
+            )
         if idx_in is not None:
             infos["input_device_id"] = idx_in
             infos["output_device_id"] = idx_out if idx_out is not None else default_out
@@ -169,11 +185,13 @@ def resolve_audio_config(infos: dict) -> dict:
         if idx_in is None:
             idx_in = default_in
             name_in = devices[default_in]["name"] if default_in is not None and default_in >= 0 else "Default Mic"
-        idx_out, name_out = find_device(
-            ["speakers", "haut-parleur", "line out", "casque", "headphones"],
-            kind="output",
-            exclude_patterns=["cable", "vb-audio"]
-        )
+        idx_out, name_out = windows_default_output()
+        if idx_out is None:
+            idx_out, name_out = find_device(
+                ["speakers", "haut-parleur", "line out", "casque", "headphones"],
+                kind="output",
+                exclude_patterns=["cable", "vb-audio"]
+            )
         infos["input_device_id"] = idx_in
         infos["output_device_id"] = idx_out if idx_out is not None else default_out
         infos["fakeDelay"] = 5.0
@@ -189,4 +207,27 @@ def resolve_audio_config(infos: dict) -> dict:
     else:
         logger.warning(f"Unknown audio_preset '{preset}'. Keeping raw configuration.")
 
+    _apply_output_latency_by_device(infos, devices, logger)
     return infos
+
+
+def _apply_output_latency_by_device(infos: dict, devices, logger) -> None:
+    """
+    Sets 'audio_output_latency' from 'output_latency_by_device' when the chosen
+    output's name contains one of its keys (case-insensitive), e.g.
+    {"JBL": 0.2} for a Bluetooth speaker. Bluetooth delay is not reported by the
+    driver, so it has to be given here; without a match the value is left as is.
+    """
+    table = infos.get("output_latency_by_device")
+    idx = infos.get("output_device_id")
+    if not isinstance(table, dict) or not table or idx is None:
+        return
+    try:
+        name = devices[int(idx)]["name"]
+    except (TypeError, ValueError, IndexError, KeyError):
+        return
+    for pattern, latency in table.items():
+        if str(pattern).lower() in name.lower():
+            infos["audio_output_latency"] = float(latency)
+            logger.info(f"[AudioPreset] Output '{name}' matches '{pattern}': audio_output_latency={float(latency):.3f}s")
+            return

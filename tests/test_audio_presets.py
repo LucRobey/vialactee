@@ -103,6 +103,51 @@ def test_resolve_aux_preset():
         assert resolved["fakeDelay"] == 5.0
 
 
+MOCK_DEVICES_WITH_BLUETOOTH = MOCK_DEVICES_WITH_VBCABLE + [
+    {"name": "Haut-parleurs (JBL Flip 5)", "max_input_channels": 0, "max_output_channels": 2},
+]
+
+
+@pytest.mark.parametrize("preset", ["spotify", "aux"])
+def test_preset_follows_windows_default_output(preset):
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = MOCK_DEVICES_WITH_BLUETOOTH
+    mock_sd.default.device = [1, 6]  # Windows output set to the Bluetooth speaker
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        resolved = Configuration_manager.resolve_audio_config({"audio_preset": preset})
+        assert resolved["output_device_id"] == 6
+
+
+def test_preset_ignores_cable_as_windows_default_output():
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = MOCK_DEVICES_WITH_BLUETOOTH
+    mock_sd.default.device = [1, 5]  # Windows output set to CABLE Input
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        resolved = Configuration_manager.resolve_audio_config({"audio_preset": "spotify"})
+        assert resolved["output_device_id"] == 3  # Speakers, never the cable
+
+
+def test_output_latency_by_device():
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = MOCK_DEVICES_WITH_BLUETOOTH
+    table = {"jbl": 0.2}
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        mock_sd.default.device = [1, 6]
+        resolved = Configuration_manager.resolve_audio_config(
+            {"audio_preset": "spotify", "output_latency_by_device": table}
+        )
+        assert resolved["audio_output_latency"] == 0.2
+
+        mock_sd.default.device = [1, 3]
+        resolved = Configuration_manager.resolve_audio_config(
+            {"audio_preset": "spotify", "output_latency_by_device": table, "audio_output_latency": 0.01}
+        )
+        assert resolved["audio_output_latency"] == 0.01  # no match: left unchanged
+
+
 def test_resolve_mic_preset():
     mock_sd = MagicMock()
     mock_sd.query_devices.return_value = MOCK_DEVICES_WITH_VBCABLE

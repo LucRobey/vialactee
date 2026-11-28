@@ -65,6 +65,7 @@ The root configuration file governing server launch, audio ingestion, hardware d
 | `log_level` | string | `"INFO"` | `"DEBUG"`, `"INFO"`, `"WARNING"`, `"ERROR"` | `Main.py` | Logger verbosity level for console and `vialactee.log` rotating file handler. |
 | `led_latency` | float | `0.0` | Seconds (float) | `BaseAudioAnalyzer` | LED pipeline lag: time between a frame command and the light being visible (ESP32 transport, strip refresh). Calibrated constant. |
 | `audio_output_latency` | float | `0.0` | Seconds (float) | `BaseAudioAnalyzer` | Speaker/DAC lag: time between the sample leaving the DAC and the sound being heard (e.g. wired ~0.01, Bluetooth ~0.15-0.25). The analyzers use the net `hardware_latency = led_latency - audio_output_latency` (see AXIOM-05). The former `latency` key is removed and ignored. |
+| `output_latency_by_device` | object | `{}` | `{"<part of device name>": seconds}` | `Configuration_manager` | Optional. After a preset picks the output, the first key found (case-insensitive) in that device's name sets `audio_output_latency`, e.g. `{"JBL": 0.2}` for a Bluetooth speaker. Bluetooth delay is not reported by the driver, so it must be given here. No match leaves `audio_output_latency` unchanged. Not applied with `"custom"`. |
 | `decay_base` | float | `0.98` | Float in $(0.90, 0.999)$ | `AudioAnalyzer` | Exponential decay rate applied to ODF peaks and running beat trust. |
 | `printCpuFpsInfo` | boolean | `false` | `true`, `false` | `Mode_master`, `Profiler` | If `true`, outputs execution metrics and FPS logs to stdout at profiler intervals. |
 | `song` | string / null | `null` | File path or track name | `Main.py`, `Local_AudioFile` | Path or name of local MP3/WAV file for direct audio playback with hardware parity. |
@@ -87,10 +88,11 @@ The `"audio_preset"` setting automates audio input and output device selection a
 
 ### Supported Presets Detailed
 
-#### 1. `"spotify"` (Default — Spotify In, PC Speakers Out with 5s Prediction)
-* **Goal:** Play Spotify on your computer, analyze 5s ahead for predictive lights, and play out through the **computer's built-in speakers** with 5s delay.
+#### 1. `"spotify"` (Default — Spotify In, Windows Output with 5s Prediction)
+* **Goal:** Play Spotify on your computer, analyze 5s ahead for predictive lights, and play out with 5s delay through **the output Windows is set to use** (built-in speakers, or a Bluetooth speaker once you select it in Windows).
 * **Input Device:** Virtual Audio Cable (`"Line 1 (Virtual Audio Cable)"` / `"CABLE Output"`).
-* **Output Device:** Computer Speakers (`"Speakers (Realtek(R) Audio)"` / `"Haut-parleurs"`).
+* **Output Device:** The Windows default output, unless it is the virtual cable; then the first device named `"speakers"` / `"haut-parleur"`.
+* **Bluetooth:** Connect the speaker and select it in Windows *before* starting the program (the device list is read once at startup). Add its delay with `output_latency_by_device`, e.g. `{"JBL": 0.2}`, and adjust by ear.
 * **`fakeDelay`:** `5.0s`.
 * **Setup Required:** In Windows Volume Mixer, route Spotify's output to *Line 1 (Virtual Audio Cable)*. Make sure Python's volume is set to 100%.
 
@@ -104,7 +106,7 @@ The `"audio_preset"` setting automates audio input and output device selection a
 #### 3. `"aux"` (External Player / Phone into AUX Jack with 5s Prediction)
 * **Goal:** An external phone, DJ deck, or instrument is plugged into the computer's 3.5mm jack.
 * **Input Device:** Line In / Mic In (`"line in"`, `"entrée ligne"`, `"aux"`).
-* **Output Device:** PC Speakers (`"speakers"`, `"haut-parleur"`).
+* **Output Device:** The Windows default output, unless it is the virtual cable; then PC Speakers (`"speakers"`, `"haut-parleur"`).
 * **`fakeDelay`:** `5.0s`.
 * **Audio Flow:** Audio enters through the 3.5mm jack, is analyzed 5s in advance, and plays out of the speakers 5 seconds later in sync with the chandelier.
 
