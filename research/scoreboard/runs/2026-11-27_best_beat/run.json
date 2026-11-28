@@ -1,0 +1,51 @@
+{
+ "run": "2026-11-27_best_beat",
+ "started": "2026-11-27",
+ "signals": [
+  "beat",
+  "bpm"
+ ],
+ "idea": "M08",
+ "candidate": "MultiBandSixSignalsAudioAnalyzer",
+ "baseline": "DyadicMetricalAudioAnalyzer",
+ "state": "decided",
+ "grades": [
+  {
+   "date": "2026-11-27",
+   "candidate": "MultiBandSixSignalsAudioAnalyzer",
+   "open": {
+    "beat": 0.76393,
+    "bpm": 0.71327
+   },
+   "gate_passed": true
+  }
+ ],
+ "check": {
+  "date": "2026-11-27",
+  "candidate": "MultiBandSixSignalsAudioAnalyzer",
+  "signals": {
+   "beat": {
+    "production": 0.80223,
+    "candidate": 0.85024,
+    "open": 0.76393
+   },
+   "bpm": {
+    "production": 0.64169,
+    "candidate": 0.77931,
+    "open": 0.71327
+   }
+  },
+  "gate_passed": true,
+  "target_ok": true
+ },
+ "verdict": {
+  "date": "2026-11-27",
+  "verdict": "propose",
+  "summary": "The best beat and tempo follower plus the six signals: beat 78 to 81, tempo 67 to 75 on the 20 tracks, all from three songs where today's half-beats stop; the six signals unchanged"
+ },
+ "decision": {
+  "date": "2026-11-27",
+  "decision": "approved",
+  "note": "Owner: 'add the six signals to MultiBandOnsetAudioAnalyzer and put it as the main'. Done the same day: the signals are in that model itself and it is the default."
+ }
+}

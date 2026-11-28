@@ -1,0 +1,8352 @@
+{
+ "built": "2026-11-27",
+ "lookahead_s": 5.0,
+ "models": {
+  "MultiBandSixSignalsAudioAnalyzer": {
+   "01": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.8227,
+      "all": 0.8227,
+      "detail": {
+       "found": 0.825,
+       "right": 0.8204,
+       "offset_ms": -19.1333,
+       "n_truth": 703,
+       "n_est": 707
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.9659,
+      "all": 0.9659,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.895,
+      "all": 0.895,
+      "detail": {
+       "balanced": 0.895,
+       "when_on": 0.8241,
+       "when_off": 0.9659,
+       "share_on_truth": 0.0524,
+       "edge_delay_s": 3.2667,
+       "edges_found": 1
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.9311,
+      "all": 0.9296,
+      "detail": {
+       "found": 0.914,
+       "right": 0.9456,
+       "offset_ms": 16.6667,
+       "n_truth": 628,
+       "n_est": 607
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.8076,
+      "all": 0.8076,
+      "detail": {
+       "balanced": 0.8076,
+       "when_on": 0.999,
+       "when_off": 0.6162,
+       "share_on_truth": 0.8813,
+       "edge_delay_s": -0.1583,
+       "edges_found": 2
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 6
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 15,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.899,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9946,
+      "all": 0.9946,
+      "detail": {
+       "balanced": 0.9946,
+       "when_on": 0.9937,
+       "when_off": 0.9956,
+       "share_on_truth": 0.0074,
+       "edge_delay_s": -0.7583,
+       "edges_found": 2
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.6055,
+      "all": 0.6055,
+      "detail": {
+       "corr": 0.6055,
+       "lag_ms": 50.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.7091,
+      "all": 0.7091,
+      "detail": {
+       "corr": 0.7091,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.7871,
+      "all": 0.7871,
+      "detail": {
+       "corr": 0.7871,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.8665,
+      "all": 0.8665,
+      "detail": {
+       "corr": 0.8665,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.217,
+      "all": 0.217,
+      "detail": {
+       "corr": 0.217,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.4854,
+      "all": 0.4844,
+      "detail": {
+       "found": 0.3965,
+       "right": 0.6225,
+       "offset_ms": -10.0,
+       "n_truth": 628,
+       "n_est": 400
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4529,
+      "detail": {
+       "found": 0.473,
+       "right": 0.4344,
+       "offset_ms": -6.6667,
+       "n_truth": 315,
+       "n_est": 348
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 217,
+       "n_est": 1
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.7602,
+      "all": 0.7592,
+      "detail": {
+       "found": 0.9236,
+       "right": 0.6444,
+       "offset_ms": 16.6667,
+       "n_truth": 628,
+       "n_est": 900
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2,
+      "detail": {
+       "found": 0.1333,
+       "right": 0.4,
+       "offset_ms": 1596.0,
+       "n_truth": 15,
+       "n_est": 5
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.7202,
+      "all": 0.7202,
+      "detail": {
+       "balanced": 0.7202,
+       "when_on": 1.0,
+       "when_off": 0.4404,
+       "share_on_truth": 0.0524,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.821,
+      "all": 0.821,
+      "detail": {
+       "balanced": 0.821,
+       "when_on": 0.868,
+       "when_off": 0.774,
+       "share_on_truth": 0.0524,
+       "edge_delay_s": 1.9833,
+       "edges_found": 1
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.9299,
+      "all": 0.9299,
+      "detail": {
+       "corr": 0.9299,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8267,
+      "all": 0.8267,
+      "detail": {
+       "corr": 0.8267,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7738,
+      "all": 0.7738,
+      "detail": {
+       "corr": 0.7738,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.8451,
+      "detail": {
+       "corr": 0.8451,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.626
+   },
+   "03": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.6551,
+      "all": 0.6547,
+      "detail": {
+       "found": 0.901,
+       "right": 0.5141,
+       "offset_ms": -20.0667,
+       "n_truth": 404,
+       "n_est": 708
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.2416,
+      "all": 0.2613,
+      "detail": {
+       "double": 0.7186,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9689,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.6595,
+      "all": 0.6477,
+      "detail": {
+       "found": 0.7443,
+       "right": 0.5733,
+       "offset_ms": 20.0,
+       "n_truth": 352,
+       "n_est": 457
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": null,
+      "all": 0.8355,
+      "detail": {
+       "balanced": 0.8355,
+       "when_on": 0.9958,
+       "when_off": 0.6752,
+       "share_on_truth": 0.9352,
+       "edge_delay_s": -0.325,
+       "edges_found": 4
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 2
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 9,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9415,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9897,
+      "all": 0.9897,
+      "detail": {
+       "balanced": 0.9897,
+       "when_on": 1.0,
+       "when_off": 0.9794,
+       "share_on_truth": 0.0251,
+       "edge_delay_s": -1.3583,
+       "edges_found": 2
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.6619,
+      "all": 0.6619,
+      "detail": {
+       "corr": 0.6619,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9461,
+      "all": 0.9461,
+      "detail": {
+       "corr": 0.9461,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.917,
+      "all": 0.917,
+      "detail": {
+       "corr": 0.917,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.964,
+      "all": 0.964,
+      "detail": {
+       "corr": 0.964,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.1721,
+      "all": 0.1721,
+      "detail": {
+       "corr": 0.1721,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.6027,
+      "all": 0.6179,
+      "detail": {
+       "found": 0.7926,
+       "right": 0.5064,
+       "offset_ms": -6.6667,
+       "n_truth": 352,
+       "n_est": 551
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2883,
+      "detail": {
+       "found": 0.4507,
+       "right": 0.2119,
+       "offset_ms": -3.3333,
+       "n_truth": 71,
+       "n_est": 157
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 11,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.5873,
+      "all": 0.6013,
+      "detail": {
+       "found": 0.9148,
+       "right": 0.4478,
+       "offset_ms": 16.6667,
+       "n_truth": 352,
+       "n_est": 719
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.1176,
+      "detail": {
+       "found": 0.1111,
+       "right": 0.125,
+       "offset_ms": 1050.0,
+       "n_truth": 9,
+       "n_est": 8
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8898,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9658,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8974,
+      "all": 0.8974,
+      "detail": {
+       "corr": 0.8974,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8857,
+      "all": 0.8857,
+      "detail": {
+       "corr": 0.8857,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7953,
+      "all": 0.7953,
+      "detail": {
+       "corr": 0.7953,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4508,
+      "detail": {
+       "corr": 0.4508,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.6252
+   },
+   "05": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.8958,
+      "all": 0.8958,
+      "detail": {
+       "found": 0.8934,
+       "right": 0.8983,
+       "offset_ms": -27.2,
+       "n_truth": 722,
+       "n_est": 718
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 1.0,
+      "all": 1.0,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.9371,
+      "all": 0.9371,
+      "detail": {
+       "balanced": 0.9371,
+       "when_on": 0.8744,
+       "when_off": 0.9998,
+       "share_on_truth": 0.0123,
+       "edge_delay_s": 0.45,
+       "edges_found": 1
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.9512,
+      "all": 0.9526,
+      "detail": {
+       "found": 0.9273,
+       "right": 0.9793,
+       "offset_ms": 16.6667,
+       "n_truth": 715,
+       "n_est": 677
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.6374,
+      "all": 0.6374,
+      "detail": {
+       "balanced": 0.6374,
+       "when_on": 1.0,
+       "when_off": 0.2748,
+       "share_on_truth": 0.9428,
+       "edge_delay_s": 0.0,
+       "edges_found": 1
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 1
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 12,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9675,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9855,
+      "all": 0.9855,
+      "detail": {
+       "balanced": 0.9855,
+       "when_on": 1.0,
+       "when_off": 0.971,
+       "share_on_truth": 0.0131,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.7478,
+      "all": 0.7478,
+      "detail": {
+       "corr": 0.7478,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9144,
+      "all": 0.9144,
+      "detail": {
+       "corr": 0.9144,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.8748,
+      "all": 0.8748,
+      "detail": {
+       "corr": 0.8748,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9443,
+      "all": 0.9443,
+      "detail": {
+       "corr": 0.9443,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.0053,
+      "all": 0.0053,
+      "detail": {
+       "corr": 0.0053,
+       "lag_ms": -500.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.8578,
+      "all": 0.8583,
+      "detail": {
+       "found": 0.7664,
+       "right": 0.9751,
+       "offset_ms": -16.6667,
+       "n_truth": 715,
+       "n_est": 562
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.499,
+      "detail": {
+       "found": 0.3719,
+       "right": 0.758,
+       "offset_ms": -16.6667,
+       "n_truth": 320,
+       "n_est": 162
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 921,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.8795,
+      "all": 0.8647,
+      "detail": {
+       "found": 0.9385,
+       "right": 0.8017,
+       "offset_ms": 16.6667,
+       "n_truth": 715,
+       "n_est": 837
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3,
+      "detail": {
+       "found": 0.25,
+       "right": 0.375,
+       "offset_ms": 1550.0,
+       "n_truth": 12,
+       "n_est": 8
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.4885,
+      "all": 0.4885,
+      "detail": {
+       "balanced": 0.4885,
+       "when_on": 0.0,
+       "when_off": 0.9771,
+       "share_on_truth": 0.0123,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.4941,
+      "all": 0.4941,
+      "detail": {
+       "balanced": 0.4941,
+       "when_on": 0.0,
+       "when_off": 0.9881,
+       "share_on_truth": 0.0123,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8488,
+      "all": 0.8488,
+      "detail": {
+       "corr": 0.8488,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.9051,
+      "all": 0.9051,
+      "detail": {
+       "corr": 0.9051,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8153,
+      "all": 0.8153,
+      "detail": {
+       "corr": 0.8153,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.6289,
+      "detail": {
+       "corr": 0.6289,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.635
+   },
+   "07": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.6527,
+      "all": 0.6672,
+      "detail": {
+       "found": 0.7056,
+       "right": 0.6329,
+       "offset_ms": -17.3,
+       "n_truth": 557,
+       "n_est": 621
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.6786,
+      "all": 0.6908,
+      "detail": {
+       "double": 0.1121,
+       "half": 0.0036
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.9792,
+      "all": 0.9792,
+      "detail": {
+       "balanced": 0.9792,
+       "when_on": 1.0,
+       "when_off": 0.9584,
+       "share_on_truth": 0.0555,
+       "edge_delay_s": -0.45,
+       "edges_found": 1
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.6289,
+      "all": 0.5898,
+      "detail": {
+       "found": 0.45,
+       "right": 0.8555,
+       "offset_ms": 16.6667,
+       "n_truth": 500,
+       "n_est": 263
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.7247,
+      "all": 0.7247,
+      "detail": {
+       "balanced": 0.7247,
+       "when_on": 0.8702,
+       "when_off": 0.5791,
+       "share_on_truth": 0.8718,
+       "edge_delay_s": -0.2833,
+       "edges_found": 9
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 2
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 2,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.94,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9944,
+      "all": 0.9944,
+      "detail": {
+       "balanced": 0.9944,
+       "when_on": 1.0,
+       "when_off": 0.9888,
+       "share_on_truth": 0.0067,
+       "edge_delay_s": -2.5833,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.6238,
+      "all": 0.6238,
+      "detail": {
+       "corr": 0.6238,
+       "lag_ms": 50.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.8791,
+      "all": 0.8791,
+      "detail": {
+       "corr": 0.8791,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.8592,
+      "all": 0.8592,
+      "detail": {
+       "corr": 0.8592,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.8776,
+      "all": 0.8776,
+      "detail": {
+       "corr": 0.8776,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.1929,
+      "all": 0.1929,
+      "detail": {
+       "corr": 0.1929,
+       "lag_ms": -300.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.4587,
+      "all": 0.4435,
+      "detail": {
+       "found": 0.318,
+       "right": 0.7327,
+       "offset_ms": -6.6667,
+       "n_truth": 500,
+       "n_est": 217
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3853,
+      "detail": {
+       "found": 0.5665,
+       "right": 0.2919,
+       "offset_ms": -16.6667,
+       "n_truth": 203,
+       "n_est": 429
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 105,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.824,
+      "all": 0.7921,
+      "detail": {
+       "found": 0.842,
+       "right": 0.7478,
+       "offset_ms": 16.6667,
+       "n_truth": 500,
+       "n_est": 563
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 2,
+       "n_est": 4
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.7502,
+      "all": 0.7502,
+      "detail": {
+       "balanced": 0.7502,
+       "when_on": 0.7698,
+       "when_off": 0.7306,
+       "share_on_truth": 0.0555,
+       "edge_delay_s": 3.15,
+       "edges_found": 1
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.8217,
+      "all": 0.8217,
+      "detail": {
+       "balanced": 0.8217,
+       "when_on": 0.7698,
+       "when_off": 0.8736,
+       "share_on_truth": 0.0555,
+       "edge_delay_s": 3.15,
+       "edges_found": 1
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8459,
+      "all": 0.8459,
+      "detail": {
+       "corr": 0.8459,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8809,
+      "all": 0.8809,
+      "detail": {
+       "corr": 0.8809,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8166,
+      "all": 0.8166,
+      "detail": {
+       "corr": 0.8166,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.6647,
+      "detail": {
+       "corr": 0.6647,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.5965
+   },
+   "09": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.6205,
+      "all": 0.6205,
+      "detail": {
+       "found": 0.6247,
+       "right": 0.6163,
+       "offset_ms": -7.5667,
+       "n_truth": 437,
+       "n_est": 443
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.984,
+      "all": 0.984,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9379,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.7645,
+      "all": 0.7539,
+      "detail": {
+       "found": 0.7424,
+       "right": 0.7658,
+       "offset_ms": 23.3333,
+       "n_truth": 458,
+       "n_est": 444
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.9268,
+      "all": 0.9268,
+      "detail": {
+       "balanced": 0.9268,
+       "when_on": 0.9971,
+       "when_off": 0.8566,
+       "share_on_truth": 0.9303,
+       "edge_delay_s": -0.3167,
+       "edges_found": 4
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": -16.6667,
+       "n_truth": 0,
+       "n_est": 10
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 7,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8114,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9926,
+      "all": 0.9926,
+      "detail": {
+       "balanced": 0.9926,
+       "when_on": 1.0,
+       "when_off": 0.9852,
+       "share_on_truth": 0.0193,
+       "edge_delay_s": -2.1167,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.6807,
+      "all": 0.6807,
+      "detail": {
+       "corr": 0.6807,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9537,
+      "all": 0.9537,
+      "detail": {
+       "corr": 0.9537,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.9419,
+      "all": 0.9419,
+      "detail": {
+       "corr": 0.9419,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9364,
+      "all": 0.9364,
+      "detail": {
+       "corr": 0.9364,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.2385,
+      "all": 0.2385,
+      "detail": {
+       "corr": 0.2385,
+       "lag_ms": 50.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.3964,
+      "all": 0.4249,
+      "detail": {
+       "found": 0.3428,
+       "right": 0.5587,
+       "offset_ms": 6.6667,
+       "n_truth": 458,
+       "n_est": 281
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3272,
+      "detail": {
+       "found": 0.233,
+       "right": 0.5494,
+       "offset_ms": -3.3333,
+       "n_truth": 382,
+       "n_est": 162
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 824,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.6223,
+      "all": 0.6731,
+      "detail": {
+       "found": 0.9192,
+       "right": 0.5309,
+       "offset_ms": 16.6667,
+       "n_truth": 458,
+       "n_est": 793
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.1667,
+      "detail": {
+       "found": 0.1429,
+       "right": 0.2,
+       "offset_ms": 1247.3333,
+       "n_truth": 7,
+       "n_est": 5
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.0447,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.5004,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8495,
+      "all": 0.8495,
+      "detail": {
+       "corr": 0.8495,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8679,
+      "all": 0.8679,
+      "detail": {
+       "corr": 0.8679,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7792,
+      "all": 0.7792,
+      "detail": {
+       "corr": 0.7792,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.5796,
+      "detail": {
+       "corr": 0.5796,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.6031
+   },
+   "11": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.6478,
+      "all": 0.6478,
+      "detail": {
+       "found": 0.9613,
+       "right": 0.4885,
+       "offset_ms": -15.3167,
+       "n_truth": 310,
+       "n_est": 610
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.0,
+      "all": 0.0,
+      "detail": {
+       "double": 0.9774,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.5244,
+      "all": 0.5244,
+      "detail": {
+       "balanced": 0.5244,
+       "when_on": 0.1389,
+       "when_off": 0.9099,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": 0.4,
+       "edges_found": 1
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.7824,
+      "all": 0.7896,
+      "detail": {
+       "found": 0.9441,
+       "right": 0.6786,
+       "offset_ms": 23.3333,
+       "n_truth": 161,
+       "n_est": 224
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.7568,
+      "all": 0.7568,
+      "detail": {
+       "balanced": 0.7568,
+       "when_on": 0.9884,
+       "when_off": 0.5253,
+       "share_on_truth": 0.584,
+       "edge_delay_s": -0.3333,
+       "edges_found": 9
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 2,
+       "n_est": 6
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 7,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8793,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9935,
+      "all": 0.9935,
+      "detail": {
+       "balanced": 0.9935,
+       "when_on": 1.0,
+       "when_off": 0.987,
+       "share_on_truth": 0.0071,
+       "edge_delay_s": -2.7167,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.7076,
+      "all": 0.7076,
+      "detail": {
+       "corr": 0.7076,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.6066,
+      "all": 0.6066,
+      "detail": {
+       "corr": 0.6066,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.8689,
+      "all": 0.8689,
+      "detail": {
+       "corr": 0.8689,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9306,
+      "all": 0.9306,
+      "detail": {
+       "corr": 0.9306,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.3356,
+      "all": 0.3356,
+      "detail": {
+       "corr": 0.3356,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.6702,
+      "all": 0.6977,
+      "detail": {
+       "found": 0.9317,
+       "right": 0.5576,
+       "offset_ms": -6.6667,
+       "n_truth": 161,
+       "n_est": 269
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4737,
+      "detail": {
+       "found": 0.9767,
+       "right": 0.3127,
+       "offset_ms": -3.3333,
+       "n_truth": 129,
+       "n_est": 405
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 213,
+       "n_est": 2
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.6718,
+      "all": 0.6895,
+      "detail": {
+       "found": 0.9379,
+       "right": 0.5451,
+       "offset_ms": 16.6667,
+       "n_truth": 161,
+       "n_est": 277
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3077,
+      "detail": {
+       "found": 0.2857,
+       "right": 0.3333,
+       "offset_ms": 1734.3333,
+       "n_truth": 7,
+       "n_est": 6
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.454,
+      "all": 0.454,
+      "detail": {
+       "balanced": 0.454,
+       "when_on": 0.1714,
+       "when_off": 0.7366,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.5074,
+      "all": 0.5074,
+      "detail": {
+       "balanced": 0.5074,
+       "when_on": 0.0663,
+       "when_off": 0.9486,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": 1.4333,
+       "edges_found": 1
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.9265,
+      "all": 0.9265,
+      "detail": {
+       "corr": 0.9265,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.829,
+      "all": 0.829,
+      "detail": {
+       "corr": 0.829,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7021,
+      "all": 0.7021,
+      "detail": {
+       "corr": 0.7021,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.657,
+      "detail": {
+       "corr": 0.657,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.5697
+   },
+   "13": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.9645,
+      "all": 0.9645,
+      "detail": {
+       "found": 0.9592,
+       "right": 0.9698,
+       "offset_ms": 4.5,
+       "n_truth": 368,
+       "n_est": 364
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.9946,
+      "all": 0.9946,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.9447,
+      "all": 0.9447,
+      "detail": {
+       "balanced": 0.9447,
+       "when_on": 0.8969,
+       "when_off": 0.9925,
+       "share_on_truth": 0.0633,
+       "edge_delay_s": -0.2667,
+       "edges_found": 3
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.7744,
+      "all": 0.787,
+      "detail": {
+       "found": 0.9054,
+       "right": 0.696,
+       "offset_ms": 20.0,
+       "n_truth": 349,
+       "n_est": 454
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.9647,
+      "all": 0.9647,
+      "detail": {
+       "balanced": 0.9647,
+       "when_on": 0.9935,
+       "when_off": 0.9358,
+       "share_on_truth": 0.9383,
+       "edge_delay_s": -0.575,
+       "edges_found": 4
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 1,
+       "n_est": 10
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 9,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8484,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9386,
+      "all": 0.9386,
+      "detail": {
+       "balanced": 0.9386,
+       "when_on": 1.0,
+       "when_off": 0.8771,
+       "share_on_truth": 0.0093,
+       "edge_delay_s": -1.8,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.819,
+      "all": 0.819,
+      "detail": {
+       "corr": 0.819,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9866,
+      "all": 0.9866,
+      "detail": {
+       "corr": 0.9866,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.9817,
+      "all": 0.9817,
+      "detail": {
+       "corr": 0.9817,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9675,
+      "all": 0.9675,
+      "detail": {
+       "corr": 0.9675,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.1383,
+      "all": 0.1383,
+      "detail": {
+       "corr": 0.1383,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.8607,
+      "all": 0.8588,
+      "detail": {
+       "found": 0.8453,
+       "right": 0.8728,
+       "offset_ms": 16.6667,
+       "n_truth": 349,
+       "n_est": 338
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.1622,
+      "detail": {
+       "found": 0.1005,
+       "right": 0.42,
+       "offset_ms": 13.3333,
+       "n_truth": 209,
+       "n_est": 56
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 618,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.7573,
+      "all": 0.7727,
+      "detail": {
+       "found": 0.9742,
+       "right": 0.6403,
+       "offset_ms": 16.6667,
+       "n_truth": 349,
+       "n_est": 531
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2857,
+      "detail": {
+       "found": 0.2222,
+       "right": 0.4,
+       "offset_ms": 676.5,
+       "n_truth": 9,
+       "n_est": 5
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.9145,
+      "all": 0.9145,
+      "detail": {
+       "balanced": 0.9145,
+       "when_on": 0.8785,
+       "when_off": 0.9504,
+       "share_on_truth": 0.0633,
+       "edge_delay_s": 1.2667,
+       "edges_found": 3
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.8295,
+      "all": 0.8295,
+      "detail": {
+       "balanced": 0.8295,
+       "when_on": 0.6896,
+       "when_off": 0.9694,
+       "share_on_truth": 0.0633,
+       "edge_delay_s": 0.3833,
+       "edges_found": 3
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8489,
+      "all": 0.8489,
+      "detail": {
+       "corr": 0.8489,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8639,
+      "all": 0.8639,
+      "detail": {
+       "corr": 0.8639,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.6121,
+      "all": 0.6121,
+      "detail": {
+       "corr": 0.6121,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.5047,
+      "detail": {
+       "corr": 0.5047,
+       "lag_ms": 550.0
+      }
+     }
+    },
+    "frame_ms": 0.5665
+   },
+   "15": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.9615,
+      "all": 0.9578,
+      "detail": {
+       "found": 0.9562,
+       "right": 0.9595,
+       "offset_ms": -20.6333,
+       "n_truth": 297,
+       "n_est": 296
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.9754,
+      "all": 0.9764,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.8374,
+      "all": 0.8374,
+      "detail": {
+       "balanced": 0.8374,
+       "when_on": 0.7152,
+       "when_off": 0.9596,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": -1.2167,
+       "edges_found": 3
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.6012,
+      "all": 0.7938,
+      "detail": {
+       "found": 0.9333,
+       "right": 0.6906,
+       "offset_ms": 26.6667,
+       "n_truth": 165,
+       "n_est": 223
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.7825,
+      "all": 0.7825,
+      "detail": {
+       "balanced": 0.7825,
+       "when_on": 0.9944,
+       "when_off": 0.5705,
+       "share_on_truth": 0.5688,
+       "edge_delay_s": -0.3583,
+       "edges_found": 2
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 2
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 7,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9458,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.8934,
+      "all": 0.8934,
+      "detail": {
+       "balanced": 0.8934,
+       "when_on": 0.7949,
+       "when_off": 0.9919,
+       "share_on_truth": 0.0319,
+       "edge_delay_s": -1.525,
+       "edges_found": 2
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.4296,
+      "all": 0.4296,
+      "detail": {
+       "corr": 0.4296,
+       "lag_ms": -700.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.4819,
+      "all": 0.4819,
+      "detail": {
+       "corr": 0.4819,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.8134,
+      "all": 0.8134,
+      "detail": {
+       "corr": 0.8134,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.8839,
+      "all": 0.8839,
+      "detail": {
+       "corr": 0.8839,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.4991,
+      "all": 0.4991,
+      "detail": {
+       "corr": 0.4991,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.5049,
+      "all": 0.761,
+      "detail": {
+       "found": 0.9939,
+       "right": 0.6165,
+       "offset_ms": -6.6667,
+       "n_truth": 165,
+       "n_est": 266
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 110,
+       "n_est": 184
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 215,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.638,
+      "all": 0.8454,
+      "detail": {
+       "found": 0.9939,
+       "right": 0.7354,
+       "offset_ms": 10.0,
+       "n_truth": 165,
+       "n_est": 223
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.1818,
+      "detail": {
+       "found": 0.1429,
+       "right": 0.25,
+       "offset_ms": 1550.0,
+       "n_truth": 7,
+       "n_est": 4
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.7872,
+      "all": 0.7872,
+      "detail": {
+       "balanced": 0.7872,
+       "when_on": 0.9454,
+       "when_off": 0.6291,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": 2.1667,
+       "edges_found": 3
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.8225,
+      "all": 0.8225,
+      "detail": {
+       "balanced": 0.8225,
+       "when_on": 0.8017,
+       "when_off": 0.8432,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": 1.8,
+       "edges_found": 3
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8899,
+      "all": 0.8899,
+      "detail": {
+       "corr": 0.8899,
+       "lag_ms": 50.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.892,
+      "all": 0.892,
+      "detail": {
+       "corr": 0.892,
+       "lag_ms": 50.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8088,
+      "all": 0.8088,
+      "detail": {
+       "corr": 0.8088,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.631,
+      "detail": {
+       "corr": 0.631,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.5577
+   },
+   "17": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.8229,
+      "all": 0.8229,
+      "detail": {
+       "found": 0.8333,
+       "right": 0.8127,
+       "offset_ms": -23.3,
+       "n_truth": 354,
+       "n_est": 363
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.839,
+      "all": 0.839,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.8361,
+      "all": 0.8361,
+      "detail": {
+       "balanced": 0.8361,
+       "when_on": 0.7777,
+       "when_off": 0.8945,
+       "share_on_truth": 0.2189,
+       "edge_delay_s": 0.0167,
+       "edges_found": 3
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.4928,
+      "all": 0.5263,
+      "detail": {
+       "found": 0.7821,
+       "right": 0.3966,
+       "offset_ms": 20.0,
+       "n_truth": 179,
+       "n_est": 353
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.8026,
+      "all": 0.8026,
+      "detail": {
+       "balanced": 0.8026,
+       "when_on": 0.9831,
+       "when_off": 0.6221,
+       "share_on_truth": 0.7025,
+       "edge_delay_s": -0.1917,
+       "edges_found": 6
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 7
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 7,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8299,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9886,
+      "all": 0.9886,
+      "detail": {
+       "balanced": 0.9886,
+       "when_on": 0.9811,
+       "when_off": 0.9961,
+       "share_on_truth": 0.0113,
+       "edge_delay_s": 0.025,
+       "edges_found": 2
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.4495,
+      "all": 0.4495,
+      "detail": {
+       "corr": 0.4495,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9288,
+      "all": 0.9288,
+      "detail": {
+       "corr": 0.9288,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.9023,
+      "all": 0.9023,
+      "detail": {
+       "corr": 0.9023,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9313,
+      "all": 0.9313,
+      "detail": {
+       "corr": 0.9313,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.4153,
+      "all": 0.4153,
+      "detail": {
+       "corr": 0.4153,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.516,
+      "all": 0.5413,
+      "detail": {
+       "found": 0.7318,
+       "right": 0.4295,
+       "offset_ms": -16.6667,
+       "n_truth": 179,
+       "n_est": 305
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3882,
+      "detail": {
+       "found": 0.4155,
+       "right": 0.3642,
+       "offset_ms": -16.6667,
+       "n_truth": 142,
+       "n_est": 164
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 136,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.3521,
+      "all": 0.3953,
+      "detail": {
+       "found": 0.8436,
+       "right": 0.2581,
+       "offset_ms": 16.6667,
+       "n_truth": 179,
+       "n_est": 585
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2857,
+      "detail": {
+       "found": 0.2857,
+       "right": 0.2857,
+       "offset_ms": 0.1667,
+       "n_truth": 7,
+       "n_est": 7
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.5389,
+      "all": 0.5389,
+      "detail": {
+       "balanced": 0.5389,
+       "when_on": 0.9345,
+       "when_off": 0.1433,
+       "share_on_truth": 0.2189,
+       "edge_delay_s": 3.3667,
+       "edges_found": 1
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.7169,
+      "all": 0.7169,
+      "detail": {
+       "balanced": 0.7169,
+       "when_on": 0.7553,
+       "when_off": 0.6785,
+       "share_on_truth": 0.2189,
+       "edge_delay_s": 2.0667,
+       "edges_found": 5
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7271,
+      "all": 0.7271,
+      "detail": {
+       "corr": 0.7271,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.6614,
+      "all": 0.6614,
+      "detail": {
+       "corr": 0.6614,
+       "lag_ms": 50.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7275,
+      "all": 0.7275,
+      "detail": {
+       "corr": 0.7275,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4427,
+      "detail": {
+       "corr": 0.4427,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.5419
+   },
+   "19": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.5958,
+      "all": 0.5958,
+      "detail": {
+       "found": 0.6432,
+       "right": 0.5549,
+       "offset_ms": -9.9,
+       "n_truth": 754,
+       "n_est": 874
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.4536,
+      "all": 0.4536,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.7678,
+      "all": 0.7678,
+      "detail": {
+       "balanced": 0.7678,
+       "when_on": 0.572,
+       "when_off": 0.9637,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 0.25,
+       "edges_found": 3
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.9334,
+      "all": 0.8952,
+      "detail": {
+       "found": 0.8598,
+       "right": 0.9335,
+       "offset_ms": 16.6667,
+       "n_truth": 849,
+       "n_est": 782
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.8595,
+      "all": 0.8595,
+      "detail": {
+       "balanced": 0.8595,
+       "when_on": 0.9894,
+       "when_off": 0.7297,
+       "share_on_truth": 0.8317,
+       "edge_delay_s": -0.425,
+       "edges_found": 8
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 3,
+       "n_est": 2
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 14,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9744,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9985,
+      "all": 0.9985,
+      "detail": {
+       "balanced": 0.9985,
+       "when_on": 1.0,
+       "when_off": 0.9969,
+       "share_on_truth": 0.003,
+       "edge_delay_s": -0.15,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.5996,
+      "all": 0.5996,
+      "detail": {
+       "corr": 0.5996,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.7799,
+      "all": 0.7799,
+      "detail": {
+       "corr": 0.7799,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.953,
+      "all": 0.953,
+      "detail": {
+       "corr": 0.953,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9562,
+      "all": 0.9562,
+      "detail": {
+       "corr": 0.9562,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.1161,
+      "all": 0.1161,
+      "detail": {
+       "corr": 0.1161,
+       "lag_ms": -900.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.6047,
+      "all": 0.585,
+      "detail": {
+       "found": 0.5819,
+       "right": 0.5881,
+       "offset_ms": 6.6667,
+       "n_truth": 849,
+       "n_est": 840
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0198,
+      "detail": {
+       "found": 0.0134,
+       "right": 0.0376,
+       "offset_ms": -6.6667,
+       "n_truth": 522,
+       "n_est": 192
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0035,
+      "detail": {
+       "found": 0.0018,
+       "right": 1.0,
+       "offset_ms": -20.0,
+       "n_truth": 1133,
+       "n_est": 2
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.7722,
+      "all": 0.7612,
+      "detail": {
+       "found": 0.8916,
+       "right": 0.664,
+       "offset_ms": 13.3333,
+       "n_truth": 849,
+       "n_est": 1140
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2857,
+      "detail": {
+       "found": 0.2143,
+       "right": 0.4286,
+       "offset_ms": 746.3333,
+       "n_truth": 14,
+       "n_est": 7
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.5408,
+      "all": 0.5408,
+      "detail": {
+       "balanced": 0.5408,
+       "when_on": 0.6792,
+       "when_off": 0.4023,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 2.4167,
+       "edges_found": 3
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.3785,
+      "all": 0.3785,
+      "detail": {
+       "balanced": 0.3785,
+       "when_on": 0.3355,
+       "when_off": 0.4215,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 2.125,
+       "edges_found": 4
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.5823,
+      "all": 0.5823,
+      "detail": {
+       "corr": 0.5823,
+       "lag_ms": 50.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7517,
+      "all": 0.7517,
+      "detail": {
+       "corr": 0.7517,
+       "lag_ms": 50.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.5585,
+      "all": 0.5585,
+      "detail": {
+       "corr": 0.5585,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.5598,
+      "detail": {
+       "corr": 0.5598,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.4804
+   }
+  },
+  "DyadicMetricalAudioAnalyzer": {
+   "01": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.7949,
+      "all": 0.7949,
+      "detail": {
+       "found": 0.8464,
+       "right": 0.7494,
+       "offset_ms": -18.9667,
+       "n_truth": 703,
+       "n_est": 794
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.8279,
+      "all": 0.8279,
+      "detail": {
+       "double": 0.138,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.895,
+      "all": 0.895,
+      "detail": {
+       "balanced": 0.895,
+       "when_on": 0.8241,
+       "when_off": 0.9659,
+       "share_on_truth": 0.0524,
+       "edge_delay_s": 3.2667,
+       "edges_found": 1
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.9311,
+      "all": 0.9296,
+      "detail": {
+       "found": 0.914,
+       "right": 0.9456,
+       "offset_ms": 16.6667,
+       "n_truth": 628,
+       "n_est": 607
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.8076,
+      "all": 0.8076,
+      "detail": {
+       "balanced": 0.8076,
+       "when_on": 0.999,
+       "when_off": 0.6162,
+       "share_on_truth": 0.8813,
+       "edge_delay_s": -0.1583,
+       "edges_found": 2
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 6
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 15,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.899,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9946,
+      "all": 0.9946,
+      "detail": {
+       "balanced": 0.9946,
+       "when_on": 0.9937,
+       "when_off": 0.9956,
+       "share_on_truth": 0.0074,
+       "edge_delay_s": -0.7583,
+       "edges_found": 2
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.6055,
+      "all": 0.6055,
+      "detail": {
+       "corr": 0.6055,
+       "lag_ms": 50.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.7091,
+      "all": 0.7091,
+      "detail": {
+       "corr": 0.7091,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.7871,
+      "all": 0.7871,
+      "detail": {
+       "corr": 0.7871,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.8665,
+      "all": 0.8665,
+      "detail": {
+       "corr": 0.8665,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.217,
+      "all": 0.217,
+      "detail": {
+       "corr": 0.217,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.5341,
+      "all": 0.5331,
+      "detail": {
+       "found": 0.449,
+       "right": 0.6558,
+       "offset_ms": -10.0,
+       "n_truth": 628,
+       "n_est": 430
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4196,
+      "detail": {
+       "found": 0.4762,
+       "right": 0.375,
+       "offset_ms": -6.6667,
+       "n_truth": 315,
+       "n_est": 405
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 217,
+       "n_est": 1
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.7602,
+      "all": 0.7592,
+      "detail": {
+       "found": 0.9236,
+       "right": 0.6444,
+       "offset_ms": 16.6667,
+       "n_truth": 628,
+       "n_est": 900
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2,
+      "detail": {
+       "found": 0.1333,
+       "right": 0.4,
+       "offset_ms": 1596.0,
+       "n_truth": 15,
+       "n_est": 5
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.7202,
+      "all": 0.7202,
+      "detail": {
+       "balanced": 0.7202,
+       "when_on": 1.0,
+       "when_off": 0.4404,
+       "share_on_truth": 0.0524,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.821,
+      "all": 0.821,
+      "detail": {
+       "balanced": 0.821,
+       "when_on": 0.868,
+       "when_off": 0.774,
+       "share_on_truth": 0.0524,
+       "edge_delay_s": 1.9833,
+       "edges_found": 1
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.9299,
+      "all": 0.9299,
+      "detail": {
+       "corr": 0.9299,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8267,
+      "all": 0.8267,
+      "detail": {
+       "corr": 0.8267,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7738,
+      "all": 0.7738,
+      "detail": {
+       "corr": 0.7738,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.8451,
+      "detail": {
+       "corr": 0.8451,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.6649
+   },
+   "03": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.6515,
+      "all": 0.6512,
+      "detail": {
+       "found": 0.901,
+       "right": 0.5098,
+       "offset_ms": -20.0667,
+       "n_truth": 404,
+       "n_est": 714
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.226,
+      "all": 0.2462,
+      "detail": {
+       "double": 0.7286,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9689,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.6595,
+      "all": 0.6477,
+      "detail": {
+       "found": 0.7443,
+       "right": 0.5733,
+       "offset_ms": 20.0,
+       "n_truth": 352,
+       "n_est": 457
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": null,
+      "all": 0.8355,
+      "detail": {
+       "balanced": 0.8355,
+       "when_on": 0.9958,
+       "when_off": 0.6752,
+       "share_on_truth": 0.9352,
+       "edge_delay_s": -0.325,
+       "edges_found": 4
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 2
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 9,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9415,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9897,
+      "all": 0.9897,
+      "detail": {
+       "balanced": 0.9897,
+       "when_on": 1.0,
+       "when_off": 0.9794,
+       "share_on_truth": 0.0251,
+       "edge_delay_s": -1.3583,
+       "edges_found": 2
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.6619,
+      "all": 0.6619,
+      "detail": {
+       "corr": 0.6619,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9461,
+      "all": 0.9461,
+      "detail": {
+       "corr": 0.9461,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.917,
+      "all": 0.917,
+      "detail": {
+       "corr": 0.917,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.964,
+      "all": 0.964,
+      "detail": {
+       "corr": 0.964,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.1721,
+      "all": 0.1721,
+      "detail": {
+       "corr": 0.1721,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.6019,
+      "all": 0.6173,
+      "detail": {
+       "found": 0.7926,
+       "right": 0.5054,
+       "offset_ms": -6.6667,
+       "n_truth": 352,
+       "n_est": 552
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2819,
+      "detail": {
+       "found": 0.4507,
+       "right": 0.2051,
+       "offset_ms": -3.3333,
+       "n_truth": 71,
+       "n_est": 162
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 11,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.5873,
+      "all": 0.6013,
+      "detail": {
+       "found": 0.9148,
+       "right": 0.4478,
+       "offset_ms": 16.6667,
+       "n_truth": 352,
+       "n_est": 719
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.1176,
+      "detail": {
+       "found": 0.1111,
+       "right": 0.125,
+       "offset_ms": 1050.0,
+       "n_truth": 9,
+       "n_est": 8
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8898,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9658,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8974,
+      "all": 0.8974,
+      "detail": {
+       "corr": 0.8974,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8857,
+      "all": 0.8857,
+      "detail": {
+       "corr": 0.8857,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7953,
+      "all": 0.7953,
+      "detail": {
+       "corr": 0.7953,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4508,
+      "detail": {
+       "corr": 0.4508,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.7409
+   },
+   "05": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.8931,
+      "all": 0.8931,
+      "detail": {
+       "found": 0.8906,
+       "right": 0.8955,
+       "offset_ms": -27.1,
+       "n_truth": 722,
+       "n_est": 718
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 1.0,
+      "all": 1.0,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.9371,
+      "all": 0.9371,
+      "detail": {
+       "balanced": 0.9371,
+       "when_on": 0.8744,
+       "when_off": 0.9998,
+       "share_on_truth": 0.0123,
+       "edge_delay_s": 0.45,
+       "edges_found": 1
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.9512,
+      "all": 0.9526,
+      "detail": {
+       "found": 0.9273,
+       "right": 0.9793,
+       "offset_ms": 16.6667,
+       "n_truth": 715,
+       "n_est": 677
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.6374,
+      "all": 0.6374,
+      "detail": {
+       "balanced": 0.6374,
+       "when_on": 1.0,
+       "when_off": 0.2748,
+       "share_on_truth": 0.9428,
+       "edge_delay_s": 0.0,
+       "edges_found": 1
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 1
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 12,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9675,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9855,
+      "all": 0.9855,
+      "detail": {
+       "balanced": 0.9855,
+       "when_on": 1.0,
+       "when_off": 0.971,
+       "share_on_truth": 0.0131,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.7478,
+      "all": 0.7478,
+      "detail": {
+       "corr": 0.7478,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9144,
+      "all": 0.9144,
+      "detail": {
+       "corr": 0.9144,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.8748,
+      "all": 0.8748,
+      "detail": {
+       "corr": 0.8748,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9443,
+      "all": 0.9443,
+      "detail": {
+       "corr": 0.9443,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.0053,
+      "all": 0.0053,
+      "detail": {
+       "corr": 0.0053,
+       "lag_ms": -500.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.8597,
+      "all": 0.86,
+      "detail": {
+       "found": 0.7692,
+       "right": 0.9752,
+       "offset_ms": -16.6667,
+       "n_truth": 715,
+       "n_est": 564
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4926,
+      "detail": {
+       "found": 0.3656,
+       "right": 0.7548,
+       "offset_ms": -16.6667,
+       "n_truth": 320,
+       "n_est": 160
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 921,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.8795,
+      "all": 0.8647,
+      "detail": {
+       "found": 0.9385,
+       "right": 0.8017,
+       "offset_ms": 16.6667,
+       "n_truth": 715,
+       "n_est": 837
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3,
+      "detail": {
+       "found": 0.25,
+       "right": 0.375,
+       "offset_ms": 1550.0,
+       "n_truth": 12,
+       "n_est": 8
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.4885,
+      "all": 0.4885,
+      "detail": {
+       "balanced": 0.4885,
+       "when_on": 0.0,
+       "when_off": 0.9771,
+       "share_on_truth": 0.0123,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.4941,
+      "all": 0.4941,
+      "detail": {
+       "balanced": 0.4941,
+       "when_on": 0.0,
+       "when_off": 0.9881,
+       "share_on_truth": 0.0123,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8488,
+      "all": 0.8488,
+      "detail": {
+       "corr": 0.8488,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.9051,
+      "all": 0.9051,
+      "detail": {
+       "corr": 0.9051,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8153,
+      "all": 0.8153,
+      "detail": {
+       "corr": 0.8153,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.6289,
+      "detail": {
+       "corr": 0.6289,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.7037
+   },
+   "07": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.6527,
+      "all": 0.6672,
+      "detail": {
+       "found": 0.7056,
+       "right": 0.6329,
+       "offset_ms": -17.2,
+       "n_truth": 557,
+       "n_est": 621
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.6786,
+      "all": 0.6908,
+      "detail": {
+       "double": 0.1121,
+       "half": 0.0036
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.9792,
+      "all": 0.9792,
+      "detail": {
+       "balanced": 0.9792,
+       "when_on": 1.0,
+       "when_off": 0.9584,
+       "share_on_truth": 0.0555,
+       "edge_delay_s": -0.45,
+       "edges_found": 1
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.6289,
+      "all": 0.5898,
+      "detail": {
+       "found": 0.45,
+       "right": 0.8555,
+       "offset_ms": 16.6667,
+       "n_truth": 500,
+       "n_est": 263
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.7247,
+      "all": 0.7247,
+      "detail": {
+       "balanced": 0.7247,
+       "when_on": 0.8702,
+       "when_off": 0.5791,
+       "share_on_truth": 0.8718,
+       "edge_delay_s": -0.2833,
+       "edges_found": 9
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 2
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 2,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.94,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9944,
+      "all": 0.9944,
+      "detail": {
+       "balanced": 0.9944,
+       "when_on": 1.0,
+       "when_off": 0.9888,
+       "share_on_truth": 0.0067,
+       "edge_delay_s": -2.5833,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.6238,
+      "all": 0.6238,
+      "detail": {
+       "corr": 0.6238,
+       "lag_ms": 50.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.8791,
+      "all": 0.8791,
+      "detail": {
+       "corr": 0.8791,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.8592,
+      "all": 0.8592,
+      "detail": {
+       "corr": 0.8592,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.8776,
+      "all": 0.8776,
+      "detail": {
+       "corr": 0.8776,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.1929,
+      "all": 0.1929,
+      "detail": {
+       "corr": 0.1929,
+       "lag_ms": -300.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.4587,
+      "all": 0.4435,
+      "detail": {
+       "found": 0.318,
+       "right": 0.7327,
+       "offset_ms": -6.6667,
+       "n_truth": 500,
+       "n_est": 217
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3853,
+      "detail": {
+       "found": 0.5665,
+       "right": 0.2919,
+       "offset_ms": -16.6667,
+       "n_truth": 203,
+       "n_est": 429
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 105,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.824,
+      "all": 0.7921,
+      "detail": {
+       "found": 0.842,
+       "right": 0.7478,
+       "offset_ms": 16.6667,
+       "n_truth": 500,
+       "n_est": 563
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 2,
+       "n_est": 4
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.7502,
+      "all": 0.7502,
+      "detail": {
+       "balanced": 0.7502,
+       "when_on": 0.7698,
+       "when_off": 0.7306,
+       "share_on_truth": 0.0555,
+       "edge_delay_s": 3.15,
+       "edges_found": 1
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.8217,
+      "all": 0.8217,
+      "detail": {
+       "balanced": 0.8217,
+       "when_on": 0.7698,
+       "when_off": 0.8736,
+       "share_on_truth": 0.0555,
+       "edge_delay_s": 3.15,
+       "edges_found": 1
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8459,
+      "all": 0.8459,
+      "detail": {
+       "corr": 0.8459,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8809,
+      "all": 0.8809,
+      "detail": {
+       "corr": 0.8809,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8166,
+      "all": 0.8166,
+      "detail": {
+       "corr": 0.8166,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.6647,
+      "detail": {
+       "corr": 0.6647,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.7425
+   },
+   "09": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.6501,
+      "all": 0.6501,
+      "detail": {
+       "found": 0.6568,
+       "right": 0.6435,
+       "offset_ms": -7.7667,
+       "n_truth": 437,
+       "n_est": 446
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.984,
+      "all": 0.984,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9379,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.7645,
+      "all": 0.7539,
+      "detail": {
+       "found": 0.7424,
+       "right": 0.7658,
+       "offset_ms": 23.3333,
+       "n_truth": 458,
+       "n_est": 444
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.9268,
+      "all": 0.9268,
+      "detail": {
+       "balanced": 0.9268,
+       "when_on": 0.9971,
+       "when_off": 0.8566,
+       "share_on_truth": 0.9303,
+       "edge_delay_s": -0.3167,
+       "edges_found": 4
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": -16.6667,
+       "n_truth": 0,
+       "n_est": 10
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 7,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8114,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9926,
+      "all": 0.9926,
+      "detail": {
+       "balanced": 0.9926,
+       "when_on": 1.0,
+       "when_off": 0.9852,
+       "share_on_truth": 0.0193,
+       "edge_delay_s": -2.1167,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.6807,
+      "all": 0.6807,
+      "detail": {
+       "corr": 0.6807,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9537,
+      "all": 0.9537,
+      "detail": {
+       "corr": 0.9537,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.9419,
+      "all": 0.9419,
+      "detail": {
+       "corr": 0.9419,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9364,
+      "all": 0.9364,
+      "detail": {
+       "corr": 0.9364,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.2385,
+      "all": 0.2385,
+      "detail": {
+       "corr": 0.2385,
+       "lag_ms": 50.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.4258,
+      "all": 0.4426,
+      "detail": {
+       "found": 0.3581,
+       "right": 0.5795,
+       "offset_ms": 6.6667,
+       "n_truth": 458,
+       "n_est": 283
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3706,
+      "detail": {
+       "found": 0.2644,
+       "right": 0.6196,
+       "offset_ms": -3.3333,
+       "n_truth": 382,
+       "n_est": 163
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 824,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.6223,
+      "all": 0.6731,
+      "detail": {
+       "found": 0.9192,
+       "right": 0.5309,
+       "offset_ms": 16.6667,
+       "n_truth": 458,
+       "n_est": 793
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.1667,
+      "detail": {
+       "found": 0.1429,
+       "right": 0.2,
+       "offset_ms": 1247.3333,
+       "n_truth": 7,
+       "n_est": 5
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.0447,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.5004,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8495,
+      "all": 0.8495,
+      "detail": {
+       "corr": 0.8495,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8679,
+      "all": 0.8679,
+      "detail": {
+       "corr": 0.8679,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7792,
+      "all": 0.7792,
+      "detail": {
+       "corr": 0.7792,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.5796,
+      "detail": {
+       "corr": 0.5796,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.7442
+   },
+   "11": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.6478,
+      "all": 0.6478,
+      "detail": {
+       "found": 0.9613,
+       "right": 0.4885,
+       "offset_ms": -15.3167,
+       "n_truth": 310,
+       "n_est": 610
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.0,
+      "all": 0.0,
+      "detail": {
+       "double": 0.9774,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.5244,
+      "all": 0.5244,
+      "detail": {
+       "balanced": 0.5244,
+       "when_on": 0.1389,
+       "when_off": 0.9099,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": 0.4,
+       "edges_found": 1
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.7824,
+      "all": 0.7896,
+      "detail": {
+       "found": 0.9441,
+       "right": 0.6786,
+       "offset_ms": 23.3333,
+       "n_truth": 161,
+       "n_est": 224
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.7568,
+      "all": 0.7568,
+      "detail": {
+       "balanced": 0.7568,
+       "when_on": 0.9884,
+       "when_off": 0.5253,
+       "share_on_truth": 0.584,
+       "edge_delay_s": -0.3333,
+       "edges_found": 9
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 2,
+       "n_est": 6
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 7,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8793,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9935,
+      "all": 0.9935,
+      "detail": {
+       "balanced": 0.9935,
+       "when_on": 1.0,
+       "when_off": 0.987,
+       "share_on_truth": 0.0071,
+       "edge_delay_s": -2.7167,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.7076,
+      "all": 0.7076,
+      "detail": {
+       "corr": 0.7076,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.6066,
+      "all": 0.6066,
+      "detail": {
+       "corr": 0.6066,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.8689,
+      "all": 0.8689,
+      "detail": {
+       "corr": 0.8689,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9306,
+      "all": 0.9306,
+      "detail": {
+       "corr": 0.9306,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.3356,
+      "all": 0.3356,
+      "detail": {
+       "corr": 0.3356,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.6702,
+      "all": 0.6977,
+      "detail": {
+       "found": 0.9317,
+       "right": 0.5576,
+       "offset_ms": -6.6667,
+       "n_truth": 161,
+       "n_est": 269
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4737,
+      "detail": {
+       "found": 0.9767,
+       "right": 0.3127,
+       "offset_ms": -3.3333,
+       "n_truth": 129,
+       "n_est": 405
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 213,
+       "n_est": 2
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.6718,
+      "all": 0.6895,
+      "detail": {
+       "found": 0.9379,
+       "right": 0.5451,
+       "offset_ms": 16.6667,
+       "n_truth": 161,
+       "n_est": 277
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3077,
+      "detail": {
+       "found": 0.2857,
+       "right": 0.3333,
+       "offset_ms": 1734.3333,
+       "n_truth": 7,
+       "n_est": 6
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.454,
+      "all": 0.454,
+      "detail": {
+       "balanced": 0.454,
+       "when_on": 0.1714,
+       "when_off": 0.7366,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.5074,
+      "all": 0.5074,
+      "detail": {
+       "balanced": 0.5074,
+       "when_on": 0.0663,
+       "when_off": 0.9486,
+       "share_on_truth": 0.0971,
+       "edge_delay_s": 1.4333,
+       "edges_found": 1
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.9265,
+      "all": 0.9265,
+      "detail": {
+       "corr": 0.9265,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.829,
+      "all": 0.829,
+      "detail": {
+       "corr": 0.829,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7021,
+      "all": 0.7021,
+      "detail": {
+       "corr": 0.7021,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.657,
+      "detail": {
+       "corr": 0.657,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.5132
+   },
+   "13": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.9645,
+      "all": 0.9645,
+      "detail": {
+       "found": 0.9592,
+       "right": 0.9698,
+       "offset_ms": 4.5,
+       "n_truth": 368,
+       "n_est": 364
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.9946,
+      "all": 0.9946,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.9447,
+      "all": 0.9447,
+      "detail": {
+       "balanced": 0.9447,
+       "when_on": 0.8969,
+       "when_off": 0.9925,
+       "share_on_truth": 0.0633,
+       "edge_delay_s": -0.2667,
+       "edges_found": 3
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.7744,
+      "all": 0.787,
+      "detail": {
+       "found": 0.9054,
+       "right": 0.696,
+       "offset_ms": 20.0,
+       "n_truth": 349,
+       "n_est": 454
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.9647,
+      "all": 0.9647,
+      "detail": {
+       "balanced": 0.9647,
+       "when_on": 0.9935,
+       "when_off": 0.9358,
+       "share_on_truth": 0.9383,
+       "edge_delay_s": -0.575,
+       "edges_found": 4
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 1,
+       "n_est": 10
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 9,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8484,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9386,
+      "all": 0.9386,
+      "detail": {
+       "balanced": 0.9386,
+       "when_on": 1.0,
+       "when_off": 0.8771,
+       "share_on_truth": 0.0093,
+       "edge_delay_s": -1.8,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.819,
+      "all": 0.819,
+      "detail": {
+       "corr": 0.819,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9866,
+      "all": 0.9866,
+      "detail": {
+       "corr": 0.9866,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.9817,
+      "all": 0.9817,
+      "detail": {
+       "corr": 0.9817,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9675,
+      "all": 0.9675,
+      "detail": {
+       "corr": 0.9675,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.1383,
+      "all": 0.1383,
+      "detail": {
+       "corr": 0.1383,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.8607,
+      "all": 0.8588,
+      "detail": {
+       "found": 0.8453,
+       "right": 0.8728,
+       "offset_ms": 16.6667,
+       "n_truth": 349,
+       "n_est": 338
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.1622,
+      "detail": {
+       "found": 0.1005,
+       "right": 0.42,
+       "offset_ms": 13.3333,
+       "n_truth": 209,
+       "n_est": 56
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 618,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.7573,
+      "all": 0.7727,
+      "detail": {
+       "found": 0.9742,
+       "right": 0.6403,
+       "offset_ms": 16.6667,
+       "n_truth": 349,
+       "n_est": 531
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2857,
+      "detail": {
+       "found": 0.2222,
+       "right": 0.4,
+       "offset_ms": 676.5,
+       "n_truth": 9,
+       "n_est": 5
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.9145,
+      "all": 0.9145,
+      "detail": {
+       "balanced": 0.9145,
+       "when_on": 0.8785,
+       "when_off": 0.9504,
+       "share_on_truth": 0.0633,
+       "edge_delay_s": 1.2667,
+       "edges_found": 3
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.8295,
+      "all": 0.8295,
+      "detail": {
+       "balanced": 0.8295,
+       "when_on": 0.6896,
+       "when_off": 0.9694,
+       "share_on_truth": 0.0633,
+       "edge_delay_s": 0.3833,
+       "edges_found": 3
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8489,
+      "all": 0.8489,
+      "detail": {
+       "corr": 0.8489,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8639,
+      "all": 0.8639,
+      "detail": {
+       "corr": 0.8639,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.6121,
+      "all": 0.6121,
+      "detail": {
+       "corr": 0.6121,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.5047,
+      "detail": {
+       "corr": 0.5047,
+       "lag_ms": 550.0
+      }
+     }
+    },
+    "frame_ms": 0.5339
+   },
+   "15": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.9615,
+      "all": 0.9578,
+      "detail": {
+       "found": 0.9562,
+       "right": 0.9595,
+       "offset_ms": -20.6333,
+       "n_truth": 297,
+       "n_est": 296
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.9754,
+      "all": 0.9764,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.8374,
+      "all": 0.8374,
+      "detail": {
+       "balanced": 0.8374,
+       "when_on": 0.7152,
+       "when_off": 0.9596,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": -1.2167,
+       "edges_found": 3
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.6012,
+      "all": 0.7938,
+      "detail": {
+       "found": 0.9333,
+       "right": 0.6906,
+       "offset_ms": 26.6667,
+       "n_truth": 165,
+       "n_est": 223
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.7825,
+      "all": 0.7825,
+      "detail": {
+       "balanced": 0.7825,
+       "when_on": 0.9944,
+       "when_off": 0.5705,
+       "share_on_truth": 0.5688,
+       "edge_delay_s": -0.3583,
+       "edges_found": 2
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 2
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 7,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9458,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.8934,
+      "all": 0.8934,
+      "detail": {
+       "balanced": 0.8934,
+       "when_on": 0.7949,
+       "when_off": 0.9919,
+       "share_on_truth": 0.0319,
+       "edge_delay_s": -1.525,
+       "edges_found": 2
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.4296,
+      "all": 0.4296,
+      "detail": {
+       "corr": 0.4296,
+       "lag_ms": -700.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.4819,
+      "all": 0.4819,
+      "detail": {
+       "corr": 0.4819,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.8134,
+      "all": 0.8134,
+      "detail": {
+       "corr": 0.8134,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.8839,
+      "all": 0.8839,
+      "detail": {
+       "corr": 0.8839,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.4991,
+      "all": 0.4991,
+      "detail": {
+       "corr": 0.4991,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.5,
+      "all": 0.7575,
+      "detail": {
+       "found": 0.9939,
+       "right": 0.6119,
+       "offset_ms": -6.6667,
+       "n_truth": 165,
+       "n_est": 268
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 110,
+       "n_est": 188
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 215,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.638,
+      "all": 0.8454,
+      "detail": {
+       "found": 0.9939,
+       "right": 0.7354,
+       "offset_ms": 10.0,
+       "n_truth": 165,
+       "n_est": 223
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.1818,
+      "detail": {
+       "found": 0.1429,
+       "right": 0.25,
+       "offset_ms": 1550.0,
+       "n_truth": 7,
+       "n_est": 4
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.7872,
+      "all": 0.7872,
+      "detail": {
+       "balanced": 0.7872,
+       "when_on": 0.9454,
+       "when_off": 0.6291,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": 2.1667,
+       "edges_found": 3
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.8225,
+      "all": 0.8225,
+      "detail": {
+       "balanced": 0.8225,
+       "when_on": 0.8017,
+       "when_off": 0.8432,
+       "share_on_truth": 0.3375,
+       "edge_delay_s": 1.8,
+       "edges_found": 3
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8899,
+      "all": 0.8899,
+      "detail": {
+       "corr": 0.8899,
+       "lag_ms": 50.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.892,
+      "all": 0.892,
+      "detail": {
+       "corr": 0.892,
+       "lag_ms": 50.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.8088,
+      "all": 0.8088,
+      "detail": {
+       "corr": 0.8088,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.631,
+      "detail": {
+       "corr": 0.631,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.5134
+   },
+   "17": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.8116,
+      "all": 0.8116,
+      "detail": {
+       "found": 0.8333,
+       "right": 0.7909,
+       "offset_ms": -23.3,
+       "n_truth": 354,
+       "n_est": 373
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.8305,
+      "all": 0.8305,
+      "detail": {
+       "double": 0.0085,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.8361,
+      "all": 0.8361,
+      "detail": {
+       "balanced": 0.8361,
+       "when_on": 0.7777,
+       "when_off": 0.8945,
+       "share_on_truth": 0.2189,
+       "edge_delay_s": 0.0167,
+       "edges_found": 3
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.4928,
+      "all": 0.5263,
+      "detail": {
+       "found": 0.7821,
+       "right": 0.3966,
+       "offset_ms": 20.0,
+       "n_truth": 179,
+       "n_est": 353
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.8026,
+      "all": 0.8026,
+      "detail": {
+       "balanced": 0.8026,
+       "when_on": 0.9831,
+       "when_off": 0.6221,
+       "share_on_truth": 0.7025,
+       "edge_delay_s": -0.1917,
+       "edges_found": 6
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "found": null,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 0,
+       "n_est": 7
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 7,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.8299,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9886,
+      "all": 0.9886,
+      "detail": {
+       "balanced": 0.9886,
+       "when_on": 0.9811,
+       "when_off": 0.9961,
+       "share_on_truth": 0.0113,
+       "edge_delay_s": 0.025,
+       "edges_found": 2
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.4495,
+      "all": 0.4495,
+      "detail": {
+       "corr": 0.4495,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.9288,
+      "all": 0.9288,
+      "detail": {
+       "corr": 0.9288,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.9023,
+      "all": 0.9023,
+      "detail": {
+       "corr": 0.9023,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9313,
+      "all": 0.9313,
+      "detail": {
+       "corr": 0.9313,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.4153,
+      "all": 0.4153,
+      "detail": {
+       "corr": 0.4153,
+       "lag_ms": 0.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.5102,
+      "all": 0.5358,
+      "detail": {
+       "found": 0.7318,
+       "right": 0.4226,
+       "offset_ms": -16.6667,
+       "n_truth": 179,
+       "n_est": 310
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.3819,
+      "detail": {
+       "found": 0.4155,
+       "right": 0.3533,
+       "offset_ms": -16.6667,
+       "n_truth": 142,
+       "n_est": 169
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 136,
+       "n_est": 0
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.3521,
+      "all": 0.3953,
+      "detail": {
+       "found": 0.8436,
+       "right": 0.2581,
+       "offset_ms": 16.6667,
+       "n_truth": 179,
+       "n_est": 585
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2857,
+      "detail": {
+       "found": 0.2857,
+       "right": 0.2857,
+       "offset_ms": 0.1667,
+       "n_truth": 7,
+       "n_est": 7
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.5389,
+      "all": 0.5389,
+      "detail": {
+       "balanced": 0.5389,
+       "when_on": 0.9345,
+       "when_off": 0.1433,
+       "share_on_truth": 0.2189,
+       "edge_delay_s": 3.3667,
+       "edges_found": 1
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.7169,
+      "all": 0.7169,
+      "detail": {
+       "balanced": 0.7169,
+       "when_on": 0.7553,
+       "when_off": 0.6785,
+       "share_on_truth": 0.2189,
+       "edge_delay_s": 2.0667,
+       "edges_found": 5
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7271,
+      "all": 0.7271,
+      "detail": {
+       "corr": 0.7271,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.6614,
+      "all": 0.6614,
+      "detail": {
+       "corr": 0.6614,
+       "lag_ms": 50.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7275,
+      "all": 0.7275,
+      "detail": {
+       "corr": 0.7275,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.4427,
+      "detail": {
+       "corr": 0.4427,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.4987
+   },
+   "19": {
+    "signals": {
+     "beat": {
+      "produced": true,
+      "checked": 0.5958,
+      "all": 0.5958,
+      "detail": {
+       "found": 0.6432,
+       "right": 0.5549,
+       "offset_ms": -9.9,
+       "n_truth": 754,
+       "n_est": 874
+      }
+     },
+     "bpm": {
+      "produced": true,
+      "checked": 0.4536,
+      "all": 0.4536,
+      "detail": {
+       "double": 0.0,
+       "half": 0.0
+      }
+     },
+     "no_beat": {
+      "produced": true,
+      "checked": 0.7678,
+      "all": 0.7678,
+      "detail": {
+       "balanced": 0.7678,
+       "when_on": 0.572,
+       "when_off": 0.9637,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 0.25,
+       "edges_found": 3
+      }
+     },
+     "bar_position": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beats_per_bar": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "beat_strength": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick": {
+      "produced": true,
+      "checked": 0.9334,
+      "all": 0.8952,
+      "detail": {
+       "found": 0.8598,
+       "right": 0.9335,
+       "offset_ms": 16.6667,
+       "n_truth": 849,
+       "n_est": 782
+      }
+     },
+     "snare": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "hat": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "tom": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "cymbal": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "kick_present": {
+      "produced": true,
+      "checked": 0.8595,
+      "all": 0.8595,
+      "detail": {
+       "balanced": 0.8595,
+       "when_on": 0.9894,
+       "when_off": 0.7297,
+       "share_on_truth": 0.8317,
+       "edge_delay_s": -0.425,
+       "edges_found": 8
+      }
+     },
+     "kick_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drop": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": 0.0,
+       "offset_ms": null,
+       "n_truth": 3,
+       "n_est": 2
+      }
+     },
+     "section_change": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0,
+      "detail": {
+       "found": 0.0,
+       "right": null,
+       "offset_ms": null,
+       "n_truth": 14,
+       "n_est": 0
+      }
+     },
+     "breakdown": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "buildup": {
+      "produced": true,
+      "checked": null,
+      "all": null,
+      "detail": {
+       "balanced": null,
+       "when_on": null,
+       "when_off": 0.9744,
+       "share_on_truth": 0.0,
+       "edge_delay_s": null,
+       "edges_found": 0
+      }
+     },
+     "riser": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "silence": {
+      "produced": true,
+      "checked": 0.9985,
+      "all": 0.9985,
+      "detail": {
+       "balanced": 0.9985,
+       "when_on": 1.0,
+       "when_off": 0.9969,
+       "share_on_truth": 0.003,
+       "edge_delay_s": -0.15,
+       "edges_found": 1
+      }
+     },
+     "bass_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_present": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "bass_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "drums_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "vocal_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "other_level": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "layers": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "loudness": {
+      "produced": true,
+      "checked": 0.5996,
+      "all": 0.5996,
+      "detail": {
+       "corr": 0.5996,
+       "lag_ms": 0.0
+      }
+     },
+     "band_sub": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "band_bass": {
+      "produced": true,
+      "checked": 0.7799,
+      "all": 0.7799,
+      "detail": {
+       "corr": 0.7799,
+       "lag_ms": 0.0
+      }
+     },
+     "band_mid": {
+      "produced": true,
+      "checked": 0.953,
+      "all": 0.953,
+      "detail": {
+       "corr": 0.953,
+       "lag_ms": 0.0
+      }
+     },
+     "band_high": {
+      "produced": true,
+      "checked": 0.9562,
+      "all": 0.9562,
+      "detail": {
+       "corr": 0.9562,
+       "lag_ms": 0.0
+      }
+     },
+     "brightness": {
+      "produced": true,
+      "checked": 0.1161,
+      "all": 0.1161,
+      "detail": {
+       "corr": 0.1161,
+       "lag_ms": -900.0
+      }
+     },
+     "fullness": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     },
+     "chord": {
+      "produced": false,
+      "checked": null,
+      "all": null,
+      "detail": {}
+     }
+    },
+    "candidates": {
+     "kick <- beat tag": {
+      "produced": true,
+      "checked": 0.6047,
+      "all": 0.585,
+      "detail": {
+       "found": 0.5819,
+       "right": 0.5881,
+       "offset_ms": 6.6667,
+       "n_truth": 849,
+       "n_est": 840
+      }
+     },
+     "snare <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0198,
+      "detail": {
+       "found": 0.0134,
+       "right": 0.0376,
+       "offset_ms": -6.6667,
+       "n_truth": 522,
+       "n_est": 192
+      }
+     },
+     "hat <- beat tag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.0035,
+      "detail": {
+       "found": 0.0018,
+       "right": 1.0,
+       "offset_ms": -20.0,
+       "n_truth": 1133,
+       "n_est": 2
+      }
+     },
+     "kick <- sudden rise of the lowest band": {
+      "produced": true,
+      "checked": 0.7722,
+      "all": 0.7612,
+      "detail": {
+       "found": 0.8916,
+       "right": 0.664,
+       "offset_ms": 13.3333,
+       "n_truth": 849,
+       "n_est": 1140
+      }
+     },
+     "section_change <- the 'song change' flag": {
+      "produced": true,
+      "checked": null,
+      "all": 0.2857,
+      "detail": {
+       "found": 0.2143,
+       "right": 0.4286,
+       "offset_ms": 746.3333,
+       "n_truth": 14,
+       "n_est": 7
+      }
+     },
+     "no_beat <- not locked": {
+      "produced": true,
+      "checked": 0.5408,
+      "all": 0.5408,
+      "detail": {
+       "balanced": 0.5408,
+       "when_on": 0.6792,
+       "when_off": 0.4023,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 2.4167,
+       "edges_found": 3
+      }
+     },
+     "no_beat <- beat trust under 0.35": {
+      "produced": true,
+      "checked": 0.3785,
+      "all": 0.3785,
+      "detail": {
+       "balanced": 0.3785,
+       "when_on": 0.3355,
+       "when_off": 0.4215,
+       "share_on_truth": 0.1446,
+       "edge_delay_s": 2.125,
+       "edges_found": 4
+      }
+     },
+     "band_bass <- 1 of the 16 bands": {
+      "produced": true,
+      "checked": 0.5823,
+      "all": 0.5823,
+      "detail": {
+       "corr": 0.5823,
+       "lag_ms": 50.0
+      }
+     },
+     "band_mid <- 8 of the 16 bands": {
+      "produced": true,
+      "checked": 0.7517,
+      "all": 0.7517,
+      "detail": {
+       "corr": 0.7517,
+       "lag_ms": 50.0
+      }
+     },
+     "band_high <- 7 of the 16 bands": {
+      "produced": true,
+      "checked": 0.5585,
+      "all": 0.5585,
+      "detail": {
+       "corr": 0.5585,
+       "lag_ms": 0.0
+      }
+     },
+     "kick_level <- lowest band": {
+      "produced": true,
+      "checked": null,
+      "all": 0.5598,
+      "detail": {
+       "corr": 0.5598,
+       "lag_ms": 0.0
+      }
+     }
+    },
+    "frame_ms": 0.3974
+   }
+  }
+ },
+ "tracks": {
+  "01": {
+   "file": "Sweet Child O' Mine.mp3",
+   "group": "rock"
+  },
+  "03": {
+   "file": "Come Together - Remastered.mp3",
+   "group": "rock"
+  },
+  "05": {
+   "file": "Message In A Bottle - Remastered 2003.mp3",
+   "group": "rock"
+  },
+  "07": {
+   "file": "Piece of My Heart - Live at The Grande Ballroom, Detroit, MI - March 1968.mp3",
+   "group": "rock"
+  },
+  "09": {
+   "file": "You Know I'm No Good.mp3",
+   "group": "pop"
+  },
+  "11": {
+   "file": "Sucker for Pain (with Wiz Khalifa, Imagine Dragons, Logic & Ty Dolla $ign feat. X Ambassadors).mp3",
+   "group": "pop"
+  },
+  "13": {
+   "file": "Another One Bites The Dust - Remastered 2011.mp3",
+   "group": "pop"
+  },
+  "15": {
+   "file": "Roadgame.mp3",
+   "group": "electro"
+  },
+  "17": {
+   "file": "Genesis.mp3",
+   "group": "electro"
+  },
+  "19": {
+   "file": "01-Plastic-People.mp3",
+   "group": "electro"
+  }
+ }
+}
