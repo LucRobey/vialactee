@@ -5,7 +5,7 @@
 > **Agent / Model:** Claude Fable 5.2  
 > **Primary Goal:** The owner asked whether the installation's analyzer is our best one, then: "could we prepare our best analyser by adding all the new variables to it?"  
 > **Status:** COMPLETED (candidate built, graded, checked, proposed, then promoted on the owner's decision: `MultiBandOnsetAudioAnalyzer` is the main analyzer; not seen on the installation yet)  
-> **Commits:** none yet (pushed: no)  
+> **Commits:** `1bc5352` (the main analyzer), `7b09551` (the lab run), `3aa37e0` (logs); committed on the branch `choreography/global-modes-on-new-signals`, then main brought up to it (pushed: yes)  
 > **Skills Used:** `vialactee-researcher` (the cycle, run by the supervising session at the owner's request)  
 > **Skill Friction:** `cycle close` wrote a proposal table whose first column was production on the check tracks only, under the heading "Production today"; fixed here. The procedure has no case for "compare two existing analyzers, nothing to tune": the open / check split then proves little, and the proposal says so.
 
