@@ -3,10 +3,13 @@
     "useMicrophone": true,
     "analyzer_model": "MultiBandOnsetAudioAnalyzer",
     "audio_preset": "spotify",
+    "output_latency_by_device": {
+        "WONDERBOOM 2": 0.19
+    },
     "printCpuFpsInfo": true,
-    "HARDWARE_MODE": "simulation",
+    "HARDWARE_MODE": "esp32",
     "hardware_profile": "full",
-    "esp32_ip": "192.168.0.29",
+    "esp32_ip": "192.168.0.30",
     "log_level": "INFO",
     "luminosity": 30,
     "sensibility": 45,
