@@ -43,6 +43,7 @@ Start the clip page (`choreography-clips`, http://127.0.0.1:8768): the waiting c
 ## Recently closed
 
 - `2026-11-27_no_beat` (no_beat): approved by you on 2026-11-27
+- `2026-11-27_best_beat` (beat, bpm): approved by you on 2026-11-27
 - `2026-11-27_bands_kick` (kick, kick_present, band_bass, band_mid, band_high): approved by you on 2026-11-27
 
 Where everything stands: [`scoreboard/STATUS.md`](scoreboard/STATUS.md) (signals) and [`choreography/STATUS.md`](choreography/STATUS.md) (modes).

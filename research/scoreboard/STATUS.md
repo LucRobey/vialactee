@@ -6,8 +6,8 @@ Built by `research/scoreboard/status.py`. Production scores from the scoreboard 
 
 | Signal | In the contract | Production today | Truth | Runs on it | Best candidate on the check tracks |
 |---|---|---|---|---|---|
-| `beat` | bridged | 78 | checked | - | - |
-| `bpm` | bridged | 67 | checked | - | - |
+| `beat` | bridged | 81 | checked | 1 | 85 (`2026-11-27_best_beat`) |
+| `bpm` | bridged | 75 | checked | 1 | 78 (`2026-11-27_best_beat`) |
 | `no_beat` | produced | 86 | checked | 1 | 87 (`2026-11-27_no_beat`) |
 | `bar_position` | empty | - | - | - | - |
 | `beats_per_bar` | empty | - | - | - | - |
@@ -48,6 +48,7 @@ Built by `research/scoreboard/status.py`. Production scores from the scoreboard 
 | Run | Target | Candidate | Open tracks | Check tracks | State | Outcome |
 |---|---|---|---|---|---|---|
 | `2026-11-27_no_beat` | no_beat | NoBeatSlotAudioAnalyzer | no_beat 89 | no_beat 87 | decided | approved by the owner 2026-11-27. Owner: 'yes, we need that'. Promoted the same day into music/BandKickSignals.py. |
+| `2026-11-27_best_beat` | beat, bpm | MultiBandSixSignalsAudioAnalyzer | beat 76, bpm 71 | beat 85, bpm 78 | decided | approved by the owner 2026-11-27. Owner: 'add the six signals to MultiBandOnsetAudioAnalyzer and put it as the main'. Done the same day: the signals are in that model itself and it is the default. |
 | `2026-11-27_bands_kick` | kick, kick_present, band_bass, band_mid, band_high | BandKickSlotsAudioAnalyzer | kick 75, kick_present 81, band_bass 82, band_mid 89, band_high 93 | kick 85, kick_present 89, band_bass 84, band_mid 88, band_high 94 | decided | approved by the owner 2026-11-27. Promoted the same day to music/BandKickSignals.py. |
 
 The work list is `BACKLOG.md`. A run that is "waiting for the owner" also appears in `research/INBOX.md`.

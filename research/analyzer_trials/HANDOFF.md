@@ -102,6 +102,14 @@ were the raw material for P1/P2.
   section changes are not corrected yet. After any correction: `python -m research.truth.build_truth`, then the
   scoreboard. Log:
   `work_history/2026-11-27_no_beat_promoted_and_first_guess_of_buildups.md`.
+- **THE MAIN ANALYZER CHANGED (2026-11-27, owner's decision): `MultiBandOnsetAudioAnalyzer`**, with the six signals
+  added to it (four lines; the file is at its size limit of 621). `DyadicMetricalAudioAnalyzer` inherits them and
+  stays selectable. `DEFAULT_ANALYZER_MODEL`, `config/app_config.json`, the studios and the lab baseline follow.
+  Scores equal the candidate's on 20 tracks. Not seen by the owner on the installation yet. Run `2026-11-27_best_beat`: candidate
+  `MultiBandSixSignalsAudioAnalyzer` = the parent model (no sub-pulse) plus the six signals. Beat 78 to 81 and tempo
+  67 to 75 on the 20 tracks, entirely from Pumped Up Kicks, Nightcall and Sweet Child O' Mine; six signals unchanged.
+  `runs/2026-11-27_best_beat/ALL_MODELS.md` ranks every analyzer on the real path: the installation's is sixth of
+  eight on beat. Log: `work_history/2026-11-27_best_beat_follower_with_the_six_signals.md`.
 - Four fixes from a research pass are in the choreography lab: perceived brightness, 60 fps timing, a flash-safety
   count, false-flash counts and a wrong-on-purpose control version.
 - **Next**: the owner watches and chooses; then tune the mode, the kick or the measure according to the
